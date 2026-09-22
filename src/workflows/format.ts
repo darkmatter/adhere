@@ -60,7 +60,7 @@ const frame = (finding: Finding, color: boolean): ReadonlyArray<string> => {
     `${gutter}· ${pink("─".repeat(Math.max(1, finding.snippet.trim().length)), color)}`,
     `${gutter}╰────`,
     `${helpTint("  hint: ", color)}${hint}`,
-    ...rest.map((line) => `        ${line}`),
+    ...rest.map((line) => (isBlank(line) ? "" : `        ${line}`)),
   ];
 };
 

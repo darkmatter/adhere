@@ -23,6 +23,8 @@ const WORKSPACE_DIRS = ["agents", "apps", "packages"] as const;
 /** Path fragments that mark generated, vendored, or dependency trees. */
 const SKIPS = [
   "/node_modules/",
+  // The store names each entry after its key, so the files end in ".ts".
+  "/.adhere-cache/",
   "/dist/",
   "/.agents/",
   "/.claude/",
