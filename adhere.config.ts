@@ -3,7 +3,8 @@ import { defineConfig } from "./src/config.ts";
 /**
  * References are lifted from the effect-solutions docs, adjusted only where
  * the installed Effect names an API differently (Schema.TaggedError,
- * Schema.Defect(), Random.withSeed).
+ * Schema.Defect(), Random.withSeed). The platform/* rule follows the
+ * effect/platform docs (effect.website/docs/platform).
  */
 export default defineConfig({
   rules: {
@@ -43,17 +44,37 @@ const program = fetchData.pipe(
     },
     "basics/external-calls-are-resilient": {
       description:
-        "A call to an external system carries a timeout and a retry schedule.",
+        "A call over the network, such as an HTTP request, a database query, or a third-party API, carries a timeout and a retry schedule. Calls through the platform FileSystem and Path services are local and are not in scope.",
       reference: `
 const retryPolicy = Schedule.exponential("100 millis").pipe(
   Schedule.both(Schedule.recurs(3))
 )
 
-const resilientCall = callExternalApi.pipe(
+const resilientCall = HttpClient.get("https://api.example.com/users").pipe(
   Effect.timeout("2 seconds"),
   Effect.retry(retryPolicy),
   Effect.timeout("10 seconds")
 )
+`,
+    },
+    "platform/os-access-through-platform-services": {
+      description:
+        "File, path, process, terminal, and HTTP access goes through Effect's platform services (FileSystem, Path, ChildProcess, Terminal, HttpClient, KeyValueStore), acquired with yield*, not through node: builtins, Bun globals, or fetch. The Bun implementations are provided once at the entry point with BunServices.layer.",
+      reference: `
+import { Effect, FileSystem, Path } from "effect"
+import { HttpClient, HttpClientResponse } from "effect/unstable/http"
+import { BunRuntime, BunServices } from "@effect/platform-bun"
+
+const program = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem
+  const path = yield* Path.Path
+  const config = yield* fs.readFileString(path.join(path.resolve(), "config.json"))
+  const response = yield* HttpClient.get("https://api.example.com/users")
+  const users = yield* HttpClientResponse.schemaBodyJson(Users)(response)
+  return { config, users }
+})
+
+program.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain)
 `,
     },
     "services/methods-have-no-requirements": {
@@ -277,14 +298,14 @@ class ApiError extends Schema.TaggedError<ApiError>()(
 ) {}
 
 const fetchUser = (id: string) =>
-  Effect.tryPromise({
-    try: () => fetch(\`/api/users/\${id}\`).then((r: Response) => r.json()),
-    catch: (error) => new ApiError({
+  HttpClient.get(\`/api/users/\${id}\`).pipe(
+    Effect.flatMap(HttpClientResponse.schemaBodyJson(User)),
+    Effect.mapError((error) => new ApiError({
       endpoint: \`/api/users/\${id}\`,
       statusCode: 500,
       error
-    })
-  })
+    }))
+  )
 `,
     },
     "config/business-logic-depends-on-config-service": {
