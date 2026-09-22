@@ -1,0 +1,36 @@
+{
+  "name": "@darkmatter/effect-audit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Audits a repository against effect-solutions topics, judged by Jev.",
+  "bin": {
+    "effect-audit": "./src/main.ts"
+  },
+  "type": "module",
+  "imports": {
+    "#*": "./src/*"
+  },
+  "exports": {
+    ".": "./src/cli.ts"
+  },
+  "scripts": {
+    "lint": "vp lint --deny-warnings .",
+    "start": "bun src/main.ts",
+    "test": "vp test",
+    "typecheck": "tsc --noEmit && bun run lint"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.0.0-rc.112",
+    "effect": "4.0.0-rc.112"
+  },
+  "overrides": {
+    "@effect/platform-node-shared": "4.0.0-rc.112"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "@types/node": "^24.13.6",
+    "typescript": "7.0.2",
+    "vite-plus": "0.3.2",
+    "vitest": "4.1.11"
+  }
+}
