@@ -1,5 +1,4 @@
-import type { Verdict } from "#models/Judge.ts";
-import type { AuditResult } from "#workflows/audit.ts";
+import type { AuditResult, Finding } from "#workflows/audit.ts";
 
 /** Workspace-relative path, matching the paths `vp lint` prints. */
 const displayPath = (file: string): string => {
@@ -33,27 +32,35 @@ export interface RenderOptions {
   readonly color?: boolean;
 }
 
+const isBlank = (line: string): boolean => line.trim().length === 0;
+
+/** The reference without its blank leading and trailing lines. */
+const referenceLines = (reference: string): ReadonlyArray<string> => {
+  const lines = reference.split("\n");
+  const first = lines.findIndex((line) => !isBlank(line));
+  if (first < 0) return [];
+  let last = lines.length - 1;
+  while (last > first && isBlank(lines[last] ?? "")) last--;
+  return lines.slice(first, last + 1);
+};
+
 /**
  * One diagnostic, in the frame `vp lint` prints on a terminal: a red header,
- * the offending line, a pink underline, and a tinted hint line.
+ * the offending line, a pink underline, and the reference code as the hint.
  */
-const frame = (verdict: Verdict, color: boolean): ReadonlyArray<string> => {
-  const width = String(verdict.line).length;
-  const gutter = " ".repeat(width + 2);
-  const column = Math.max(1, Math.round(verdict.column));
-  const rule =
-    verdict.decidedBy === "jev"
-      ? `jev(${verdict.topic}/${verdict.rule})`
-      : `${verdict.topic}/${verdict.rule}`;
-  const digits = String(verdict.line);
-  const pad = " ".repeat(width - digits.length);
+const frame = (finding: Finding, color: boolean): ReadonlyArray<string> => {
+  const digits = String(finding.line);
+  const gutter = " ".repeat(digits.length + 2);
+  const [hint = "", ...rest] = referenceLines(finding.reference);
+  const header = `${finding.rule} (${finding.probability.toFixed(2)})`;
   return [
-    `  ${red("×", color)} ${red(rule, color)}: ${red(verdict.message, color)}`,
-    `${gutter}╭─[${blue(displayPath(verdict.file), color)}:${verdict.line}:${column}]`,
-    ` ${pad}${dim(digits, color)} │ ${verdict.snippet}`,
-    `${gutter}· ${pink(`${" ".repeat(column - 1)}─`, color)}`,
+    `  ${red("×", color)} ${red(header, color)}: ${red(finding.description, color)}`,
+    `${gutter}╭─[${blue(displayPath(finding.file), color)}:${finding.line}:1]`,
+    ` ${dim(digits, color)} │ ${finding.snippet}`,
+    `${gutter}· ${pink("─".repeat(Math.max(1, finding.snippet.trim().length)), color)}`,
     `${gutter}╰────`,
-    `${helpTint("  hint: ", color)}${verdict.help}`,
+    `${helpTint("  hint: ", color)}${hint}`,
+    ...rest.map((line) => `        ${line}`),
   ];
 };
 
@@ -67,14 +74,20 @@ export const render = (
 ): ReadonlyArray<string> => {
   const color = options.color === true;
   const lines: Array<string> = [];
-  for (const verdict of result.violations) {
+  for (const finding of result.findings) {
     if (lines.length > 0) lines.push("");
-    lines.push(...frame(verdict, color));
+    lines.push(...frame(finding, color));
   }
   if (lines.length > 0) lines.push("");
+  const summary = [
+    counted(result.files, "file", "files"),
+    `${result.judged} judged`,
+    `${result.cached} cached`,
+    ...(result.skipped > 0 ? [`${result.skipped} skipped`] : []),
+  ];
   lines.push(
-    `Found ${counted(result.violations.length, "error", "errors")}.`,
-    `${counted(result.filesScanned, "file", "files")}, ${counted(result.candidates, "candidate", "candidates")}, ${counted(result.cachedFiles, "cached file", "cached files")}.`,
+    `Found ${counted(result.findings.length, "error", "errors")}.`,
+    `${summary.join(", ")}.`,
   );
   return lines;
 };
