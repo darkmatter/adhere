@@ -1,10 +1,10 @@
 import {
   ConfigUnavailable,
   decodeConfig,
+  type Overrides,
   type ResolvedConfig,
   resolveConfig,
 } from "#config.ts";
-import type { PresetName } from "#presets.ts";
 import { Context, Effect, FileSystem, Layer, Path } from "effect";
 
 const CONFIG_FILE = "adhere.config.ts";
@@ -28,10 +28,10 @@ const loadConfigFile = Effect.fn("AdhereConfig.load")(function* (file: string) {
 });
 
 /**
- * The rules of `adhere.config.ts` in the working directory plus the presets
- * named on the command line. With presets, the file is optional.
+ * `adhere.config.ts` from the working directory with the command-line
+ * overrides applied. With a preset on the command line, the file is optional.
  */
-export const AdhereConfigLive = (presets: ReadonlyArray<PresetName>) =>
+export const AdhereConfigLive = (overrides: Overrides) =>
   Layer.effect(AdhereConfig)(
     Effect.gen(function* () {
       const path = yield* Path.Path;
@@ -46,12 +46,12 @@ export const AdhereConfigLive = (presets: ReadonlyArray<PresetName>) =>
         );
       if (exists) {
         return AdhereConfig.of(
-          resolveConfig(yield* loadConfigFile(file), presets),
+          resolveConfig(yield* loadConfigFile(file), overrides),
         );
       }
-      if (presets.length > 0) {
+      if (overrides.presets !== undefined && overrides.presets.length > 0) {
         return AdhereConfig.of(
-          resolveConfig(yield* decodeConfig({}), presets),
+          resolveConfig(yield* decodeConfig({}), overrides),
         );
       }
       return yield* ConfigUnavailable.make({

@@ -35,15 +35,24 @@ export interface ResolvedConfig {
   readonly rules: Readonly<Record<RuleId, Rule>>;
 }
 
+/** Command-line values that apply on top of the config file. */
+export interface Overrides {
+  readonly presets?: ReadonlyArray<PresetName>;
+  /** Replaces the config's global threshold. Per-rule thresholds still win. */
+  readonly threshold?: number;
+}
+
 export const resolveConfig = (
   config: AdhereConfig,
-  extraPresets: ReadonlyArray<PresetName> = [],
+  overrides: Overrides = {},
 ): ResolvedConfig => ({
   model: config.model,
-  threshold: config.threshold,
+  threshold: overrides.threshold ?? config.threshold,
   rules: Object.assign(
     {},
-    ...[...extraPresets, ...config.presets].map((name) => presets[name]),
+    ...[...(overrides.presets ?? []), ...config.presets].map(
+      (name) => presets[name],
+    ),
     config.rules,
   ),
 });

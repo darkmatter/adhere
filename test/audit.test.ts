@@ -1,8 +1,8 @@
 import { Crypto, Effect, Layer, Record } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { decodeConfig, resolveConfig } from "../src/config.ts";
-import { effect } from "../src/presets/effect.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
+import { effect } from "../src/presets/effect.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
 import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
 import {
@@ -197,12 +197,18 @@ describe("config", () => {
     const decoded = await Effect.runPromise(
       decodeConfig({ rules: { "basics/gen-for-sequencing": override } }),
     );
-    const resolved = resolveConfig(decoded, ["effect"]);
+    const resolved = resolveConfig(decoded, { presets: ["effect"] });
     expect(Object.keys(resolved.rules)).toEqual(Object.keys(effect));
     expect(resolved.rules["basics/gen-for-sequencing"]).toEqual(override);
     expect(resolved.rules["basics/fn-for-named-effects"]).toEqual(
       effect["basics/fn-for-named-effects"],
     );
+  });
+
+  it("a command-line threshold replaces the config's global threshold", async () => {
+    const decoded = await Effect.runPromise(decodeConfig({ threshold: 0.6 }));
+    expect(resolveConfig(decoded).threshold).toBe(0.6);
+    expect(resolveConfig(decoded, { threshold: 0.85 }).threshold).toBe(0.85);
   });
 
   it("refuses an unknown preset", async () => {
