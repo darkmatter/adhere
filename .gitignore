@@ -1,7 +1,7 @@
 node_modules/
 dist/
 *.tsbuildinfo
-.adhere-cache/
+.adhere/cache/
 .env
 .env.*
 !.envrc

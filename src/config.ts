@@ -21,11 +21,18 @@ export const AdhereConfig = Schema.Struct({
   presets: Schema.Array(Schema.Literals(presetNames)).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed([])),
   ),
-  /** A record of rules, or a directory path relative to the config file. */
-  rules: Schema.Union([Schema.Record(Schema.String, Rule), Schema.String]).pipe(
-    Schema.withDecodingDefaultKey(Effect.succeed({})),
+  /**
+   * A record of rules, or a directory path relative to the config file.
+   * Unset: `.adhere/` when that directory exists, otherwise no rules.
+   */
+  rules: Schema.optionalKey(
+    Schema.Union([Schema.Record(Schema.String, Rule), Schema.String]),
   ),
 });
+
+/** Where a repo keeps its rule files by default. The cache lives under it. */
+export const ADHERE_DIRECTORY = ".adhere";
+export const CACHE_DIRECTORY = `${ADHERE_DIRECTORY}/cache`;
 export interface AdhereConfig extends Schema.Schema.Type<typeof AdhereConfig> {}
 
 export const defineConfig = (config: typeof AdhereConfig.Encoded) => config;
@@ -38,7 +45,7 @@ export interface Preset {
 }
 
 /** The same thing with its rules read from wherever they were. */
-export type Loaded<T extends { readonly rules: unknown }> = Omit<T, "rules"> & {
+export type Loaded<T extends { readonly rules?: unknown }> = Omit<T, "rules"> & {
   readonly rules: Rules;
 };
 
