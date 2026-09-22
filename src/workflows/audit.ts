@@ -144,11 +144,13 @@ export const runAudit: Effect.Effect<
     return fileResult(cached ? "cached" : "judged", findings);
   });
 
-  const results = yield* Effect.forEach(files, auditFile, { concurrency: 8 });
+  // Directory order is not stable across runs; the report should be.
+  const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
+  const results = yield* Effect.forEach(sorted, auditFile, { concurrency: 8 });
   const count = (status: FileResult["status"]) =>
     results.filter((result) => result.status === status).length;
   return {
-    files: files.length,
+    files: sorted.length,
     judged: count("judged"),
     cached: count("cached"),
     skipped: count("skipped"),
