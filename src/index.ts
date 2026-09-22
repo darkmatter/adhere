@@ -1,5 +1,6 @@
 export {
   type AdhereConfig,
+  type Config,
   ConfigUnavailable,
   defineConfig,
   type Preset,

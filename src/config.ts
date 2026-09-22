@@ -35,7 +35,10 @@ export const ADHERE_DIRECTORY = ".adhere";
 export const CACHE_DIRECTORY = `${ADHERE_DIRECTORY}/cache`;
 export interface AdhereConfig extends Schema.Schema.Type<typeof AdhereConfig> {}
 
-export const defineConfig = (config: typeof AdhereConfig.Encoded) => config;
+/** The shape a config file default-exports. */
+export type Config = typeof AdhereConfig.Encoded;
+
+export const defineConfig = (config: Config) => config;
 
 /** A built-in rule set. Same shape as a config, minus `presets`. */
 export interface Preset {
@@ -71,9 +74,9 @@ export const presetsOf = (
   config: Pick<AdhereConfig, "presets">,
   overrides: Overrides,
 ): ReadonlyArray<PresetName> => [
-  ...(overrides.presets ?? []),
-  ...config.presets,
-];
+    ...(overrides.presets ?? []),
+    ...config.presets,
+  ];
 
 /**
  * Precedence, highest first: command line, config file, presets in order
@@ -117,7 +120,7 @@ export const decodeConfig = (
   Schema.decodeUnknownEffect(AdhereConfig)(value).pipe(
     Effect.mapError((problem) =>
       ConfigUnavailable.make({
-        message: `adhere.config.ts must default-export defineConfig({...}): ${problem.message}`,
+        message: `the config must default-export defineConfig({...}): ${problem.message}`,
       }),
     ),
   );

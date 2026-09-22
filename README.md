@@ -11,12 +11,17 @@ Deterministic rules (substring matches, type checks) belong in a normal linter.
 
 ## Config
 
-`adhere.config.ts` in the working directory of the repo being audited:
+A config file in the working directory of the repo being audited, at one of
+these paths (keep one):
+
+- `adhere.config.ts`
+- `.adhere/config.ts`
+- `.adhere.config.ts`
 
 ```ts
-import { defineConfig } from "@darkmatter/adhere";
+import type { Config } from "@darkmatter/adhere";
 
-export default defineConfig({
+export default {
   model: "jev-latest", // optional, default "jev-latest"
   threshold: 0.7, // optional, default 0.7
   presets: ["effect"], // optional, built-in rule sets
@@ -31,23 +36,27 @@ type UserId = typeof UserId.Type
       threshold: 0.8, // optional per-rule override
     },
   },
-});
+} satisfies Config;
 ```
 
 The default export is decoded with Effect `Schema`. An invalid shape refuses
-the run.
+the run. The `import type` is erased at runtime, so the file also loads under
+the native executable, where `@darkmatter/adhere` is not installed. With the
+package installed, `defineConfig({...})` does the same thing.
 
 ### Rules as Markdown files
 
 A repo's own rules live in `.adhere/`, one `*.md` file per rule. The path
 without `.md` is the rule id, so `.adhere/data/brand-ports.md` is
-`data/brand-ports`. When that directory exists, it is read without any config;
-`adhere.config.ts` is needed only to name presets, set thresholds, or point
-`rules` somewhere else:
+`data/brand-ports`. When that directory exists, it is read without any config.
+A repo that already has a `docs/` directory may prefer `docs/adhere/`, so the
+rules sit with the rest of its documentation; point `rules` at it:
 
 ```ts
-export default defineConfig({ presets: ["effect"], rules: "./team-rules" });
+export default { presets: ["effect"], rules: "./docs/adhere" } satisfies Config;
 ```
+
+A config is otherwise needed only to name presets or set thresholds.
 
 A file is front matter, then a body. The first fenced code block in the body
 is the reference; prose around it renders on GitHub and is ignored. Without a
@@ -65,7 +74,7 @@ Why: a bare `number` accepts 70000 and -1.
 const Port = Schema.Int.pipe(
   Schema.check(Schema.isBetween({ minimum: 1, maximum: 65535 })),
   Schema.brand("Port"),
-)
+);
 ```
 ````
 
@@ -92,7 +101,7 @@ beats all of the above for that rule.
 
 ## Run
 
-Requires Bun.
+From a checkout, with Bun:
 
 ```sh
 bun install
@@ -103,6 +112,15 @@ adhere --preset effect
 `adhere` audits the working directory. When that directory contains `agents/`,
 `apps/`, or `packages/`, only those trees are read. Exit code 1 when there is
 at least one finding.
+
+### Native executable
+
+`bun run build` compiles `dist/adhere`, a single binary with Bun and the
+`effect` preset inside it, through Bun's
+[`--compile`](https://bun.sh/docs/bundler/executables) with
+`--asset ./presets`. It runs without Bun or `node_modules` on the target
+machine and still loads the repo's `config.ts` and Markdown rules from disk.
+For another platform, add `--target`, for example `bun-darwin-arm64`.
 
 ## How a file is judged
 
