@@ -439,7 +439,7 @@ describe("contradictions", () => {
         id: "style/unrelated",
         file: "/repo/packages/web/.adhere/style/unrelated.md",
         scope: "/repo/packages/web",
-        rule: { description: "Do not use service classes for IO.", reference: "x()" },
+        rule: { description: "Avoid mutable globals.", reference: "x()" },
       },
     ]);
 
@@ -463,7 +463,7 @@ describe("init", () => {
       "utf8",
     );
 
-    expect(config).toContain("defineConfig");
+    expect(config).toContain("satisfies Config");
     expect(rule).toContain("description:");
 
     const second = await Effect.runPromise(initProject(root));

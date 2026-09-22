@@ -7,8 +7,10 @@ import type { Preset } from "#config.ts";
  * is the check Bun's docs give for this. Measured on Bun 1.4. The `typeof`
  * guard is for Vitest, which imports this module on Node.
  */
-const presetsRoot =
-  typeof Bun !== "undefined" && Bun.isStandaloneExecutable
+const isStandaloneExecutable =
+  typeof Bun !== "undefined" && Bun.isStandaloneExecutable;
+
+const presetsRoot = isStandaloneExecutable
   ? new URL("./presets/", import.meta.url)
   : new URL("../presets/", import.meta.url);
 
