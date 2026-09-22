@@ -2,7 +2,7 @@
   "name": "@darkmatter/adhere",
   "version": "0.1.0",
   "private": true,
-  "description": "Audits a repository against effect-solutions topics, judged by Jev.",
+  "description": "Audits a repository against the rules in adhere.config.ts.",
   "bin": {
     "adhere": "./src/main.ts"
   },
@@ -11,7 +11,7 @@
     "#*": "./src/*"
   },
   "exports": {
-    ".": "./src/cli.ts"
+    ".": "./src/rules.ts"
   },
   "scripts": {
     "lint": "vp lint --deny-warnings .",

@@ -41,7 +41,10 @@ const frame = (verdict: Verdict, color: boolean): ReadonlyArray<string> => {
   const width = String(verdict.line).length;
   const gutter = " ".repeat(width + 2);
   const column = Math.max(1, Math.round(verdict.column));
-  const rule = `jev(${verdict.topic}/${verdict.rule})`;
+  const rule =
+    verdict.decidedBy === "jev"
+      ? `jev(${verdict.topic}/${verdict.rule})`
+      : `${verdict.topic}/${verdict.rule}`;
   const digits = String(verdict.line);
   const pad = " ".repeat(width - digits.length);
   return [

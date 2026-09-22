@@ -1,32 +1,35 @@
 import { Crypto, Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
-import type { ScannedFile, SolutionsTopic } from "../src/models/Audit.ts";
+import type { ScannedFile } from "../src/models/Audit.ts";
 import { type Candidate, JevJudge, type Verdict } from "../src/models/Judge.ts";
+import config from "../adhere.config.ts";
+import { includes } from "../src/rules.ts";
 import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
-import { EffectSolutions } from "../src/services/EffectSolutions.ts";
+import { Rules } from "../src/services/Rules.ts";
 import { SourceWalker } from "../src/services/SourceWalker.ts";
-import { TopicPatterns } from "../src/services/TopicPatterns.ts";
 import { render, runAudit } from "../src/workflows/audit.ts";
 
-const topics: ReadonlyArray<SolutionsTopic> = [
-  { slug: "quick-start", title: "Quick Start" },
-  { slug: "basics", title: "Basics" },
-  { slug: "config", title: "Config" },
-];
-
-const solutionsStub = Layer.succeed(EffectSolutions, {
-  topics: Effect.succeed(topics),
+const rulesStub = Layer.succeed(Rules, {
+  rules: [
+    {
+      topic: "config",
+      rule: "process-env-read",
+      message: "Configuration is read from process.env.",
+      help: "Read it with Config.string, Config.int, or Config.redacted.",
+      ...includes("process.env."),
+    },
+    {
+      topic: "data-modeling",
+      rule: "handrolled-tag-union",
+      message: "Tagged union is written by hand.",
+      help: "Define it with Schema.TaggedStruct or Schema.TaggedUnion.",
+      ...includes("readonly _tag:"),
+    },
+  ],
 });
 
 const walkerStub = (files: ReadonlyArray<ScannedFile>) =>
   Layer.succeed(SourceWalker, { files: Effect.succeed(files) });
-
-const patternsStub = Layer.succeed(TopicPatterns, {
-  pattern: (topic: string) =>
-    Effect.succeed(
-      `## ${topic}\nUse Effect's documented pattern for ${topic}.`,
-    ),
-});
 
 /**
  * A judge stub that says every candidate violates with the same probability,
@@ -43,6 +46,7 @@ const judged = (candidate: Candidate, violates: number): Verdict => ({
   snippet: candidate.snippet,
   violates,
   reason: "stubbed verdict",
+  decidedBy: "jev",
 });
 
 const judgeAlways = (violates: number) =>
@@ -64,12 +68,11 @@ const testCrypto = Layer.succeed(
 const memoryCache = () => {
   const entries = new Map<string, CacheEntry>();
   return Layer.succeed(AuditCache, {
-    get: (path: string) => entries.get(path),
+    get: (path: string) => Effect.sync(() => entries.get(path)),
     put: (path: string, entry: CacheEntry) =>
       Effect.sync(() => {
         entries.set(path, entry);
       }),
-    save: Effect.void,
   });
 };
 
@@ -82,9 +85,8 @@ const file = (path: string, lines: ReadonlyArray<string>): ScannedFile => ({
 const auditWith = (files: ReadonlyArray<ScannedFile>, violates = 0.9) =>
   Effect.runPromise(
     runAudit().pipe(
-      Effect.provide(solutionsStub),
+      Effect.provide(rulesStub),
       Effect.provide(walkerStub(files)),
-      Effect.provide(patternsStub),
       Effect.provide(judgeAlways(violates)),
       Effect.provide(memoryCache()),
       Effect.provide(testCrypto),
@@ -92,7 +94,7 @@ const auditWith = (files: ReadonlyArray<ScannedFile>, violates = 0.9) =>
   );
 
 describe("audit", () => {
-  it("reports a Jev-confirmed config violation for a process.env read", async () => {
+  it("reports a process.env read from the line test, without asking Jev", async () => {
     const result = await auditWith([
       file("apps/demo/src/config.ts", [
         "export const port = process.env.PORT ?? 3000;",
@@ -108,13 +110,14 @@ describe("audit", () => {
         message: "Configuration is read from process.env.",
         help: "Read it with Config.string, Config.int, or Config.redacted.",
         snippet: "export const port = process.env.PORT ?? 3000;",
-        violates: 0.9,
-        reason: "stubbed verdict",
+        violates: 1,
+        reason: "matched the rule",
+        decidedBy: "rule",
       },
     ]);
   });
 
-  it("drops candidates the judge finds compliant", async () => {
+  it("reports a line-test match even when the judge would call it compliant", async () => {
     const result = await auditWith(
       [
         file("apps/demo/src/config.ts", [
@@ -124,13 +127,14 @@ describe("audit", () => {
       0.2,
     );
     expect(result.candidates).toBe(1);
-    expect(result.violations).toHaveLength(0);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0]?.decidedBy).toBe("rule");
   });
 
-  it("respects a custom threshold", async () => {
+  it("does not drop a line-test match because of the threshold", async () => {
     const result = await Effect.runPromise(
       runAudit({ threshold: 0.95 }).pipe(
-        Effect.provide(solutionsStub),
+        Effect.provide(rulesStub),
         Effect.provide(
           walkerStub([
             file("apps/demo/src/config.ts", [
@@ -138,16 +142,16 @@ describe("audit", () => {
             ]),
           ]),
         ),
-        Effect.provide(patternsStub),
         Effect.provide(judgeAlways(0.9)),
         Effect.provide(memoryCache()),
         Effect.provide(testCrypto),
       ),
     );
-    expect(result.violations).toHaveLength(0);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0]?.decidedBy).toBe("rule");
   });
 
-  it("sends the judge an excerpt with the flagged line marked", async () => {
+  it("does not ask Jev to confirm a line-test match", async () => {
     const seen: Array<{ excerpt: string; pattern: string }> = [];
     const judge = Layer.succeed(JevJudge, {
       judge: (candidate: Candidate, pattern: string) =>
@@ -158,7 +162,7 @@ describe("audit", () => {
     });
     await Effect.runPromise(
       runAudit().pipe(
-        Effect.provide(solutionsStub),
+        Effect.provide(rulesStub),
         Effect.provide(
           walkerStub([
             file("a.ts", [
@@ -168,28 +172,24 @@ describe("audit", () => {
             ]),
           ]),
         ),
-        Effect.provide(patternsStub),
         Effect.provide(judge),
         Effect.provide(memoryCache()),
         Effect.provide(testCrypto),
       ),
     );
-    expect(seen).toHaveLength(1);
-    expect(seen[0]?.excerpt).toContain("> 2 |");
-    expect(seen[0]?.pattern).toContain("## config");
+    expect(seen).toHaveLength(0);
   });
 
   it("filters to the requested topics only", async () => {
     const result = await Effect.runPromise(
       runAudit({ topics: ["config"] }).pipe(
-        Effect.provide(solutionsStub),
+        Effect.provide(rulesStub),
         Effect.provide(
           walkerStub([
             file("a.ts", ["const url = process.env.API_URL;"]),
             file("b.ts", ['const x: { readonly _tag: "a" } = null!;']),
           ]),
         ),
-        Effect.provide(patternsStub),
         Effect.provide(judgeAlways(0.9)),
         Effect.provide(memoryCache()),
         Effect.provide(testCrypto),
@@ -206,7 +206,7 @@ describe("audit", () => {
     const plain = render({ ...result, filesScanned: 1, cachedFiles: 0 });
     expect(plain.join("\n")).toBe(
       [
-        "  × jev(config/process-env-read): Configuration is read from process.env.",
+        "  × config/process-env-read: Configuration is read from process.env.",
         "   ╭─[apps/demo/src/config.ts:1:11]",
         " 1 │ const a = process.env.A;",
         "   ·           ─",
@@ -243,9 +243,8 @@ describe("audit", () => {
     const run = () =>
       Effect.runPromise(
         runAudit().pipe(
-          Effect.provide(solutionsStub),
+          Effect.provide(rulesStub),
           Effect.provide(walkerStub([source])),
-          Effect.provide(patternsStub),
           Effect.provide(judge),
           Effect.provide(cache),
           Effect.provide(testCrypto),
@@ -253,9 +252,52 @@ describe("audit", () => {
       );
     const first = await run();
     const second = await run();
-    expect(calls).toBe(1);
+    expect(calls).toBe(0);
     expect(first.cachedFiles).toBe(0);
     expect(second.cachedFiles).toBe(1);
     expect(second.violations).toEqual(first.violations);
+  });
+
+  it("sends a judged rule's pattern to Jev", async () => {
+    const seen: Array<string> = [];
+    const judge = Layer.succeed(JevJudge, {
+      judge: (candidate: Candidate, pattern: string) =>
+        Effect.sync(() => {
+          seen.push(pattern);
+          return judged(candidate, 0.9);
+        }),
+    });
+    const judgedOnly = Layer.succeed(Rules, {
+      rules: [
+        {
+          topic: "config",
+          rule: "secret-in-source",
+          message: "A secret is written in source.",
+          help: "Read it with Config.redacted.",
+          judged: true,
+          pattern: "No secret literals.",
+        },
+      ],
+    });
+    await Effect.runPromise(
+      runAudit().pipe(
+        Effect.provide(judgedOnly),
+        Effect.provide(walkerStub([file("a.ts", ["const a = 1;"])])),
+        Effect.provide(judge),
+        Effect.provide(memoryCache()),
+        Effect.provide(testCrypto),
+      ),
+    );
+    expect(seen).toEqual(["No secret literals."]);
+  });
+});
+
+describe("adhere.config.ts", () => {
+  it("exports the process.env rule", () => {
+    expect(
+      config.some(
+        (rule) => rule.topic === "config" && rule.rule === "process-env-read",
+      ),
+    ).toBe(true);
   });
 });

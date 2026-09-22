@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-/** A topic from `effect-solutions list`: the slug the CLI publishes and its title. */
+/** A topic named by the rules in `adhere.config.ts`. */
 export const SolutionsTopic = Schema.Struct({
   slug: Schema.NonEmptyString,
   title: Schema.NonEmptyString,
@@ -35,24 +35,15 @@ export interface Finding {
   readonly snippet: string;
 }
 
-/** A detector: the topic it serves, the rule slugs it owns, and how it reads one file. */
-export interface Detector {
-  readonly topic: string;
-  readonly rules: ReadonlyArray<string>;
-  /** `topic/rule` plus the rule message, for cache invalidation. */
-  readonly descriptions: ReadonlyArray<string>;
-  readonly scan: (file: ScannedFile) => ReadonlyArray<Finding>;
-}
-
-/** One source file as the walker hands it to detectors: absolute path and its lines. */
+/** One source file as the walker hands it to the rules: absolute path and its lines. */
 export interface ScannedFile {
   readonly path: string;
   readonly lines: ReadonlyArray<string>;
 }
 
-/** The audit's refusal: the CLI that names the topics could not be consulted. */
-export class SolutionsUnavailable extends Schema.TaggedError<SolutionsUnavailable>()(
-  "SolutionsUnavailable",
+/** The audit's refusal: `adhere.config.ts` could not be loaded. */
+export class RulesUnavailable extends Schema.TaggedError<RulesUnavailable>()(
+  "RulesUnavailable",
   { message: Schema.String },
 ) { }
 
@@ -62,4 +53,4 @@ export class WalkUnavailable extends Schema.TaggedError<WalkUnavailable>()(
   { message: Schema.String },
 ) { }
 
-export type AuditError = SolutionsUnavailable | WalkUnavailable;
+export type AuditError = RulesUnavailable | WalkUnavailable;

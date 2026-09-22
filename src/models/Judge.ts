@@ -22,6 +22,8 @@ export const Verdict = Schema.Struct({
   violates: Schema.Finite,
   /** Jev's one-line reason, quoted from the pattern it applied. */
   reason: Schema.String,
+  /** `rule` when a line test decided it. `jev` when the rule cannot be a line test. */
+  decidedBy: Schema.Literals(["rule", "jev"]),
 });
 export interface Verdict extends Schema.Schema.Type<typeof Verdict> { }
 
@@ -41,6 +43,8 @@ export interface Candidate {
   readonly snippet: string;
   /** The code window around the line, for judgment. */
   readonly excerpt: string;
+  /** The pattern text from the rule, for a judgment Jev has to make. */
+  readonly pattern: string;
 }
 
 /** The judge's refusal: the evaluation service could not be consulted. */
@@ -50,15 +54,15 @@ export class JevUnavailable extends Schema.TaggedError<JevUnavailable>()(
 ) { }
 
 /**
- * Jev, TypeSafe's System One model, as the audit's judge. One call judges
- * one candidate: the topic's documented pattern, plus the code excerpt.
+ * Jev, TypeSafe's System One model, as the audit's judge. One call decides
+ * a rule that has no line test: the topic's documented pattern, plus the file.
  */
 export class JevJudge extends Context.Service<
   JevJudge,
   {
     /**
-     * Judge one candidate finding against one topic's documented pattern.
-     * Returns the probability the code violates that pattern, with a reason.
+     * Decide whether one file violates a rule that cannot be a line test.
+     * Returns the probability it does, the line Jev points at, and a reason.
      */
     readonly judge: (
       candidate: Candidate,

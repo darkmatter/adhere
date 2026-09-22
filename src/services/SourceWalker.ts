@@ -1,6 +1,4 @@
 import { Context, Effect, FileSystem, Layer, Path } from "effect";
-import { cwd } from "node:process";
-import { fileURLToPath } from "node:url";
 import type { ScannedFile } from "#models/Audit.ts";
 import { WalkUnavailable } from "#models/Audit.ts";
 
@@ -44,6 +42,7 @@ const isScannable = (file: string, self: string): boolean =>
   file.endsWith(".ts") &&
   !file.endsWith(".d.ts") &&
   !file.endsWith(".test.ts") &&
+  !file.endsWith("/adhere.config.ts") &&
   SKIPS.every((skip) => !file.includes(skip)) &&
   // The audit's own detector patterns are data, not violations of themselves.
   !isInside(file, self);
@@ -89,10 +88,6 @@ const readRoot = Effect.fn("SourceWalker.readRoot")(
     Effect.flatMap(listRoot(fs, root, self), (paths) => readEach(fs, paths)),
 );
 
-/** This package, so an audit of the tool's own repo does not flag itself. */
-const packageRoot = (path: Path.Path): string =>
-  path.resolve(fileURLToPath(new URL("../../", import.meta.url)));
-
 /**
  * Workspace trees that exist under the working directory. An ordinary repo,
  * with none of them, is read from its root.
@@ -122,8 +117,11 @@ export const SourceWalkerLive = Layer.effect(SourceWalker)(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const root = path.resolve(cwd());
-    const self = packageRoot(path);
+    // No segments: Path resolves against the working directory.
+    const root = path.resolve();
+    const self = yield* path
+      .fromFileUrl(new URL("../../", import.meta.url))
+      .pipe(Effect.orDie);
     const walk = Effect.fn("SourceWalker.files")(function* () {
       const dirs = yield* scanDirs(fs, root).pipe(Effect.mapError(refused));
       const trees = yield* Effect.forEach(dirs, (dir) =>
