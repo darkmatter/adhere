@@ -16,7 +16,7 @@ export class TopicPatterns extends Context.Service<
       topic: string,
     ) => Effect.Effect<string, SolutionsUnavailable>;
   }
->()("@darkmatter/effect-audit/services/TopicPatterns") {}
+>()("@darkmatter/adhere/services/TopicPatterns") {}
 
 /** What one CLI run said: exit status plus both collected pipes. */
 interface Shown {

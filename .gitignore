@@ -1,7 +1,7 @@
 node_modules/
 dist/
 *.tsbuildinfo
-.effect-audit-cache.json
+.adhere-cache.json
 .env
 .env.*
 !.envrc

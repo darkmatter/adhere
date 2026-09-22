@@ -1,4 +1,4 @@
-# effect-audit
+# adhere
 
 Audits the repository you run it in against the topics published by the
 `effect-solutions` CLI.
@@ -18,4 +18,4 @@ bun src/main.ts --topics config --threshold 0.5
 
 The scan starts at the current working directory. When that directory contains
 `agents/`, `apps/`, or `packages/`, only those trees are read. Verdicts are
-cached in `.effect-audit-cache.json` in the working directory.
+cached in `.adhere-cache.json` in the working directory.

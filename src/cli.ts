@@ -34,7 +34,7 @@ const filterOf = (
 
 /** The audit over the repo's real tree, the real CLI, and the real Jev judge. */
 export const auditCommand = Command.make(
-  "effect-audit",
+  "adhere",
   { topics: topicsFlag, threshold: thresholdFlag },
   ({ topics, threshold }) =>
     Effect.gen(function* () {

@@ -65,4 +65,4 @@ export class JevJudge extends Context.Service<
       pattern: string,
     ) => Effect.Effect<Verdict, JevUnavailable>;
   }
->()("@darkmatter/effect-audit/models/Judge/JevJudge") { }
+>()("@darkmatter/adhere/models/Judge/JevJudge") { }

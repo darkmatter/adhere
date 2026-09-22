@@ -65,10 +65,10 @@ export class AuditCache extends Context.Service<
     /** Write the whole cache back to its single JSON file. */
     readonly save: Effect.Effect<void>;
   }
->()("@darkmatter/effect-audit/services/AuditCache") {}
+>()("@darkmatter/adhere/services/AuditCache") {}
 
 /**
- * The real cache: `.effect-audit-cache.json` in the working directory. A
+ * The real cache: `.adhere-cache.json` in the working directory. A
  * missing or unreadable file starts empty; a ruleset mismatch drops stored
  * entries.
  */
@@ -76,7 +76,7 @@ export const AuditCacheLive = Layer.effect(AuditCache)(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const file = path.join(path.resolve(cwd()), ".effect-audit-cache.json");
+    const file = path.join(path.resolve(cwd()), ".adhere-cache.json");
     const ruleset = yield* contentHash(
       detectors.flatMap((each) => each.descriptions),
     );

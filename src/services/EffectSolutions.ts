@@ -13,7 +13,7 @@ export class EffectSolutions extends Context.Service<
       SolutionsUnavailable
     >;
   }
->()("@darkmatter/effect-audit/services/EffectSolutions") {}
+>()("@darkmatter/adhere/services/EffectSolutions") {}
 
 /**
  * Parses the CLI's `list` output. Each topic is one `<slug>  Title` line;
