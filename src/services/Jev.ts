@@ -1,7 +1,7 @@
-import type { Rule, RuleId } from "#config.ts";
+import type { RuleId, Rules } from "#config.ts";
 import { Context, type Effect, Record, Schema } from "effect";
 
-export type Rules = Readonly<Record<RuleId, Rule>>;
+export type { Rules };
 export type Lines = ReadonlyArray<string>;
 
 export class JevUnavailable extends Schema.TaggedError<JevUnavailable>()(

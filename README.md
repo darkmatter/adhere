@@ -37,14 +37,49 @@ type UserId = typeof UserId.Type
 The default export is decoded with Effect `Schema`. An invalid shape refuses
 the run.
 
+### Rules as Markdown files
+
+`rules` can also be a directory path, relative to the config file:
+
+```ts
+export default defineConfig({ presets: ["effect"], rules: "./rules" });
+```
+
+Every `*.md` file under it is one rule. The path without `.md` is the rule id,
+so `rules/data/brand-ports.md` is `data/brand-ports`. A file is front matter,
+then a body. The first fenced code block in the body is the reference; prose
+around it renders on GitHub and is ignored. Without a fence, the whole body is
+the reference.
+
+````md
+---
+description: A port is a branded, range-checked integer, not a bare number.
+threshold: 0.8
+---
+
+Why: a bare `number` accepts 70000 and -1.
+
+```ts
+const Port = Schema.Int.pipe(
+  Schema.check(Schema.isBetween({ minimum: 1, maximum: 65535 })),
+  Schema.brand("Port"),
+)
+```
+````
+
+`description` is required. `threshold` is optional. A file that fails
+validation refuses the run with its path in the message. `loadRules(directory)`
+from the package root does the same load for your own tooling.
+
 ### Presets
 
 A preset has the shape of a config without `presets`: `rules`, and optionally
-`model` and `threshold`. `effect` is the one preset: 26 rules lifted from the
+`model` and `threshold`. `effect` is the one preset: 26 Markdown rules in
+[`presets/effect/`](./presets/effect/), lifted from the
 [effect-solutions](https://github.com/kitlangton/effect-solutions) docs and the
-[effect/platform](https://effect.website/docs/platform/introduction/) docs,
-in `src/presets/effect.ts`. Name it in the config, or on the command line
-with `--preset effect`, in which case `adhere.config.ts` is optional.
+[effect/platform](https://effect.website/docs/platform/introduction/) docs.
+Name it in the config, or on the command line with `--preset effect`, in which
+case `adhere.config.ts` is optional.
 
 ### Precedence
 

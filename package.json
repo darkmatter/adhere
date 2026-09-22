@@ -11,7 +11,7 @@
     "#*": "./src/*"
   },
   "exports": {
-    ".": "./src/config.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "lint": "vp lint --deny-warnings .",

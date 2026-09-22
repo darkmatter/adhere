@@ -1,4 +1,4 @@
-import { type PresetName, presetNames, presets } from "#presets.ts";
+import { type PresetName, presetNames } from "#presets.ts";
 import { Effect, Schema } from "effect";
 
 export type RuleId = string;
@@ -10,13 +10,19 @@ export const Rule = Schema.Struct({
 });
 export interface Rule extends Schema.Schema.Type<typeof Rule> {}
 
+export type Rules = Readonly<Record<RuleId, Rule>>;
+
+/** Rules inline, or a directory of Markdown rule files (see `markdown.ts`). */
+export type RuleSource = Rules | string | URL;
+
 export const AdhereConfig = Schema.Struct({
   model: Schema.optionalKey(Schema.String),
   threshold: Schema.optionalKey(Schema.Finite),
   presets: Schema.Array(Schema.Literals(presetNames)).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed([])),
   ),
-  rules: Schema.Record(Schema.String, Rule).pipe(
+  /** A record of rules, or a directory path relative to the config file. */
+  rules: Schema.Union([Schema.Record(Schema.String, Rule), Schema.String]).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed({})),
   ),
 });
@@ -28,8 +34,13 @@ export const defineConfig = (config: typeof AdhereConfig.Encoded) => config;
 export interface Preset {
   readonly model?: string;
   readonly threshold?: number;
-  readonly rules: Readonly<Record<RuleId, Rule>>;
+  readonly rules: RuleSource;
 }
+
+/** The same thing with its rules read from wherever they were. */
+export type Loaded<T extends { readonly rules: unknown }> = Omit<T, "rules"> & {
+  readonly rules: Rules;
+};
 
 export const DEFAULT_MODEL = "jev-latest";
 export const DEFAULT_THRESHOLD = 0.7;
@@ -38,7 +49,7 @@ export const DEFAULT_THRESHOLD = 0.7;
 export interface ResolvedConfig {
   readonly model: string;
   readonly threshold: number;
-  readonly rules: Readonly<Record<RuleId, Rule>>;
+  readonly rules: Rules;
 }
 
 /** Command-line values that apply on top of the config file. */
@@ -48,19 +59,29 @@ export interface Overrides {
   readonly threshold?: number;
 }
 
+/** The presets a run applies, command-line ones first. */
+export const presetsOf = (
+  config: Pick<AdhereConfig, "presets">,
+  overrides: Overrides,
+): ReadonlyArray<PresetName> => [
+  ...(overrides.presets ?? []),
+  ...config.presets,
+];
+
 /**
  * Precedence, highest first: command line, config file, presets in order
  * (a later preset wins), then the defaults. A config rule replaces a preset
  * rule with the same id.
  */
 export const resolveConfig = (
-  config: AdhereConfig,
+  config: Loaded<AdhereConfig>,
   overrides: Overrides = {},
-  registry: Readonly<Record<PresetName, Preset>> = presets,
+  registry: Readonly<Partial<Record<PresetName, Loaded<Preset>>>> = {},
 ): ResolvedConfig => {
-  const applied = [...(overrides.presets ?? []), ...config.presets].map(
-    (name) => registry[name],
-  );
+  const applied = presetsOf(config, overrides).flatMap((name) => {
+    const preset = registry[name];
+    return preset === undefined ? [] : [preset];
+  });
   const last = <K extends "model" | "threshold">(key: K) =>
     applied.map((preset) => preset[key]).findLast((value) => value !== undefined);
   return {
