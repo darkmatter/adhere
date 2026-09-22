@@ -210,9 +210,14 @@ describe("config", () => {
     expect(resolved.rules).toEqual({ a: override, b });
   });
 
+  it("leaves rules unset when the config names none, so the loader can pick .adhere/", async () => {
+    const decoded = await Effect.runPromise(decodeConfig({}));
+    expect(decoded.rules).toBeUndefined();
+  });
+
   it("accepts a directory path as the rules of a config", async () => {
-    const decoded = await Effect.runPromise(decodeConfig({ rules: "./rules" }));
-    expect(decoded.rules).toBe("./rules");
+    const decoded = await Effect.runPromise(decodeConfig({ rules: "./team-rules" }));
+    expect(decoded.rules).toBe("./team-rules");
   });
 
   it("threshold precedence: command line, then config, then preset, then 0.7", async () => {

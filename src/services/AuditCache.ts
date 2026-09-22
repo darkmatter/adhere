@@ -1,3 +1,4 @@
+import { CACHE_DIRECTORY } from "#config.ts";
 import { Context, Crypto, Effect, Layer, Option, Path, Schema } from "effect";
 import * as KeyValueStore from "effect/unstable/persistence/KeyValueStore";
 
@@ -25,9 +26,6 @@ export const sha256 = Effect.fn("AuditCache.sha256")(function* (text: string) {
     .pipe(Effect.orDie);
   return hexOf(digest);
 });
-
-/** Directory of one file per key, in the working directory. */
-const CACHE_DIRECTORY = ".adhere-cache";
 
 export class AuditCache extends Context.Service<
   AuditCache,

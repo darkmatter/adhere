@@ -39,17 +39,19 @@ the run.
 
 ### Rules as Markdown files
 
-`rules` can also be a directory path, relative to the config file:
+A repo's own rules live in `.adhere/`, one `*.md` file per rule. The path
+without `.md` is the rule id, so `.adhere/data/brand-ports.md` is
+`data/brand-ports`. When that directory exists, it is read without any config;
+`adhere.config.ts` is needed only to name presets, set thresholds, or point
+`rules` somewhere else:
 
 ```ts
-export default defineConfig({ presets: ["effect"], rules: "./rules" });
+export default defineConfig({ presets: ["effect"], rules: "./team-rules" });
 ```
 
-Every `*.md` file under it is one rule. The path without `.md` is the rule id,
-so `rules/data/brand-ports.md` is `data/brand-ports`. A file is front matter,
-then a body. The first fenced code block in the body is the reference; prose
-around it renders on GitHub and is ignored. Without a fence, the whole body is
-the reference.
+A file is front matter, then a body. The first fenced code block in the body
+is the reference; prose around it renders on GitHub and is ignored. Without a
+fence, the whole body is the reference.
 
 ````md
 ---
@@ -115,7 +117,7 @@ at least one finding.
 
 ## Cache
 
-Judgments are cached in `.adhere-cache/` in the working directory, one entry
+Judgments are cached in `.adhere/cache/` (add it to `.gitignore`), one entry
 per file. An entry stores the file's content hash and, per rule, the
 probability, the located line, and a fingerprint of the rule's text and model.
 A changed file re-judges every rule for that file. An edited rule re-judges

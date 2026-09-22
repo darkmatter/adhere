@@ -1,4 +1,5 @@
 import {
+  ADHERE_DIRECTORY,
   type AdhereConfig as Decoded,
   ConfigUnavailable,
   decodeConfig,
@@ -44,8 +45,8 @@ const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (
 
 /**
  * `adhere.config.ts` from the working directory with the command-line
- * overrides applied. With a preset on the command line, the file is optional.
- * Rule directories in the config resolve against the working directory.
+ * overrides applied. The file is optional when `.adhere/` holds rules or a
+ * preset is named. Rule directories resolve against the working directory.
  */
 export const AdhereConfigLive = (overrides: Overrides) =>
   Layer.effect(AdhereConfig)(
@@ -54,22 +55,28 @@ export const AdhereConfigLive = (overrides: Overrides) =>
       const fs = yield* FileSystem.FileSystem;
       const cwd = path.resolve();
       const file = path.join(cwd, CONFIG_FILE);
-      const exists = yield* fs
-        .exists(file)
-        .pipe(
-          Effect.mapError((problem) =>
-            ConfigUnavailable.make({ message: problem.message }),
-          ),
-        );
-      if (!exists && (overrides.presets === undefined || overrides.presets.length === 0)) {
+      const present = (target: string) =>
+        fs
+          .exists(target)
+          .pipe(
+            Effect.mapError((problem) =>
+              ConfigUnavailable.make({ message: problem.message }),
+            ),
+          );
+      const hasConfig = yield* present(file);
+      const hasRulesDir = yield* present(path.join(cwd, ADHERE_DIRECTORY));
+      const hasPreset =
+        overrides.presets !== undefined && overrides.presets.length > 0;
+      if (!hasConfig && !hasRulesDir && !hasPreset) {
         return yield* ConfigUnavailable.make({
-          message: `${CONFIG_FILE} was not found in the working directory. Add one, or pass --preset effect to use the built-in rules.`,
+          message: `Nothing to audit against: no ${CONFIG_FILE}, no ${ADHERE_DIRECTORY}/ directory of rules, and no --preset. Pass --preset effect to use the built-in rules.`,
         });
       }
-      const config: Decoded = exists
+      const config: Decoded = hasConfig
         ? yield* loadConfigFile(file)
         : yield* decodeConfig({});
-      const rules = yield* materializeRules(config.rules, cwd);
+      const source = config.rules ?? (hasRulesDir ? ADHERE_DIRECTORY : {});
+      const rules = yield* materializeRules(source, cwd);
       const registry = yield* Effect.forEach(
         presetsOf(config, overrides),
         (name) => loadPreset(name, cwd),
