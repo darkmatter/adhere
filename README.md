@@ -144,3 +144,10 @@ above it without judging again.
 
 `TYPESAFE_API_KEY` is read only when a request is about to be sent. A run
 where every file is cached needs no key and no network.
+
+## Agent skill
+
+[`skills/adhere/SKILL.md`](./skills/adhere/SKILL.md) teaches an agent to
+gather a repo's conventions into rule files, configure adhere, and calibrate
+thresholds. Install it with the [skills](https://github.com/vercel-labs/skills)
+CLI: `skills add darkmatter/adhere`.
