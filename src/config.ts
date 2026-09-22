@@ -1,6 +1,5 @@
 import { Effect, Schema } from "effect";
 
-/** "topic/slug", the key of a rule in `adhere.config.ts`. */
 export type RuleId = string;
 
 export const Rule = Schema.Struct({

@@ -2,13 +2,7 @@ import type { Rule, RuleId } from "#config.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, type Judgment, sha256 } from "#services/AuditCache.ts";
-import {
-  Jev,
-  type JevUnavailable,
-  MAX_LINES,
-  numbered,
-  snippetOf,
-} from "#services/Jev.ts";
+import { Jev, type JevUnavailable, MAX_LINES, snippetOf } from "#services/Jev.ts";
 import { SourceWalker } from "#services/SourceWalker.ts";
 import { type Crypto, Effect, Record } from "effect";
 
@@ -24,11 +18,8 @@ export interface Finding {
 
 export interface AuditResult {
   readonly files: number;
-  /** Files that cost at least one Jev request. */
   readonly judged: number;
-  /** Files answered entirely from the cache. */
   readonly cached: number;
-  /** Files too long to locate a line in. */
   readonly skipped: number;
   readonly findings: ReadonlyArray<Finding>;
 }
@@ -38,10 +29,8 @@ interface FileResult {
   readonly findings: ReadonlyArray<Finding>;
 }
 
-/** A rule with what the pipeline derives from it once per run. */
-interface Keyed {
+interface PreparedRule {
   readonly rule: Rule;
-  /** Identifies this rule's text under this model; a change re-judges only it. */
   readonly fingerprint: string;
   readonly threshold: number;
 }
@@ -63,7 +52,7 @@ export const runAudit: Effect.Effect<
   const cache = yield* AuditCache;
   const files = yield* (yield* SourceWalker).files;
 
-  const keyed: Record<RuleId, Keyed> = yield* Effect.forEach(
+  const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
     Object.entries(config.rules),
     ([id, rule]) =>
       Effect.map(
@@ -76,7 +65,7 @@ export const runAudit: Effect.Effect<
       ),
   ).pipe(Effect.map(Record.fromEntries));
 
-  const rulesOf = (some: Readonly<Record<RuleId, Keyed>>) =>
+  const rulesOf = (some: Readonly<Record<RuleId, PreparedRule>>) =>
     Record.map(some, (k) => k.rule);
 
   const auditFile = Effect.fn("audit.file")(function* (file: ScannedFile) {
@@ -86,21 +75,20 @@ export const runAudit: Effect.Effect<
     const remembered = entry?.hash === hash ? entry.judgments : {};
     const kept = Record.filter(
       remembered,
-      (judgment, id) => judgment.fingerprint === keyed[id]?.fingerprint,
+      (judgment, id) => judgment.fingerprint === prepared[id]?.fingerprint,
     );
-    const pending = Record.filter(keyed, (_, id) => kept[id] === undefined);
-    const code = numbered(file.lines);
+    const pending = Record.filter(prepared, (_, id) => kept[id] === undefined);
 
     const probabilities = isEmpty(pending)
       ? {}
-      : yield* jev.judge(code, rulesOf(pending));
+      : yield* jev.judge(file.lines, rulesOf(pending));
     const judged: Record<RuleId, Judgment> = { ...kept };
     for (const [id, probability] of Object.entries(probabilities)) {
       const k = pending[id];
       if (k !== undefined) judged[id] = { fingerprint: k.fingerprint, probability };
     }
 
-    const flagged = Record.filter(keyed, (k, id) => {
+    const flagged = Record.filter(prepared, (k, id) => {
       const judgment = judged[id];
       return (
         judgment !== undefined &&
@@ -110,7 +98,7 @@ export const runAudit: Effect.Effect<
     });
     const lines = isEmpty(flagged)
       ? {}
-      : yield* jev.locate(code, rulesOf(flagged));
+      : yield* jev.locate(file.lines, rulesOf(flagged));
     const located = Record.map(judged, (judgment, id) => {
       const line = lines[id];
       return line === undefined
@@ -123,7 +111,7 @@ export const runAudit: Effect.Effect<
 
     const findings = Object.entries(located)
       .flatMap(([id, judgment]): ReadonlyArray<Finding> => {
-        const k = keyed[id];
+        const k = prepared[id];
         return k !== undefined &&
           judgment.line !== undefined &&
           judgment.probability > k.threshold
@@ -144,7 +132,6 @@ export const runAudit: Effect.Effect<
     return fileResult(cached ? "cached" : "judged", findings);
   });
 
-  // Directory order is not stable across runs; the report should be.
   const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
   const results = yield* Effect.forEach(sorted, auditFile, { concurrency: 8 });
   const count = (status: FileResult["status"]) =>

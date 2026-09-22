@@ -9,7 +9,6 @@ import {
   Jev,
   judgeBody,
   locateBody,
-  numbered,
   type Rules,
 } from "../src/services/Jev.ts";
 import { SourceWalker } from "../src/services/SourceWalker.ts";
@@ -45,7 +44,6 @@ const memoryCache = () => {
   });
 };
 
-/** A Jev that answers from fixed tables and records the rules of every call. */
 const recordingJev = (answers: {
   readonly judge: Record<string, number>;
   readonly locate: Record<string, number>;
@@ -54,12 +52,12 @@ const recordingJev = (answers: {
   const asked = (table: Record<string, number>, rules: Rules) =>
     Record.filter(table, (_, id) => rules[id] !== undefined);
   const layer = Layer.succeed(Jev, {
-    judge: (_code, rules) =>
+    judge: (_lines, rules) =>
       Effect.sync(() => {
         calls.judge.push(rules);
         return asked(answers.judge, rules);
       }),
-    locate: (_code, rules) =>
+    locate: (_lines, rules) =>
       Effect.sync(() => {
         calls.locate.push(rules);
         return asked(answers.locate, rules);
@@ -112,7 +110,7 @@ const findingA = {
 };
 
 describe("request bodies", () => {
-  const code = numbered(["const x = 1;", "", "  const y = 2;"]);
+  const code = ["const x = 1;", "", "  const y = 2;"];
 
   it("judge: one noul per rule over the numbered code and the rules", () => {
     expect(judgeBody("jev-latest", code, rules)).toEqual({
@@ -158,8 +156,9 @@ describe("request bodies", () => {
   });
 
   it("over 255 lines: a choice over 20-line blocks, then a choice inside the chosen block", () => {
-    const long = numbered(
-      Array.from({ length: 300 }, (_, index) => `const v${index + 1} = ${index + 1};`),
+    const long = Array.from(
+      { length: 300 },
+      (_, index) => `const v${index + 1} = ${index + 1};`,
     );
     const blocks = blockBody("jev-latest", long, { a });
     expect(blocks.questions.a?.type).toBe("choice");

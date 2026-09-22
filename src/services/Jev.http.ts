@@ -4,6 +4,7 @@ import {
   Jev,
   JevUnavailable,
   judgeBody,
+  type Lines,
   locateBody,
   needsBlocks,
   type Rules,
@@ -43,7 +44,7 @@ export const JevLive = Layer.effect(Jev)(
       Answers: Schema.Codec<A, unknown, never, never>,
     ) =>
       Effect.gen(function* () {
-        // Read lazily: a run with nothing pending never needs the key.
+        // Read here, not in the layer: a run with nothing pending needs no key.
         const apiKey = yield* Config.redacted("TYPESAFE_API_KEY").pipe(
           Effect.mapError((problem) =>
             refused(`Cannot read TYPESAFE_API_KEY: ${problem.message}`),
@@ -68,11 +69,11 @@ export const JevLive = Layer.effect(Jev)(
       });
 
     const judge = Effect.fn("Jev.judge")(function* (
-      code: string,
+      lines: Lines,
       rules: Rules,
     ) {
       const { answers } = yield* ask(
-        judgeBody(config.model, code, rules),
+        judgeBody(config.model, lines, rules),
         NoulAnswers,
       );
       return Record.map(answers, (answer) => answer.noul);
@@ -82,17 +83,17 @@ export const JevLive = Layer.effect(Jev)(
       Record.map(answers, (answer) => Number(answer.choice));
 
     const locate = Effect.fn("Jev.locate")(function* (
-      code: string,
+      lines: Lines,
       rules: Rules,
     ) {
-      const blocks = needsBlocks(code)
+      const blocks = needsBlocks(lines)
         ? chosen(
-            (yield* ask(blockBody(config.model, code, rules), ChoiceAnswers))
+            (yield* ask(blockBody(config.model, lines, rules), ChoiceAnswers))
               .answers,
           )
         : undefined;
       const { answers } = yield* ask(
-        locateBody(config.model, code, rules, blocks),
+        locateBody(config.model, lines, rules, blocks),
         ChoiceAnswers,
       );
       return chosen(answers);

@@ -1,6 +1,5 @@
 import { Schema } from "effect";
 
-/** One source file as the walker hands it to the audit: absolute path and its lines. */
 export interface ScannedFile {
   readonly path: string;
   readonly lines: ReadonlyArray<string>;

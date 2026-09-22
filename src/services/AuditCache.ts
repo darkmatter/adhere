@@ -1,7 +1,6 @@
 import { Context, Crypto, Effect, Layer, Option, Path, Schema } from "effect";
 import * as KeyValueStore from "effect/unstable/persistence/KeyValueStore";
 
-/** One rule's judgment of one file. `line` is present only once located. */
 export const Judgment = Schema.Struct({
   fingerprint: Schema.String,
   probability: Schema.Finite,
@@ -30,7 +29,6 @@ export const sha256 = Effect.fn("AuditCache.sha256")(function* (text: string) {
 /** Directory of one file per key, in the working directory. */
 const CACHE_DIRECTORY = ".adhere-cache";
 
-/** Judgments remembered per file path. A cache problem never fails the audit. */
 export class AuditCache extends Context.Service<
   AuditCache,
   {
@@ -39,7 +37,6 @@ export class AuditCache extends Context.Service<
   }
 >()("@darkmatter/adhere/services/AuditCache") {}
 
-/** The filesystem store, or a memory store when the directory cannot be opened. */
 const openStore = Effect.fn("AuditCache.openStore")(function* (
   directory: string,
 ) {
@@ -52,16 +49,22 @@ const openStore = Effect.fn("AuditCache.openStore")(function* (
 export const AuditCacheLive = Layer.effect(AuditCache)(
   Effect.gen(function* () {
     const path = yield* Path.Path;
-    // No segments: Path resolves against the working directory.
     const store = yield* openStore(path.join(path.resolve(), CACHE_DIRECTORY));
     const entries = KeyValueStore.toSchemaStore(store, CacheEntry);
+    const crypto = yield* Crypto.Crypto;
+    // Hashed keys: a raw path would name the cache file like a source file.
+    const keyOf = (filePath: string) =>
+      sha256(filePath).pipe(Effect.provideService(Crypto.Crypto, crypto));
     return AuditCache.of({
       get: (filePath) =>
-        entries.get(filePath).pipe(
+        Effect.flatMap(keyOf(filePath), (key) => entries.get(key)).pipe(
           Effect.map(Option.getOrUndefined),
           Effect.orElseSucceed(() => undefined),
         ),
-      put: (filePath, entry) => entries.set(filePath, entry).pipe(Effect.ignore),
+      put: (filePath, entry) =>
+        Effect.flatMap(keyOf(filePath), (key) => entries.set(key, entry)).pipe(
+          Effect.ignore,
+        ),
     });
   }),
 );

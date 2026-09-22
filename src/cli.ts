@@ -7,7 +7,6 @@ import { Console, Effect, Layer, Path, Runtime, Schema, Stdio } from "effect";
 import { Command } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
 
-/** Exit 1 after the report. Already printed, so the runtime must not log it. */
 class FindingsReported extends Schema.TaggedError<FindingsReported>()(
   "FindingsReported",
   { count: Schema.Finite },
@@ -21,7 +20,7 @@ export const auditCommand = Command.make("adhere", {}, () =>
     const stdio = yield* Stdio.Stdio;
     const color = yield* stdio.stdoutIsTerminal;
     const path = yield* Path.Path;
-    // One write, so the frames stay in order.
+    // One write: separate Console.log calls have interleaved out of order here.
     yield* Console.log(
       render(result, { color, root: path.resolve() }).join("\n"),
     );

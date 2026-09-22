@@ -1,6 +1,5 @@
 import type { AuditResult, Finding } from "#workflows/audit.ts";
 
-/** Path relative to the audited directory, matching the paths `vp lint` prints. */
 const displayPath = (file: string, root: string | undefined): string =>
   root !== undefined && file.startsWith(`${root}/`)
     ? file.slice(root.length + 1)
@@ -26,13 +25,11 @@ const helpTint = (text: string, enabled: boolean) =>
 export interface RenderOptions {
   /** Color the frame the way `vp lint` does on a terminal. */
   readonly color?: boolean;
-  /** The audited directory; file paths are printed relative to it. */
   readonly root?: string;
 }
 
 const isBlank = (line: string): boolean => line.trim().length === 0;
 
-/** The reference without its blank leading and trailing lines. */
 const referenceLines = (reference: string): ReadonlyArray<string> => {
   const lines = reference.split("\n");
   const first = lines.findIndex((line) => !isBlank(line));

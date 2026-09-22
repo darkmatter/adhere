@@ -2,25 +2,22 @@ import type { Rule, RuleId } from "#config.ts";
 import { Context, type Effect, Record, Schema } from "effect";
 
 export type Rules = Readonly<Record<RuleId, Rule>>;
+export type Lines = ReadonlyArray<string>;
 
 export class JevUnavailable extends Schema.TaggedError<JevUnavailable>()(
   "JevUnavailable",
   { message: Schema.String },
 ) {}
 
-/**
- * Jev, TypeSafe's System One model. `code` is the file with numbered lines,
- * `N | text`. One call covers every rule passed to it.
- */
 export class Jev extends Context.Service<
   Jev,
   {
     readonly judge: (
-      code: string,
+      lines: Lines,
       rules: Rules,
     ) => Effect.Effect<Record<RuleId, number>, JevUnavailable>;
     readonly locate: (
-      code: string,
+      lines: Lines,
       rules: Rules,
     ) => Effect.Effect<Record<RuleId, number>, JevUnavailable>;
   }
@@ -28,36 +25,26 @@ export class Jev extends Context.Service<
 
 /** A `choice` question accepts at most this many criteria. */
 const CHOICE_LIMIT = 255;
-/** Lines per block when a file has too many lines for one `choice`. */
-const BLOCK = 20;
-/** Longer files cannot be located in two steps and are skipped. */
-export const MAX_LINES = CHOICE_LIMIT * BLOCK;
-
-export const numbered = (lines: ReadonlyArray<string>): string =>
-  lines.map((line, index) => `${index + 1} | ${line}`).join("\n");
+const LINES_PER_BLOCK = 20;
+export const MAX_LINES = CHOICE_LIMIT * LINES_PER_BLOCK;
 
 export const snippetOf = (line: string): string => line.trim().slice(0, 120);
 
 const isBlank = (line: string): boolean => line.trim().length === 0;
 
-/** Line texts of numbered code; index 0 is line 1. */
-const lineTexts = (code: string): ReadonlyArray<string> =>
-  code.split("\n").map((row) => row.slice(row.indexOf(" | ") + 3));
+export const needsBlocks = (lines: Lines): boolean =>
+  lines.filter((line) => !isBlank(line)).length > CHOICE_LIMIT;
 
-export const needsBlocks = (code: string): boolean =>
-  lineTexts(code).filter((line) => !isBlank(line)).length > CHOICE_LIMIT;
-
-const stateOf = (code: string, rules: Rules) => ({
-  code,
+const stateOf = (lines: Lines, rules: Rules) => ({
+  code: lines.map((line, index) => `${index + 1} | ${line}`).join("\n"),
   rules: Record.map(rules, ({ description, reference }) => ({
     description,
     reference,
   })),
 });
 
-/** Non-blank lines `from`..`to` (1-based, inclusive), keyed by line number. */
 const lineCriteria = (
-  lines: ReadonlyArray<string>,
+  lines: Lines,
   from: number,
   to: number,
 ): Record<string, string> => {
@@ -69,56 +56,51 @@ const lineCriteria = (
   return criteria;
 };
 
-export const judgeBody = (model: string, code: string, rules: Rules) => ({
+export const judgeBody = (model: string, lines: Lines, rules: Rules) => ({
   model,
-  state: stateOf(code, rules),
+  state: stateOf(lines, rules),
   questions: Record.map(rules, (_, id) => ({
     type: "noul" as const,
     instructions: `Does state.code diverge from the pattern shown in state.rules["${id}"].reference, as described by state.rules["${id}"].description? Answer no if the pattern does not apply to this file.`,
   })),
 });
 
-/**
- * One `choice` over the file's non-blank lines per rule. With `blocks`, each
- * rule's choice is limited to the lines of the block chosen for it.
- */
 export const locateBody = (
   model: string,
-  code: string,
+  lines: Lines,
   rules: Rules,
   blocks?: Readonly<Record<RuleId, number>>,
-) => {
-  const lines = lineTexts(code);
-  return {
-    model,
-    state: stateOf(code, rules),
-    questions: Record.map(rules, (_, id) => {
-      const block = blocks?.[id];
-      return {
-        type: "choice" as const,
-        instructions: `Which line of state.code most clearly diverges from state.rules["${id}"].reference?`,
-        criteria:
-          block === undefined
-            ? lineCriteria(lines, 1, lines.length)
-            : lineCriteria(lines, block * BLOCK + 1, (block + 1) * BLOCK),
-      };
-    }),
-  };
-};
+) => ({
+  model,
+  state: stateOf(lines, rules),
+  questions: Record.map(rules, (_, id) => {
+    const block = blocks?.[id];
+    return {
+      type: "choice" as const,
+      instructions: `Which line of state.code most clearly diverges from state.rules["${id}"].reference?`,
+      criteria:
+        block === undefined
+          ? lineCriteria(lines, 1, lines.length)
+          : lineCriteria(
+              lines,
+              block * LINES_PER_BLOCK + 1,
+              (block + 1) * LINES_PER_BLOCK,
+            ),
+    };
+  }),
+});
 
-/** One `choice` over blocks of `BLOCK` lines per rule; blank blocks are omitted. */
-export const blockBody = (model: string, code: string, rules: Rules) => {
-  const lines = lineTexts(code);
+export const blockBody = (model: string, lines: Lines, rules: Rules) => {
   const criteria: Record<string, string> = {};
-  for (let block = 0; block * BLOCK < lines.length; block++) {
+  for (let block = 0; block * LINES_PER_BLOCK < lines.length; block++) {
     const first = lines
-      .slice(block * BLOCK, (block + 1) * BLOCK)
+      .slice(block * LINES_PER_BLOCK, (block + 1) * LINES_PER_BLOCK)
       .find((line) => !isBlank(line));
     if (first !== undefined) criteria[String(block)] = `${snippetOf(first)}...`;
   }
   return {
     model,
-    state: stateOf(code, rules),
+    state: stateOf(lines, rules),
     questions: Record.map(rules, (_, id) => ({
       type: "choice" as const,
       instructions: `Which block of state.code contains the line that most clearly diverges from state.rules["${id}"].reference?`,
