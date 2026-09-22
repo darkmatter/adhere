@@ -1,8 +1,12 @@
 {
   "name": "@darkmatter/adhere",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "description": "Lints a repository against reference code in adhere.config.ts, judged by Jev.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/darkmatter/adhere.git"
+  },
   "bin": {
     "adhere": "./src/main.ts"
   },
@@ -12,6 +16,9 @@
   },
   "exports": {
     ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "lint": "vp lint --deny-warnings .",
