@@ -17,7 +17,8 @@
     "lint": "vp lint --deny-warnings .",
     "start": "bun src/main.ts",
     "test": "vp test",
-    "typecheck": "tsc --noEmit && bun run lint"
+    "typecheck": "tsc --noEmit && bun run lint",
+    "build": "bun build --compile --minify --sourcemap src/main.ts --asset ./presets --outfile dist/adhere"
   },
   "dependencies": {
     "@effect/platform-bun": "4.0.0-rc.112",

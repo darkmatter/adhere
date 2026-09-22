@@ -14,7 +14,12 @@ import { type PresetName, presets } from "#presets.ts";
 import { materializeRules } from "#rules.ts";
 import { Context, Effect, FileSystem, Layer, Path, Record } from "effect";
 
-const CONFIG_FILE = "adhere.config.ts";
+/** Where a config may live, relative to the working directory. Exactly one may exist. */
+export const CONFIG_FILES = [
+  "adhere.config.ts",
+  ".adhere/config.ts",
+  ".adhere.config.ts",
+] as const;
 
 export class AdhereConfig extends Context.Service<
   AdhereConfig,
@@ -28,10 +33,14 @@ const loadConfigFile = Effect.fn("AdhereConfig.load")(function* (file: string) {
     try: () => import(url.href) as Promise<{ readonly default?: unknown }>,
     catch: (cause) =>
       ConfigUnavailable.make({
-        message: `Could not load ${CONFIG_FILE}: ${cause instanceof Error ? cause.message : String(cause)}`,
+        message: `Could not load ${file}: ${cause instanceof Error ? cause.message : String(cause)}`,
       }),
   });
-  return yield* decodeConfig(loaded.default);
+  return yield* decodeConfig(loaded.default).pipe(
+    Effect.mapError((problem) =>
+      ConfigUnavailable.make({ message: `${file}: ${problem.message}` }),
+    ),
+  );
 });
 
 const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (
@@ -44,9 +53,10 @@ const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (
 });
 
 /**
- * `adhere.config.ts` from the working directory with the command-line
- * overrides applied. The file is optional when `.adhere/` holds rules or a
- * preset is named. Rule directories resolve against the working directory.
+ * The config file in the working directory (one of `CONFIG_FILES`) with the
+ * command-line overrides applied. The file is optional when `.adhere/` holds
+ * rules or a preset is named. Rule directories resolve against the working
+ * directory.
  */
 export const AdhereConfigLive = (overrides: Overrides) =>
   Layer.effect(AdhereConfig)(
@@ -54,27 +64,33 @@ export const AdhereConfigLive = (overrides: Overrides) =>
       const path = yield* Path.Path;
       const fs = yield* FileSystem.FileSystem;
       const cwd = path.resolve();
-      const file = path.join(cwd, CONFIG_FILE);
       const present = (target: string) =>
         fs
-          .exists(target)
+          .exists(path.join(cwd, target))
           .pipe(
             Effect.mapError((problem) =>
               ConfigUnavailable.make({ message: problem.message }),
             ),
           );
-      const hasConfig = yield* present(file);
-      const hasRulesDir = yield* present(path.join(cwd, ADHERE_DIRECTORY));
-      const hasPreset =
-        overrides.presets !== undefined && overrides.presets.length > 0;
-      if (!hasConfig && !hasRulesDir && !hasPreset) {
+      const found = yield* Effect.filter(CONFIG_FILES, present);
+      if (found.length > 1) {
         return yield* ConfigUnavailable.make({
-          message: `Nothing to audit against: no ${CONFIG_FILE}, no ${ADHERE_DIRECTORY}/ directory of rules, and no --preset. Pass --preset effect to use the built-in rules.`,
+          message: `More than one config file: ${found.join(", ")}. Keep one.`,
         });
       }
-      const config: Decoded = hasConfig
-        ? yield* loadConfigFile(file)
-        : yield* decodeConfig({});
+      const configFile = found[0];
+      const hasRulesDir = yield* present(ADHERE_DIRECTORY);
+      const hasPreset =
+        overrides.presets !== undefined && overrides.presets.length > 0;
+      if (configFile === undefined && !hasRulesDir && !hasPreset) {
+        return yield* ConfigUnavailable.make({
+          message: `Nothing to audit against: no config file (${CONFIG_FILES.join(", ")}), no ${ADHERE_DIRECTORY}/ directory of rules, and no --preset. Pass --preset effect to use the built-in rules.`,
+        });
+      }
+      const config: Decoded =
+        configFile === undefined
+          ? yield* decodeConfig({})
+          : yield* loadConfigFile(path.join(cwd, configFile));
       const source = config.rules ?? (hasRulesDir ? ADHERE_DIRECTORY : {});
       const rules = yield* materializeRules(source, cwd);
       const registry = yield* Effect.forEach(

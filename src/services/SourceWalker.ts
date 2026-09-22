@@ -44,6 +44,7 @@ const isScannable = (file: string, self: string): boolean =>
   !file.endsWith(".d.ts") &&
   !file.endsWith(".test.ts") &&
   !file.endsWith("/adhere.config.ts") &&
+  !file.endsWith("/.adhere.config.ts") &&
   SKIPS.every((skip) => !file.includes(skip)) &&
   // The audit's own detector patterns are data, not violations of themselves.
   !isInside(file, self);
