@@ -1,6 +1,6 @@
 import { Crypto, Effect, Layer, Record } from "effect";
 import { describe, expect, it } from "vite-plus/test";
-import { decodeConfig, resolveConfig } from "../src/config.ts";
+import { decodeConfig, type Preset, resolveConfig } from "../src/config.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
 import { effect } from "../src/presets/effect.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
@@ -184,10 +184,9 @@ describe("config", () => {
     const decoded = await Effect.runPromise(
       decodeConfig({ rules: { "data/brand": { description: "d", reference: "r" } } }),
     );
-    expect(decoded).toEqual({
+    expect(resolveConfig(decoded)).toEqual({
       model: "jev-latest",
       threshold: 0.7,
-      presets: [],
       rules: { "data/brand": { description: "d", reference: "r" } },
     });
   });
@@ -198,17 +197,26 @@ describe("config", () => {
       decodeConfig({ rules: { "basics/gen-for-sequencing": override } }),
     );
     const resolved = resolveConfig(decoded, { presets: ["effect"] });
-    expect(Object.keys(resolved.rules)).toEqual(Object.keys(effect));
+    expect(Object.keys(resolved.rules)).toEqual(Object.keys(effect.rules));
     expect(resolved.rules["basics/gen-for-sequencing"]).toEqual(override);
     expect(resolved.rules["basics/fn-for-named-effects"]).toEqual(
-      effect["basics/fn-for-named-effects"],
+      effect.rules["basics/fn-for-named-effects"],
     );
   });
 
-  it("a command-line threshold replaces the config's global threshold", async () => {
-    const decoded = await Effect.runPromise(decodeConfig({ threshold: 0.6 }));
-    expect(resolveConfig(decoded).threshold).toBe(0.6);
-    expect(resolveConfig(decoded, { threshold: 0.85 }).threshold).toBe(0.85);
+  it("threshold precedence: command line, then config, then preset, then 0.7", async () => {
+    const strict: Preset = { threshold: 0.9, rules: {} };
+    const registry = { effect: strict };
+    const bare = await Effect.runPromise(decodeConfig({}));
+    expect(resolveConfig(bare).threshold).toBe(0.7);
+    expect(resolveConfig(bare, { presets: ["effect"] }, registry).threshold).toBe(0.9);
+    const configured = await Effect.runPromise(
+      decodeConfig({ presets: ["effect"], threshold: 0.6 }),
+    );
+    expect(resolveConfig(configured, {}, registry).threshold).toBe(0.6);
+    expect(resolveConfig(configured, { threshold: 0.85 }, registry).threshold).toBe(
+      0.85,
+    );
   });
 
   it("refuses an unknown preset", async () => {

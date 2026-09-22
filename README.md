@@ -35,15 +35,23 @@ type UserId = typeof UserId.Type
 ```
 
 The default export is decoded with Effect `Schema`. An invalid shape refuses
-the run. A rule in `rules` replaces a preset rule with the same id.
+the run.
 
 ### Presets
 
-`effect` is the one preset: 26 rules lifted from the
+A preset has the shape of a config without `presets`: `rules`, and optionally
+`model` and `threshold`. `effect` is the one preset: 26 rules lifted from the
 [effect-solutions](https://github.com/kitlangton/effect-solutions) docs and the
 [effect/platform](https://effect.website/docs/platform/introduction/) docs,
 in `src/presets/effect.ts`. Name it in the config, or on the command line
 with `--preset effect`, in which case `adhere.config.ts` is optional.
+
+### Precedence
+
+Highest first: `--threshold` on the command line, the config file, presets in
+order (a later preset wins), then the defaults `jev-latest` and `0.7`. A rule
+in `rules` replaces a preset rule with the same id. A rule's own `threshold`
+beats all of the above for that rule.
 
 ## Run
 

@@ -1,4 +1,4 @@
-import type { Rule, RuleId } from "#config.ts";
+import type { Preset, Rule, RuleId } from "#config.ts";
 
 /**
  * References are lifted from the effect-solutions docs, adjusted only where
@@ -6,7 +6,7 @@ import type { Rule, RuleId } from "#config.ts";
  * Schema.Defect(), Random.withSeed). The platform/* rule follows the
  * effect/platform docs (effect.website/docs/platform).
  */
-export const effect: Readonly<Record<RuleId, Rule>> = {
+const rules: Readonly<Record<RuleId, Rule>> = {
   "basics/gen-for-sequencing": {
     description:
       "Sequential effectful steps are written with Effect.gen and yield*, not nested flatMap or callback chains.",
@@ -423,3 +423,5 @@ const addCommand = Command.make("add", { text }, ({ text }) =>
 `,
   },
 };
+
+export const effect: Preset = { rules };
