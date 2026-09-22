@@ -3,8 +3,18 @@ import { AuditCacheLive } from "#services/AuditCache.ts";
 import { JevLive } from "#services/Jev.http.ts";
 import { SourceWalkerLive } from "#services/SourceWalker.ts";
 import { render, runAudit } from "#workflows/audit.ts";
-import { Console, Effect, Layer, Path, Runtime, Schema, Stdio } from "effect";
-import { Command } from "effect/unstable/cli";
+import { type PresetName, presetNames } from "#presets.ts";
+import {
+  Console,
+  Effect,
+  Layer,
+  Option,
+  Path,
+  Runtime,
+  Schema,
+  Stdio,
+} from "effect";
+import { Command, Flag } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
 
 class FindingsReported extends Schema.TaggedError<FindingsReported>()(
@@ -14,7 +24,21 @@ class FindingsReported extends Schema.TaggedError<FindingsReported>()(
   readonly [Runtime.errorReported] = false;
 }
 
-export const auditCommand = Command.make("adhere", {}, () =>
+const preset = Flag.choice("preset", presetNames).pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "Add a built-in rule set. With a preset, adhere.config.ts is optional.",
+  ),
+);
+
+export const auditLayer = (presets: ReadonlyArray<PresetName>) =>
+  Layer.mergeAll(
+    SourceWalkerLive,
+    AuditCacheLive,
+    JevLive.pipe(Layer.provide(FetchHttpClient.layer)),
+  ).pipe(Layer.provideMerge(AdhereConfigLive(presets)));
+
+export const auditCommand = Command.make("adhere", { preset }, () =>
   Effect.gen(function* () {
     const result = yield* runAudit;
     const stdio = yield* Stdio.Stdio;
@@ -30,12 +54,9 @@ export const auditCommand = Command.make("adhere", {}, () =>
   }),
 ).pipe(
   Command.withDescription(
-    "Audit the working directory against the reference code in adhere.config.ts, judged by Jev.",
+    "Audit the working directory against reference code from adhere.config.ts or a preset, judged by Jev.",
+  ),
+  Command.provide((input) =>
+    auditLayer(Option.isSome(input.preset) ? [input.preset.value] : []),
   ),
 );
-
-export const auditLayer = Layer.mergeAll(
-  SourceWalkerLive,
-  AuditCacheLive,
-  JevLive.pipe(Layer.provide(FetchHttpClient.layer)),
-).pipe(Layer.provideMerge(AdhereConfigLive));

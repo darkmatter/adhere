@@ -1,6 +1,7 @@
 import { Crypto, Effect, Layer, Record } from "effect";
 import { describe, expect, it } from "vite-plus/test";
-import { decodeConfig } from "../src/config.ts";
+import { decodeConfig, resolveConfig } from "../src/config.ts";
+import { effect } from "../src/presets/effect.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
 import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
@@ -186,8 +187,30 @@ describe("config", () => {
     expect(decoded).toEqual({
       model: "jev-latest",
       threshold: 0.7,
+      presets: [],
       rules: { "data/brand": { description: "d", reference: "r" } },
     });
+  });
+
+  it("folds presets into the rules, with a config rule winning over a preset rule", async () => {
+    const override = { description: "mine", reference: "mine" };
+    const decoded = await Effect.runPromise(
+      decodeConfig({ rules: { "basics/gen-for-sequencing": override } }),
+    );
+    const resolved = resolveConfig(decoded, ["effect"]);
+    expect(Object.keys(resolved.rules)).toEqual(Object.keys(effect));
+    expect(resolved.rules["basics/gen-for-sequencing"]).toEqual(override);
+    expect(resolved.rules["basics/fn-for-named-effects"]).toEqual(
+      effect["basics/fn-for-named-effects"],
+    );
+  });
+
+  it("refuses an unknown preset", async () => {
+    const refused = await Effect.runPromise(
+      Effect.flip(decodeConfig({ presets: ["react"] })),
+    );
+    expect(refused._tag).toBe("ConfigUnavailable");
+    expect(refused.message).toContain("effect");
   });
 
   it("refuses a rule without a reference", async () => {

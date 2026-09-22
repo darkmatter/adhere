@@ -1,3 +1,4 @@
+import { type PresetName, presetNames, presets } from "#presets.ts";
 import { Effect, Schema } from "effect";
 
 export type RuleId = string;
@@ -16,11 +17,36 @@ export const AdhereConfig = Schema.Struct({
   threshold: Schema.Finite.pipe(
     Schema.withDecodingDefaultKey(Effect.succeed(0.7)),
   ),
-  rules: Schema.Record(Schema.String, Rule),
+  presets: Schema.Array(Schema.Literals(presetNames)).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed([])),
+  ),
+  rules: Schema.Record(Schema.String, Rule).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed({})),
+  ),
 });
 export interface AdhereConfig extends Schema.Schema.Type<typeof AdhereConfig> {}
 
 export const defineConfig = (config: typeof AdhereConfig.Encoded) => config;
+
+/** A config with its presets folded into `rules`. A config rule wins over a preset rule of the same id. */
+export interface ResolvedConfig {
+  readonly model: string;
+  readonly threshold: number;
+  readonly rules: Readonly<Record<RuleId, Rule>>;
+}
+
+export const resolveConfig = (
+  config: AdhereConfig,
+  extraPresets: ReadonlyArray<PresetName> = [],
+): ResolvedConfig => ({
+  model: config.model,
+  threshold: config.threshold,
+  rules: Object.assign(
+    {},
+    ...[...extraPresets, ...config.presets].map((name) => presets[name]),
+    config.rules,
+  ),
+});
 
 export class ConfigUnavailable extends Schema.TaggedError<ConfigUnavailable>()(
   "ConfigUnavailable",

@@ -19,6 +19,7 @@ import { defineConfig } from "@darkmatter/adhere";
 export default defineConfig({
   model: "jev-latest", // optional, default "jev-latest"
   threshold: 0.7, // optional, default 0.7
+  presets: ["effect"], // optional, built-in rule sets
   rules: {
     "data/brand-meaningful-primitives": {
       description:
@@ -33,8 +34,16 @@ type UserId = typeof UserId.Type
 });
 ```
 
-The default export is decoded with Effect `Schema`. A missing file or an
-invalid shape refuses the run.
+The default export is decoded with Effect `Schema`. An invalid shape refuses
+the run. A rule in `rules` replaces a preset rule with the same id.
+
+### Presets
+
+`effect` is the one preset: 26 rules lifted from the
+[effect-solutions](https://effect.solutions) docs and the
+[effect/platform](https://effect.website/docs/platform/introduction/) docs,
+in `src/presets/effect.ts`. Name it in the config, or on the command line
+with `--preset effect`, in which case `adhere.config.ts` is optional.
 
 ## Run
 
@@ -42,7 +51,8 @@ Requires Bun.
 
 ```sh
 bun install
-bun src/main.ts
+bun link          # puts `adhere` on PATH
+adhere --preset effect
 ```
 
 `adhere` audits the working directory. When that directory contains `agents/`,
