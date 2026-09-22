@@ -1,5 +1,6 @@
-import { defineConfig } from "./src/config.ts";
+import { defineConfig } from "./src/index.ts";
 
 export default defineConfig({
   presets: ["effect"],
+  rules: "./rules",
 });

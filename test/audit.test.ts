@@ -1,8 +1,15 @@
-import { Crypto, Effect, Layer, Record } from "effect";
+import { Crypto, Effect, FileSystem, Layer, Path, Record } from "effect";
 import { describe, expect, it } from "vite-plus/test";
-import { decodeConfig, type Preset, resolveConfig } from "../src/config.ts";
+import {
+  AdhereConfig as AdhereConfigSchema,
+  decodeConfig,
+  type Loaded,
+  type Preset,
+  resolveConfig,
+} from "../src/config.ts";
+import { parseRuleMarkdown } from "../src/markdown.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
-import { effect } from "../src/presets/effect.ts";
+import { loadRules } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
 import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
 import {
@@ -179,12 +186,16 @@ describe("request bodies", () => {
   });
 });
 
+/** A decoded config whose rules are already in memory, as the loader hands them on. */
+const loaded = (config: typeof AdhereConfigSchema.Encoded, rules: Rules = {}) =>
+  Effect.map(decodeConfig(config), (decoded) => ({ ...decoded, rules }));
+
 describe("config", () => {
   it("applies the default model and threshold", async () => {
-    const decoded = await Effect.runPromise(
-      decodeConfig({ rules: { "data/brand": { description: "d", reference: "r" } } }),
+    const config = await Effect.runPromise(
+      loaded({}, { "data/brand": { description: "d", reference: "r" } }),
     );
-    expect(resolveConfig(decoded)).toEqual({
+    expect(resolveConfig(config)).toEqual({
       model: "jev-latest",
       threshold: 0.7,
       rules: { "data/brand": { description: "d", reference: "r" } },
@@ -193,25 +204,24 @@ describe("config", () => {
 
   it("folds presets into the rules, with a config rule winning over a preset rule", async () => {
     const override = { description: "mine", reference: "mine" };
-    const decoded = await Effect.runPromise(
-      decodeConfig({ rules: { "basics/gen-for-sequencing": override } }),
-    );
-    const resolved = resolveConfig(decoded, { presets: ["effect"] });
-    expect(Object.keys(resolved.rules)).toEqual(Object.keys(effect.rules));
-    expect(resolved.rules["basics/gen-for-sequencing"]).toEqual(override);
-    expect(resolved.rules["basics/fn-for-named-effects"]).toEqual(
-      effect.rules["basics/fn-for-named-effects"],
-    );
+    const preset: Loaded<Preset> = { rules: { a, b } };
+    const config = await Effect.runPromise(loaded({}, { a: override }));
+    const resolved = resolveConfig(config, { presets: ["effect"] }, { effect: preset });
+    expect(resolved.rules).toEqual({ a: override, b });
+  });
+
+  it("accepts a directory path as the rules of a config", async () => {
+    const decoded = await Effect.runPromise(decodeConfig({ rules: "./rules" }));
+    expect(decoded.rules).toBe("./rules");
   });
 
   it("threshold precedence: command line, then config, then preset, then 0.7", async () => {
-    const strict: Preset = { threshold: 0.9, rules: {} };
-    const registry = { effect: strict };
-    const bare = await Effect.runPromise(decodeConfig({}));
+    const registry = { effect: { threshold: 0.9, rules: {} } };
+    const bare = await Effect.runPromise(loaded({}));
     expect(resolveConfig(bare).threshold).toBe(0.7);
     expect(resolveConfig(bare, { presets: ["effect"] }, registry).threshold).toBe(0.9);
     const configured = await Effect.runPromise(
-      decodeConfig({ presets: ["effect"], threshold: 0.6 }),
+      loaded({ presets: ["effect"], threshold: 0.6 }),
     );
     expect(resolveConfig(configured, {}, registry).threshold).toBe(0.6);
     expect(resolveConfig(configured, { threshold: 0.85 }, registry).threshold).toBe(
@@ -233,6 +243,72 @@ describe("config", () => {
     );
     expect(refused._tag).toBe("ConfigUnavailable");
     expect(refused.message).toContain("reference");
+  });
+});
+
+describe("markdown rules", () => {
+  const parse = (text: string) =>
+    Effect.runPromise(parseRuleMarkdown(text, "rules/a.md"));
+
+  it("front matter is the description and threshold; the fenced block is the reference", async () => {
+    const rule = await parse(
+      [
+        "---",
+        "description: Ports are branded.",
+        "threshold: 0.8",
+        "---",
+        "",
+        "Prose for GitHub, ignored by adhere.",
+        "",
+        "```ts",
+        'const Port = Schema.Int.pipe(Schema.brand("Port"))',
+        "type Port = typeof Port.Type",
+        "```",
+        "",
+      ].join("\n"),
+    );
+    expect(rule).toEqual({
+      description: "Ports are branded.",
+      threshold: 0.8,
+      reference:
+        'const Port = Schema.Int.pipe(Schema.brand("Port"))\ntype Port = typeof Port.Type',
+    });
+  });
+
+  it("without a fence, the whole body is the reference", async () => {
+    const rule = await parse("---\ndescription: d\n---\nconst x = 1\n");
+    expect(rule).toEqual({ description: "d", reference: "const x = 1" });
+  });
+
+  it("refuses a file without a description, naming the file", async () => {
+    const refused = await Effect.runPromise(
+      Effect.flip(parseRuleMarkdown("---\nthreshold: 0.8\n---\ncode", "rules/a.md")),
+    );
+    expect(refused._tag).toBe("ConfigUnavailable");
+    expect(refused.message).toContain("rules/a.md");
+    expect(refused.message).toContain("description");
+  });
+
+  it("loads a directory: the relative path without .md is the rule id", async () => {
+    const tree: Record<string, string> = {
+      "/repo/rules/basics/gen.md": "---\ndescription: gen\n---\n```ts\ngen()\n```\n",
+      "/repo/rules/data/brand.md": "---\ndescription: brand\n---\nbrand()\n",
+      "/repo/rules/README.md": "---\ndescription: readme\n---\nnot a rule\n",
+      "/repo/rules/notes.txt": "ignored",
+    };
+    const fs = FileSystem.layerNoop({
+      readDirectory: () =>
+        Effect.succeed(["basics/gen.md", "data/brand.md", "README.md", "notes.txt"]),
+      readFileString: (file) => Effect.succeed(tree[file] ?? ""),
+    });
+    const rules = await Effect.runPromise(
+      loadRules("/repo/rules").pipe(Effect.provide(Layer.merge(fs, Path.layer))),
+    );
+    expect(rules).toEqual({
+      README: { description: "readme", reference: "not a rule" },
+      "basics/gen": { description: "gen", reference: "gen()" },
+      "data/brand": { description: "brand", reference: "brand()" },
+    });
   });
 });
 
