@@ -40,7 +40,7 @@ the run. A rule in `rules` replaces a preset rule with the same id.
 ### Presets
 
 `effect` is the one preset: 26 rules lifted from the
-[effect-solutions](https://effect.solutions) docs and the
+[effect-solutions](https://github.com/kitlangton/effect-solutions) docs and the
 [effect/platform](https://effect.website/docs/platform/introduction/) docs,
 in `src/presets/effect.ts`. Name it in the config, or on the command line
 with `--preset effect`, in which case `adhere.config.ts` is optional.
