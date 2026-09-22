@@ -1,10 +1,13 @@
-import { AdhereConfigLive } from "#services/AdhereConfig.ts";
+import { AdhereConfig, AdhereConfigLive } from "#services/AdhereConfig.ts";
 import { AuditCacheLive } from "#services/AuditCache.ts";
 import { JevLive } from "#services/Jev.http.ts";
 import { SourceWalkerLive } from "#services/SourceWalker.ts";
 import { render, runAudit } from "#workflows/audit.ts";
 import type { Overrides } from "#config.ts";
+import { findContradictions, formatContradictions } from "#contradictions.ts";
+import { initProject } from "#init.ts";
 import { presetNames } from "#presets.ts";
+import { globalRuleSet } from "#rules.ts";
 import {
   Console,
   Effect,
@@ -26,6 +29,20 @@ import skill from "../skills/adhere/SKILL.md" with { type: "text" };
 class FindingsReported extends Schema.TaggedError<FindingsReported>()(
   "FindingsReported",
   { count: Schema.Finite },
+) {
+  readonly [Runtime.errorReported] = false;
+}
+
+class ContradictionsReported extends Schema.TaggedError<ContradictionsReported>()(
+  "ContradictionsReported",
+  { count: Schema.Finite },
+) {
+  readonly [Runtime.errorReported] = false;
+}
+
+class UsageReported extends Schema.TaggedError<UsageReported>()(
+  "UsageReported",
+  { message: Schema.String },
 ) {
   readonly [Runtime.errorReported] = false;
 }
@@ -85,6 +102,80 @@ const audit = Command.make("adhere", { preset, threshold }, () =>
     }),
   ),
 );
+
+const INIT_HELP = `Usage: adhere init [--force]
+
+Scaffold adhere.config.ts and example Markdown rules.
+
+Options:
+  --force   Overwrite existing scaffold files
+  --help    Show this help
+
+Examples:
+  adhere init
+  adhere init --force`;
+
+const CONTRADICTIONS_HELP = `Usage: adhere contradictions
+
+Check this project's configured adhere rules for local textual contradictions.
+
+Examples:
+  adhere contradictions`;
+
+export const runInitCommand = (args: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    if (args.includes("--help") || args.includes("-h")) {
+      yield* Console.log(INIT_HELP);
+      return;
+    }
+    const unknown = args.filter((arg) => arg !== "--force");
+    if (unknown.length > 0) {
+      yield* Console.error(`Unknown option for adhere init: ${unknown.join(", ")}`);
+      yield* Console.error(INIT_HELP);
+      return yield* UsageReported.make({ message: "invalid init arguments" });
+    }
+    const path = yield* Path.Path;
+    const result = yield* initProject(path.resolve(), {
+      force: args.includes("--force"),
+    });
+    const lines = [
+      result.created.length > 0
+        ? `created: ${result.created.join(", ")}`
+        : "created: none",
+      result.skipped.length > 0
+        ? `skipped: ${result.skipped.join(", ")}`
+        : "skipped: none",
+    ];
+    yield* Console.log(lines.join("\n"));
+  });
+
+export const runContradictionsCommand = (args: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    if (args.includes("--help") || args.includes("-h")) {
+      yield* Console.log(CONTRADICTIONS_HELP);
+      return;
+    }
+    if (args.length > 0) {
+      yield* Console.error(
+        `Unknown option for adhere contradictions: ${args.join(", ")}`,
+      );
+      yield* Console.error(CONTRADICTIONS_HELP);
+      return yield* UsageReported.make({
+        message: "invalid contradictions arguments",
+      });
+    }
+    const config = yield* AdhereConfig;
+    const path = yield* Path.Path;
+    const root = path.resolve();
+    const entries = config.scopedRules ?? globalRuleSet(config.rules, root);
+    const contradictions = findContradictions(entries);
+    yield* Console.log(formatContradictions(contradictions));
+    if (contradictions.length > 0) {
+      return yield* ContradictionsReported.make({
+        count: contradictions.length,
+      });
+    }
+  });
 
 /** The whole CLI: `adhere` audits, `adhere skill` prints the skill. */
 export const auditCommand = audit.pipe(Command.withSubcommands([skillCommand]));
