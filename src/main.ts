@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { auditCommand, auditLayer } from "#cli.ts";
 import { BunRuntime, BunServices } from "@effect/platform-bun";
 import { Effect } from "effect";
