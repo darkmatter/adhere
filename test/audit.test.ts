@@ -257,10 +257,10 @@ describe("render", () => {
   const result = { files: 1, judged: 1, cached: 0, skipped: 0, findings: [findingA] };
 
   it("prints the vp-lint frame with the reference as the hint", () => {
-    expect(render(result).join("\n")).toBe(
+    expect(render(result, { root: "/repo" }).join("\n")).toBe(
       [
         "  × a (0.90): Ports are branded.",
-        "   ╭─[/repo/src/server.ts:2:1]",
+        "   ╭─[src/server.ts:2:1]",
         " 2 │ const port: number = Number(process.env.PORT);",
         "   · ──────────────────────────────────────────────",
         "   ╰────",

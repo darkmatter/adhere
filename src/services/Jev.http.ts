@@ -31,6 +31,7 @@ export const JevLive = Layer.effect(Jev)(
     const config = yield* AdhereConfig;
     const client = (yield* HttpClient.HttpClient).pipe(
       HttpClient.filterStatusOk,
+      HttpClient.transformResponse(Effect.timeout("30 seconds")),
       HttpClient.retryTransient({
         schedule: Schedule.exponential("500 millis"),
         times: 3,

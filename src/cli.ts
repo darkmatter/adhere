@@ -3,7 +3,7 @@ import { AuditCacheLive } from "#services/AuditCache.ts";
 import { JevLive } from "#services/Jev.http.ts";
 import { SourceWalkerLive } from "#services/SourceWalker.ts";
 import { render, runAudit } from "#workflows/audit.ts";
-import { Console, Effect, Layer, Runtime, Schema, Stdio } from "effect";
+import { Console, Effect, Layer, Path, Runtime, Schema, Stdio } from "effect";
 import { Command } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
 
@@ -20,8 +20,11 @@ export const auditCommand = Command.make("adhere", {}, () =>
     const result = yield* runAudit;
     const stdio = yield* Stdio.Stdio;
     const color = yield* stdio.stdoutIsTerminal;
+    const path = yield* Path.Path;
     // One write, so the frames stay in order.
-    yield* Console.log(render(result, { color }).join("\n"));
+    yield* Console.log(
+      render(result, { color, root: path.resolve() }).join("\n"),
+    );
     if (result.findings.length > 0) {
       yield* FindingsReported.make({ count: result.findings.length });
     }

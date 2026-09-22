@@ -1,14 +1,10 @@
 import type { AuditResult, Finding } from "#workflows/audit.ts";
 
-/** Workspace-relative path, matching the paths `vp lint` prints. */
-const displayPath = (file: string): string => {
-  for (const root of ["agents/", "apps/", "packages/"]) {
-    const at = file.lastIndexOf(`/${root}`);
-    if (at >= 0) return file.slice(at + 1);
-    if (file.startsWith(root)) return file;
-  }
-  return file;
-};
+/** Path relative to the audited directory, matching the paths `vp lint` prints. */
+const displayPath = (file: string, root: string | undefined): string =>
+  root !== undefined && file.startsWith(`${root}/`)
+    ? file.slice(root.length + 1)
+    : file;
 
 const counted = (count: number, one: string, many: string): string =>
   `${count} ${count === 1 ? one : many}`;
@@ -30,6 +26,8 @@ const helpTint = (text: string, enabled: boolean) =>
 export interface RenderOptions {
   /** Color the frame the way `vp lint` does on a terminal. */
   readonly color?: boolean;
+  /** The audited directory; file paths are printed relative to it. */
+  readonly root?: string;
 }
 
 const isBlank = (line: string): boolean => line.trim().length === 0;
@@ -48,14 +46,15 @@ const referenceLines = (reference: string): ReadonlyArray<string> => {
  * One diagnostic, in the frame `vp lint` prints on a terminal: a red header,
  * the offending line, a pink underline, and the reference code as the hint.
  */
-const frame = (finding: Finding, color: boolean): ReadonlyArray<string> => {
+const frame = (finding: Finding, options: RenderOptions): ReadonlyArray<string> => {
+  const color = options.color === true;
   const digits = String(finding.line);
   const gutter = " ".repeat(digits.length + 2);
   const [hint = "", ...rest] = referenceLines(finding.reference);
   const header = `${finding.rule} (${finding.probability.toFixed(2)})`;
   return [
     `  ${red("×", color)} ${red(header, color)}: ${red(finding.description, color)}`,
-    `${gutter}╭─[${blue(displayPath(finding.file), color)}:${finding.line}:1]`,
+    `${gutter}╭─[${blue(displayPath(finding.file, options.root), color)}:${finding.line}:1]`,
     ` ${dim(digits, color)} │ ${finding.snippet}`,
     `${gutter}· ${pink("─".repeat(Math.max(1, finding.snippet.trim().length)), color)}`,
     `${gutter}╰────`,
@@ -72,11 +71,10 @@ export const render = (
   result: AuditResult,
   options: RenderOptions = {},
 ): ReadonlyArray<string> => {
-  const color = options.color === true;
   const lines: Array<string> = [];
   for (const finding of result.findings) {
     if (lines.length > 0) lines.push("");
-    lines.push(...frame(finding, color));
+    lines.push(...frame(finding, options));
   }
   if (lines.length > 0) lines.push("");
   const summary = [
