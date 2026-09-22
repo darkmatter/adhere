@@ -150,4 +150,6 @@ where every file is cached needs no key and no network.
 [`skills/adhere/SKILL.md`](./skills/adhere/SKILL.md) teaches an agent to
 gather a repo's conventions into rule files, configure adhere, and calibrate
 thresholds. Install it with the [skills](https://github.com/vercel-labs/skills)
-CLI: `skills add darkmatter/adhere`.
+CLI: `skills add darkmatter/adhere`. The binary carries the same file:
+`adhere skill` prints it, so `adhere skill > .agents/skills/adhere/SKILL.md`
+works without a checkout.

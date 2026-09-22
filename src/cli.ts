@@ -17,6 +17,11 @@ import {
 } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
+// A Bun text import (https://bun.sh/docs/bundler/loaders#text): the file's
+// contents become a string at bundle time, so the compiled binary carries the
+// skill without an --asset flag. `skills/` sits beside `src/`, outside the `#`
+// import map, hence the relative path.
+import skill from "../skills/adhere/SKILL.md" with { type: "text" };
 
 class FindingsReported extends Schema.TaggedError<FindingsReported>()(
   "FindingsReported",
@@ -46,7 +51,16 @@ export const auditLayer = (overrides: Overrides) =>
     JevLive.pipe(Layer.provide(FetchHttpClient.layer)),
   ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)));
 
-export const auditCommand = Command.make("adhere", { preset, threshold }, () =>
+/** `adhere skill`: the agent skill for writing rules, as shipped in the binary. */
+export const skillCommand = Command.make("skill", {}, () =>
+  Console.log(skill.trimEnd()),
+).pipe(
+  Command.withDescription(
+    "Print the agent skill that gathers a repo's conventions into rules and configures adhere. Pipe it into .agents/skills/adhere/SKILL.md or hand it to an agent.",
+  ),
+);
+
+const audit = Command.make("adhere", { preset, threshold }, () =>
   Effect.gen(function* () {
     const result = yield* runAudit;
     const stdio = yield* Stdio.Stdio;
@@ -71,3 +85,6 @@ export const auditCommand = Command.make("adhere", { preset, threshold }, () =>
     }),
   ),
 );
+
+/** The whole CLI: `adhere` audits, `adhere skill` prints the skill. */
+export const auditCommand = audit.pipe(Command.withSubcommands([skillCommand]));
