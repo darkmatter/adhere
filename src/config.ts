@@ -1,4 +1,5 @@
 import { type PresetName, presetNames } from "#presets.ts";
+import type { RuleSet } from "#rules.ts";
 import { Effect, Schema } from "effect";
 
 export type RuleId = string;
@@ -60,6 +61,7 @@ export interface ResolvedConfig {
   readonly model: string;
   readonly threshold: number;
   readonly rules: Rules;
+  readonly scopedRules?: RuleSet;
 }
 
 /** Command-line values that apply on top of the config file. */

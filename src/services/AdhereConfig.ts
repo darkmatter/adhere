@@ -11,7 +11,13 @@ import {
   resolveConfig,
 } from "#config.ts";
 import { type PresetName, presets } from "#presets.ts";
-import { materializeRules } from "#rules.ts";
+import {
+  applicableRules,
+  globalRuleSet,
+  loadAdhereRuleSet,
+  materializeRules,
+  type RuleSet,
+} from "#rules.ts";
 import { Context, Effect, FileSystem, Layer, Path, Record } from "effect";
 
 /** Where a config may live, relative to the working directory. Exactly one may exist. */
@@ -79,26 +85,39 @@ export const AdhereConfigLive = (overrides: Overrides) =>
         });
       }
       const configFile = found[0];
-      const hasRulesDir = yield* present(ADHERE_DIRECTORY);
       const hasPreset =
         overrides.presets !== undefined && overrides.presets.length > 0;
-      if (configFile === undefined && !hasRulesDir && !hasPreset) {
-        return yield* ConfigUnavailable.make({
-          message: `Nothing to audit against: no config file (${CONFIG_FILES.join(", ")}), no ${ADHERE_DIRECTORY}/ directory of rules, and no --preset. Pass --preset effect to use the built-in rules.`,
-        });
-      }
       const config: Decoded =
         configFile === undefined
           ? yield* decodeConfig({})
           : yield* loadConfigFile(path.join(cwd, configFile));
-      const source = config.rules ?? (hasRulesDir ? ADHERE_DIRECTORY : {});
-      const rules = yield* materializeRules(source, cwd);
+      const discoveredEntries =
+        config.rules === undefined ? yield* loadAdhereRuleSet(cwd) : [];
+      const hasProjectRules = discoveredEntries.length > 0;
+      if (configFile === undefined && !hasProjectRules && !hasPreset) {
+        return yield* ConfigUnavailable.make({
+          message: `Nothing to audit against: no config file (${CONFIG_FILES.join(", ")}), no ${ADHERE_DIRECTORY}/ directory of rules, and no --preset. Pass --preset effect to use the built-in rules.`,
+        });
+      }
+      const projectEntries: RuleSet =
+        config.rules === undefined
+          ? discoveredEntries
+          : globalRuleSet(
+              yield* materializeRules(config.rules ?? {}, cwd),
+              cwd,
+            );
+      const rules = applicableRules(cwd, projectEntries);
       const registry = yield* Effect.forEach(
         presetsOf(config, overrides),
         (name) => loadPreset(name, cwd),
       ).pipe(Effect.map(Record.fromEntries));
-      return AdhereConfig.of(
-        resolveConfig({ ...config, rules }, overrides, registry),
+      const resolved = resolveConfig({ ...config, rules }, overrides, registry);
+      const presetEntries = Object.entries(registry).flatMap(([, preset]) =>
+        globalRuleSet(preset.rules, cwd),
       );
+      return AdhereConfig.of({
+        ...resolved,
+        scopedRules: [...presetEntries, ...projectEntries],
+      });
     }),
   );

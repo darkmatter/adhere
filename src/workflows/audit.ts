@@ -4,6 +4,7 @@ import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, type Judgment, sha256 } from "#services/AuditCache.ts";
 import { Jev, type JevUnavailable, MAX_LINES, snippetOf } from "#services/Jev.ts";
 import { SourceWalker } from "#services/SourceWalker.ts";
+import { applicableRules } from "#rules.ts";
 import { type Crypto, Effect, Record } from "effect";
 
 export interface Finding {
@@ -52,24 +53,28 @@ export const runAudit: Effect.Effect<
   const cache = yield* AuditCache;
   const files = yield* (yield* SourceWalker).files;
 
-  const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
-    Object.entries(config.rules),
-    ([id, rule]) =>
-      Effect.map(
-        sha256(config.model + rule.description + rule.reference),
-        (fingerprint) =>
-          [
-            id,
-            { rule, fingerprint, threshold: rule.threshold ?? config.threshold },
-          ] as const,
-      ),
-  ).pipe(Effect.map(Record.fromEntries));
+  const configuredRules = (file: string) =>
+    config.scopedRules === undefined
+      ? config.rules
+      : applicableRules(file, config.scopedRules);
 
   const rulesOf = (some: Readonly<Record<RuleId, PreparedRule>>) =>
     Record.map(some, (k) => k.rule);
 
   const auditFile = Effect.fn("audit.file")(function* (file: ScannedFile) {
     if (file.lines.length > MAX_LINES) return fileResult("skipped", []);
+    const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
+      Object.entries(configuredRules(file.path)),
+      ([id, rule]) =>
+        Effect.map(
+          sha256(config.model + rule.description + rule.reference),
+          (fingerprint) =>
+            [
+              id,
+              { rule, fingerprint, threshold: rule.threshold ?? config.threshold },
+            ] as const,
+        ),
+    ).pipe(Effect.map(Record.fromEntries));
     const hash = yield* sha256(file.lines.join("\n"));
     const entry = yield* cache.get(file.path);
     const remembered = entry?.hash === hash ? entry.judgments : {};

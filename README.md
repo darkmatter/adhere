@@ -58,6 +58,16 @@ export default { presets: ["effect"], rules: "./docs/adhere" } satisfies Config;
 
 A config is otherwise needed only to name presets or set thresholds.
 
+Nested `.adhere/` directories are also discovered. A rule in
+`packages/api/.adhere/data/brand-ports.md` has the same id,
+`data/brand-ports`, but applies only to files under `packages/api/`. Root
+`.adhere/` rules apply project-wide. If a nested rule has the same id as a root
+rule, the nearest containing `.adhere/` shadows the less-specific rule for that
+subtree; outside that subtree, the root rule still applies. There is no broader
+priority system: presets are global, project rules override preset rules with
+the same id, and nested project rules override less-specific project rules with
+the same id for files in their subtree.
+
 A file is front matter, then a body. The first fenced code block in the body
 is the reference; prose around it renders on GitHub and is ignored. Without a
 fence, the whole body is the reference.
@@ -112,6 +122,27 @@ adhere --preset effect
 `adhere` audits the working directory. When that directory contains `agents/`,
 `apps/`, or `packages/`, only those trees are read. Exit code 1 when there is
 at least one finding.
+
+Initialize a new project with a config and example rules:
+
+```sh
+adhere init
+adhere init --force  # overwrite the scaffold files if they already exist
+```
+
+The command is safe to rerun: by default it reports existing files as skipped
+and does not clobber them.
+
+Check only this project's configured rules for local textual contradictions:
+
+```sh
+adhere contradictions
+```
+
+It exits 1 and prints the conflicting rule files when overlapping rule scopes
+contain opposite textual directives for the same topic, such as "Use service
+classes for IO" and "Do not use service classes for IO". Same-id nested rules
+are treated as intentional shadowing rather than contradictions.
 
 ### Native executable
 

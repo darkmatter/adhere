@@ -9,6 +9,19 @@ export {
   type Rules,
   type RuleSource,
 } from "#config.ts";
+export {
+  findContradictions,
+  formatContradictions,
+  type Contradiction,
+} from "#contradictions.ts";
+export { initProject, type InitOptions, type InitResult } from "#init.ts";
 export { parseRuleMarkdown } from "#markdown.ts";
 export { type PresetName, presetNames } from "#presets.ts";
-export { loadRules } from "#rules.ts";
+export {
+  applicableRules,
+  globalRuleSet,
+  loadAdhereRuleSet,
+  loadRules,
+  type RuleEntry,
+  type RuleSet,
+} from "#rules.ts";

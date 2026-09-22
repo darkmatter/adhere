@@ -1,5 +1,12 @@
+import { readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Crypto, Effect, FileSystem, Layer, Path, Record } from "effect";
 import { describe, expect, it } from "vite-plus/test";
+import {
+  findContradictions,
+  formatContradictions,
+} from "../src/contradictions.ts";
 import {
   AdhereConfig as AdhereConfigSchema,
   decodeConfig,
@@ -7,9 +14,10 @@ import {
   type Preset,
   resolveConfig,
 } from "../src/config.ts";
+import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
-import { loadRules } from "../src/rules.ts";
+import { applicableRules, loadAdhereRuleSet, loadRules } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
 import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
 import {
@@ -314,6 +322,154 @@ describe("markdown rules", () => {
       "basics/gen": { description: "gen", reference: "gen()" },
       "data/brand": { description: "brand", reference: "brand()" },
     });
+  });
+});
+
+describe("nested .adhere rules", () => {
+  it("loads every .adhere directory with the containing directory as scope", async () => {
+    const tree: Record<string, string> = {
+      "/repo/.adhere/style/service.md": "---\ndescription: root\n---\nroot()\n",
+      "/repo/.adhere/cache/ignored.md": "---\ndescription: cache\n---\ncache()\n",
+      "/repo/packages/api/.adhere/style/service.md":
+        "---\ndescription: api\n---\napi()\n",
+      "/repo/packages/api/.adhere/api/schema.md":
+        "---\ndescription: schema\n---\nschema()\n",
+    };
+    const fs = FileSystem.layerNoop({
+      readDirectory: () =>
+        Effect.succeed([
+          ".adhere/style/service.md",
+          ".adhere/cache/ignored.md",
+          "packages/api/.adhere/style/service.md",
+          "packages/api/.adhere/api/schema.md",
+        ]),
+      readFileString: (file) => Effect.succeed(tree[file] ?? ""),
+    });
+
+    const entries = await Effect.runPromise(
+      loadAdhereRuleSet("/repo").pipe(Effect.provide(Layer.merge(fs, Path.layer))),
+    );
+
+    expect(entries).toEqual([
+      {
+        id: "style/service",
+        file: "/repo/.adhere/style/service.md",
+        scope: "/repo",
+        rule: { description: "root", reference: "root()" },
+      },
+      {
+        id: "api/schema",
+        file: "/repo/packages/api/.adhere/api/schema.md",
+        scope: "/repo/packages/api",
+        rule: { description: "schema", reference: "schema()" },
+      },
+      {
+        id: "style/service",
+        file: "/repo/packages/api/.adhere/style/service.md",
+        scope: "/repo/packages/api",
+        rule: { description: "api", reference: "api()" },
+      },
+    ]);
+  });
+
+  it("applies root rules globally and lets the nearest nested rule shadow the same id", () => {
+    const rootOnly = { description: "Root only.", reference: "rootOnly()" };
+    const rootShadowed = { description: "Root service.", reference: "root()" };
+    const apiShadow = { description: "API service.", reference: "api()" };
+    const apiOnly = { description: "API only.", reference: "apiOnly()" };
+
+    const entries = [
+      {
+        id: "style/root-only",
+        file: "/repo/.adhere/style/root-only.md",
+        scope: "/repo",
+        rule: rootOnly,
+      },
+      {
+        id: "style/service",
+        file: "/repo/.adhere/style/service.md",
+        scope: "/repo",
+        rule: rootShadowed,
+      },
+      {
+        id: "style/service",
+        file: "/repo/packages/api/.adhere/style/service.md",
+        scope: "/repo/packages/api",
+        rule: apiShadow,
+      },
+      {
+        id: "api/schema",
+        file: "/repo/packages/api/.adhere/api/schema.md",
+        scope: "/repo/packages/api",
+        rule: apiOnly,
+      },
+    ];
+
+    expect(applicableRules("/repo/packages/api/src/index.ts", entries)).toEqual({
+      "api/schema": apiOnly,
+      "style/root-only": rootOnly,
+      "style/service": apiShadow,
+    });
+    expect(applicableRules("/repo/packages/web/src/index.ts", entries)).toEqual({
+      "style/root-only": rootOnly,
+      "style/service": rootShadowed,
+    });
+  });
+});
+
+describe("contradictions", () => {
+  it("finds opposite textual rules that overlap in scope", () => {
+    const contradictions = findContradictions([
+      {
+        id: "style/use-services",
+        file: "/repo/.adhere/style/use-services.md",
+        scope: "/repo",
+        rule: { description: "Use service classes for IO.", reference: "class Api {}" },
+      },
+      {
+        id: "style/avoid-services",
+        file: "/repo/packages/api/.adhere/style/avoid-services.md",
+        scope: "/repo/packages/api",
+        rule: {
+          description: "Do not use service classes for IO.",
+          reference: "const Api = {}",
+        },
+      },
+      {
+        id: "style/unrelated",
+        file: "/repo/packages/web/.adhere/style/unrelated.md",
+        scope: "/repo/packages/web",
+        rule: { description: "Do not use service classes for IO.", reference: "x()" },
+      },
+    ]);
+
+    expect(contradictions).toHaveLength(1);
+    expect(formatContradictions(contradictions)).toContain(
+      "/repo/.adhere/style/use-services.md",
+    );
+    expect(formatContradictions(contradictions)).toContain(
+      "/repo/packages/api/.adhere/style/avoid-services.md",
+    );
+  });
+});
+
+describe("init", () => {
+  it("scaffolds config and example rules without clobbering existing files", async () => {
+    const root = join(tmpdir(), `adhere-init-${Date.now()}`);
+    await Effect.runPromise(initProject(root));
+    const config = await readFile(join(root, "adhere.config.ts"), "utf8");
+    const rule = await readFile(
+      join(root, ".adhere", "style", "prefer-small-files.md"),
+      "utf8",
+    );
+
+    expect(config).toContain("defineConfig");
+    expect(rule).toContain("description:");
+
+    const second = await Effect.runPromise(initProject(root));
+    expect(second.created).toEqual([]);
+    expect(second.skipped).toContain("adhere.config.ts");
+    expect(second.skipped).toContain(".adhere/style/prefer-small-files.md");
   });
 });
 
