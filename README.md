@@ -107,6 +107,13 @@ the report goes to stdout. A request Jev refuses stops the run with the file,
 the HTTP status, and Jev's reason. Files finished before it are cached, so
 running again continues from there.
 
+The firewall in front of Jev's API can refuse a request whose code reads to
+it as an attack, with a 403 and an HTML page rather than Jev's JSON. It refuses
+the same request every run, so that file is skipped, the run goes on, and the
+report lists each such file with Cloudflare's Ray ID, which TypeSafe AI can
+look the block up by. When only the question that finds the line is refused,
+the file's judgments are kept, and a rerun sends that question alone.
+
 ### Limiting a run
 
 Three flags bound what a run does. `--limit <checks>` judges at most that many

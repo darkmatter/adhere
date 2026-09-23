@@ -14,17 +14,27 @@ export class JevUnavailable extends Schema.TaggedError<JevUnavailable>()("JevUna
  */
 export class JevOverflow extends Schema.TaggedError<JevOverflow>()("JevOverflow", {}) {}
 
+/**
+ * A request the firewall in front of Jev's API refused: a 403 with an HTML
+ * block page where Jev answers JSON. It reads some code as an attack, so the
+ * same request is refused every time while the rest of a run goes through.
+ * `ray` is Cloudflare's Ray ID, which TypeSafe AI can look the block up by.
+ */
+export class JevBlocked extends Schema.TaggedError<JevBlocked>()("JevBlocked", {
+  ray: Schema.String,
+}) {}
+
 export class Jev extends Context.Service<
   Jev,
   {
     readonly judge: (
       lines: Lines,
       rules: Rules,
-    ) => Effect.Effect<Record<RuleId, number>, JevUnavailable | JevOverflow>;
+    ) => Effect.Effect<Record<RuleId, number>, JevUnavailable | JevOverflow | JevBlocked>;
     readonly locate: (
       lines: Lines,
       rules: Rules,
-    ) => Effect.Effect<Record<RuleId, number>, JevUnavailable | JevOverflow>;
+    ) => Effect.Effect<Record<RuleId, number>, JevUnavailable | JevOverflow | JevBlocked>;
     /**
      * Per rule, the partner Jev names as impossible to follow in the same code,
      * as `[rule, partner]` indexes into `rules`. A rule Jev names none for is

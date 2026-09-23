@@ -32,12 +32,21 @@ export interface AuditResult {
   readonly skipped: number;
   /** Files whose checks `--limit` left for a later run, none judged in this one. */
   readonly waiting: number;
+  /** Files the firewall in front of Jev's API refused, with the ID to report each by. */
+  readonly blocked: ReadonlyArray<Blocked>;
   readonly findings: ReadonlyArray<Finding>;
 }
 
+/** A file whose request the firewall refused, and Cloudflare's Ray ID for the refusal. */
+export interface Blocked {
+  readonly file: string;
+  readonly ray: string;
+}
+
 interface FileResult {
-  readonly status: "judged" | "cached" | "skipped" | "waiting";
+  readonly status: "judged" | "cached" | "skipped" | "waiting" | "blocked";
   readonly findings: ReadonlyArray<Finding>;
+  readonly blocked?: Blocked;
 }
 
 interface PreparedRule {
@@ -257,9 +266,22 @@ export const executeAudit = (
           judgment.line === undefined
         );
       });
-      const lines = isEmpty(flagged)
-        ? {}
-        : yield* jev.locate(file.lines, rulesOf(flagged)).pipe(inFile(file));
+      // A blocked line question still leaves the judgments worth caching: a rerun
+      // asks only for the lines again, not for every rule.
+      const {
+        lines,
+        blocked,
+      }: { readonly lines: Readonly<Record<RuleId, number>>; readonly blocked?: Blocked } = isEmpty(
+        flagged,
+      )
+        ? { lines: {}, blocked: undefined }
+        : yield* jev.locate(file.lines, rulesOf(flagged)).pipe(
+            Effect.map((lines) => ({ lines, blocked: undefined })),
+            Effect.catchTag("JevBlocked", ({ ray }) =>
+              Effect.succeed({ lines: {}, blocked: { file: file.path, ray } }),
+            ),
+            inFile(file),
+          );
       const located = Record.map(judged, (judgment, id) => {
         const line = lines[id];
         return line === undefined
@@ -291,7 +313,10 @@ export const executeAudit = (
         })
         .sort((a, b) => a.line - b.line);
       return {
-        result: fileResult(cached ? (deferred > 0 ? "waiting" : "cached") : "judged", findings),
+        result:
+          blocked === undefined
+            ? fileResult(cached ? (deferred > 0 ? "waiting" : "cached") : "judged", findings)
+            : { status: "blocked", findings, blocked },
         requests:
           (isEmpty(pending) ? 0 : judgeRequests(file.lines, rulesOf(pending))) +
           (isEmpty(flagged) ? 0 : locateRequests(file.lines, rulesOf(flagged))),
@@ -309,6 +334,17 @@ export const executeAudit = (
                 requests: judgeRequests(plan.file.lines, rulesOf(plan.pending)),
               }),
             ),
+            // The firewall refuses this file's code every time; the rest of the run goes on.
+            Effect.catchTag("JevBlocked", ({ ray }) =>
+              Effect.succeed({
+                result: {
+                  status: "blocked",
+                  findings: [],
+                  blocked: { file: plan.file.path, ray },
+                } satisfies FileResult,
+                requests: judgeRequests(plan.file.lines, rulesOf(plan.pending)),
+              }),
+            ),
           );
       yield* progress({ requests, findings: result.findings.length });
       return result;
@@ -323,6 +359,7 @@ export const executeAudit = (
       cached: count("cached"),
       skipped: count("skipped"),
       waiting: count("waiting"),
+      blocked: results.flatMap((result) => (result.blocked === undefined ? [] : [result.blocked])),
       findings: results.flatMap((result) => result.findings),
     };
   });

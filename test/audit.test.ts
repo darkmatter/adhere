@@ -32,6 +32,7 @@ import {
   contradictBody,
   fits,
   Jev,
+  JevBlocked,
   JevOverflow,
   JevUnavailable,
   judgeBody,
@@ -1061,6 +1062,7 @@ describe("pipeline", () => {
       cached: 0,
       skipped: 0,
       waiting: 0,
+      blocked: [],
       findings: [findingA],
     });
   });
@@ -1079,6 +1081,7 @@ describe("pipeline", () => {
       cached: 1,
       skipped: 0,
       waiting: 0,
+      blocked: [],
       findings: [findingA],
     });
 
@@ -1151,8 +1154,53 @@ describe("pipeline", () => {
       cached: 0,
       skipped: 1,
       waiting: 0,
+      blocked: [],
       findings: [findingA],
     });
+  });
+
+  it("skips a file the firewall blocks, judges the rest, and lists it with its Ray ID", async () => {
+    const other: ScannedFile = { path: "/repo/src/other.ts", lines: ["const x = 1;"] };
+    const jev = Layer.succeed(Jev, {
+      judge: (lines) =>
+        lines.length === other.lines.length
+          ? Effect.fail(JevBlocked.make({ ray: "a3fb098cae4f55a3-LAX" }))
+          : Effect.succeed({ a: 0.9, b: 0.2 }),
+      locate: () => Effect.succeed({ a: 2 }),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const result = await audit({ rules, jev, cache: memoryCache(), files: [source, other] });
+    expect(result).toMatchObject({
+      files: 2,
+      judged: 1,
+      blocked: [{ file: other.path, ray: "a3fb098cae4f55a3-LAX" }],
+      findings: [findingA],
+    });
+    const report = render(result, { root: "/repo" });
+    expect(report).toContain("2 files, 1 judged, 0 cached, 1 blocked.");
+    expect(report).toContain("  src/other.ts (Ray ID a3fb098cae4f55a3-LAX)");
+  });
+
+  it("keeps the judgments when only the line question is blocked, and asks it again", async () => {
+    const cache = memoryCache();
+    const blockedLines = Layer.succeed(Jev, {
+      judge: () => Effect.succeed({ a: 0.9, b: 0.2 }),
+      locate: () => Effect.fail(JevBlocked.make({ ray: "b7c1-LAX" })),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const first = await audit({ rules, jev: blockedLines, cache });
+    expect(first).toMatchObject({
+      judged: 0,
+      blocked: [{ file: source.path, ray: "b7c1-LAX" }],
+      findings: [],
+    });
+
+    const again = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    const second = await audit({ rules, jev: again.layer, cache });
+    expect(again.calls).toEqual({ judge: [], locate: [{ a }] });
+    expect(second.findings).toEqual([findingA]);
   });
 
   it("skips a file Jev says is over its context, and judges the rest", async () => {
@@ -1176,6 +1224,7 @@ describe("pipeline", () => {
       cached: 0,
       skipped: 1,
       waiting: 0,
+      blocked: [],
       findings: [findingA],
     });
   });
@@ -1237,7 +1286,15 @@ describe("highlight", () => {
 });
 
 describe("render", () => {
-  const result = { files: 1, judged: 1, cached: 0, skipped: 0, waiting: 0, findings: [findingA] };
+  const result = {
+    files: 1,
+    judged: 1,
+    cached: 0,
+    skipped: 0,
+    waiting: 0,
+    blocked: [],
+    findings: [findingA],
+  };
 
   it("prints the vp-lint frame with the code to write as the hint", () => {
     expect(render(result, { root: "/repo" }).join("\n")).toBe(
@@ -1534,6 +1591,28 @@ describe("jev over http", () => {
       success: { a: 0.25, b: 0.25, c: 0.25 },
     });
     expect(asked).toEqual([["a", "b"], ["c"]]);
+  });
+
+  it("reads the firewall's HTML page as a block with its Ray ID, and a JSON 403 as a refusal", async () => {
+    const key = Effect.succeed(Redacted.make("tsk_saved"));
+    const page = () =>
+      new Response(
+        '<!DOCTYPE html>\n<html class="no-js ie6 oldie">Sorry, you have been blocked</html>',
+        {
+          status: 403,
+          headers: { "content-type": "text/html; charset=UTF-8", "cf-ray": "a3fb098cae4f55a3-LAX" },
+        },
+      );
+    expect(await judge(key, { a }, page).judged).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "JevBlocked", ray: "a3fb098cae4f55a3-LAX" },
+    });
+
+    const denied = () => Response.json({ detail: "this key has no access" }, { status: 403 });
+    expect(await judge(key, { a }, denied).judged).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "JevUnavailable" },
+    });
   });
 
   it("reads Jev's max_tokens_exceeded as an overflow, and any other 400 as a refusal", async () => {

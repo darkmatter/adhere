@@ -125,12 +125,34 @@ const summary = (result: AuditResult): ReadonlyArray<Line> => {
     `${result.cached} cached`,
     ...(result.skipped > 0 ? [`${result.skipped} skipped`] : []),
     ...(result.waiting > 0 ? [`${result.waiting} waiting`] : []),
+    ...(result.blocked.length > 0 ? [`${result.blocked.length} blocked`] : []),
   ];
   return [
     [span(`Found ${counted(result.findings.length, "error", "errors")}.`)],
     [span(`${counts.join(", ")}.`)],
   ];
 };
+
+/**
+ * The files the firewall in front of Jev's API refused, each with the Ray ID
+ * TypeSafe AI can look the block up by, so a gap in the audit says where it is.
+ */
+const blockedFiles = (result: AuditResult, root: string | undefined): ReadonlyArray<Line> =>
+  result.blocked.length === 0
+    ? []
+    : [
+        [],
+        [
+          span(
+            `The firewall in front of Jev's API blocked ${counted(result.blocked.length, "file", "files")}, so ${result.blocked.length === 1 ? "it is" : "they are"} not judged in full. TypeSafe AI can look each block up by its Ray ID:`,
+          ),
+        ],
+        ...result.blocked.map(({ file, ray }) => [
+          span("  "),
+          span(displayPath(file, root), "path"),
+          span(` (Ray ID ${ray})`),
+        ]),
+      ];
 
 export interface RenderOptions {
   /** Color the frame the way `vp lint` does on a terminal, and highlight the code. */
@@ -147,6 +169,7 @@ export const render = (result: AuditResult, options: RenderOptions = {}): Readon
   [
     ...result.findings.flatMap((finding) => [...frame(finding, options.root), []]),
     ...summary(result),
+    ...blockedFiles(result, options.root),
   ].map((line) => serialize(line, options.color === true));
 
 /**

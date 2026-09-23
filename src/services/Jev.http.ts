@@ -7,6 +7,7 @@ import {
   conflictBody,
   contradictBody,
   Jev,
+  JevBlocked,
   JevOverflow,
   JevUnavailable,
   judgeBody,
@@ -48,6 +49,11 @@ const Overflowed = Schema.fromJsonString(
 const isOverflow = (body: string): boolean =>
   Option.isSome(Schema.decodeUnknownOption(Overflowed)(body));
 
+/** A firewall's block page: HTML where Jev answers JSON, even for its own errors. */
+const isBlockPage = (response: HttpClientResponse.HttpClientResponse, body: string): boolean =>
+  (response.headers["content-type"] ?? "").includes("text/html") ||
+  body.trimStart().startsWith("<");
+
 /**
  * A request that failed. A 400 saying the request is over Jev's context is a
  * `JevOverflow`, which skips the file. Any other answer outside 2xx refuses
@@ -63,19 +69,33 @@ const failed = (
   const { response } = problem.reason;
   return Effect.flatMap(
     Effect.orElseSucceed(response.text, () => ""),
-    (body): Effect.Effect<never, JevOverflow | JevUnavailable> =>
+    (body): Effect.Effect<never, JevOverflow | JevBlocked | JevUnavailable> =>
       response.status === 400 && isOverflow(body)
         ? Effect.fail(JevOverflow.make())
-        : Effect.fail(refused(`Jev answered HTTP ${response.status}${detailOf(body)}`)),
+        : response.status === 403 && isBlockPage(response, body)
+          ? Effect.fail(JevBlocked.make({ ray: response.headers["cf-ray"] ?? "none given" }))
+          : Effect.fail(refused(`Jev answered HTTP ${response.status}${detailOf(body)}`)),
   );
 };
 
-/** Comparing rules has no file to skip, so a request over Jev's context refuses instead. */
+/**
+ * Comparing rules has no file to skip, so a request over Jev's context, or one
+ * the firewall blocks, refuses instead.
+ */
 const refuseOverflow = <A>(
-  self: Effect.Effect<A, JevOverflow | JevUnavailable>,
+  self: Effect.Effect<A, JevOverflow | JevBlocked | JevUnavailable>,
 ): Effect.Effect<A, JevUnavailable> =>
-  Effect.catchTag(self, "JevOverflow", () =>
-    Effect.fail(refused("Comparing the rules took a request over Jev's context")),
+  self.pipe(
+    Effect.catchTag("JevOverflow", () =>
+      Effect.fail(refused("Comparing the rules took a request over Jev's context")),
+    ),
+    Effect.catchTag("JevBlocked", ({ ray }) =>
+      Effect.fail(
+        refused(
+          `The firewall in front of Jev's API blocked comparing the rules (Cloudflare Ray ID ${ray})`,
+        ),
+      ),
+    ),
   );
 
 export const JevLive = Layer.effect(Jev)(
