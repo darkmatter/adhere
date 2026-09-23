@@ -1,7 +1,8 @@
 # adhere
 
 A linter for rules a normal linter cannot check. A rule is a one-sentence
-description plus correct reference code, code to avoid, or both. For each
+description like "business logic should live in services", plus correct 
+reference code / code to avoid / or both. For each
 source file, adhere asks [Jev](https://typesafe.ai) (TypeSafe AI's System One
 model) whether the file breaks each rule, gets a calibrated probability per
 rule, and reports the ones above a threshold with the line Jev points at. The
@@ -9,10 +10,16 @@ report uses the same frame as `vp lint`.
 
 Deterministic rules (substring matches, type checks) belong in a normal linter.
 
+A preset for effect is included which can be run without setup: 
+
+```sh
+TYPESAFE_API_KEY=xxx npx @drkmttr/adhere lint --preset effect
+```
+
 ## Install
 
 ```sh
-npm install --global @drkmttr/adhere   # or: bun add --global @drkmttr/adhere
+bun add --global @drkmttr/adhere   # or: npm install --global @drkmttr/adhere
 ```
 
 To pin the version in a repo, for CI or scripts, add it as a dev dependency
@@ -20,7 +27,7 @@ and run `npx adhere`. To try it without installing, run
 `npx @drkmttr/adhere` or `bunx @drkmttr/adhere`.
 
 `adhere` is a prebuilt executable for macOS and Linux on arm64 and x64 and for
-Windows on x64. It needs Node to start, and no Bun.
+Windows on x64. .
 
 adhere sends each file it judges to Jev at `api.typesafe.ai`, authenticated
 with a TypeSafe AI API key: the one `adhere login` saved, or
@@ -32,7 +39,7 @@ with a TypeSafe AI API key: the one `adhere login` saved, or
 adhere init                          # .adhere/config.ts and two example rules
 echo ".adhere/cache/" >> .gitignore
 adhere login                         # save your TypeSafe AI API key, once
-adhere validate                      # check the rules, and ask Jev whether any contradict
+adhere validate                      # Checks your rules for contradictions using Jev
 adhere lint                          # audit the working directory
 ```
 
