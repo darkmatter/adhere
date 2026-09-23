@@ -89,7 +89,7 @@ const encoder = new TextEncoder();
 export const tokensOf = (value: unknown): number =>
   Math.ceil(encoder.encode(JSON.stringify(value)).length / 3);
 
-export const snippetOf = (line: string): string => line.trim().slice(0, 120);
+const snippetOf = (line: string): string => line.trim().slice(0, 120);
 
 const isBlank = (line: string): boolean => line.trim().length === 0;
 

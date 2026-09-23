@@ -28,18 +28,19 @@ type Line = ReadonlyArray<Span>;
  * palette (`38;5;N`) or truecolor (`38;2;R;G;B`), bold with a trailing `;1`,
  * and a dim line number. Of the header, only the `×` and the rule are red,
  * since a whole line of red is hard to read: the probability is an accent, and
- * the description a soft white. The code's are the terminal's own colors
- * (`3N`), so the user's theme picks shades that read on its background; none
- * is magenta, which would run into the label.
+ * the description a cool near-white, set here since a theme's own white can
+ * be gray. The code's are the terminal's own colors (`3N`), so the user's
+ * theme picks shades that read on its background; none is magenta, which
+ * would run into the underline.
  */
 const THEME: Readonly<Record<Role, string>> = {
-  error: "38;5;197;1",
-  probability: "38;2;250;179;135",
-  description: "38;2;242;205;205",
+  error: "38;2;164;20;71;1",
+  probability: "38;5;156",
+  description: "38;2;230;230;255",
   path: "38;2;5;125;160;1",
   lineNumber: "2",
   underline: "38;2;255;0;175",
-  label: "38;5;212",
+  label: "38;2;242;205;205",
   comment: "2",
   string: "32",
   constant: "33",
@@ -97,17 +98,33 @@ const header = (finding: Finding): Line => [
   span(finding.description, "description"),
 ];
 
-/** The path, the offending line numbered in the gutter, and an underline as long as the line. */
+/**
+ * The path, then the finding's excerpt with each line numbered in the gutter,
+ * and an underline under the offending line's code.
+ */
 const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => {
-  const number = String(finding.line);
-  const gutter = span(" ".repeat(number.length + 2));
-  // A snippet is one line: `snippetOf` trims it out of the file.
-  const [code = []] = highlighted(finding.snippet);
-  const underline = "─".repeat(Math.max(1, finding.snippet.trim().length));
+  const { start, lines } = finding.excerpt;
+  const width = String(start + lines.length - 1).length;
+  const gutter = span(" ".repeat(width + 2));
+  const offending = lines[finding.line - start] ?? "";
+  // The line's own indentation, tabs and all, lines the underline up under its code.
+  const indent = offending.slice(0, offending.length - offending.trimStart().length);
+  const underline = "─".repeat(Math.max(1, offending.trim().length));
+  const location = `:${finding.line}:${indent.length + 1}]`;
   return [
-    [gutter, span("╭─["), span(displayPath(finding.file, root), "path"), span(`:${number}:1]`)],
-    [span(" "), span(number, "lineNumber"), span(" │ "), ...code],
-    [gutter, span("· "), span(underline, "underline")],
+    [gutter, span("╭─["), span(displayPath(finding.file, root), "path"), span(location)],
+    ...highlighted(lines.join("\n")).flatMap((code, index): ReadonlyArray<Line> => {
+      const number = String(start + index);
+      const numbered = [
+        span(" ".repeat(width - number.length + 1)),
+        span(number, "lineNumber"),
+        span(" │ "),
+        ...code,
+      ];
+      return start + index === finding.line
+        ? [numbered, [gutter, span("· "), span(indent), span(underline, "underline")]]
+        : [numbered];
+    }),
     [gutter, span("╰────")],
   ];
 };
@@ -125,8 +142,8 @@ const hint = (finding: Finding): ReadonlyArray<Line> => {
 
 /**
  * One diagnostic, in the frame `vp lint` prints on a terminal: a header with
- * the rule in red, the offending line, a pink underline, and the code to write
- * as the hint.
+ * the rule in red, the code around the offending line, a pink underline under
+ * it, and the code to write as the hint.
  */
 const frame = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => [
   header(finding),

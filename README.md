@@ -47,9 +47,14 @@ built-in Effect rules. A finding looks like this:
 
 ```text
   × data/brand-ports (0.93): A port is a branded, range-checked integer, not a bare number.
-   ╭─[src/server.ts:4:1]
- 4 │ const port: number = Number(process.env.PORT ?? 3000);
-   · ──────────────────────────────────────────────────────
+   ╭─[src/server.ts:6:3]
+ 4 │ export const serve = Effect.gen(function* () {
+ 5 │   const host = process.env.HOST ?? "localhost";
+ 6 │   const port: number = Number(process.env.PORT ?? 3000);
+   ·   ──────────────────────────────────────────────────────
+ 7 │   yield* listen({ host, port });
+ 8 │   yield* Effect.log(`Listening on ${host}:${port}`);
+ 9 │ });
    ╰────
   hint: const Port = Schema.Int.pipe(
           Schema.check(Schema.isBetween({ minimum: 1, maximum: 65535 })),
@@ -60,7 +65,10 @@ Found 1 error.
 42 files, 3 judged, 39 cached.
 ```
 
-The header is the rule id, Jev's probability, and the rule's description. The
+The header is the rule id, Jev's probability, and the rule's description.
+Under it is the line Jev points at, underlined, with the code around it: the
+largest statement around the line that is 30 lines or fewer, usually the whole
+function, and up to 3 lines of whole statements on either side. The
 hint is the rule's code that must be written; a rule with only code that must
 never be written shows that code, labeled `never:`, instead. On a terminal, the report is in color and the code
 in it is highlighted. The exit code is 0 when nothing is reported and 1 when

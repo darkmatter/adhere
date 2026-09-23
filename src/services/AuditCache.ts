@@ -2,11 +2,14 @@ import { CACHE_DIRECTORY } from "#config.ts";
 import { Context, Crypto, Effect, Layer, Option, Path, Schema } from "effect";
 import * as KeyValueStore from "effect/unstable/persistence/KeyValueStore";
 
+/**
+ * Entries written before the report read its excerpt from the file also hold
+ * the line's text, as `snippet`; decoding drops it, so they stay valid.
+ */
 export const Judgment = Schema.Struct({
   fingerprint: Schema.String,
   probability: Schema.Finite,
   line: Schema.optionalKey(Schema.Finite),
-  snippet: Schema.optionalKey(Schema.String),
 });
 export interface Judgment extends Schema.Schema.Type<typeof Judgment> {}
 

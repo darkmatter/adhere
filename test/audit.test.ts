@@ -2,7 +2,17 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { stripVTControlCharacters } from "node:util";
-import { ConfigProvider, Crypto, Effect, FileSystem, Layer, Path, Record, Redacted } from "effect";
+import {
+  ConfigProvider,
+  Crypto,
+  Effect,
+  FileSystem,
+  Layer,
+  Path,
+  Record,
+  Redacted,
+  Schema,
+} from "effect";
 import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import { describe, expect, it } from "vite-plus/test";
 import { findContradictions, formatContradictions } from "../src/contradictions.ts";
@@ -13,13 +23,14 @@ import {
   type Preset,
   resolveConfig,
 } from "../src/config.ts";
+import { excerptOf } from "../src/excerpt.ts";
 import { tokenize } from "../src/highlight.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
 import { applicableRules, loadAdhereRuleSet, loadRules, type RuleEntry } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
-import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
+import { AuditCache, CacheEntry } from "../src/services/AuditCache.ts";
 import {
   Credentials,
   CredentialsLive,
@@ -151,7 +162,7 @@ const findingA = {
   examples: { good: { word: "must" as const, code: a.must } },
   file: "/repo/src/server.ts",
   line: 2,
-  snippet: "const port: number = Number(process.env.PORT);",
+  excerpt: { start: 1, lines: source.lines },
   probability: 0.9,
 };
 
@@ -1105,7 +1116,6 @@ describe("pipeline", () => {
             fingerprint: hex(`jev-latest${a.description}${a.must}`),
             probability: 0.9,
             line: 2,
-            snippet: findingA.snippet,
           },
         },
       },
@@ -1130,6 +1140,18 @@ describe("pipeline", () => {
         examples: { ...findingA.examples, bad: { word: "never", code: withNever.never } },
       },
     ]);
+  });
+
+  it("reads a cache entry that still holds the line's text, as entries did before excerpts", () => {
+    const judgment = { fingerprint: "f", probability: 0.9, line: 2 };
+    const written = JSON.stringify({
+      hash: "h",
+      judgments: { a: { ...judgment, snippet: "const port: number = 3000;" } },
+    });
+    expect(Schema.decodeUnknownSync(Schema.fromJsonString(CacheEntry))(written)).toEqual({
+      hash: "h",
+      judgments: { a: judgment },
+    });
   });
 
   it("skips a file too long for Jev's context, and judges the rest", async () => {
@@ -1277,11 +1299,159 @@ describe("highlight", () => {
     ]);
   });
 
+  it("reads a template in another's ${…} as part of it, braces and all", () => {
+    expect(marked("const list = `${xs.map((x) => `- ${x}`).join(`}`)}`; const n = 1;")).toEqual([
+      "[keyword const] list = [string `${xs.map((x) => `- ${x}`).join(`}`)}`]; [keyword const] n = [constant 1];",
+    ]);
+  });
+
   it("gives back every character of the input, however malformed", () => {
-    for (const code of ['"unterminated', "/* open", "`open\n\n", "a\r\nb", "é → 🎉", "y / z /"]) {
+    for (const code of [
+      '"unterminated',
+      "/* open",
+      "`open\n\n",
+      "`${open",
+      "`${a}\\",
+      "a\r\nb",
+      "é → 🎉",
+      "y / z /",
+    ]) {
       const text = tokenize(code).map((line) => line.map((token) => token.text).join(""));
       expect(text.join("\n")).toBe(code);
     }
+  });
+});
+
+describe("excerpt", () => {
+  /** The excerpt of `code` from line `first` to line `last`. */
+  const lines = (code: ReadonlyArray<string>, first: number, last: number) => ({
+    start: first,
+    lines: code.slice(first - 1, last),
+  });
+
+  it("shows the whole function a line is in, when it fits", () => {
+    const code = [
+      'import { Effect } from "effect";',
+      "",
+      "export const load = (path: string) =>",
+      "  Effect.gen(function* () {",
+      "    const fs = yield* FileSystem.FileSystem;",
+      "    const text = yield* fs.readFileString(path);",
+      "    return JSON.parse(text);",
+      "  });",
+      "",
+      "export const save = (path: string, value: unknown) => write(path, value);",
+    ];
+    expect(excerptOf(code, 6)).toEqual(lines(code, 3, 8));
+  });
+
+  it("shows a few whole statements on either side of a line outside any function", () => {
+    const code = [
+      "const defaults = {",
+      '  host: "localhost",',
+      "};",
+      "const host = process.env.HOST ?? defaults.host;",
+      "const port: number = Number(process.env.PORT ?? 3000);",
+      "const url = `http://${host}:${port}`;",
+      "export const serve = () => {",
+      "  listen(url);",
+      "};",
+    ];
+    expect(excerptOf(code, 5)).toEqual(lines(code, 4, 6));
+  });
+
+  it("shows the statement a line is in when its function is too long, under the line that opens it", () => {
+    const steps = Array.from(
+      { length: 30 },
+      (_, index) => `  const step${index} = yield* step(${index});`,
+    );
+    const code = [
+      "export const run = Effect.gen(function* () {",
+      "  const config = yield* Config;",
+      "  const flagged = rules.filter((rule) => {",
+      "    const judgment = judged[rule.id];",
+      "    return judgment > rule.threshold;",
+      "  });",
+      ...steps,
+      "  return flagged;",
+      "});",
+    ];
+    expect(excerptOf(code, 4)).toEqual(lines(code, 1, 7));
+  });
+
+  it("starts below a comment it would start partway through, and ends at code", () => {
+    const code = [
+      "/**",
+      " * The port and host to listen on.",
+      " */",
+      "const port = 3000;",
+      'const host = "localhost";',
+      "const url = `http://${host}:${port}`;",
+      "// Serves the app.",
+      "// Call it once.",
+      "export const serve = () => listen(url);",
+    ];
+    expect(excerptOf(code, 5)).toEqual(lines(code, 4, 6));
+  });
+
+  it("shows a comment the line is in whole, from where it opens", () => {
+    const code = [
+      "/**",
+      " * Reads the port.",
+      " *",
+      " * Falls back to 3000.",
+      " * Never throws.",
+      " */",
+      "const port = 3000;",
+    ];
+    expect(excerptOf(code, 5)).toEqual(lines(code, 1, 7));
+  });
+
+  it("reads brackets in strings, templates, regexes, and comments as text", () => {
+    const code = [
+      "export const shapes = (text: string) => {",
+      '  const open = "{(";',
+      "  const close = `)}`;",
+      "  // } ends nothing",
+      "  const fence = /[{]/;",
+      "  return text.includes(open) && !fence.test(close);",
+      "};",
+      "export const after = 1;",
+    ];
+    expect(excerptOf(code, 3)).toEqual(lines(code, 1, 7));
+  });
+
+  it("ends a statement at a line break, without semicolons, unless an operator carries it over", () => {
+    const code = [
+      "const base = 1",
+      "const total = base",
+      "  + 2",
+      "const doubled = [total]",
+      "  .map((n) => n * 2)",
+      "if (total > 2) {",
+      "  log(total)",
+      "} else {",
+      "  log(doubled)",
+      "}",
+    ];
+    expect(excerptOf(code, 1)).toEqual(lines(code, 1, 3));
+    expect(excerptOf(code, 6)).toEqual(lines(code, 4, 10));
+  });
+
+  it("keeps type arguments broken over lines together, commas and all", () => {
+    const members = Array.from(
+      { length: 6 },
+      (_, index) => `    readonly get${index}: Effect.Effect<string, never>;`,
+    );
+    const code = [
+      "export class Store extends Context.Service<",
+      "  Store,",
+      "  {",
+      ...members,
+      "  }",
+      '>()("Store") {}',
+    ];
+    expect(excerptOf(code, 9)).toEqual(lines(code, 1, 11));
   });
 });
 
@@ -1300,9 +1470,11 @@ describe("render", () => {
     expect(render(result, { root: "/repo" }).join("\n")).toBe(
       [
         "  × a (0.90): Ports are branded.",
-        "   ╭─[src/server.ts:2:1]",
-        " 2 │ const port: number = Number(process.env.PORT);",
-        "   · ──────────────────────────────────────────────",
+        "   ╭─[src/server.ts:2:3]",
+        " 1 │ const before = 1;",
+        " 2 │   const port: number = Number(process.env.PORT);",
+        "   ·   ──────────────────────────────────────────────",
+        " 3 │ const after = 2;",
         "   ╰────",
         '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
         "        type Port = typeof Port.Type",
@@ -1311,6 +1483,19 @@ describe("render", () => {
         "1 file, 1 judged, 0 cached.",
       ].join("\n"),
     );
+  });
+
+  it("numbers the excerpt's lines right-aligned, and underlines the code past a tab", () => {
+    const excerpt = { start: 9, lines: ["if (port) {", "\tlisten(port);", "}"] };
+    const finding = { ...findingA, line: 10, excerpt };
+    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(1, 7)).toEqual([
+      "    ╭─[src/server.ts:10:2]",
+      "  9 │ if (port) {",
+      " 10 │ \tlisten(port);",
+      "    · \t─────────────",
+      " 11 │ }",
+      "    ╰────",
+    ]);
   });
 
   it("shows the code never to write, labeled with its word, for a rule without code to write", () => {
@@ -1325,10 +1510,10 @@ describe("render", () => {
   const sgr = (code: string, text: string) => `\u001b[${code}m${text}\u001b[0m`;
 
   it("colors only the rule red in the header on a terminal and counts skipped files", () => {
-    const red = "38;5;197;1";
+    const red = "38;2;184;20;81;1";
     const colored = render({ ...result, skipped: 2 }, { color: true }).join("\n");
     expect(colored).toContain(
-      `  ${sgr(red, "×")} ${sgr(red, "a")} (${sgr("38;2;250;179;135", "0.90")}): ${sgr("38;2;242;205;205", "Ports are branded.")}`,
+      `  ${sgr(red, "×")} ${sgr(red, "a")} (${sgr("38;5;156", "0.90")}): ${sgr("38;2;245;245;250", "Ports are branded.")}`,
     );
     expect(colored).toContain("\u001b[38;2;5;125;160;1m/repo/src/server.ts");
     expect(colored.endsWith("1 file, 1 judged, 0 cached, 2 skipped.")).toBe(true);
@@ -1337,10 +1522,10 @@ describe("render", () => {
   it("highlights the offending line and the hint on a terminal", () => {
     const colored = render(result, { color: true });
     expect(colored).toContain(
-      ` ${sgr("2", "2")} │ ${sgr("34", "const")} port: ${sgr("36", "number")} = ${sgr("36", "Number")}(process.env.PORT);`,
+      ` ${sgr("2", "2")} │   ${sgr("34", "const")} port: ${sgr("36", "number")} = ${sgr("36", "Number")}(process.env.PORT);`,
     );
     expect(colored).toContain(
-      `${sgr("38;5;212", "  hint: ")}${sgr("34", "const")} ${sgr("36", "Port")} = ${sgr("36", "Schema")}.${sgr("36", "Int")}.pipe(${sgr("36", "Schema")}.brand(${sgr("32", '"Port"')}))`,
+      `${sgr("38;2;242;205;205", "  hint: ")}${sgr("34", "const")} ${sgr("36", "Port")} = ${sgr("36", "Schema")}.${sgr("36", "Int")}.pipe(${sgr("36", "Schema")}.brand(${sgr("32", '"Port"')}))`,
     );
   });
 

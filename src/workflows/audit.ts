@@ -1,4 +1,5 @@
 import { type Examples, examplesOf, type Rule, type RuleId } from "#config.ts";
+import { type Excerpt, excerptOf } from "#excerpt.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, type Judgment, sha256 } from "#services/AuditCache.ts";
@@ -9,7 +10,6 @@ import {
   judgeQuestion,
   judgeRequests,
   locateRequests,
-  snippetOf,
 } from "#services/Jev.ts";
 import { SourceWalker } from "#services/SourceWalker.ts";
 import { applicableRules } from "#rules.ts";
@@ -21,7 +21,8 @@ export interface Finding {
   readonly examples: Examples;
   readonly file: string;
   readonly line: number;
-  readonly snippet: string;
+  /** The code around `line` the report shows. */
+  readonly excerpt: Excerpt;
   readonly probability: number;
 }
 
@@ -288,9 +289,7 @@ export const executeAudit = (
           );
       const located = Record.map(judged, (judgment, id) => {
         const line = lines[id];
-        return line === undefined
-          ? judgment
-          : { ...judgment, line, snippet: snippetOf(file.lines[line - 1] ?? "") };
+        return line === undefined ? judgment : { ...judgment, line };
       });
 
       const cached = isEmpty(pending) && isEmpty(flagged);
@@ -309,7 +308,7 @@ export const executeAudit = (
                   examples: examplesOf(k.rule),
                   file: file.path,
                   line: judgment.line,
-                  snippet: judgment.snippet ?? "",
+                  excerpt: excerptOf(file.lines, judgment.line),
                   probability: judgment.probability,
                 },
               ]
