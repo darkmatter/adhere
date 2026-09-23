@@ -1,0 +1,770 @@
+[
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "basics/fn-for-named-effects#1",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "basics/fn-for-named-effects#2",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "basics/gen-for-sequencing#1",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "basics/gen-for-sequencing#2",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "basics/instrument-with-pipe#1",
+    "label": "false",
+    "note": "The call already has a timeout and a retry."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "config/business-logic-depends-on-config-service#1",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "config/business-logic-depends-on-config-service#2",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "config/tests-provide-values-directly#1",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "config/tests-provide-values-directly#2",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "errors/wrap-external-errors#1",
+    "label": "false",
+    "note": "The call already has a timeout and a retry."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "errors/wrap-external-errors#2",
+    "label": "false",
+    "note": "The call already has a timeout and a retry."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "services/fresh-layer-per-test#3",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "services/memoize-parameterized-layers#1",
+    "label": "false",
+    "note": "It composes layers and makes no call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "services/memoize-parameterized-layers#2",
+    "label": "false",
+    "note": "It composes layers and makes no call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "services/methods-have-no-requirements#2",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "services/provide-at-entry#1",
+    "label": "debatable",
+    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "services/test-layers-are-in-memory#1",
+    "label": "debatable",
+    "note": "A test layer's queries to a local SQLite file."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "src/services/Jev.http.ts",
+    "label": "false",
+    "note": "Its client times out after 30 seconds and retries transient failures."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
+    "file": "testing/test-clock-for-time#3",
+    "label": "debatable",
+    "note": "An it.live test timing a real round trip, which a timeout or a retry would defeat."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "basics/gen-for-sequencing#1",
+    "label": "false",
+    "note": "An Effect held in a constant, not a function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "basics/gen-for-sequencing#2",
+    "label": "false",
+    "note": "An Effect held in a constant, not a function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "basics/instrument-with-pipe#1",
+    "label": "false",
+    "note": "An Effect held in a constant, not a function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "basics/instrument-with-pipe#2",
+    "label": "false",
+    "note": "An Effect held in a constant, not a function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "cli/handlers-delegate#1",
+    "label": "false",
+    "note": "An anonymous handler passed to Command.make, not a named function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "config/secrets-are-redacted#1",
+    "label": "false",
+    "note": "An Effect held in a constant, not a function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "config/secrets-are-redacted#2",
+    "label": "false",
+    "note": "An Effect held in a constant, not a function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "config/validate-with-schema#1",
+    "label": "false",
+    "note": "An Effect held in a constant, not a function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "config/validate-with-schema#2",
+    "label": "false",
+    "note": "An Effect held in a constant, not a function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "services/no-mutable-state#2",
+    "label": "debatable",
+    "note": "Service methods written as arrow functions inside a layer."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "services/provide-at-entry#1",
+    "label": "false",
+    "note": "An Effect held in a constant, not a function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "services/provide-at-entry#2",
+    "label": "false",
+    "note": "An Effect held in a constant, not a function."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "services/test-layers-are-in-memory#1",
+    "label": "debatable",
+    "note": "Service methods written as arrow functions inside a layer."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "src/cli.ts",
+    "label": "real",
+    "note": "toStderr returns an Effect and is not defined with Effect.fn."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "src/config.ts",
+    "label": "real",
+    "note": "decodeConfig returns an Effect and is not defined with Effect.fn."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "src/init.ts",
+    "label": "real",
+    "note": "initProject returns an Effect and is not defined with Effect.fn."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "src/markdown.ts",
+    "label": "real",
+    "note": "parseRuleMarkdown returns an Effect and is not defined with Effect.fn."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "src/services/Jev.http.ts",
+    "label": "real",
+    "note": "ask and answersTo return Effects and are not defined with Effect.fn."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "src/services/SourceWalker.ts",
+    "label": "real",
+    "note": "readEach returns an Effect and is not defined with Effect.fn."
+  },
+  {
+    "rule": "basics/gen-for-sequencing",
+    "file": "src/services/AuditCache.ts",
+    "label": "debatable",
+    "note": "Two steps chained with flatMap and map; whether that is sequencing is a judgment call."
+  },
+  {
+    "rule": "basics/instrument-with-pipe",
+    "file": "cli/handlers-delegate#2",
+    "label": "debatable",
+    "note": "Console.log in a handler body: the command's output, arguably not instrumentation."
+  },
+  {
+    "rule": "basics/instrument-with-pipe",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "It builds requests and adds no timeouts, retries, logs, or spans. It does contain adhere's question text."
+  },
+  {
+    "rule": "cli/handlers-delegate",
+    "file": "errors/defects-for-bugs#1",
+    "label": "false",
+    "note": "The file has no command handler."
+  },
+  {
+    "rule": "cli/handlers-delegate",
+    "file": "errors/defects-for-bugs#2",
+    "label": "false",
+    "note": "The file has no command handler."
+  },
+  {
+    "rule": "cli/handlers-delegate",
+    "file": "errors/domain-errors-are-tagged#1",
+    "label": "false",
+    "note": "The file has no command handler."
+  },
+  {
+    "rule": "cli/handlers-delegate",
+    "file": "errors/domain-errors-are-tagged#2",
+    "label": "false",
+    "note": "The file has no command handler."
+  },
+  {
+    "rule": "cli/handlers-delegate",
+    "file": "src/cli.ts",
+    "label": "debatable",
+    "note": "Its handlers build the plan, ask to confirm, and count progress: interface work rather than business logic, arguably."
+  },
+  {
+    "rule": "cli/handlers-delegate",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "The file has no command handler. It does contain adhere's question text."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "basics/external-calls-are-resilient#1",
+    "label": "debatable",
+    "note": "A base URL hard-coded in business logic; the rule is about reading Config, not about hard-coding."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "basics/external-calls-are-resilient#2",
+    "label": "debatable",
+    "note": "A base URL hard-coded in business logic; the rule is about reading Config, not about hard-coding."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "config/secrets-are-redacted#1",
+    "label": "debatable",
+    "note": "Reads Config in an Effect that is not a service's layer, though it could become one."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "config/secrets-are-redacted#2",
+    "label": "debatable",
+    "note": "Reads Config in an Effect that is not a service's layer, though it could become one."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "config/tests-provide-values-directly#1",
+    "label": "false",
+    "note": "A test that sets environment variables; it reads no Config."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "config/validate-with-schema#1",
+    "label": "debatable",
+    "note": "Reads Config in an Effect that is not a service's layer, though it could become one."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "errors/wrap-external-errors#1",
+    "label": "false",
+    "note": "It reads no config."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "errors/wrap-external-errors#2",
+    "label": "false",
+    "note": "It reads no config."
+  },
+  {
+    "rule": "config/secrets-are-redacted",
+    "file": "src/cli.ts",
+    "label": "debatable",
+    "note": "Reads the key from a masked prompt, not Config, and unwraps it briefly to check it."
+  },
+  {
+    "rule": "config/secrets-are-redacted",
+    "file": "src/services/Jev.http.ts",
+    "label": "false",
+    "note": "It reads no config; the key arrives redacted."
+  },
+  {
+    "rule": "config/tests-provide-values-directly",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "Not a test. It does contain adhere's question text."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "basics/gen-for-sequencing#3",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "cli/handlers-delegate#1",
+    "label": "real",
+    "note": "A customer id as a bare string."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "cli/handlers-delegate#2",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "config/business-logic-depends-on-config-service#1",
+    "label": "real",
+    "note": "Email addresses as bare strings."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "config/business-logic-depends-on-config-service#2",
+    "label": "real",
+    "note": "Email addresses as bare strings."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "config/validate-with-schema#1",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "config/validate-with-schema#2",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "errors/defects-for-bugs#1",
+    "label": "real",
+    "note": "A SKU and stock counts as bare Schema.String and Schema.Number."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "errors/defects-for-bugs#2",
+    "label": "real",
+    "note": "A SKU and stock counts as bare Schema.String and Schema.Number."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "services/fresh-layer-per-test#2",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "services/fresh-layer-per-test#3",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "services/memoize-parameterized-layers#1",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "services/memoize-parameterized-layers#2",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "services/no-mutable-state#1",
+    "label": "real",
+    "note": "A request count as a bare number."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "services/test-layers-are-in-memory#1",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/cli.ts",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/config.ts",
+    "label": "real",
+    "note": "RuleId is a bare string."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/contradictions.ts",
+    "label": "debatable",
+    "note": "A probability as a bare number: arguably not an id, count, or address."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/rules.ts",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/services/AuditCache.ts",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/services/Jev.http.ts",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/services/Jev.ts",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/workflows/audit.ts",
+    "label": "real",
+    "note": "File paths and line numbers are bare strings and numbers on Finding."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "testing/test-clock-for-time#3",
+    "label": "debatable",
+    "note": "A localhost URL as a literal string in a test."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "testing/test-random#1",
+    "label": "debatable",
+    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
+  },
+  {
+    "rule": "data/records-are-schema-classes",
+    "file": "data/variants-are-tagged-unions#1",
+    "label": "real",
+    "note": "Payment variants as a plain type alias."
+  },
+  {
+    "rule": "data/records-are-schema-classes",
+    "file": "src/config.ts",
+    "label": "debatable",
+    "note": "Configuration types, or a Schema.Struct with an interface: arguably not domain records, and not Schema.Class."
+  },
+  {
+    "rule": "data/records-are-schema-classes",
+    "file": "src/contradictions.ts",
+    "label": "real",
+    "note": "Contradiction is a plain interface."
+  },
+  {
+    "rule": "data/records-are-schema-classes",
+    "file": "src/models/Audit.ts",
+    "label": "real",
+    "note": "ScannedFile is a plain interface."
+  },
+  {
+    "rule": "data/records-are-schema-classes",
+    "file": "src/rules.ts",
+    "label": "real",
+    "note": "RuleEntry is a plain interface."
+  },
+  {
+    "rule": "data/records-are-schema-classes",
+    "file": "src/services/AuditCache.ts",
+    "label": "debatable",
+    "note": "Configuration types, or a Schema.Struct with an interface: arguably not domain records, and not Schema.Class."
+  },
+  {
+    "rule": "data/records-are-schema-classes",
+    "file": "src/services/Jev.ts",
+    "label": "real",
+    "note": "ComparedRule and Body are plain interfaces."
+  },
+  {
+    "rule": "data/records-are-schema-classes",
+    "file": "src/workflows/audit.ts",
+    "label": "real",
+    "note": "Finding and AuditResult are plain interfaces."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "errors/defects-for-bugs#1",
+    "label": "false",
+    "note": "The file has no structured variants."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "errors/domain-errors-are-tagged#1",
+    "label": "false",
+    "note": "The file has no structured variants."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "errors/domain-errors-are-tagged#2",
+    "label": "false",
+    "note": "The file has no structured variants."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "errors/wrap-external-errors#2",
+    "label": "false",
+    "note": "The file has no structured variants."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "src/models/Audit.ts",
+    "label": "false",
+    "note": "The file has no structured variants."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "src/services/Jev.http.ts",
+    "label": "false",
+    "note": "The file has no structured variants."
+  },
+  {
+    "rule": "errors/catch-defects-at-boundaries-only",
+    "file": "config/validate-with-schema#1",
+    "label": "false",
+    "note": "It raises defects or maps typed errors, and catches no defect."
+  },
+  {
+    "rule": "errors/catch-defects-at-boundaries-only",
+    "file": "errors/defects-for-bugs#1",
+    "label": "false",
+    "note": "It raises defects or maps typed errors, and catches no defect."
+  },
+  {
+    "rule": "errors/catch-defects-at-boundaries-only",
+    "file": "errors/defects-for-bugs#2",
+    "label": "false",
+    "note": "It raises defects or maps typed errors, and catches no defect."
+  },
+  {
+    "rule": "errors/catch-defects-at-boundaries-only",
+    "file": "errors/domain-errors-are-tagged#1",
+    "label": "false",
+    "note": "It raises defects or maps typed errors, and catches no defect."
+  },
+  {
+    "rule": "errors/catch-defects-at-boundaries-only",
+    "file": "errors/domain-errors-are-tagged#2",
+    "label": "false",
+    "note": "It raises defects or maps typed errors, and catches no defect."
+  },
+  {
+    "rule": "errors/catch-defects-at-boundaries-only",
+    "file": "errors/wrap-external-errors#2",
+    "label": "false",
+    "note": "It raises defects or maps typed errors, and catches no defect."
+  },
+  {
+    "rule": "errors/defects-for-bugs",
+    "file": "errors/domain-errors-are-tagged#1",
+    "label": "false",
+    "note": "A frozen account and insufficient funds are failures a caller handles."
+  },
+  {
+    "rule": "errors/defects-for-bugs",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "JevUnavailable and JevOverflow are failures the caller handles."
+  },
+  {
+    "rule": "errors/domain-errors-are-tagged",
+    "file": "config/validate-with-schema#1",
+    "label": "debatable",
+    "note": "Dies on invalid config: a defect rather than a domain failure."
+  },
+  {
+    "rule": "errors/domain-errors-are-tagged",
+    "file": "src/markdown.ts",
+    "label": "false",
+    "note": "It fails with tagged errors already."
+  },
+  {
+    "rule": "errors/domain-errors-are-tagged",
+    "file": "src/services/Jev.http.ts",
+    "label": "false",
+    "note": "It fails with tagged errors already."
+  },
+  {
+    "rule": "errors/wrap-external-errors",
+    "file": "basics/external-calls-are-resilient#1",
+    "label": "real",
+    "note": "HttpClient errors pass through unwrapped."
+  },
+  {
+    "rule": "errors/wrap-external-errors",
+    "file": "basics/external-calls-are-resilient#2",
+    "label": "real",
+    "note": "HttpClient errors pass through unwrapped."
+  },
+  {
+    "rule": "errors/wrap-external-errors",
+    "file": "src/services/Jev.http.ts",
+    "label": "debatable",
+    "note": "HTTP errors are wrapped in a tagged error, with a message rather than a Schema.Defect field."
+  },
+  {
+    "rule": "platform/os-access-through-platform-services",
+    "file": "config/tests-provide-values-directly#1",
+    "label": "real",
+    "note": "Sets process.env directly."
+  },
+  {
+    "rule": "platform/os-access-through-platform-services",
+    "file": "src/cli.ts",
+    "label": "real",
+    "note": "Writes to process.stderr directly."
+  },
+  {
+    "rule": "platform/os-access-through-platform-services",
+    "file": "src/init.ts",
+    "label": "real",
+    "note": "Imports node:fs/promises and node:path."
+  },
+  {
+    "rule": "services/fresh-layer-per-test",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "Not a test. It does contain adhere's question text."
+  },
+  {
+    "rule": "services/memoize-parameterized-layers",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "It constructs no layers."
+  },
+  {
+    "rule": "services/no-mutable-state",
+    "file": "services/test-layers-are-in-memory#1",
+    "label": "false",
+    "note": "The layer exposes readonly methods and no state."
+  },
+  {
+    "rule": "services/no-mutable-state",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "The Jev service exposes readonly methods; the arrays in the file are local to functions."
+  },
+  {
+    "rule": "services/provide-at-entry",
+    "file": "config/tests-provide-values-directly#1",
+    "label": "debatable",
+    "note": "A test providing layers, arguably its own entry point."
+  },
+  {
+    "rule": "services/provide-at-entry",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "It never calls Effect.provide. It does contain adhere's question text."
+  },
+  {
+    "rule": "services/provide-at-entry",
+    "file": "testing/test-clock-for-time#3",
+    "label": "debatable",
+    "note": "A test providing layers, arguably its own entry point."
+  },
+  {
+    "rule": "services/test-layers-are-in-memory",
+    "file": "config/tests-provide-values-directly#1",
+    "label": "debatable",
+    "note": "A test using the real layer rather than building a test implementation."
+  },
+  {
+    "rule": "services/test-layers-are-in-memory",
+    "file": "config/tests-provide-values-directly#2",
+    "label": "debatable",
+    "note": "A test using the real layer rather than building a test implementation."
+  },
+  {
+    "rule": "services/test-layers-are-in-memory",
+    "file": "services/fresh-layer-per-test#3",
+    "label": "false",
+    "note": "An integration test that shares a real Postgres container on purpose."
+  },
+  {
+    "rule": "services/test-layers-are-in-memory",
+    "file": "testing/test-clock-for-time#1",
+    "label": "debatable",
+    "note": "A test using the real layer rather than building a test implementation."
+  },
+  {
+    "rule": "services/test-layers-are-in-memory",
+    "file": "testing/test-clock-for-time#2",
+    "label": "debatable",
+    "note": "A test using the real layer rather than building a test implementation."
+  },
+  {
+    "rule": "services/test-layers-are-in-memory",
+    "file": "testing/test-clock-for-time#3",
+    "label": "debatable",
+    "note": "A test using the real layer rather than building a test implementation."
+  },
+  {
+    "rule": "testing/test-clock-for-time",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "Not a test. It does contain adhere's question text."
+  }
+]
