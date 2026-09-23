@@ -1,5 +1,5 @@
 ---
-description: A call over the network, such as an HTTP request, a database query, or a third-party API, must carry a timeout and a retry schedule. Calls through the platform FileSystem and Path services are local and are not in scope.
+description: A call over the network, such as an HTTP request, a database query, or a third-party API, must be made with a timeout and a retry schedule, never bare. Calls through the platform FileSystem and Path services are local and are not in scope.
 ---
 
 ```ts must

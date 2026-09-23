@@ -1,5 +1,5 @@
 ---
-description: A test that depends on time must use TestClock. Real sleeps and it.live must be used only when real time is required.
+description: A test that depends on time must use TestClock, never a real sleep or it.live, unless the test needs real time.
 ---
 
 ```ts must

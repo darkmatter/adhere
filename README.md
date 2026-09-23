@@ -46,7 +46,7 @@ Without a config or rules, `adhere lint --preset effect` audits against the
 built-in Effect rules. A finding looks like this:
 
 ```text
-  × data/brand-ports (0.93): A port is a branded, range-checked integer, not a bare number.
+  × data/brand-ports (0.93): A port must be a branded, range-checked integer, never a bare number.
    ╭─[src/server.ts:6:3]
  4 │ export const serve = Effect.gen(function* () {
  5 │   const host = process.env.HOST ?? "localhost";

@@ -109,6 +109,12 @@
   },
   {
     "rule": "basics/external-calls-are-resilient",
+    "file": "src/workflows/audit.ts",
+    "label": "debatable",
+    "note": "It calls Jev through a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
+  },
+  {
+    "rule": "basics/external-calls-are-resilient",
     "file": "testing/test-clock-for-time#3",
     "label": "debatable",
     "note": "An it.live test timing a real round trip, which a timeout or a retry would defeat."
@@ -208,6 +214,12 @@
     "file": "src/init.ts",
     "label": "real",
     "note": "initProject returns an Effect and is not defined with Effect.fn."
+  },
+  {
+    "rule": "basics/fn-for-named-effects",
+    "file": "src/main.ts",
+    "label": "real",
+    "note": "report returns an Effect and is not defined with Effect.fn."
   },
   {
     "rule": "basics/fn-for-named-effects",

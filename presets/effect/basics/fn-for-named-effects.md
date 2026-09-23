@@ -1,5 +1,5 @@
 ---
-description: A named function that returns an Effect must be defined with Effect.fn so the call site is traced. An Effect held in a constant, such as `const program = Effect.gen(...)`, is not a function and is not in scope.
+description: A named function that returns an Effect must be defined with Effect.fn so the call site is traced, never as a plain arrow function or function declaration. An Effect held in a constant, such as `const program = Effect.gen(...)`, is not a function and is not in scope.
 ---
 
 ```ts must
