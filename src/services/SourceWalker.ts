@@ -1,4 +1,5 @@
 import { Context, Effect, FileSystem, Layer, Path } from "effect";
+import { ADHERE_DIRECTORY, SKIPPED_DIRECTORIES } from "#config.ts";
 import type { ScannedFile } from "#models/Audit.ts";
 import { WalkUnavailable } from "#models/Audit.ts";
 
@@ -20,21 +21,15 @@ export class SourceWalker extends Context.Service<
  * trees. Otherwise read the working directory itself.
  */
 const WORKSPACE_DIRS = ["agents", "apps", "packages"] as const;
-/** Path fragments that mark generated, vendored, or dependency trees. */
-const SKIPS = [
-  "/node_modules/",
-  "/.adhere/",
-  "/dist/",
-  "/.agents/",
-  "/.claude/",
-  "/.direnv/",
-  "/.alchemy/",
-  "/coverage/",
-  "/.vite/",
-  "/references/",
-  "/vendor/",
-  "/e2e/",
-] as const;
+/**
+ * A path, relative to the root being read, through a skipped directory or
+ * through `.adhere/`, whose files are rules and cache rather than source.
+ * Relative, so the directories above the working directory never count.
+ */
+export const isInSkippedTree = (relative: string): boolean =>
+  relative
+    .split(/[\\/]/)
+    .some((segment) => segment === ADHERE_DIRECTORY || SKIPPED_DIRECTORIES.has(segment));
 
 const isInside = (file: string, root: string): boolean =>
   file === root || file.startsWith(`${root}/`);
@@ -45,7 +40,6 @@ const isScannable = (file: string, self: string): boolean =>
   !file.endsWith(".test.ts") &&
   !file.endsWith("/adhere.config.ts") &&
   !file.endsWith("/.adhere.config.ts") &&
-  SKIPS.every((skip) => !file.includes(skip)) &&
   // The audit's own detector patterns are data, not violations of themselves.
   !isInside(file, self);
 
@@ -57,7 +51,10 @@ const rooted = (root: string, paths: ReadonlyArray<string>) => paths.map((rel) =
 
 /** What the root actually contains: only paths the audit reads. */
 const scannable = (root: string, paths: ReadonlyArray<string>, self: string) =>
-  rooted(root, paths).filter((file) => isScannable(file, self));
+  rooted(
+    root,
+    paths.filter((relative) => !isInSkippedTree(relative)),
+  ).filter((file) => isScannable(file, self));
 
 /** One root's paths, filtered to what the audit reads. */
 const listRoot = Effect.fn("SourceWalker.listRoot")(

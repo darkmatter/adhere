@@ -38,6 +38,25 @@ export const CONFIG_FILES = [
   "adhere.config.ts",
   ".adhere.config.ts",
 ] as const;
+/**
+ * Directories never read into, for source files or for nested `.adhere/`
+ * rules: dependency, generated, vendored, and tool trees. Matched as whole
+ * path segments below the working directory, so a repo that itself sits under
+ * one of these names is still read.
+ */
+export const SKIPPED_DIRECTORIES: ReadonlySet<string> = new Set([
+  "node_modules",
+  "dist",
+  ".agents",
+  ".claude",
+  ".direnv",
+  ".alchemy",
+  "coverage",
+  ".vite",
+  "references",
+  "vendor",
+  "e2e",
+]);
 export interface AdhereConfig extends Schema.Schema.Type<typeof AdhereConfig> {}
 
 /** The shape a config file default-exports. */

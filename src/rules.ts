@@ -1,4 +1,10 @@
-import { ConfigUnavailable, type Rule, type RuleId, type RuleSource } from "#config.ts";
+import {
+  ConfigUnavailable,
+  type Rule,
+  type RuleId,
+  type RuleSource,
+  SKIPPED_DIRECTORIES,
+} from "#config.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { Effect, FileSystem, Path, Record } from "effect";
 
@@ -31,7 +37,13 @@ const isMarkdown = (path: string): boolean => path.endsWith(".md");
 const isNestedRuleFile = (relative: string): boolean => {
   const segments = segmentsOf(relative);
   const adhere = segments.lastIndexOf(ADHERE_SEGMENT);
-  return adhere >= 0 && segments[adhere + 1] !== CACHE_SEGMENT && isMarkdown(relative);
+  return (
+    adhere >= 0 &&
+    segments[adhere + 1] !== CACHE_SEGMENT &&
+    isMarkdown(relative) &&
+    // Only the path to the `.adhere/`: `.adhere/e2e/` is a rule topic, not a skip.
+    !segments.slice(0, adhere).some((segment) => SKIPPED_DIRECTORIES.has(segment))
+  );
 };
 
 const rulePathOf = (segments: ReadonlyArray<string>): ReadonlyArray<string> => {

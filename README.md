@@ -78,10 +78,11 @@ prints a completion script.
 
 `adhere lint` reads the `.ts` files under the working directory, except `.d.ts`,
 `.test.ts`, and config files. When the working directory contains `agents/`,
-`apps/`, or `packages/`, only those trees are read. Paths under
-`node_modules/`, `dist/`, `coverage/`, `vendor/`, `e2e/`, `references/`,
-`.adhere/`, `.agents/`, `.claude/`, `.direnv/`, `.alchemy/`, or `.vite/` are
-skipped. `.tsx` files are not read, and `.gitignore` is not consulted.
+`apps/`, or `packages/`, only those trees are read. Below the working
+directory, anything under `node_modules/`, `dist/`, `coverage/`, `vendor/`,
+`e2e/`, `references/`, `.adhere/`, `.agents/`, `.claude/`, `.direnv/`,
+`.alchemy/`, or `.vite/` is skipped; the directories above it do not count.
+`.tsx` files are not read, and `.gitignore` is not consulted.
 
 ### Init
 
@@ -175,7 +176,8 @@ const Port = Schema.Int.pipe(
 validation refuses the run with its path in the message. `loadRules(directory)`
 from the package root does the same load for your own tooling.
 
-Nested `.adhere/` directories are also discovered. A rule in
+Nested `.adhere/` directories are also discovered, except under
+`node_modules/`, `dist/`, and the other skipped directories (above). A rule in
 `packages/api/.adhere/data/brand-ports.md` has the same id,
 `data/brand-ports`, but applies only to files under `packages/api/`. Root
 `.adhere/` rules apply project-wide. If a nested rule has the same id as a root

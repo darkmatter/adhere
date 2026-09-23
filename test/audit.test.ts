@@ -18,7 +18,7 @@ import { applicableRules, loadAdhereRuleSet, loadRules } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
 import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
 import { blockBody, Jev, judgeBody, locateBody, type Rules } from "../src/services/Jev.ts";
-import { SourceWalker } from "../src/services/SourceWalker.ts";
+import { isInSkippedTree, SourceWalker } from "../src/services/SourceWalker.ts";
 import { render, runAudit } from "../src/workflows/audit.ts";
 
 const a = {
@@ -350,6 +350,28 @@ describe("nested .adhere rules", () => {
     ]);
   });
 
+  it("skips .adhere directories inside dependency and generated trees", async () => {
+    const tree: Record<string, string> = {
+      "/repo/.adhere/e2e/isolated.md": "---\ndescription: isolated\n---\nisolated()\n",
+    };
+    // The skipped files read as empty, which would refuse the load if they were parsed.
+    const fs = FileSystem.layerNoop({
+      readDirectory: () =>
+        Effect.succeed([
+          ".adhere/e2e/isolated.md",
+          "node_modules/@drkmttr/adhere/.adhere/rules/refusals-name-the-file.md",
+          "dist/.adhere/style/service.md",
+        ]),
+      readFileString: (file) => Effect.succeed(tree[file] ?? ""),
+    });
+
+    const entries = await Effect.runPromise(
+      loadAdhereRuleSet("/repo").pipe(Effect.provide(Layer.merge(fs, Path.layer))),
+    );
+
+    expect(entries.map((entry) => entry.id)).toEqual(["e2e/isolated"]);
+  });
+
   it("applies root rules globally and lets the nearest nested rule shadow the same id", () => {
     const rootOnly = { description: "Root only.", reference: "rootOnly()" };
     const rootShadowed = { description: "Root service.", reference: "root()" };
@@ -392,6 +414,16 @@ describe("nested .adhere rules", () => {
       "style/root-only": rootOnly,
       "style/service": rootShadowed,
     });
+  });
+});
+
+describe("source walker", () => {
+  it("skips dependency, generated, and .adhere trees by whole path segment", () => {
+    expect(isInSkippedTree("src/server.ts")).toBe(false);
+    expect(isInSkippedTree("vendorized/lib.ts")).toBe(false);
+    expect(isInSkippedTree("packages/api/node_modules/pkg/index.ts")).toBe(true);
+    expect(isInSkippedTree("dist/main.ts")).toBe(true);
+    expect(isInSkippedTree(".adhere/config.ts")).toBe(true);
   });
 });
 
