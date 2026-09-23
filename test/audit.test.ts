@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { Crypto, Effect, FileSystem, Layer, Path, Record } from "effect";
 import { describe, expect, it } from "vite-plus/test";
@@ -122,16 +123,15 @@ const findingA = {
 
 describe("cli metadata", () => {
   it("prints the package.json version", () => {
-    const result = Bun.spawnSync({
-      cmd: [process.execPath, "src/main.ts", "--version"],
+    const result = spawnSync("bun", ["src/main.ts", "--version"], {
       cwd: repoRoot,
-      stderr: "pipe",
-      stdout: "pipe",
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
-    expect(result.exitCode).toBe(0);
-    expect(result.stderr.toString()).toBe("");
-    expect(result.stdout.toString().trim()).toBe(`adhere v${packageJson.version}`);
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout.trim()).toBe(`adhere v${packageJson.version}`);
   });
 });
 
