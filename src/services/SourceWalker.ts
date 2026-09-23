@@ -13,7 +13,7 @@ export class SourceWalker extends Context.Service<
      */
     readonly files: Effect.Effect<ReadonlyArray<ScannedFile>, WalkUnavailable>;
   }
->()("@darkmatter/adhere/services/SourceWalker") {}
+>()("@drkmttr/adhere/services/SourceWalker") {}
 
 /**
  * When the working directory is a darkmatter-style workspace, read these

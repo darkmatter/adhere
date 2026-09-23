@@ -33,7 +33,7 @@ export class AuditCache extends Context.Service<
     readonly get: (path: string) => Effect.Effect<CacheEntry | undefined>;
     readonly put: (path: string, entry: CacheEntry) => Effect.Effect<void>;
   }
->()("@darkmatter/adhere/services/AuditCache") {}
+>()("@drkmttr/adhere/services/AuditCache") {}
 
 const openStore = Effect.fn("AuditCache.openStore")(function* (
   directory: string,
