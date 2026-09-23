@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
-import { auditCommand, runContradictionsCommand, runInitCommand } from "#cli.ts";
+import { cli } from "#cli.ts";
 import * as adhere from "#index.ts";
-import { AdhereConfigLive } from "#services/AdhereConfig.ts";
 import { version } from "#version.ts";
 import { BunRuntime, BunServices } from "@effect/platform-bun";
 import { plugin } from "bun";
@@ -18,16 +17,7 @@ plugin({
   },
 });
 
-const [subcommand, ...args] = Bun.argv.slice(2);
-
-const program =
-  subcommand === "init"
-    ? runInitCommand(args)
-    : subcommand === "contradictions"
-      ? runContradictionsCommand(args).pipe(Effect.provide(AdhereConfigLive({})))
-      : Command.run(auditCommand, { version });
-
-program.pipe(
+Command.run(cli, { version }).pipe(
   // oxlint-disable-next-line effecttsgo/strict-effect-provide -- this executable entrypoint supplies Bun's process services.
   Effect.provide(BunServices.layer),
   BunRuntime.runMain,

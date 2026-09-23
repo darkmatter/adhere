@@ -38,7 +38,7 @@ Keep rules about intent, shape, and placement:
 - "Business logic depends on a config service, not on `Config.*` reads."
 - "Domain errors are `Schema.TaggedError` classes, not thrown `Error`."
 
-Skip rules a preset already covers. Run `adhere --help` and read
+Skip rules a preset already covers. Run `adhere lint --help` and read
 `presets/effect/` in the adhere repo before writing Effect rules; extend with
 `presets: ["effect"]` and add only what is specific to this repo.
 
@@ -95,8 +95,9 @@ uncached files; in this org it comes from SOPS via `just shell`.
 ## 5. Run and calibrate
 
 ```sh
-adhere                     # or: adhere --preset effect
-adhere --threshold 0.9     # re-reads the cache, sends nothing
+adhere validate              # decodes the config and rules, checks contradictions
+adhere lint                  # or: adhere lint --preset effect
+adhere lint --threshold 0.9  # re-reads the cache, sends nothing
 ```
 
 Then, per rule, read the findings and decide:

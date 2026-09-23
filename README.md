@@ -29,12 +29,13 @@ with a TypeSafe AI API key in `TYPESAFE_API_KEY`.
 
 ```sh
 adhere init                          # .adhere/config.ts and two example rules
+adhere validate                      # check the config and rules, without Jev
 echo ".adhere/cache/" >> .gitignore
 export TYPESAFE_API_KEY=...
-adhere                               # audit the working directory
+adhere lint                          # audit the working directory
 ```
 
-Without a config or rules, `adhere --preset effect` audits against the
+Without a config or rules, `adhere lint --preset effect` audits against the
 built-in Effect rules. A finding looks like this:
 
 ```text
@@ -55,26 +56,27 @@ Found 1 error.
 The header is the rule id, Jev's probability, and the rule's description. The
 hint is the rule's reference. The exit code is 0 when nothing is reported and 1
 when something is. It is also 1 when the run refuses, for example on an invalid
-config or rule file, a missing `TYPESAFE_API_KEY`, or an unknown flag; a
-refusal prints its reason.
+config or rule file, a missing `TYPESAFE_API_KEY`, or an unknown command or
+flag; a refusal prints its reason.
 
 ## Usage
 
 ```sh
-adhere                    # audit the working directory
-adhere --preset effect    # add a built-in rule set; the config becomes optional
-adhere --threshold 0.8    # replace the config's threshold; per-rule thresholds still apply
-adhere init [--force]     # scaffold .adhere/config.ts and two example rules
-adhere contradictions     # check the project's rules for contradicting directives
-adhere skill              # print the agent skill (below)
+adhere lint                    # audit the working directory
+adhere lint --preset effect    # add a built-in rule set; the config becomes optional
+adhere lint --threshold 0.8    # replace the config's threshold; per-rule thresholds still apply
+adhere validate                # load the config and rules without Jev, check for contradictions
+adhere init [--force]          # scaffold .adhere/config.ts and two example rules
+adhere skill                   # print the agent skill (below)
 ```
 
-`adhere --help` lists every flag, and `adhere --completions <shell>` prints a
-completion script. `init` and `contradictions` take `--help` too.
+Bare `adhere` prints the help, which lists the commands, and
+`adhere <command> --help` lists a command's flags. `adhere --completions <shell>`
+prints a completion script.
 
 ### What gets read
 
-`adhere` reads the `.ts` files under the working directory, except `.d.ts`,
+`adhere lint` reads the `.ts` files under the working directory, except `.d.ts`,
 `.test.ts`, and config files. When the working directory contains `agents/`,
 `apps/`, or `packages/`, only those trees are read. Paths under
 `node_modules/`, `dist/`, `coverage/`, `vendor/`, `e2e/`, `references/`,
@@ -88,14 +90,16 @@ rerun: by default it reports existing files as skipped and does not clobber
 them. `--force` overwrites them. A config already at another accepted path is
 kept, and no second one is added, even with `--force`.
 
-### Contradictions
+### Validate
 
-`adhere contradictions` checks only this project's configured rules for local
-textual contradictions. It exits 1 and prints the conflicting rule files when
-overlapping rule scopes contain opposite textual directives for the same
-topic, such as "Use service classes for IO" and "Do not use service classes
-for IO". Same-id nested rules are treated as intentional shadowing rather than
-contradictions.
+`adhere validate` loads the config, rule files, and presets the way `lint`
+does, without calling Jev, so a file that fails to decode refuses here too, and
+it prints how many rules it loaded. `--preset` adds a built-in rule set, as for
+`lint`. It then checks the rules for local textual contradictions: it exits 1
+and prints the conflicting rule files when overlapping rule scopes contain
+opposite textual directives for the same topic, such as "Use service classes
+for IO" and "Do not use service classes for IO". Same-id nested rules are
+treated as intentional shadowing rather than contradictions.
 
 ## Config
 
@@ -252,7 +256,7 @@ From a checkout, with Bun:
 ```sh
 bun install
 bun link          # puts `adhere` on PATH
-adhere --preset effect
+adhere lint --preset effect
 ```
 
 In a checkout no platform package is installed, so `bin/adhere.js` runs
