@@ -30,9 +30,15 @@ import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
 import { presets } from "../src/presets.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
-import { applicableRules, loadAdhereRuleSet, loadRules, type RuleEntry } from "../src/rules.ts";
+import {
+  applicableRules,
+  loadAdhereRuleSet,
+  loadRules,
+  type RuleEntry,
+  type RuleSet,
+} from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
-import { AuditCache, CacheEntry } from "../src/services/AuditCache.ts";
+import { AuditCache, CacheEntry, type Tally } from "../src/services/AuditCache.ts";
 import {
   Credentials,
   CredentialsLive,
@@ -49,6 +55,8 @@ import {
   JevOverflow,
   JevUnavailable,
   judgeBody,
+  linterKey,
+  linterQuestion,
   locateBody,
   namedPairs,
   type Pair,
@@ -59,6 +67,14 @@ import {
 } from "../src/services/Jev.ts";
 import { isInSkippedTree, passesFilter, SourceWalker } from "../src/services/SourceWalker.ts";
 import { formatStrays, straysAmong, strayingOf, TIPS_URL } from "../src/wording.ts";
+import {
+  formatLinterCheck,
+  SAMPLE,
+  type Tallied,
+  talliedOf,
+  tallyKeyOf,
+  tallyProjectRules,
+} from "../src/mechanical.ts";
 import {
   type AuditPlan,
   executeAudit,
@@ -90,13 +106,21 @@ const testCrypto = Layer.succeed(
   }),
 );
 
-const memoryCache = (seed: Readonly<Record<string, CacheEntry>> = {}) => {
+const memoryCache = (
+  seed: Readonly<Record<string, CacheEntry>> = {},
+  tallies: Map<string, Tally> = new Map(),
+) => {
   const entries = new Map<string, CacheEntry>(Object.entries(seed));
   return Layer.succeed(AuditCache, {
     get: (path) => Effect.sync(() => entries.get(path)),
     put: (path, entry) =>
       Effect.sync(() => {
         entries.set(path, entry);
+      }),
+    tally: (key) => Effect.sync(() => tallies.get(key)),
+    putTally: (key, tally) =>
+      Effect.sync(() => {
+        tallies.set(key, tally);
       }),
   });
 };
@@ -112,7 +136,7 @@ const recordingJev = (answers: {
     judge: (_lines, rules) =>
       Effect.sync(() => {
         calls.judge.push(rules);
-        return asked(answers.judge, rules);
+        return { probabilities: asked(answers.judge, rules), linter: {} };
       }),
     locate: (_lines, rules) =>
       Effect.sync(() => {
@@ -1052,7 +1076,10 @@ describe("plan", () => {
     // Rule a is broken in server.ts, the three-line file, and nowhere else.
     const jev = Layer.succeed(Jev, {
       judge: (lines, asked) =>
-        Effect.succeed(Record.map(asked, (_, id) => (id === "a" && lines.length > 1 ? 0.9 : 0.2))),
+        Effect.succeed({
+          probabilities: Record.map(asked, (_, id) => (id === "a" && lines.length > 1 ? 0.9 : 0.2)),
+          linter: {},
+        }),
       locate: (_lines, asked) => Effect.succeed(Record.map(asked, () => 2)),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
@@ -1109,6 +1136,7 @@ describe("plan", () => {
     kept: {},
     pending: {},
     deferred: 0,
+    sampled: {},
   });
   const summary = (fields: Omit<AuditPlan, "files">, files = 200): AuditPlan => ({
     files: Array.from({ length: files }, (_, index) => filePlan(`/repo/${index}.ts`)),
@@ -1200,6 +1228,196 @@ describe("plan", () => {
     expect(progressLine({ files: 37, requests: 41, findings: 1 }, partly)).toBe(
       "37/200 files, 41 requests sent, 1 finding",
     );
+  });
+});
+
+describe("linter check", () => {
+  const ports = {
+    description: "A port must be a branded integer, never a bare number.",
+    must: "const port = Port.make(8080);",
+    never: "const port: number = 8080;",
+  };
+  const files: ReadonlyArray<ScannedFile> = Array.from({ length: 25 }, (_, index) => ({
+    path: `/repo/src/f${String(index).padStart(2, "0")}.ts`,
+    lines: [`export const x${index} = ${index};`],
+  }));
+  const keyOf = (rule: typeof ports) =>
+    Effect.runPromise(tallyKeyOf("jev-latest", rule).pipe(Effect.provide(testCrypto)));
+  const sampledPaths = (plan: AuditPlan) =>
+    plan.files.filter((file) => !Record.isEmptyRecord(file.sampled)).map((file) => file.file.path);
+  const tallyOf = (paths: ReadonlyArray<string>, probability: number): Tally => ({
+    files: Object.fromEntries(paths.map((path) => [path, probability])),
+  });
+
+  it("rides beside a sampled rule's judge question, with the fields the judge question has", () => {
+    const body = judgeBody("jev-latest", ["const x = 1;"], { ports, a }, ["ports"]);
+    expect(Object.keys(body.questions)).toEqual(["ports", "a", linterKey("ports")]);
+    expect(body.questions[linterKey("ports")]).toEqual(linterQuestion(ports));
+    expect(linterQuestion(ports).instructions).toMatchObject({
+      question:
+        "Should `rule` have been checked by a regular linter? Consider `code`: could a linter or type checker have decided exactly whether it follows `rule`, without judgment?",
+      rule: ports.description,
+      must: ports.must,
+      never: ports.never,
+    });
+  });
+
+  it("asks on 10 of the files a rule is judged on, spread evenly over them in path order", async () => {
+    const planned = await planOf({ rules: { ports }, files, cache: memoryCache() });
+    const key = await keyOf(ports);
+
+    expect(sampledPaths(planned)).toEqual(
+      [0, 2, 5, 7, 10, 12, 15, 17, 20, 22].map((index) => files[index]?.path),
+    );
+    expect(planned.files.flatMap((file) => Object.values(file.sampled))).toEqual(
+      Array.from({ length: SAMPLE }, () => key),
+    );
+  });
+
+  it("asks only for the answers a rule's tally lacks, on files it has none from", async () => {
+    const key = await keyOf(ports);
+    const tallies = new Map([
+      [
+        key,
+        tallyOf(
+          files.slice(0, 7).map((file) => file.path),
+          0.9,
+        ),
+      ],
+    ]);
+
+    const planned = await planOf({ rules: { ports }, files, cache: memoryCache({}, tallies) });
+
+    expect(sampledPaths(planned)).toEqual([7, 13, 19].map((index) => files[index]?.path));
+  });
+
+  it("asks nothing for a rule whose tally is full, or for a preset's rule", async () => {
+    const logs = {
+      description: "Code must never call console.log.",
+      must: "yield* Effect.log(message);",
+      never: "console.log(message);",
+    };
+    const scopedRules: RuleSet = [
+      { id: "ports", rule: ports, scope: "/repo" },
+      { id: "logs", rule: logs, scope: "/repo", preset: "effect" },
+    ];
+    const plan = (cache: Layer.Layer<AuditCache>) =>
+      Effect.runPromise(
+        planAudit().pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(AdhereConfig, {
+                model: "jev-latest",
+                threshold: 0.7,
+                rules: { ports, logs },
+                scopedRules,
+              }),
+              Layer.succeed(SourceWalker, { files: Effect.succeed(files) }),
+              cache,
+              testCrypto,
+            ),
+          ),
+        ),
+      );
+
+    const fresh = await plan(memoryCache());
+    expect(new Set(fresh.files.flatMap((file) => Object.keys(file.sampled)))).toEqual(
+      new Set(["ports"]),
+    );
+    const full = new Map([[await keyOf(ports), tallyOf(["/repo/elsewhere.ts"], 0.9)]]);
+    for (let index = 1; index < SAMPLE; index++) {
+      full.set(await keyOf(ports), {
+        files: { ...full.get(await keyOf(ports))?.files, [`/repo/other${index}.ts`]: 0.9 },
+      });
+    }
+    expect(sampledPaths(await plan(memoryCache({}, full)))).toEqual([]);
+  });
+
+  it("adds each sampled file's answer to the rule's tally", async () => {
+    const key = await keyOf(ports);
+    const tallies = new Map([[key, tallyOf(["/repo/elsewhere.ts"], 0.2)]]);
+    const cache = memoryCache({}, tallies);
+    const planned = await planOf({ rules: { ports }, files, cache });
+    const asked: Array<ReadonlyArray<string>> = [];
+    const jev = Layer.succeed(Jev, {
+      judge: (_lines, rules, sampled = []) =>
+        Effect.sync(() => {
+          asked.push(sampled);
+          return {
+            probabilities: Record.map(rules, () => 0.1),
+            linter: Object.fromEntries(sampled.map((id) => [id, 0.8])),
+          };
+        }),
+      locate: () => Effect.die("no file breaks the rule"),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+
+    await Effect.runPromise(executeAudit(planned).pipe(Effect.provide(Layer.merge(jev, cache))));
+
+    // The tally had one answer, so 9 of the 25 files carried the question.
+    expect(asked.filter((ids) => ids.length > 0)).toEqual(
+      Array.from({ length: 9 }, () => ["ports"]),
+    );
+    const answers = tallies.get(key)?.files ?? {};
+    expect(Object.keys(answers)).toHaveLength(SAMPLE);
+    expect(answers["/repo/elsewhere.ts"]).toBe(0.2);
+    expect(Object.values(answers).filter((probability) => probability === 0.8)).toHaveLength(9);
+  });
+
+  it("counts a file as flagged when Jev says a linter more likely than not could check it", () => {
+    const entry: RuleEntry = { id: "ports", rule: ports, scope: "/repo" };
+    expect(talliedOf(entry, { files: { a: 0.9, b: 0.51, c: 0.5, d: 0.1 } })).toEqual({
+      entry,
+      asked: 4,
+      flagged: 2,
+    });
+    expect(talliedOf(entry, undefined)).toEqual({ entry, asked: 0, flagged: 0 });
+  });
+
+  it("tallies only the project's rules: a preset's are not the user's to change", async () => {
+    const cache = memoryCache({}, new Map([[await keyOf(ports), tallyOf(["/repo/a.ts"], 0.9)]]));
+    const project: RuleEntry = { id: "ports", rule: ports, scope: "/repo" };
+
+    const tallied = await Effect.runPromise(
+      tallyProjectRules(
+        [project, { id: "logs", rule: ports, scope: "/repo", preset: "effect" }],
+        "jev-latest",
+      ).pipe(Effect.provide(Layer.merge(cache, testCrypto))),
+    );
+
+    expect(tallied).toEqual([{ entry: project, asked: 1, flagged: 1 }]);
+  });
+
+  it("reports a rule most files flagged, one with mixed answers, and the rules with too few", () => {
+    const tallied = (id: string, asked: number, flagged: number, file?: string): Tallied => ({
+      entry: { id, rule: ports, scope: "/repo", ...(file === undefined ? {} : { file }) },
+      asked,
+      flagged,
+    });
+
+    expect(
+      formatLinterCheck(
+        [
+          tallied("data/ports", 10, 9, "/repo/.adhere/data/ports.md"),
+          tallied("style/naming", 10, 5),
+          tallied("style/small", 10, 2),
+          tallied("style/new", 4, 4),
+        ],
+        "/repo",
+      ),
+    ).toEqual([
+      "2 rules flagged by the linter check:",
+      "  data/ports (.adhere/data/ports.md)",
+      "    Flagged on 9 of 10 files: a regular linter should probably check this rule.",
+      "  style/naming",
+      "    Flagged on 5 of 10 files: say more precisely what the rule applies to.",
+      "1 rule has fewer than 10 answers from lint yet, which asks as it judges files.",
+    ]);
+    expect(formatLinterCheck([tallied("style/small", 10, 2)], "/repo")).toEqual([
+      "The linter check flags no rule.",
+    ]);
+    expect(formatLinterCheck([], "/repo")).toEqual([]);
   });
 });
 
@@ -1329,7 +1547,7 @@ describe("pipeline", () => {
       judge: (lines) =>
         lines.length === other.lines.length
           ? Effect.fail(JevBlocked.make({ ray: "a3fb098cae4f55a3-LAX" }))
-          : Effect.succeed({ a: 0.9, b: 0.2 }),
+          : Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} }),
       locate: () => Effect.succeed({ a: 2 }),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
@@ -1349,7 +1567,7 @@ describe("pipeline", () => {
   it("keeps the judgments when only the line question is blocked, and asks it again", async () => {
     const cache = memoryCache();
     const blockedLines = Layer.succeed(Jev, {
-      judge: () => Effect.succeed({ a: 0.9, b: 0.2 }),
+      judge: () => Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} }),
       locate: () => Effect.fail(JevBlocked.make({ ray: "b7c1-LAX" })),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
@@ -1376,7 +1594,7 @@ describe("pipeline", () => {
       judge: (lines) =>
         lines.length === dense.lines.length
           ? Effect.fail(JevOverflow.make())
-          : Effect.succeed({ a: 0.9, b: 0.2 }),
+          : Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} }),
       locate: () => Effect.succeed({ a: 2 }),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
@@ -1880,7 +2098,10 @@ describe("jev over http", () => {
 
   it("sends the key from Credentials as a bearer token", async () => {
     const { authorizations, judged } = judge(Effect.succeed(Redacted.make("tsk_saved")));
-    expect(await judged).toMatchObject({ _tag: "Success", success: { a: 0.25 } });
+    expect(await judged).toMatchObject({
+      _tag: "Success",
+      success: { probabilities: { a: 0.25 }, linter: {} },
+    });
     expect(authorizations).toEqual(["Bearer tsk_saved"]);
   });
 
@@ -1919,7 +2140,7 @@ describe("jev over http", () => {
     });
     expect(await judged).toMatchObject({
       _tag: "Success",
-      success: { a: 0.25, b: 0.25, c: 0.25 },
+      success: { probabilities: { a: 0.25, b: 0.25, c: 0.25 }, linter: {} },
     });
     expect(asked).toEqual([["a", "b"], ["c"]]);
   });

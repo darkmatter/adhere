@@ -8,7 +8,8 @@ model) whether the file breaks each rule, gets a calibrated probability per
 rule, and reports the ones above a threshold with the line Jev points at. The
 report uses the same frame as `vp lint`.
 
-Deterministic rules (substring matches, type checks) belong in a normal linter.
+Deterministic rules (substring matches, type checks) belong in a normal linter;
+`adhere validate` points out a rule that looks like one.
 
 A preset for effect is included which can be run without setup:
 
@@ -190,6 +191,20 @@ rule worded otherwise with its file and how:
 A rule with only code that must never be written needs no `must` example, as
 [Rules as Markdown files](#rules-as-markdown-files) explains. The tips are
 advice, so the wording does not change the exit code.
+
+Then it reports the linter check, which also sends nothing. While `lint`
+judges a file against one of the project's own rules, it asks Jev a second
+question beside it: should the rule have been checked by a regular linter, that
+is, could a linter or type checker have decided exactly whether this file
+follows it? It asks on 10 files per rule, spread over the files it judges, and
+keeps the answers in the cache until the rule's text changes. `validate` prints
+each rule flagged on 7 or more of its 10 files as one a regular linter should
+probably check, and each flagged on 3 to 6 as a rule that reads differently
+from file to file, whose description should say more precisely what it
+applies to. A rule with fewer than 10 answers is counted as waiting; `lint`
+collects them as it judges files, so a repo whose files are all cached collects
+them as its files change. Preset rules are left out: they are not the
+project's to change. The linter check is advice too.
 
 It then asks Jev whether any two rules that apply to the same files
 contradict, so that no code can follow both: one request names, per rule, the
@@ -409,7 +424,9 @@ beats all of the above for that rule.
    at the rule's scope, so a file with no code the rule is about is a no. Since
    no rule sits in the shared state, a rule's probability depends only on the
    file and that rule, not on which other rules share the request. Every
-   question shares the state cost of the request.
+   question shares the state cost of the request. On up to 10 files per
+   project rule, the rule's question has a second one beside it, the linter
+   check (see [Validate](#validate)), with the same fields.
 2. A second request only when at least one rule's probability is above its
    threshold: one `choice` question per flagged rule over the file's non-blank
    lines, which yields the line to report. A file with more than 255 non-blank
@@ -434,6 +451,8 @@ and an adhere that asks its questions differently re-judges every rule once.
 A lowered threshold locates cached judgments that are newly above it without
 judging again. Entries depend on content, not on the
 machine, so restoring `.adhere/cache/` between CI runs skips unchanged files.
+The cache also keeps the linter check's answers, one tally per rule, under a
+key that changes with the rule's text and the model.
 
 The API key is read only when a request is about to be sent. A run where
 every file is cached needs no key and no network.

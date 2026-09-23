@@ -2,18 +2,23 @@ import { type Examples, examplesOf, type Rule, type RuleId } from "#config.ts";
 import { type Excerpt, excerptOf } from "#excerpt.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
-import { AuditCache, type Judgment, sha256 } from "#services/AuditCache.ts";
+import { AuditCache, type Judgment, sha256, type Tally } from "#services/AuditCache.ts";
 import {
   fits,
   Jev,
   JevUnavailable,
+  type Judged,
   judgeQuestion,
   judgeRequests,
+  linterQuestion,
   locateRequests,
+  questionRoom,
+  tokensOf,
 } from "#services/Jev.ts";
 import { SourceWalker } from "#services/SourceWalker.ts";
+import { SAMPLE, tallyKeyOf } from "#mechanical.ts";
 import { applicableRules } from "#rules.ts";
-import { type Crypto, Duration, Effect, Record } from "effect";
+import { type Crypto, Duration, Effect, Record, Semaphore } from "effect";
 
 export interface Finding {
   readonly rule: RuleId;
@@ -83,6 +88,8 @@ export interface FilePlan {
   readonly pending: Readonly<Record<RuleId, PreparedRule>>;
   /** Pending checks `--limit` leaves for a later run. */
   readonly deferred: number;
+  /** Pending rules whose linter check question rides along on this file, each with its tally's key. */
+  readonly sampled: Readonly<Record<RuleId, string>>;
 }
 
 /** A run worked out from the files, the rules, and the cache, before any request. */
@@ -178,6 +185,7 @@ export const planAudit = (
           kept: {},
           pending: {},
           deferred: 0,
+          sampled: {},
         } satisfies FilePlan;
       }
       const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
@@ -208,15 +216,78 @@ export const planAudit = (
         kept,
         pending,
         deferred: 0,
+        sampled: {},
       } satisfies FilePlan;
+    });
+
+    // Preset rules are not the project's to change, so the linter check leaves them out.
+    const presetRules = new Set(
+      (config.scopedRules ?? []).flatMap((entry) =>
+        entry.preset === undefined ? [] : [entry.rule],
+      ),
+    );
+
+    /**
+     * The linter check's samples: for each project rule its tally still needs
+     * answers for, files this run judges it on, spread evenly over them in path
+     * order, skipping files the tally has and files its question would not fit.
+     */
+    const withSamples = Effect.fn("audit.samples")(function* (plans: ReadonlyArray<FilePlan>) {
+      const needs = new Map<Rule, { readonly key: string; readonly tallied: Tally["files"] }>();
+      for (const plan of plans) {
+        for (const { rule } of Object.values(plan.pending)) {
+          if (presetRules.has(rule) || needs.has(rule)) continue;
+          const key = yield* tallyKeyOf(config.model, rule);
+          needs.set(rule, { key, tallied: (yield* cache.tally(key))?.files ?? {} });
+        }
+      }
+      for (const [rule, { tallied }] of needs) {
+        if (Object.keys(tallied).length >= SAMPLE) needs.delete(rule);
+      }
+      if (needs.size === 0) return plans;
+
+      const candidates = new Map<Rule, Array<{ readonly plan: FilePlan; readonly id: RuleId }>>();
+      const tokens = new Map<Rule, number>();
+      for (const plan of plans) {
+        let room: number | undefined;
+        for (const [id, { rule }] of Object.entries(plan.pending)) {
+          const need = needs.get(rule);
+          if (need === undefined || need.tallied[plan.file.path] !== undefined) continue;
+          room ??= questionRoom(plan.file.lines);
+          const size = tokens.get(rule) ?? tokensOf(linterQuestion(rule));
+          tokens.set(rule, size);
+          if (size > room) continue;
+          const found = candidates.get(rule);
+          if (found === undefined) candidates.set(rule, [{ plan, id }]);
+          else found.push({ plan, id });
+        }
+      }
+
+      const sampled = new Map<FilePlan, Record<RuleId, string>>();
+      for (const [rule, found] of candidates) {
+        const need = needs.get(rule);
+        if (need === undefined) continue;
+        const count = Math.min(found.length, SAMPLE - Object.keys(need.tallied).length);
+        for (let index = 0; index < count; index++) {
+          const pick = found[Math.floor((index * found.length) / count)];
+          if (pick !== undefined) {
+            sampled.set(pick.plan, { ...sampled.get(pick.plan), [pick.id]: need.key });
+          }
+        }
+      }
+      return plans.map((plan) => {
+        const some = sampled.get(plan);
+        return some === undefined ? plan : { ...plan, sampled: some };
+      });
     });
 
     const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
     const everything: ReadonlyArray<FilePlan> = yield* Effect.forEach(sorted, planFile, {
       concurrency: 8,
     });
-    const planned =
+    const limited =
       options.limit === undefined ? everything : withinLimit(everything, options.limit);
+    const planned = yield* withSamples(limited);
     const judged = planned.filter((plan) => !plan.skipped);
     const total = (count: (plan: FilePlan) => number) =>
       judged.reduce((sum, plan) => sum + count(plan), 0);
@@ -228,7 +299,9 @@ export const planAudit = (
       skipped: planned.length - judged.length,
       deferred: total((plan) => plan.deferred),
       requests: total((plan) =>
-        isEmpty(plan.pending) ? 0 : judgeRequests(plan.file.lines, rulesOf(plan.pending)),
+        isEmpty(plan.pending)
+          ? 0
+          : judgeRequests(plan.file.lines, rulesOf(plan.pending), Object.keys(plan.sampled)),
       ),
     };
   });
@@ -244,6 +317,29 @@ export const executeAudit = (
   Effect.gen(function* () {
     const jev = yield* Jev;
     const cache = yield* AuditCache;
+    // Files finish together; each tally is read, extended, and written back by one file at a time.
+    const tallying = yield* Semaphore.make(1);
+
+    /** Adds one file's linter check answers to their rules' tallies. */
+    const record = (
+      file: string,
+      sampled: Readonly<Record<RuleId, string>>,
+      linter: Readonly<Record<RuleId, number>>,
+    ) =>
+      tallying.withPermits(1)(
+        Effect.forEach(
+          Object.entries(linter),
+          ([id, probability]) => {
+            const key = sampled[id];
+            return key === undefined
+              ? Effect.void
+              : Effect.flatMap(cache.tally(key), (tally) =>
+                  cache.putTally(key, { files: { ...tally?.files, [file]: probability } }),
+                );
+          },
+          { discard: true },
+        ),
+      );
 
     /** Judges and locates one file the plan left pending, with the requests that took. */
     const judgeFile = Effect.fn("audit.judgeFile")(function* ({
@@ -253,10 +349,12 @@ export const executeAudit = (
       kept,
       pending,
       deferred,
+      sampled,
     }: FilePlan) {
-      const probabilities = isEmpty(pending)
-        ? {}
-        : yield* jev.judge(file.lines, rulesOf(pending)).pipe(inFile(file));
+      const { probabilities, linter }: Judged = isEmpty(pending)
+        ? { probabilities: {}, linter: {} }
+        : yield* jev.judge(file.lines, rulesOf(pending), Object.keys(sampled)).pipe(inFile(file));
+      if (!isEmpty(linter)) yield* record(file.path, sampled, linter);
       const judged: Record<RuleId, Judgment> = { ...kept };
       for (const [id, probability] of Object.entries(probabilities)) {
         const k = pending[id];
@@ -321,7 +419,9 @@ export const executeAudit = (
             ? fileResult(cached ? (deferred > 0 ? "waiting" : "cached") : "judged", findings)
             : { status: "blocked", findings, blocked },
         requests:
-          (isEmpty(pending) ? 0 : judgeRequests(file.lines, rulesOf(pending))) +
+          (isEmpty(pending)
+            ? 0
+            : judgeRequests(file.lines, rulesOf(pending), Object.keys(sampled))) +
           (isEmpty(flagged) ? 0 : locateRequests(file.lines, rulesOf(flagged))),
       };
     });
@@ -334,7 +434,11 @@ export const executeAudit = (
             Effect.catchTag("JevOverflow", () =>
               Effect.succeed({
                 result: fileResult("skipped", []),
-                requests: judgeRequests(plan.file.lines, rulesOf(plan.pending)),
+                requests: judgeRequests(
+                  plan.file.lines,
+                  rulesOf(plan.pending),
+                  Object.keys(plan.sampled),
+                ),
               }),
             ),
             // The firewall refuses this file's code every time; the rest of the run goes on.
@@ -345,7 +449,11 @@ export const executeAudit = (
                   findings: [],
                   blocked: { file: plan.file.path, ray },
                 } satisfies FileResult,
-                requests: judgeRequests(plan.file.lines, rulesOf(plan.pending)),
+                requests: judgeRequests(
+                  plan.file.lines,
+                  rulesOf(plan.pending),
+                  Object.keys(plan.sampled),
+                ),
               }),
             ),
           );

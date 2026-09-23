@@ -24,13 +24,27 @@ export class JevBlocked extends Schema.TaggedError<JevBlocked>()("JevBlocked", {
   ray: Schema.String,
 }) {}
 
+/** What judging a file answers: per rule, whether it breaks it, and the linter check's answers. */
+export interface Judged {
+  /** Per rule, Jev's probability that the file breaks it. */
+  readonly probabilities: Readonly<Record<RuleId, number>>;
+  /** Per sampled rule, Jev's probability that a regular linter could have decided the file against it. */
+  readonly linter: Readonly<Record<RuleId, number>>;
+}
+
 export class Jev extends Context.Service<
   Jev,
   {
+    /**
+     * Each rule's probability that the file breaks it. A rule in `sampled`
+     * also carries the linter check's question, whose answer comes back
+     * under `linter`.
+     */
     readonly judge: (
       lines: Lines,
       rules: Rules,
-    ) => Effect.Effect<Record<RuleId, number>, JevUnavailable | JevOverflow | JevBlocked>;
+      sampled?: ReadonlyArray<RuleId>,
+    ) => Effect.Effect<Judged, JevUnavailable | JevOverflow | JevBlocked>;
     readonly locate: (
       lines: Lines,
       rules: Rules,
@@ -193,10 +207,53 @@ const lineCriteria = (lines: Lines, from: number, to: number): Record<string, st
   return criteria;
 };
 
-export const judgeBody = (model: string, lines: Lines, rules: Rules) => ({
+/**
+ * The linter check's question: whether a regular linter could have decided
+ * `code` against the rule. It carries the judge question's fields, so Jev
+ * sees the rule as it does when judging, with the file in view.
+ */
+export const linterQuestion = (rule: Rule) => {
+  const { instructions } = judgeQuestion(rule);
+  return {
+    type: "noul" as const,
+    instructions: {
+      ...instructions,
+      question:
+        "Should `rule` have been checked by a regular linter? Consider `code`: could a linter or type checker have decided exactly whether it follows `rule`, without judgment?",
+    },
+    criteria: {
+      true: "A regular linter or type checker could decide exactly whether `code` follows `rule`",
+      false:
+        "Deciding whether `code` follows `rule` takes judgment about what the code means or is for",
+    },
+  };
+};
+
+/** The key a rule's linter question rides under, beside its judge question. */
+export const linterKey = (id: RuleId): string => `linter:${id}`;
+
+/** The tokens a file's code leaves in Jev's context for any one question beside it, as `fits` counts them. */
+export const questionRoom = (lines: Lines): number =>
+  QUESTION_CONTEXT - WRAPPER - tokensOf(stateOf(lines));
+
+/** One question per rule, and the linter question beside each rule in `sampled`. */
+export const judgeBody = (
+  model: string,
+  lines: Lines,
+  rules: Rules,
+  sampled: ReadonlyArray<RuleId> = [],
+) => ({
   model,
   state: stateOf(lines),
-  questions: Record.map(rules, (rule) => judgeQuestion(rule)),
+  questions: {
+    ...Record.map(rules, (rule): ReturnType<typeof judgeQuestion> => judgeQuestion(rule)),
+    ...Object.fromEntries(
+      sampled.flatMap((id) => {
+        const rule = rules[id];
+        return rule === undefined ? [] : [[linterKey(id), linterQuestion(rule)] as const];
+      }),
+    ),
+  },
 });
 
 export const locateBody = (
@@ -288,8 +345,11 @@ export const requestsOf = (body: Body): ReadonlyArray<Body> => {
 };
 
 /** The requests judging `rules` over a file takes: the judge body, split to fit, as `judge` sends it. */
-export const judgeRequests = (lines: Lines, rules: Rules): number =>
-  requestsOf(judgeBody("", lines, rules)).length;
+export const judgeRequests = (
+  lines: Lines,
+  rules: Rules,
+  sampled: ReadonlyArray<RuleId> = [],
+): number => requestsOf(judgeBody("", lines, rules, sampled)).length;
 
 /**
  * The requests locating `rules` in a file takes, split to fit as `locate`

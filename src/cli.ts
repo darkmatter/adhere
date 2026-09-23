@@ -20,6 +20,7 @@ import {
 import type { Overrides } from "#config.ts";
 import { findContradictions, formatContradictions } from "#contradictions.ts";
 import { initProject } from "#init.ts";
+import { formatLinterCheck, tallyProjectRules } from "#mechanical.ts";
 import { type PresetName, presetNames } from "#presets.ts";
 import { globalRuleSet } from "#rules.ts";
 import { formatStrays, straysAmong } from "#wording.ts";
@@ -205,17 +206,18 @@ export const lintCommand = Command.make(
 
 /** Jev, with the key `lint` uses, and the config it reads the model and threshold from. */
 export const validateLayer = (overrides: Overrides) =>
-  JevLive.pipe(
-    Layer.provide([FetchHttpClient.layer, CredentialsLive]),
-    Layer.provideMerge(AdhereConfigLive(overrides)),
-  );
+  Layer.merge(
+    JevLive.pipe(Layer.provide([FetchHttpClient.layer, CredentialsLive])),
+    AuditCacheLive,
+  ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)));
 
 /**
  * `adhere validate`: everything `lint` loads, then how each rule's wording
- * differs from the README's rule writing tips, then Jev on whether any two
- * rules that apply to the same files contradict. Only a contradiction fails
- * the run: the tips are advice. A config, rule file, or preset that does not
- * decode refuses here the way it would refuse `lint`.
+ * differs from the README's rule writing tips, then the linter check's tallies
+ * from lint, then Jev on whether any two rules that apply to the same files
+ * contradict. Only a contradiction fails the run: the tips and the linter
+ * check are advice. A config, rule file, or preset that does not decode
+ * refuses here the way it would refuse `lint`.
  */
 export const validateCommand = Command.make("validate", { preset }, () =>
   Effect.gen(function* () {
@@ -224,8 +226,15 @@ export const validateCommand = Command.make("validate", { preset }, () =>
     const root = path.resolve();
     const entries = config.scopedRules ?? globalRuleSet(config.rules, root);
     const loaded = `${entries.length} ${entries.length === 1 ? "rule" : "rules"} loaded.`;
-    // The wording needs no request, so it shows before Jev is asked anything.
-    yield* Console.log([loaded, ...formatStrays(straysAmong(entries), root)].join("\n"));
+    const tallied = yield* tallyProjectRules(entries, config.model);
+    // The wording and the tallies need no request, so they show before Jev is asked anything.
+    yield* Console.log(
+      [
+        loaded,
+        ...formatStrays(straysAmong(entries), root),
+        ...formatLinterCheck(tallied, root),
+      ].join("\n"),
+    );
     const contradictions = yield* findContradictions(entries, config.threshold);
     yield* Console.log(formatContradictions(contradictions));
     if (contradictions.length > 0) {
@@ -234,7 +243,7 @@ export const validateCommand = Command.make("validate", { preset }, () =>
   }),
 ).pipe(
   Command.withDescription(
-    "Load the config, rule files, and presets the way lint does, check each rule's wording against the README's rule writing tips, then ask Jev whether any two rules that apply to the same files contradict each other.",
+    "Load the config, rule files, and presets the way lint does, check each rule's wording against the README's rule writing tips, report the rules lint's linter check flags, then ask Jev whether any two rules that apply to the same files contradict each other.",
   ),
   Command.provide((input) => validateLayer({ presets: chosenPresets(input.preset) })),
 );

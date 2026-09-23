@@ -1,3 +1,4 @@
+import type { RuleId } from "#config.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { Credentials } from "#services/Credentials.ts";
 import {
@@ -10,8 +11,10 @@ import {
   JevBlocked,
   JevOverflow,
   JevUnavailable,
+  type Judged,
   judgeBody,
   type Lines,
+  linterKey,
   locateBody,
   namedPairs,
   needsBlocks,
@@ -198,9 +201,28 @@ export const JevLive = Layer.effect(Jev)(
           ),
       );
 
-    const judge = Effect.fn("Jev.judge")(function* (lines: Lines, rules: Rules) {
-      const answers = yield* answersTo("judge", judgeBody(config.model, lines, rules), NoulAnswers);
-      return Record.map(answers, (answer) => answer.noul);
+    const judge = Effect.fn("Jev.judge")(function* (
+      lines: Lines,
+      rules: Rules,
+      sampled: ReadonlyArray<RuleId> = [],
+    ) {
+      const answers = yield* answersTo(
+        "judge",
+        judgeBody(config.model, lines, rules, sampled),
+        NoulAnswers,
+      );
+      /** Each rule's answer, read from the question it rode under. */
+      const answered = (ids: ReadonlyArray<RuleId>, keyOf: (id: RuleId) => string) =>
+        Record.fromEntries(
+          ids.flatMap((id) => {
+            const answer = answers[keyOf(id)];
+            return answer === undefined ? [] : [[id, answer.noul] as const];
+          }),
+        );
+      return {
+        probabilities: answered(Object.keys(rules), (id) => id),
+        linter: answered(sampled, linterKey),
+      } satisfies Judged;
     });
 
     const chosen = (answers: Readonly<Record<string, { choice: string }>>) =>

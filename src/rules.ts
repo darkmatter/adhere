@@ -18,6 +18,8 @@ export interface RuleEntry {
   readonly rule: Rule;
   readonly scope: string;
   readonly file?: string;
+  /** The built-in rule set the rule came from, when it is not the project's own. */
+  readonly preset?: string;
 }
 
 export type RuleSet = ReadonlyArray<RuleEntry>;

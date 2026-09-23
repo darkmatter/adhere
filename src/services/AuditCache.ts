@@ -19,6 +19,15 @@ export const CacheEntry = Schema.Struct({
 });
 export interface CacheEntry extends Schema.Schema.Type<typeof CacheEntry> {}
 
+/**
+ * A rule's linter check so far: per file lint asked it on, Jev's probability
+ * that a regular linter could have decided the file against the rule.
+ */
+export const Tally = Schema.Struct({
+  files: Schema.Record(Schema.String, Schema.Finite),
+});
+export interface Tally extends Schema.Schema.Type<typeof Tally> {}
+
 const hexOf = (bytes: Uint8Array): string =>
   Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 
@@ -33,6 +42,9 @@ export class AuditCache extends Context.Service<
   {
     readonly get: (path: string) => Effect.Effect<CacheEntry | undefined>;
     readonly put: (path: string, entry: CacheEntry) => Effect.Effect<void>;
+    /** A rule's tally, under a key that changes with the rule's text. */
+    readonly tally: (key: string) => Effect.Effect<Tally | undefined>;
+    readonly putTally: (key: string, tally: Tally) => Effect.Effect<void>;
   }
 >()("@drkmttr/adhere/services/AuditCache") {}
 
@@ -48,6 +60,7 @@ export const AuditCacheLive = Layer.effect(AuditCache)(
     const path = yield* Path.Path;
     const store = yield* openStore(path.join(path.resolve(), CACHE_DIRECTORY));
     const entries = KeyValueStore.toSchemaStore(store, CacheEntry);
+    const tallies = KeyValueStore.toSchemaStore(store, Tally);
     const crypto = yield* Crypto.Crypto;
     // Hashed keys: a raw path would name the cache file like a source file.
     const keyOf = (filePath: string) =>
@@ -60,6 +73,16 @@ export const AuditCacheLive = Layer.effect(AuditCache)(
         ),
       put: (filePath, entry) =>
         Effect.flatMap(keyOf(filePath), (key) => entries.set(key, entry)).pipe(Effect.ignore),
+      // Under a prefix no path starts with, so a tally never lands on a file's entry.
+      tally: (key) =>
+        Effect.flatMap(keyOf(`\u0000tally\u0000${key}`), (stored) => tallies.get(stored)).pipe(
+          Effect.map(Option.getOrUndefined),
+          Effect.orElseSucceed(() => undefined),
+        ),
+      putTally: (key, tally) =>
+        Effect.flatMap(keyOf(`\u0000tally\u0000${key}`), (stored) =>
+          tallies.set(stored, tally),
+        ).pipe(Effect.ignore),
     });
   }),
 );
