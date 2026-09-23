@@ -1,0 +1,7 @@
+# Code fences in rule files and in the eval's examples are often fragments,
+# with `yield*` outside a generator. A formatter that parses them rewrites
+# `yield* x` as `yield * x`, a multiplication.
+presets/**/*.md
+.adhere/**/*.md
+eval/cases/**/*.md
+eval/studies/more-examples.md
