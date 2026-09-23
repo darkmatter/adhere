@@ -1322,21 +1322,25 @@ describe("render", () => {
     expect(lines.some((line) => line.includes("hint:"))).toBe(false);
   });
 
-  it("colors the header red on a terminal and counts skipped files", () => {
+  const sgr = (code: string, text: string) => `\u001b[${code}m${text}\u001b[0m`;
+
+  it("colors only the rule red in the header on a terminal and counts skipped files", () => {
+    const red = "38;5;197;1";
     const colored = render({ ...result, skipped: 2 }, { color: true }).join("\n");
-    expect(colored).toContain("\u001b[38;2;219;91;81;1m×");
+    expect(colored).toContain(
+      `  ${sgr(red, "×")} ${sgr(red, "a")} (${sgr("38;2;250;179;135", "0.90")}): ${sgr("38;2;242;205;205", "Ports are branded.")}`,
+    );
     expect(colored).toContain("\u001b[38;2;5;125;160;1m/repo/src/server.ts");
     expect(colored.endsWith("1 file, 1 judged, 0 cached, 2 skipped.")).toBe(true);
   });
 
   it("highlights the offending line and the hint on a terminal", () => {
-    const sgr = (code: string, text: string) => `\u001b[${code}m${text}\u001b[0m`;
     const colored = render(result, { color: true });
     expect(colored).toContain(
       ` ${sgr("2", "2")} │ ${sgr("34", "const")} port: ${sgr("36", "number")} = ${sgr("36", "Number")}(process.env.PORT);`,
     );
     expect(colored).toContain(
-      `${sgr("38;2;180;105;245", "  hint: ")}${sgr("34", "const")} ${sgr("36", "Port")} = ${sgr("36", "Schema")}.${sgr("36", "Int")}.pipe(${sgr("36", "Schema")}.brand(${sgr("32", '"Port"')}))`,
+      `${sgr("38;5;212", "  hint: ")}${sgr("34", "const")} ${sgr("36", "Port")} = ${sgr("36", "Schema")}.${sgr("36", "Int")}.pipe(${sgr("36", "Schema")}.brand(${sgr("32", '"Port"')}))`,
     );
   });
 

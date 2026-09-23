@@ -6,7 +6,15 @@ import type { AuditPlan, AuditResult, FileDone, Finding } from "#workflows/audit
  * token of code, named by its role. Layout measures text; only `serialize`
  * turns a role into color, so no width or blank line ever sees an escape code.
  */
-type Role = "error" | "path" | "lineNumber" | "underline" | "label" | Kind;
+type Role =
+  | "error"
+  | "probability"
+  | "description"
+  | "path"
+  | "lineNumber"
+  | "underline"
+  | "label"
+  | Kind;
 
 interface Span {
   readonly text: string;
@@ -16,17 +24,22 @@ interface Span {
 type Line = ReadonlyArray<Span>;
 
 /**
- * SGR parameters per role. The frame's match `vp lint`: truecolor
- * (`38;2;R;G;B`), bold with a trailing `;1`, and a dim line number. The code's
- * are the terminal's own colors (`3N`), so the user's theme picks shades that
- * read on its background; none is magenta, which would run into the label.
+ * SGR parameters per role. The frame's are set colors, from the 256-color
+ * palette (`38;5;N`) or truecolor (`38;2;R;G;B`), bold with a trailing `;1`,
+ * and a dim line number. Of the header, only the `×` and the rule are red,
+ * since a whole line of red is hard to read: the probability is an accent, and
+ * the description a soft white. The code's are the terminal's own colors
+ * (`3N`), so the user's theme picks shades that read on its background; none
+ * is magenta, which would run into the label.
  */
 const THEME: Readonly<Record<Role, string>> = {
-  error: "38;2;219;91;81;1",
+  error: "38;5;197;1",
+  probability: "38;2;250;179;135",
+  description: "38;2;242;205;205",
   path: "38;2;5;125;160;1",
   lineNumber: "2",
   underline: "38;2;255;0;175",
-  label: "38;2;180;105;245",
+  label: "38;5;212",
   comment: "2",
   string: "32",
   constant: "33",
@@ -77,9 +90,11 @@ const header = (finding: Finding): Line => [
   span("  "),
   span("×", "error"),
   span(" "),
-  span(`${finding.rule} (${finding.probability.toFixed(2)})`, "error"),
-  span(": "),
-  span(finding.description, "error"),
+  span(finding.rule, "error"),
+  span(" ("),
+  span(finding.probability.toFixed(2), "probability"),
+  span("): "),
+  span(finding.description, "description"),
 ];
 
 /** The path, the offending line numbered in the gutter, and an underline as long as the line. */
@@ -109,8 +124,9 @@ const hint = (finding: Finding): ReadonlyArray<Line> => {
 };
 
 /**
- * One diagnostic, in the frame `vp lint` prints on a terminal: a red header,
- * the offending line, a pink underline, and the code to write as the hint.
+ * One diagnostic, in the frame `vp lint` prints on a terminal: a header with
+ * the rule in red, the offending line, a pink underline, and the code to write
+ * as the hint.
  */
 const frame = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => [
   header(finding),
