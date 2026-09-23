@@ -2,6 +2,7 @@ import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { Credentials } from "#services/Credentials.ts";
 import {
   blockBody,
+  type Body,
   type ComparedRule,
   conflictBody,
   contradictBody,
@@ -14,6 +15,7 @@ import {
   needsBlocks,
   type Pair,
   pairProbability,
+  requestsOf,
   type Rules,
 } from "#services/Jev.ts";
 import { Effect, Layer, Record, Schedule, Schema } from "effect";
@@ -44,7 +46,7 @@ export const JevLive = Layer.effect(Jev)(
       }),
     );
 
-    const ask = <A>(body: unknown, Answers: Schema.Codec<A, unknown, never, never>) =>
+    const ask = <A>(body: Body, Answers: Schema.Codec<A, unknown, never, never>) =>
       Effect.gen(function* () {
         // Read here, not in the layer: a run with nothing pending needs no key.
         const apiKey = yield* credentials.apiKey.pipe(
@@ -66,8 +68,27 @@ export const JevLive = Layer.effect(Jev)(
         );
       });
 
+    /** Every answer to a body, over as many requests as Jev's context needs. */
+    const answersTo = <A>(
+      body: Body,
+      Answers: Schema.Codec<
+        { readonly answers: Readonly<Record<string, A>> },
+        unknown,
+        never,
+        never
+      >,
+    ) =>
+      Effect.map(
+        Effect.forEach(requestsOf(body), (request) => ask(request, Answers)),
+        (responses) =>
+          responses.reduce<Record<string, A>>(
+            (answers, response) => ({ ...answers, ...response.answers }),
+            {},
+          ),
+      );
+
     const judge = Effect.fn("Jev.judge")(function* (lines: Lines, rules: Rules) {
-      const { answers } = yield* ask(judgeBody(config.model, lines, rules), NoulAnswers);
+      const answers = yield* answersTo(judgeBody(config.model, lines, rules), NoulAnswers);
       return Record.map(answers, (answer) => answer.noul);
     });
 
@@ -76,17 +97,18 @@ export const JevLive = Layer.effect(Jev)(
 
     const locate = Effect.fn("Jev.locate")(function* (lines: Lines, rules: Rules) {
       const blocks = needsBlocks(lines)
-        ? chosen((yield* ask(blockBody(config.model, lines, rules), ChoiceAnswers)).answers)
+        ? chosen(yield* answersTo(blockBody(config.model, lines, rules), ChoiceAnswers))
         : undefined;
-      const { answers } = yield* ask(locateBody(config.model, lines, rules, blocks), ChoiceAnswers);
-      return chosen(answers);
+      return chosen(
+        yield* answersTo(locateBody(config.model, lines, rules, blocks), ChoiceAnswers),
+      );
     });
 
     const conflicts = Effect.fn("Jev.conflicts")(function* (
       rules: ReadonlyArray<ComparedRule>,
       partners: ReadonlyArray<ReadonlyArray<number>>,
     ) {
-      const { answers } = yield* ask(conflictBody(config.model, rules, partners), ChoiceAnswers);
+      const answers = yield* answersTo(conflictBody(config.model, rules, partners), ChoiceAnswers);
       return namedPairs(answers, partners);
     });
 

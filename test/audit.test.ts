@@ -30,13 +30,16 @@ import {
   blockBody,
   conflictBody,
   contradictBody,
+  fits,
   Jev,
   judgeBody,
   locateBody,
   namedPairs,
   type Pair,
   pairProbability,
+  requestsOf,
   type Rules,
+  tokensOf,
 } from "../src/services/Jev.ts";
 import { isInSkippedTree, SourceWalker } from "../src/services/SourceWalker.ts";
 import { render, runAudit } from "../src/workflows/audit.ts";
@@ -50,6 +53,7 @@ const b = {
   reference: 'const key = yield* Config.redacted("API_KEY")',
 };
 const rules: Rules = { a, b };
+const code1 = ["const port = 3000;"];
 
 /** Echoes the input as its digest, so equal text still shares a cache key. */
 const testCrypto = Layer.succeed(
@@ -109,6 +113,7 @@ const audit = (options: {
   readonly threshold?: number;
   readonly jev: Layer.Layer<Jev>;
   readonly cache: Layer.Layer<AuditCache>;
+  readonly files?: ReadonlyArray<ScannedFile>;
 }) =>
   Effect.runPromise(
     runAudit.pipe(
@@ -119,7 +124,7 @@ const audit = (options: {
             threshold: options.threshold ?? 0.7,
             rules: options.rules,
           }),
-          Layer.succeed(SourceWalker, { files: Effect.succeed([source]) }),
+          Layer.succeed(SourceWalker, { files: Effect.succeed(options.files ?? [source]) }),
           options.jev,
           options.cache,
           testCrypto,
@@ -235,6 +240,47 @@ describe("request bodies", () => {
     );
     expect(inside.questions.a?.criteria["61"]).toBe("const v61 = 61;");
     expect(inside.questions.a?.criteria["80"]).toBe("const v80 = 80;");
+  });
+});
+
+describe("jev's context", () => {
+  /** A rule whose question comes to about `tokens` by `tokensOf`'s count. */
+  const sized = (tokens: number) => ({ description: "Sized.", reference: "x".repeat(tokens * 3) });
+  const linesOf = (count: number, line: string) => Array.from({ length: count }, () => line);
+  const line = "export const value = compute(input);";
+
+  it("splits questions into requests that fit beside the state, in order", () => {
+    const body = judgeBody("jev-latest", code1, {
+      a: sized(20_000),
+      b: sized(20_000),
+      c: sized(20_000),
+      d: sized(20_000),
+    });
+    const requests = requestsOf(body);
+    expect(requests.map((request) => Object.keys(request.questions))).toEqual([
+      ["a", "b", "c"],
+      ["d"],
+    ]);
+    for (const request of requests) {
+      expect(request.state).toEqual(body.state);
+      const questions = Object.values(request.questions).map(tokensOf);
+      expect(tokensOf(request.state) + questions.reduce((sum, n) => sum + n, 0)).toBeLessThan(
+        64_000,
+      );
+    }
+  });
+
+  it("keeps a body that fits as one request", () => {
+    const body = judgeBody("jev-latest", code1, rules);
+    expect(requestsOf(body)).toEqual([body]);
+  });
+
+  it("fits a file whose code and longest question come within 32k tokens, in at most 5100 lines", () => {
+    expect(fits(linesOf(1000, line), rules)).toBe(true);
+    expect(fits(linesOf(4000, line), rules)).toBe(false);
+    expect(fits(linesOf(5101, ""), rules)).toBe(false);
+    expect(fits(code1, { a: sized(20_000) })).toBe(true);
+    expect(fits(code1, { a: sized(33_000) })).toBe(false);
   });
 });
 
@@ -775,6 +821,31 @@ describe("pipeline", () => {
     expect(result.findings).toEqual([{ ...findingA, avoid: withAvoid.avoid }]);
   });
 
+  it("skips a file too long for Jev's context, and judges the rest", async () => {
+    const generated: ScannedFile = {
+      path: "/repo/src/generated.ts",
+      lines: Array.from(
+        { length: 4000 },
+        (_, index) => `export const v${index} = compute(${index});`,
+      ),
+    };
+    const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    const result = await audit({
+      rules,
+      jev: jev.layer,
+      cache: memoryCache(),
+      files: [source, generated],
+    });
+    expect(jev.calls.judge).toEqual([{ a, b }]);
+    expect(result).toEqual({
+      files: 2,
+      judged: 1,
+      cached: 0,
+      skipped: 1,
+      findings: [findingA],
+    });
+  });
+
   it("locates a cached judgment when a lower threshold flags it", async () => {
     const cache = memoryCache();
     const strict = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
@@ -1011,14 +1082,27 @@ describe("credentials", () => {
 });
 
 describe("jev over http", () => {
-  /** Judges one file through the live client, recording each request's authorization header. */
-  const judge = (key: Effect.Effect<Redacted.Redacted<string>, CredentialsUnavailable>) => {
+  /**
+   * Judges one file through the live client, which answers 0.25 to every
+   * question it is sent, recording each request's authorization header and
+   * question ids.
+   */
+  const judge = (
+    key: Effect.Effect<Redacted.Redacted<string>, CredentialsUnavailable>,
+    judgedRules: Rules = { a },
+  ) => {
     const authorizations: Array<string | undefined> = [];
+    const asked: Array<ReadonlyArray<string>> = [];
     const client = HttpClient.make((request) => {
       authorizations.push(request.headers.authorization);
-      return Effect.succeed(
-        HttpClientResponse.fromWeb(request, Response.json({ answers: { a: { noul: 0.25 } } })),
-      );
+      const body: { readonly questions: Record<string, unknown> } =
+        request.body._tag === "Uint8Array"
+          ? JSON.parse(new TextDecoder().decode(request.body.body))
+          : { questions: {} };
+      const ids = Object.keys(body.questions);
+      asked.push(ids);
+      const answers = Object.fromEntries(ids.map((id) => [id, { noul: 0.25 }]));
+      return Effect.succeed(HttpClientResponse.fromWeb(request, Response.json({ answers })));
     });
     const layer = JevLive.pipe(
       Layer.provide([
@@ -1033,10 +1117,10 @@ describe("jev over http", () => {
       ]),
     );
     const judged = Effect.gen(function* () {
-      return yield* (yield* Jev).judge(["const port = 3000;"], { a });
+      return yield* (yield* Jev).judge(["const port = 3000;"], judgedRules);
     });
     const result = Effect.runPromise(Effect.result(Effect.provide(judged, layer)));
-    return { authorizations, judged: result };
+    return { authorizations, asked, judged: result };
   };
 
   it("sends the key from Credentials as a bearer token", async () => {
@@ -1053,5 +1137,20 @@ describe("jev over http", () => {
       failure: { _tag: "JevUnavailable", message },
     });
     expect(authorizations).toEqual([]);
+  });
+
+  it("asks what one request cannot hold over several, and merges the answers", async () => {
+    // About 30k tokens a question: two fit in a 64k request, a third does not.
+    const big = { description: "Big.", reference: "x".repeat(90_000) };
+    const { asked, judged } = judge(Effect.succeed(Redacted.make("tsk_saved")), {
+      a: big,
+      b: big,
+      c: big,
+    });
+    expect(await judged).toMatchObject({
+      _tag: "Success",
+      success: { a: 0.25, b: 0.25, c: 0.25 },
+    });
+    expect(asked).toEqual([["a", "b"], ["c"]]);
   });
 });

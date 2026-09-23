@@ -2,7 +2,7 @@ import type { Rule, RuleId } from "#config.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, type Judgment, sha256 } from "#services/AuditCache.ts";
-import { Jev, type JevUnavailable, judgeQuestion, MAX_LINES, snippetOf } from "#services/Jev.ts";
+import { fits, Jev, type JevUnavailable, judgeQuestion, snippetOf } from "#services/Jev.ts";
 import { SourceWalker } from "#services/SourceWalker.ts";
 import { applicableRules } from "#rules.ts";
 import { type Crypto, Effect, Record } from "effect";
@@ -70,9 +70,11 @@ export const runAudit: Effect.Effect<
   const rulesOf = (some: Readonly<Record<RuleId, PreparedRule>>) => Record.map(some, (k) => k.rule);
 
   const auditFile = Effect.fn("audit.file")(function* (file: ScannedFile) {
-    if (file.lines.length > MAX_LINES) return fileResult("skipped", []);
+    const rules = configuredRules(file.path);
+    // Too long for Jev's context: skipped and counted, rather than refused mid-run.
+    if (!fits(file.lines, rules)) return fileResult("skipped", []);
     const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
-      Object.entries(configuredRules(file.path)),
+      Object.entries(rules),
       ([id, rule]) =>
         Effect.map(
           fingerprintOf(config.model, rule),

@@ -51,7 +51,26 @@ export type Pair = readonly [number, number];
 /** A `choice` question accepts at most this many criteria. */
 const CHOICE_LIMIT = 255;
 const LINES_PER_BLOCK = 20;
-export const MAX_LINES = CHOICE_LIMIT * LINES_PER_BLOCK;
+const MAX_LINES = CHOICE_LIMIT * LINES_PER_BLOCK;
+
+/**
+ * Jev 1.13's context, from its model card: the state with its longest
+ * question, and the state with every question in the request.
+ */
+const QUESTION_CONTEXT = 32_000;
+const REQUEST_CONTEXT = 64_000;
+/** Room for what Jev wraps around a request, which `tokensOf` does not see. */
+const WRAPPER = 1_000;
+
+const encoder = new TextEncoder();
+
+/**
+ * An estimate, meant to run high, of the tokens Jev reads for a value: one
+ * per three bytes of its JSON. Code runs a little over three bytes a token,
+ * prose about four.
+ */
+export const tokensOf = (value: unknown): number =>
+  Math.ceil(encoder.encode(JSON.stringify(value)).length / 3);
 
 export const snippetOf = (line: string): string => line.trim().slice(0, 120);
 
@@ -175,6 +194,48 @@ export const blockBody = (model: string, lines: Lines, rules: Rules) => {
       criteria,
     })),
   };
+};
+
+/**
+ * Whether Jev can take every request a file may need: its lines within two
+ * line choices, and its code beside the longest question any rule asks.
+ */
+export const fits = (lines: Lines, rules: Rules): boolean => {
+  if (lines.length > MAX_LINES) return false;
+  const located = needsBlocks(lines) ? blockBody("", lines, rules) : locateBody("", lines, rules);
+  const questions = [
+    ...Object.values(judgeBody("", lines, rules).questions),
+    ...Object.values(located.questions),
+  ];
+  const longest = Math.max(0, ...questions.map(tokensOf));
+  return tokensOf(stateOf(lines)) + longest <= QUESTION_CONTEXT - WRAPPER;
+};
+
+export interface Body {
+  readonly model: string;
+  readonly state: unknown;
+  readonly questions: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * A body as requests Jev can take: its questions in order, with a new
+ * request whenever the next question would not fit beside the state and
+ * the questions before it.
+ */
+export const requestsOf = (body: Body): ReadonlyArray<Body> => {
+  const room = REQUEST_CONTEXT - WRAPPER - tokensOf(body.state);
+  const requests: Array<{ readonly questions: Record<string, unknown>; tokens: number }> = [];
+  for (const [id, question] of Object.entries(body.questions)) {
+    const tokens = tokensOf(question);
+    const last = requests.at(-1);
+    if (last !== undefined && last.tokens + tokens <= room) {
+      last.questions[id] = question;
+      last.tokens += tokens;
+    } else {
+      requests.push({ questions: { [id]: question }, tokens });
+    }
+  }
+  return requests.map(({ questions }) => ({ ...body, questions }));
 };
 
 /** A choice keeps one criterion for "none", which leaves this many for partners. */

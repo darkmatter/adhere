@@ -267,7 +267,12 @@ beats all of the above for that rule.
    threshold: one `choice` question per flagged rule over the file's non-blank
    lines, which yields the line to report. A file with more than 255 non-blank
    lines is located in two steps (a block of 20 lines, then a line inside it).
-   Files longer than 5100 lines are skipped and counted in the summary.
+3. Jev reads at most 32k tokens of state and one question together, and 64k
+   tokens in a request. adhere estimates tokens from the JSON it sends, at
+   about three bytes a token. When a file's questions would not fit in one
+   request, they are split across several. A file whose code and longest
+   question would not fit together, or that has more than 5100 lines, is
+   skipped and counted in the summary, and the rest of the run goes on.
 
 ## Cache
 
