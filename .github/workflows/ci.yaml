@@ -16,4 +16,12 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run test
-      - run: bun run build
+      - run: bun run build:npm
+      - name: Run the launcher against the linux-x64 package
+        run: |
+          # Outside the checkout, where the launcher has no source to fall back to.
+          launcher="$RUNNER_TEMP/launcher"
+          mkdir -p "$launcher/node_modules/@drkmttr"
+          cp -r bin "$launcher/bin"
+          ln -s "$PWD/dist/npm/linux-x64" "$launcher/node_modules/@drkmttr/adhere-linux-x64"
+          node "$launcher/bin/adhere.js" --version

@@ -8,7 +8,7 @@
     "url": "git+https://github.com/darkmatter/adhere.git"
   },
   "bin": {
-    "adhere": "src/main.ts"
+    "adhere": "bin/adhere.js"
   },
   "type": "module",
   "imports": {
@@ -26,13 +26,14 @@
     "test": "vp test",
     "typecheck": "tsc --noEmit && bun run lint",
     "build": "bun build --compile --minify --sourcemap src/main.ts --asset ./presets --outfile dist/adhere",
+    "build:npm": "bun scripts/npm-packages.ts build",
     "release": "release-it"
   },
   "dependencies": {
-    "@effect/platform-bun": "4.0.0-rc.112",
     "effect": "4.0.0-rc.112"
   },
   "devDependencies": {
+    "@effect/platform-bun": "4.0.0-rc.112",
     "@types/bun": "^1.4.2",
     "@types/node": "^24.13.6",
     "release-it": "^21.1.0",

@@ -5,10 +5,10 @@
     "": {
       "name": "@drkmttr/adhere",
       "dependencies": {
-        "@effect/platform-bun": "4.0.0-rc.112",
         "effect": "4.0.0-rc.112",
       },
       "devDependencies": {
+        "@effect/platform-bun": "4.0.0-rc.112",
         "@types/bun": "^1.4.2",
         "@types/node": "^24.13.6",
         "release-it": "^21.1.0",
