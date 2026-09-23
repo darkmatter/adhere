@@ -1,6 +1,6 @@
 {
   "name": "@drkmttr/adhere",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "description": "Lints a repository against reference code in adhere.config.ts, judged by Jev.",
   "repository": {
