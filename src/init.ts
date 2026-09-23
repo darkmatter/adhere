@@ -11,7 +11,7 @@ export interface InitOptions {
   readonly force?: boolean;
 }
 
-const CONFIG = `import type { Config } from "@darkmatter/adhere";
+const CONFIG = `import type { Config } from "@drkmttr/adhere";
 
 export default {
   threshold: 0.7,

@@ -79,7 +79,7 @@ passed on the command line. Use a type-only import so the file also loads
 under the native binary:
 
 ```ts
-import type { Config } from "@darkmatter/adhere";
+import type { Config } from "@drkmttr/adhere";
 
 export default {
   presets: ["effect"],

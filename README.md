@@ -19,7 +19,7 @@ these paths (keep one):
 - `.adhere.config.ts`
 
 ```ts
-import type { Config } from "@darkmatter/adhere";
+import type { Config } from "@drkmttr/adhere";
 
 export default {
   model: "jev-latest", // optional, default "jev-latest"
@@ -41,7 +41,7 @@ type UserId = typeof UserId.Type
 
 The default export is decoded with Effect `Schema`. An invalid shape refuses
 the run. The `import type` is erased at runtime, so the file also loads under
-the native executable, where `@darkmatter/adhere` is not installed. With the
+the native executable, where `@drkmttr/adhere` is not installed. With the
 package installed, `defineConfig({...})` does the same thing.
 
 ### Rules as Markdown files

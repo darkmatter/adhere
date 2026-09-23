@@ -30,7 +30,7 @@ export const CONFIG_FILES = [
 export class AdhereConfig extends Context.Service<
   AdhereConfig,
   ResolvedConfig
->()("@darkmatter/adhere/services/AdhereConfig") {}
+>()("@drkmttr/adhere/services/AdhereConfig") {}
 
 const loadConfigFile = Effect.fn("AdhereConfig.load")(function* (file: string) {
   const path = yield* Path.Path;

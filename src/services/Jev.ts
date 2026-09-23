@@ -21,7 +21,7 @@ export class Jev extends Context.Service<
       rules: Rules,
     ) => Effect.Effect<Record<RuleId, number>, JevUnavailable>;
   }
->()("@darkmatter/adhere/services/Jev") {}
+>()("@drkmttr/adhere/services/Jev") {}
 
 /** A `choice` question accepts at most this many criteria. */
 const CHOICE_LIMIT = 255;
