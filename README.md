@@ -109,6 +109,19 @@ order (a later preset wins), then the defaults `jev-latest` and `0.7`. A rule
 in `rules` replaces a preset rule with the same id. A rule's own `threshold`
 beats all of the above for that rule.
 
+## Install
+
+```sh
+npm install --global @drkmttr/adhere   # or: bun add --global @drkmttr/adhere
+```
+
+`adhere` is the native executable (below), compiled for macOS and Linux on
+arm64 and x64 and for Windows on x64. Each platform's is its own package,
+`@drkmttr/adhere-<platform>-<arch>`, and an optional dependency of
+`@drkmttr/adhere` that the install fetches only on that platform. The package's
+`bin/adhere.js` runs it with Node, so neither Bun nor adhere's runtime
+dependencies are needed.
+
 ## Run
 
 From a checkout, with Bun:
@@ -118,6 +131,9 @@ bun install
 bun link          # puts `adhere` on PATH
 adhere --preset effect
 ```
+
+In a checkout no platform package is installed, so `bin/adhere.js` runs
+`src/main.ts` with Bun instead.
 
 `adhere` audits the working directory. When that directory contains `agents/`,
 `apps/`, or `packages/`, only those trees are read. Exit code 1 when there is
@@ -151,7 +167,9 @@ are treated as intentional shadowing rather than contradictions.
 [`--compile`](https://bun.sh/docs/bundler/executables) with
 `--asset ./presets`. It runs without Bun or `node_modules` on the target
 machine and still loads the repo's `config.ts` and Markdown rules from disk.
-For another platform, add `--target`, for example `bun-darwin-arm64`.
+`bun run build:npm` compiles it for every published platform instead, each
+into its package under `dist/npm/`
+([`scripts/npm-packages.ts`](./scripts/npm-packages.ts)).
 
 ## Release
 
@@ -170,8 +188,12 @@ Release-it bumps `package.json`, commits `chore: release v0.3.0` back to
 
 Publishing stays in `.github/workflows/publish.yaml`: the published GitHub
 Release triggers the OIDC trusted-publisher job, which verifies that
-`package.json` matches the release tag and then runs
-`npm publish --access public --provenance`. No npm token is used.
+`package.json` matches the release tag, builds the platform packages, and
+publishes each of them before `@drkmttr/adhere`, which it first lists them in as
+`optionalDependencies` at the same version. Every publish is
+`npm publish --access public --provenance`. No npm token is used, so a new
+platform package has to be published once by hand and given the trusted
+publisher on npmjs.com before the job can publish it.
 
 ## How a file is judged
 

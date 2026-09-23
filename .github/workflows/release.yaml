@@ -55,7 +55,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run test
-      - run: bun run build
+      - run: bun run build:npm
       - name: Create GitHub release
         run: bun run release -- --ci "${{ steps.release.outputs.version }}"
         env:

@@ -33,5 +33,20 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run test
-      - run: bun run build
-      - run: npm publish --access public --provenance
+      - run: bun run build:npm
+      - name: Publish the platform packages
+        run: |
+          for directory in dist/npm/*/; do
+            name="$(node -p "require('./${directory}package.json').name")"
+            version="$(node -p "require('./${directory}package.json').version")"
+            # A rerun after a partial publish skips the versions already on npm.
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version is already published."
+            else
+              npm publish "$directory" --access public --provenance
+            fi
+          done
+      - name: Publish @drkmttr/adhere with the platform packages as optional dependencies
+        run: |
+          bun scripts/npm-packages.ts pin
+          npm publish --access public --provenance
