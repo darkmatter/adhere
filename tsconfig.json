@@ -21,6 +21,12 @@
       "#*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts", ".adhere/config.ts"],
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "scripts/**/*.ts",
+    "eval/**/*.ts",
+    ".adhere/config.ts"
+  ],
   "exclude": ["dist", "node_modules"]
 }
