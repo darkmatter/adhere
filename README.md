@@ -23,8 +23,7 @@ bun add --global @drkmttr/adhere   # or: npm install --global @drkmttr/adhere
 ```
 
 To pin the version in a repo, for CI or scripts, add it as a dev dependency
-and run `npx adhere`. To try it without installing, run
-`npx @drkmttr/adhere` or `bunx @drkmttr/adhere`.
+and run `npx adhere`.
 
 `adhere` is a prebuilt executable for macOS and Linux on arm64 and x64 and for
 Windows on x64. .
