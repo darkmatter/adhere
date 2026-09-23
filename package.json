@@ -44,12 +44,19 @@
     "@effect/platform-node-shared": "4.0.0-rc.112"
   },
   "release-it": {
-    "$schema": "https://unpkg.com/release-it/schema/release-it.json",
+    "$schema": "https://unpkg.com/release-it@21.1.0/schema/release-it.json",
+    "git": {
+      "commitMessage": "chore: release v${version}",
+      "requireBranch": "main",
+      "tag": false
+    },
     "github": {
+      "autoGenerate": true,
       "release": true
     },
     "npm": {
-      "skipChecks": true
+      "allowSameVersion": true,
+      "publish": false
     }
   }
 }
