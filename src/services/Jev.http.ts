@@ -18,8 +18,8 @@ import {
   requestsOf,
   type Rules,
 } from "#services/Jev.ts";
-import { Effect, Layer, Record, Schedule, Schema } from "effect";
-import { HttpClient, HttpClientResponse } from "effect/unstable/http";
+import { type Cause, Effect, Layer, Record, Schedule, Schema } from "effect";
+import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http";
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 
 const SYSTEM_ONE = "https://api.typesafe.ai/v1/systemone";
@@ -32,6 +32,27 @@ const ChoiceAnswers = Schema.Struct({
 });
 
 const refused = (message: string) => JevUnavailable.make({ message });
+
+/** Jev's error body, on one line and cut short, or nothing when it sent none. */
+const detailOf = (body: string): string => {
+  const text = body.trim().replace(/\s+/g, " ");
+  return text.length === 0 ? "" : `: ${text.slice(0, 300)}`;
+};
+
+/**
+ * A failed request as a refusal: for an answer outside 2xx, its status and
+ * what Jev said, since the status alone does not say why; otherwise the cause.
+ */
+const refusalOf = (problem: HttpClientError.HttpClientError | Cause.TimeoutError) => {
+  if (!HttpClientError.isHttpClientError(problem) || problem.reason._tag !== "StatusCodeError") {
+    return Effect.succeed(refused(`System One request failed: ${problem.message}`));
+  }
+  const { response } = problem.reason;
+  return Effect.map(
+    Effect.orElseSucceed(response.text, () => ""),
+    (body) => refused(`Jev answered HTTP ${response.status}${detailOf(body)}`),
+  );
+};
 
 export const JevLive = Layer.effect(Jev)(
   Effect.gen(function* () {
@@ -58,9 +79,7 @@ export const JevLive = Layer.effect(Jev)(
         ).pipe(Effect.orDie);
         const response = yield* client
           .execute(HttpClientRequest.bearerToken(request, apiKey))
-          .pipe(
-            Effect.mapError((problem) => refused(`System One request failed: ${problem.message}`)),
-          );
+          .pipe(Effect.catch((problem) => Effect.flatMap(refusalOf(problem), Effect.fail)));
         return yield* HttpClientResponse.schemaBodyJson(Answers)(response).pipe(
           Effect.mapError((problem) =>
             refused(`System One response did not decode: ${problem.message}`),

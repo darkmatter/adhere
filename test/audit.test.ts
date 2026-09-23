@@ -32,6 +32,7 @@ import {
   contradictBody,
   fits,
   Jev,
+  JevUnavailable,
   judgeBody,
   locateBody,
   namedPairs,
@@ -42,7 +43,16 @@ import {
   tokensOf,
 } from "../src/services/Jev.ts";
 import { isInSkippedTree, SourceWalker } from "../src/services/SourceWalker.ts";
-import { render, runAudit } from "../src/workflows/audit.ts";
+import {
+  type AuditPlan,
+  executeAudit,
+  type FileDone,
+  type FilePlan,
+  planAudit,
+  render,
+  runAudit,
+} from "../src/workflows/audit.ts";
+import { describePlan, progressLine, sendQuestion } from "../src/workflows/format.ts";
 
 const a = {
   description: "Ports are branded.",
@@ -748,6 +758,141 @@ describe("init", () => {
   });
 });
 
+const planOf = (options: {
+  readonly rules: Rules;
+  readonly files: ReadonlyArray<ScannedFile>;
+  readonly cache: Layer.Layer<AuditCache>;
+}) =>
+  Effect.runPromise(
+    planAudit.pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          Layer.succeed(AdhereConfig, {
+            model: "jev-latest",
+            threshold: 0.7,
+            rules: options.rules,
+          }),
+          Layer.succeed(SourceWalker, { files: Effect.succeed(options.files) }),
+          options.cache,
+          testCrypto,
+        ),
+      ),
+    ),
+  );
+
+describe("plan", () => {
+  const other: ScannedFile = { path: "/repo/src/other.ts", lines: ["const x = 1;"] };
+
+  it("counts the checks, what the cache answers, and the requests the rest take", async () => {
+    const cache = memoryCache();
+    await audit({
+      rules,
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
+      cache,
+    });
+
+    const planned = await planOf({ rules, files: [source, other], cache });
+    expect(planned.files.map((plan) => plan.file.path)).toEqual([other.path, source.path]);
+    expect({ ...planned, files: planned.files.length }).toEqual({
+      files: 2,
+      rules: 2,
+      checks: 4,
+      cached: 2,
+      skipped: 0,
+      requests: 1,
+    });
+  });
+
+  it("tells progress each file's requests and findings as it finishes", async () => {
+    const cache = memoryCache();
+    const planned = await planOf({ rules, files: [source, other], cache });
+    // Rule a is broken in server.ts, the three-line file, and nowhere else.
+    const jev = Layer.succeed(Jev, {
+      judge: (lines, asked) =>
+        Effect.succeed(Record.map(asked, (_, id) => (id === "a" && lines.length > 1 ? 0.9 : 0.2))),
+      locate: (_lines, asked) => Effect.succeed(Record.map(asked, () => 2)),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const done: Array<FileDone> = [];
+    const result = await Effect.runPromise(
+      executeAudit(planned, (file) =>
+        Effect.sync(() => {
+          done.push(file);
+        }),
+      ).pipe(Effect.provide(Layer.merge(jev, cache))),
+    );
+
+    // Both files are judged; only server.ts has a finding, so only it is located too.
+    expect([...done].sort((x, y) => x.requests - y.requests)).toEqual([
+      { requests: 1, findings: 0 },
+      { requests: 2, findings: 1 },
+    ]);
+    expect(result.findings).toEqual([findingA]);
+  });
+
+  it("names the file a refusal stopped at, and that a rerun continues", async () => {
+    const refusing = Layer.succeed(Jev, {
+      judge: () => Effect.fail(JevUnavailable.make({ message: "Jev answered HTTP 429" })),
+      locate: () => Effect.die("nothing judged, nothing to locate"),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const refused = await Effect.runPromise(
+      Effect.flip(
+        runAudit.pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules }),
+              Layer.succeed(SourceWalker, { files: Effect.succeed([source]) }),
+              refusing,
+              memoryCache(),
+              testCrypto,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(refused.message).toBe(
+      "/repo/src/server.ts: Jev answered HTTP 429. Files judged before it are cached, so a rerun continues from there.",
+    );
+  });
+
+  const filePlan = (path: string): FilePlan => ({
+    file: { path, lines: [] },
+    skipped: false,
+    hash: "",
+    prepared: {},
+    kept: {},
+    pending: {},
+  });
+  const summary = (fields: Omit<AuditPlan, "files">, files = 200): AuditPlan => ({
+    files: Array.from({ length: files }, (_, index) => filePlan(`/repo/${index}.ts`)),
+    ...fields,
+  });
+
+  it("describes the plan: checks, the cache's share, and the requests the rest take", () => {
+    const partly = summary({ rules: 14, checks: 2800, cached: 1400, skipped: 3, requests: 197 });
+    expect(describePlan(partly)).toEqual([
+      "200 files and 14 rules: 2800 checks, 1400 cached, 3 files too long to judge.",
+      "Judging the other 1400 takes 197 requests to Jev, plus 1 or more for each file with a finding.",
+    ]);
+    expect(sendQuestion(partly)).toBe("Send 197 requests to Jev?");
+    expect(
+      describePlan(summary({ rules: 1, checks: 1, cached: 0, skipped: 0, requests: 1 }, 1)),
+    ).toEqual([
+      "1 file and 1 rule: 1 check.",
+      "Judging them takes 1 request to Jev, plus 1 or more for each file with a finding.",
+    ]);
+    expect(
+      describePlan(summary({ rules: 2, checks: 4, cached: 4, skipped: 0, requests: 0 }, 2))[1],
+    ).toBe("The cache answers every check.");
+    expect(progressLine({ files: 37, requests: 41, findings: 1 }, partly)).toBe(
+      "37/200 files, 41 requests sent, 1 finding",
+    );
+  });
+});
+
 describe("pipeline", () => {
   it("judges every rule in one call, locates only the flagged rule, reports the located line", async () => {
     const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
@@ -1085,16 +1230,20 @@ describe("jev over http", () => {
   /**
    * Judges one file through the live client, which answers 0.25 to every
    * question it is sent, recording each request's authorization header and
-   * question ids.
+   * question ids. `respond` replaces the answer, to send a failure instead.
    */
   const judge = (
     key: Effect.Effect<Redacted.Redacted<string>, CredentialsUnavailable>,
     judgedRules: Rules = { a },
+    respond?: () => Response,
   ) => {
     const authorizations: Array<string | undefined> = [];
     const asked: Array<ReadonlyArray<string>> = [];
     const client = HttpClient.make((request) => {
       authorizations.push(request.headers.authorization);
+      if (respond !== undefined) {
+        return Effect.succeed(HttpClientResponse.fromWeb(request, respond()));
+      }
       const body: { readonly questions: Record<string, unknown> } =
         request.body._tag === "Uint8Array"
           ? JSON.parse(new TextDecoder().decode(request.body.body))
@@ -1127,6 +1276,21 @@ describe("jev over http", () => {
     const { authorizations, judged } = judge(Effect.succeed(Redacted.make("tsk_saved")));
     expect(await judged).toMatchObject({ _tag: "Success", success: { a: 0.25 } });
     expect(authorizations).toEqual(["Bearer tsk_saved"]);
+  });
+
+  it("refuses an answer outside 2xx with its status and what Jev said about it", async () => {
+    const { judged } = judge(
+      Effect.succeed(Redacted.make("tsk_saved")),
+      { a },
+      () => new Response('{\n  "detail": "request too large"\n}', { status: 413 }),
+    );
+    expect(await judged).toMatchObject({
+      _tag: "Failure",
+      failure: {
+        _tag: "JevUnavailable",
+        message: 'Jev answered HTTP 413: { "detail": "request too large" }',
+      },
+    });
   });
 
   it("refuses with Credentials' reason, before sending anything", async () => {

@@ -3,7 +3,20 @@ import { AuditCacheLive } from "#services/AuditCache.ts";
 import { Credentials, CredentialsLive, CredentialsUnavailable } from "#services/Credentials.ts";
 import { JevLive } from "#services/Jev.http.ts";
 import { SourceWalkerLive } from "#services/SourceWalker.ts";
-import { render, runAudit } from "#workflows/audit.ts";
+import {
+  type AuditPlan,
+  executeAudit,
+  type FileDone,
+  planAudit,
+  render,
+} from "#workflows/audit.ts";
+import {
+  describePlan,
+  type Progress,
+  progressAfter,
+  progressLine,
+  sendQuestion,
+} from "#workflows/format.ts";
 import type { Overrides } from "#config.ts";
 import { findContradictions, formatContradictions } from "#contradictions.ts";
 import { initProject } from "#init.ts";
@@ -12,6 +25,7 @@ import { globalRuleSet } from "#rules.ts";
 import {
   Console,
   Effect,
+  Exit,
   Layer,
   Option,
   Path,
@@ -54,6 +68,44 @@ const threshold = Flag.float("threshold").pipe(
   ),
 );
 
+const yes = Flag.boolean("yes").pipe(
+  Flag.withAlias("y"),
+  Flag.withDefault(false),
+  Flag.withDescription(
+    "Send the requests without asking first. lint only asks with a terminal on stdin and stdout.",
+  ),
+);
+
+class Cancelled extends Schema.TaggedError<Cancelled>()("Cancelled", {}) {
+  readonly [Runtime.errorReported] = false;
+}
+
+/** Text on stderr, beside the report on stdout. */
+const toStderr = (text: string) =>
+  Effect.sync(() => {
+    process.stderr.write(text);
+  });
+
+/**
+ * A counter on stderr, redrawn in place on a terminal as files finish. On
+ * anything else it stays quiet, so a log gets the plan and the report rather
+ * than a line per file. A failed run keeps its last count on screen.
+ */
+const counterFor = (plan: AuditPlan) => {
+  const live = process.stderr.isTTY === true;
+  let progress: Progress = { files: 0, requests: 0, findings: 0 };
+  const draw = () => (live ? toStderr(`\r\u001b[2K${progressLine(progress, plan)}`) : Effect.void);
+  return {
+    start: Effect.suspend(draw),
+    update: (done: FileDone) =>
+      Effect.suspend(() => {
+        progress = progressAfter(progress, done);
+        return draw();
+      }),
+    finish: (failed: boolean) => (live ? toStderr(failed ? "\n" : "\r\u001b[2K") : Effect.void),
+  };
+};
+
 const force = Flag.boolean("force").pipe(
   Flag.withDefault(false),
   Flag.withDescription("Overwrite existing scaffold files."),
@@ -70,10 +122,28 @@ export const auditLayer = (overrides: Overrides) =>
   ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)));
 
 /** `adhere lint`: the audit. */
-export const lintCommand = Command.make("lint", { preset, threshold }, () =>
+export const lintCommand = Command.make("lint", { preset, threshold, yes }, (input) =>
   Effect.gen(function* () {
-    const result = yield* runAudit;
     const stdio = yield* Stdio.Stdio;
+    const plan = yield* planAudit;
+    yield* toStderr(`${describePlan(plan).join("\n")}\n`);
+    // A prompt draws on stdout, so it needs a terminal at both ends: none when
+    // the report is redirected, or in CI.
+    const interactive = (yield* stdio.stdinIsTerminal) && (yield* stdio.stdoutIsTerminal);
+    if (plan.requests > 0 && interactive && !input.yes) {
+      const send = yield* Prompt.run(
+        Prompt.confirm({ message: sendQuestion(plan), initial: true }),
+      );
+      if (!send) {
+        yield* toStderr("Nothing sent.\n");
+        return yield* Cancelled.make({});
+      }
+    }
+    const counter = counterFor(plan);
+    yield* counter.start;
+    const result = yield* executeAudit(plan, counter.update).pipe(
+      Effect.onExit((exit) => counter.finish(Exit.isFailure(exit))),
+    );
     const color = yield* stdio.stdoutIsTerminal;
     const path = yield* Path.Path;
     // One write: separate Console.log calls have interleaved out of order here.

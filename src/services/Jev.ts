@@ -238,6 +238,20 @@ export const requestsOf = (body: Body): ReadonlyArray<Body> => {
   return requests.map(({ questions }) => ({ ...body, questions }));
 };
 
+/** The requests judging `rules` over a file takes: the judge body, split to fit, as `judge` sends it. */
+export const judgeRequests = (lines: Lines, rules: Rules): number =>
+  requestsOf(judgeBody("", lines, rules)).length;
+
+/**
+ * The requests locating `rules` in a file takes, split to fit as `locate`
+ * sends them: a block choice first for a long file, then a line choice. For a
+ * long file the line choice is counted before a block is chosen, so it can
+ * run high.
+ */
+export const locateRequests = (lines: Lines, rules: Rules): number =>
+  (needsBlocks(lines) ? requestsOf(blockBody("", lines, rules)).length : 0) +
+  requestsOf(locateBody("", lines, rules)).length;
+
 /** A choice keeps one criterion for "none", which leaves this many for partners. */
 const PARTNERS_PER_QUESTION = CHOICE_LIMIT - 1;
 

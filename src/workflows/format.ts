@@ -1,5 +1,5 @@
 import { type Kind, tokenize } from "#highlight.ts";
-import type { AuditResult, Finding } from "#workflows/audit.ts";
+import type { AuditPlan, AuditResult, FileDone, Finding } from "#workflows/audit.ts";
 
 /**
  * The report as data: lines of spans, each span a part of the frame or a
@@ -143,3 +143,44 @@ export const render = (result: AuditResult, options: RenderOptions = {}): Readon
     ...result.findings.flatMap((finding) => [...frame(finding, options.root), []]),
     ...summary(result),
   ].map((line) => serialize(line, options.color === true));
+
+/**
+ * What a run will do, before it asks: the files and rules found, the checks
+ * between them and how many the cache answers, then what judging the rest
+ * takes.
+ */
+export const describePlan = (plan: AuditPlan): ReadonlyArray<string> => {
+  const cached = plan.cached > 0 ? `, ${plan.cached} cached` : "";
+  const skipped =
+    plan.skipped > 0 ? `, ${counted(plan.skipped, "file", "files")} too long to judge` : "";
+  const found = `${counted(plan.files.length, "file", "files")} and ${counted(plan.rules, "rule", "rules")}: ${counted(plan.checks, "check", "checks")}${cached}${skipped}.`;
+  if (plan.requests === 0) {
+    return [found, plan.checks === 0 ? "Nothing to judge." : "The cache answers every check."];
+  }
+  const rest = plan.cached > 0 ? `the other ${plan.checks - plan.cached}` : "them";
+  return [
+    found,
+    `Judging ${rest} takes ${counted(plan.requests, "request", "requests")} to Jev, plus 1 or more for each file with a finding.`,
+  ];
+};
+
+/** The question before a run sends anything. */
+export const sendQuestion = (plan: AuditPlan): string =>
+  `Send ${counted(plan.requests, "request", "requests")} to Jev?`;
+
+/** A run's progress so far: every file it finished, with the requests and findings they added up to. */
+export interface Progress {
+  readonly files: number;
+  readonly requests: number;
+  readonly findings: number;
+}
+
+export const progressAfter = (progress: Progress, done: FileDone): Progress => ({
+  files: progress.files + 1,
+  requests: progress.requests + done.requests,
+  findings: progress.findings + done.findings,
+});
+
+/** The counter a run redraws as files finish. */
+export const progressLine = (progress: Progress, plan: AuditPlan): string =>
+  `${progress.files}/${plan.files.length} files, ${counted(progress.requests, "request", "requests")} sent, ${counted(progress.findings, "finding", "findings")}`;

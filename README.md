@@ -68,6 +68,7 @@ refusal prints its reason.
 adhere lint                    # audit the working directory
 adhere lint --preset effect    # add a built-in rule set; the config becomes optional
 adhere lint --threshold 0.8    # replace the config's threshold; per-rule thresholds still apply
+adhere lint --yes              # send the requests without asking first
 adhere validate                # load the config and rules, ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
 adhere login                   # save a TypeSafe AI API key for later runs
@@ -78,6 +79,24 @@ adhere skill                   # print the agent skill (below)
 Bare `adhere` prints the help, which lists the commands, and
 `adhere <command> --help` lists a command's flags. `adhere --completions <shell>`
 prints a completion script.
+
+### Before and during a run
+
+Before it sends anything, `lint` says on stderr what it found and what judging
+takes:
+
+```text
+200 files and 14 rules: 2800 checks, 1400 cached.
+Judging the other 1400 takes 200 requests to Jev, plus 1 or more for each file with a finding.
+? Send 200 requests to Jev? › (Y/n)
+```
+
+It asks only with a terminal on stdin and stdout, and never when the cache
+answers every check; `--yes` sends without asking. While it runs, a counter on
+stderr shows the files done, the requests sent, and the findings so far, and
+the report goes to stdout. A request Jev refuses stops the run with the file,
+the HTTP status, and Jev's reason. Files finished before it are cached, so
+running again continues from there.
 
 ### What gets read
 
