@@ -1,5 +1,6 @@
 import { AdhereConfig, AdhereConfigLive } from "#services/AdhereConfig.ts";
 import { AuditCacheLive } from "#services/AuditCache.ts";
+import { Credentials, CredentialsLive, CredentialsUnavailable } from "#services/Credentials.ts";
 import { JevLive } from "#services/Jev.http.ts";
 import { SourceWalkerLive } from "#services/SourceWalker.ts";
 import { render, runAudit } from "#workflows/audit.ts";
@@ -14,11 +15,13 @@ import {
   Layer,
   Option,
   Path,
+  Redacted,
   Runtime,
   Schema,
   Stdio,
+  Stream,
 } from "effect";
-import { Command, Flag } from "effect/unstable/cli";
+import { Command, Flag, Prompt } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
 // A Bun text import (https://bun.sh/docs/bundler/loaders#text): the file's
 // contents become a string at bundle time, so the compiled binary carries the
@@ -63,7 +66,7 @@ export const auditLayer = (overrides: Overrides) =>
   Layer.mergeAll(
     SourceWalkerLive,
     AuditCacheLive,
-    JevLive.pipe(Layer.provide(FetchHttpClient.layer)),
+    JevLive.pipe(Layer.provide([FetchHttpClient.layer, CredentialsLive])),
   ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)));
 
 /** `adhere lint`: the audit. */
@@ -127,6 +130,63 @@ export const initCommand = Command.make("init", { force }, (input) =>
   }),
 ).pipe(Command.withDescription("Scaffold .adhere/config.ts and example Markdown rules."));
 
+/**
+ * The key typed at a masked prompt, or piped in: `adhere login < key.txt`.
+ * Whitespace around it, like the newline a pipe ends with, is dropped.
+ */
+const readApiKey = Effect.fn("login.readApiKey")(function* () {
+  const stdio = yield* Stdio.Stdio;
+  const typed: string = (yield* stdio.stdinIsTerminal)
+    ? Redacted.value(yield* Prompt.run(Prompt.password({ message: "TypeSafe AI API key" })))
+    : yield* stdio.stdin.pipe(
+        Stream.decodeText(),
+        Stream.mkString,
+        Effect.mapError((problem) =>
+          CredentialsUnavailable.make({
+            message: `Cannot read the key from stdin: ${problem.message}`,
+          }),
+        ),
+      );
+  const key = typed.trim();
+  if (key.length === 0) {
+    return yield* CredentialsUnavailable.make({
+      message: "No API key given: type it at the prompt, or pipe it in.",
+    });
+  }
+  return Redacted.make(key);
+});
+
+/** `adhere login`: save the API key, so a run needs no TYPESAFE_API_KEY. */
+export const loginCommand = Command.make("login", {}, () =>
+  Effect.gen(function* () {
+    const credentials = yield* Credentials;
+    yield* credentials.save(yield* readApiKey());
+    yield* Console.log(`Saved the API key to ${yield* credentials.file}.`);
+  }),
+).pipe(
+  Command.withDescription(
+    "Save a TypeSafe AI API key in ~/.config/adhere ($XDG_CONFIG_HOME/adhere when set), readable only by you, so lint runs without TYPESAFE_API_KEY. Prompts for the key, or reads it from stdin when piped.",
+  ),
+  Command.provide(CredentialsLive),
+);
+
+/** `adhere logout`: delete the saved API key. */
+export const logoutCommand = Command.make("logout", {}, () =>
+  Effect.gen(function* () {
+    const credentials = yield* Credentials;
+    const file = yield* credentials.file;
+    const removed = yield* credentials.remove;
+    yield* Console.log(
+      removed ? `Deleted the API key saved in ${file}.` : `No API key is saved in ${file}.`,
+    );
+  }),
+).pipe(
+  Command.withDescription(
+    "Delete the API key adhere login saved. TYPESAFE_API_KEY, when set, still applies.",
+  ),
+  Command.provide(CredentialsLive),
+);
+
 /** `adhere skill`: the agent skill for writing rules, as shipped in the binary. */
 export const skillCommand = Command.make("skill", {}, () => Console.log(skill.trimEnd())).pipe(
   Command.withDescription(
@@ -140,11 +200,19 @@ export const cli = Command.make("adhere").pipe(
   Command.withExamples([
     { command: "adhere init", description: "Scaffold .adhere/config.ts and two example rules" },
     { command: "adhere validate", description: "Check the config and rules without calling Jev" },
+    { command: "adhere login", description: "Save your TypeSafe AI API key for later runs" },
     { command: "adhere lint", description: "Audit the working directory" },
     {
       command: "adhere lint --preset effect",
       description: "Audit against the built-in Effect rules",
     },
   ]),
-  Command.withSubcommands([lintCommand, validateCommand, initCommand, skillCommand]),
+  Command.withSubcommands([
+    lintCommand,
+    validateCommand,
+    initCommand,
+    loginCommand,
+    logoutCommand,
+    skillCommand,
+  ]),
 );

@@ -1,4 +1,5 @@
 import { AdhereConfig } from "#services/AdhereConfig.ts";
+import { Credentials } from "#services/Credentials.ts";
 import {
   blockBody,
   Jev,
@@ -9,7 +10,7 @@ import {
   needsBlocks,
   type Rules,
 } from "#services/Jev.ts";
-import { Config, Effect, Layer, Record, Schedule, Schema } from "effect";
+import { Effect, Layer, Record, Schedule, Schema } from "effect";
 import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 
@@ -27,6 +28,7 @@ const refused = (message: string) => JevUnavailable.make({ message });
 export const JevLive = Layer.effect(Jev)(
   Effect.gen(function* () {
     const config = yield* AdhereConfig;
+    const credentials = yield* Credentials;
     const client = (yield* HttpClient.HttpClient).pipe(
       HttpClient.filterStatusOk,
       HttpClient.transformResponse(Effect.timeout("30 seconds")),
@@ -39,8 +41,8 @@ export const JevLive = Layer.effect(Jev)(
     const ask = <A>(body: unknown, Answers: Schema.Codec<A, unknown, never, never>) =>
       Effect.gen(function* () {
         // Read here, not in the layer: a run with nothing pending needs no key.
-        const apiKey = yield* Config.redacted("TYPESAFE_API_KEY").pipe(
-          Effect.mapError((problem) => refused(`Cannot read TYPESAFE_API_KEY: ${problem.message}`)),
+        const apiKey = yield* credentials.apiKey.pipe(
+          Effect.mapError((problem) => refused(problem.message)),
         );
         const request = yield* HttpClientRequest.bodyJson(
           HttpClientRequest.post(SYSTEM_ONE),

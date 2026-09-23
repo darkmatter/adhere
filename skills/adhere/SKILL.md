@@ -96,8 +96,9 @@ export default {
 } satisfies Config;
 ```
 
-Add `.adhere/cache/` to `.gitignore`. `TYPESAFE_API_KEY` must be set for
-uncached files; in this org it comes from SOPS via `just shell`.
+Add `.adhere/cache/` to `.gitignore`. Uncached files need a TypeSafe AI API
+key: one saved by `adhere login`, or `TYPESAFE_API_KEY`, which takes
+precedence; in this org it comes from SOPS via `just shell`.
 
 ## 5. Run and calibrate
 

@@ -23,7 +23,8 @@ and run `npx adhere`. To try it without installing, run
 Windows on x64. It needs Node to start, and no Bun.
 
 adhere sends each file it judges to Jev at `api.typesafe.ai`, authenticated
-with a TypeSafe AI API key in `TYPESAFE_API_KEY`.
+with a TypeSafe AI API key: the one `adhere login` saved, or
+`TYPESAFE_API_KEY` when it is set.
 
 ## Quick start
 
@@ -31,7 +32,7 @@ with a TypeSafe AI API key in `TYPESAFE_API_KEY`.
 adhere init                          # .adhere/config.ts and two example rules
 adhere validate                      # check the config and rules, without Jev
 echo ".adhere/cache/" >> .gitignore
-export TYPESAFE_API_KEY=...
+adhere login                         # save your TypeSafe AI API key, once
 adhere lint                          # audit the working directory
 ```
 
@@ -58,8 +59,8 @@ hint is the rule's reference; a rule with only code to avoid shows that code,
 labeled `avoid:`, instead. On a terminal, the report is in color and the code
 in it is highlighted. The exit code is 0 when nothing is reported and 1 when
 something is. It is also 1 when the run refuses, for example on an invalid
-config or rule file, a missing `TYPESAFE_API_KEY`, or an unknown command or
-flag; a refusal prints its reason.
+config or rule file, a missing API key, or an unknown command or flag; a
+refusal prints its reason.
 
 ## Usage
 
@@ -69,6 +70,8 @@ adhere lint --preset effect    # add a built-in rule set; the config becomes opt
 adhere lint --threshold 0.8    # replace the config's threshold; per-rule thresholds still apply
 adhere validate                # load the config and rules without Jev, check for contradictions
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
+adhere login                   # save a TypeSafe AI API key for later runs
+adhere logout                  # delete the saved key
 adhere skill                   # print the agent skill (below)
 ```
 
@@ -103,6 +106,15 @@ and prints the conflicting rule files when overlapping rule scopes contain
 opposite textual directives for the same topic, such as "Use service classes
 for IO" and "Do not use service classes for IO". Same-id nested rules are
 treated as intentional shadowing rather than contradictions.
+
+### Login
+
+`adhere login` prompts for a TypeSafe AI API key, masking what you type, and
+saves it to `~/.config/adhere/credentials.json`, or under `$XDG_CONFIG_HOME`
+when that is set, readable only by you. Piped input is read instead of a
+prompt: `adhere login < key.txt`. `lint` uses the saved key, but
+`TYPESAFE_API_KEY`, when set, takes precedence, so CI can pass a key without a
+login. `adhere logout` deletes the saved key.
 
 ## Config
 
@@ -259,8 +271,8 @@ only that rule. A lowered threshold locates cached judgments that are newly
 above it without judging again. Entries depend on content, not on the
 machine, so restoring `.adhere/cache/` between CI runs skips unchanged files.
 
-`TYPESAFE_API_KEY` is read only when a request is about to be sent. A run
-where every file is cached needs no key and no network.
+The API key is read only when a request is about to be sent. A run where
+every file is cached needs no key and no network.
 
 ## Agent skill
 

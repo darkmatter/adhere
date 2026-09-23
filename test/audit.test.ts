@@ -2,7 +2,8 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { stripVTControlCharacters } from "node:util";
-import { Crypto, Effect, FileSystem, Layer, Path, Record } from "effect";
+import { ConfigProvider, Crypto, Effect, FileSystem, Layer, Path, Record, Redacted } from "effect";
+import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import { describe, expect, it } from "vite-plus/test";
 import { findContradictions, formatContradictions } from "../src/contradictions.ts";
 import {
@@ -19,6 +20,12 @@ import type { ScannedFile } from "../src/models/Audit.ts";
 import { applicableRules, loadAdhereRuleSet, loadRules } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
 import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
+import {
+  Credentials,
+  CredentialsLive,
+  CredentialsUnavailable,
+} from "../src/services/Credentials.ts";
+import { JevLive } from "../src/services/Jev.http.ts";
 import { blockBody, Jev, judgeBody, locateBody, type Rules } from "../src/services/Jev.ts";
 import { isInSkippedTree, SourceWalker } from "../src/services/SourceWalker.ts";
 import { render, runAudit } from "../src/workflows/audit.ts";
@@ -759,5 +766,169 @@ describe("render", () => {
     for (const line of colored) {
       expect(line.split("\u001b[").length - 1).toBe(2 * (line.split("\u001b[0m").length - 1));
     }
+  });
+});
+
+describe("credentials", () => {
+  const FILE = "/config/adhere/credentials.json";
+  const SAVED = { [FILE]: '{"apiKey":"tsk_saved"}\n' };
+
+  /** Files in a map, each with the mode it was created with, and each made directory's mode. */
+  const memoryFiles = (seed: Readonly<Record<string, string>> = {}) => {
+    const files = new Map<string, { readonly text: string; readonly mode?: number }>(
+      Object.entries(seed).map(([path, text]) => [path, { text }]),
+    );
+    const directories = new Map<string, number | undefined>();
+    const layer = FileSystem.layerNoop({
+      exists: (path) => Effect.succeed(files.has(path)),
+      readFileString: (path) => Effect.succeed(files.get(path)?.text ?? ""),
+      writeFileString: (path, text, options) =>
+        Effect.sync(() => {
+          files.set(path, { text, mode: options?.mode });
+        }),
+      rename: (from, to) =>
+        Effect.sync(() => {
+          const file = files.get(from);
+          files.delete(from);
+          if (file !== undefined) files.set(to, file);
+        }),
+      remove: (path) =>
+        Effect.sync(() => {
+          files.delete(path);
+        }),
+      makeDirectory: (path, options) =>
+        Effect.sync(() => {
+          directories.set(path, options?.mode);
+        }),
+    });
+    return { files, directories, layer };
+  };
+
+  /** The live service over `fs`, with `env` as the whole environment. */
+  const run = <A, E>(
+    env: Readonly<Record<string, string>>,
+    fs: Layer.Layer<FileSystem.FileSystem>,
+    program: Effect.Effect<A, E, Credentials>,
+  ) =>
+    Effect.runPromise(
+      program.pipe(
+        Effect.provide(
+          Layer.merge(
+            CredentialsLive.pipe(Layer.provide(Layer.merge(fs, Path.layer))),
+            ConfigProvider.layer(ConfigProvider.fromEnv({ env })),
+          ),
+        ),
+      ),
+    );
+
+  const apiKey = Effect.gen(function* () {
+    return Redacted.value(yield* (yield* Credentials).apiKey);
+  });
+
+  it("saves a key under XDG_CONFIG_HOME, readable only by the user, and reads it back", async () => {
+    const memory = memoryFiles();
+    const saved = Effect.gen(function* () {
+      yield* (yield* Credentials).save(Redacted.make("tsk_saved"));
+      return yield* apiKey;
+    });
+    expect(await run({ XDG_CONFIG_HOME: "/config" }, memory.layer, saved)).toBe("tsk_saved");
+    expect(Object.fromEntries(memory.files)).toEqual({
+      [FILE]: { text: '{"apiKey":"tsk_saved"}\n', mode: 0o600 },
+    });
+    expect(memory.directories.get("/config/adhere")).toBe(0o700);
+  });
+
+  it("keeps the key under ~/.config without XDG_CONFIG_HOME", async () => {
+    const file = Effect.gen(function* () {
+      return yield* (yield* Credentials).file;
+    });
+    expect(await run({ HOME: "/home/me" }, memoryFiles().layer, file)).toBe(
+      "/home/me/.config/adhere/credentials.json",
+    );
+  });
+
+  it("prefers TYPESAFE_API_KEY to the saved key, and uses the saved key without it", async () => {
+    const env = { XDG_CONFIG_HOME: "/config" };
+    const fromEnvironment = { ...env, TYPESAFE_API_KEY: "tsk_env" };
+    expect(await run(fromEnvironment, memoryFiles(SAVED).layer, apiKey)).toBe("tsk_env");
+    expect(await run(env, memoryFiles(SAVED).layer, apiKey)).toBe("tsk_saved");
+  });
+
+  it("refuses without a key, naming adhere login, and refuses a file that holds none", async () => {
+    const env = { XDG_CONFIG_HOME: "/config" };
+    const missing = await run(env, memoryFiles().layer, Effect.flip(apiKey));
+    expect(missing.message).toBe(
+      "No TypeSafe AI API key. Run `adhere login` to save one, or set TYPESAFE_API_KEY.",
+    );
+    const broken = await run(env, memoryFiles({ [FILE]: "{}" }).layer, Effect.flip(apiKey));
+    expect(broken.message).toBe(
+      `${FILE} holds no API key. Run \`adhere login\` to save one again.`,
+    );
+  });
+
+  it("refuses to save a key with a space, and writes nothing", async () => {
+    const memory = memoryFiles();
+    const save = Effect.gen(function* () {
+      yield* (yield* Credentials).save(Redacted.make("tsk one"));
+    });
+    const refused = await run({ XDG_CONFIG_HOME: "/config" }, memory.layer, Effect.flip(save));
+    expect(refused.message).toBe("An API key is one word, with no spaces or line breaks.");
+    expect(memory.files.size).toBe(0);
+  });
+
+  it("deletes the saved key, and says when there was none", async () => {
+    const memory = memoryFiles(SAVED);
+    const removed = Effect.gen(function* () {
+      const credentials = yield* Credentials;
+      return [yield* credentials.remove, yield* credentials.remove];
+    });
+    expect(await run({ XDG_CONFIG_HOME: "/config" }, memory.layer, removed)).toEqual([true, false]);
+    expect(memory.files.size).toBe(0);
+  });
+});
+
+describe("jev over http", () => {
+  /** Judges one file through the live client, recording each request's authorization header. */
+  const judge = (key: Effect.Effect<Redacted.Redacted<string>, CredentialsUnavailable>) => {
+    const authorizations: Array<string | undefined> = [];
+    const client = HttpClient.make((request) => {
+      authorizations.push(request.headers.authorization);
+      return Effect.succeed(
+        HttpClientResponse.fromWeb(request, Response.json({ answers: { a: { noul: 0.25 } } })),
+      );
+    });
+    const layer = JevLive.pipe(
+      Layer.provide([
+        Layer.succeed(HttpClient.HttpClient, client),
+        Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules: {} }),
+        Layer.succeed(Credentials, {
+          apiKey: key,
+          file: Effect.succeed("/config/adhere/credentials.json"),
+          save: () => Effect.void,
+          remove: Effect.succeed(false),
+        }),
+      ]),
+    );
+    const judged = Effect.gen(function* () {
+      return yield* (yield* Jev).judge(["const port = 3000;"], { a });
+    });
+    const result = Effect.runPromise(Effect.result(Effect.provide(judged, layer)));
+    return { authorizations, judged: result };
+  };
+
+  it("sends the key from Credentials as a bearer token", async () => {
+    const { authorizations, judged } = judge(Effect.succeed(Redacted.make("tsk_saved")));
+    expect(await judged).toMatchObject({ _tag: "Success", success: { a: 0.25 } });
+    expect(authorizations).toEqual(["Bearer tsk_saved"]);
+  });
+
+  it("refuses with Credentials' reason, before sending anything", async () => {
+    const message = "No TypeSafe AI API key. Run `adhere login` to save one.";
+    const { authorizations, judged } = judge(Effect.fail(CredentialsUnavailable.make({ message })));
+    expect(await judged).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "JevUnavailable", message },
+    });
+    expect(authorizations).toEqual([]);
   });
 });
