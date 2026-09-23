@@ -952,7 +952,7 @@ describe("wording", () => {
         Effect.provide(Layer.merge(fs, Path.layer)),
       ),
     );
-    expect(Object.keys(rules)).toHaveLength(26);
+    expect(Object.keys(rules)).toHaveLength(19);
     expect(Record.filter(Record.map(rules, strayingOf), (straying) => straying.length > 0)).toEqual(
       {},
     );

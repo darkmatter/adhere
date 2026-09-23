@@ -355,12 +355,40 @@ each rule worded otherwise.
 ### Presets
 
 A preset has the shape of a config without `presets`: `rules`, and optionally
-`model` and `threshold`. `effect` is the one preset: 26 Markdown rules in
+`model` and `threshold`. `effect` is the one preset: 19 Markdown rules in
 [`presets/effect/`](./presets/effect/), lifted from the
 [effect-solutions](https://github.com/kitlangton/effect-solutions) docs and the
 [effect/platform](https://effect.website/docs/platform/introduction/) docs.
 Name it in the config, or on the command line with `--preset effect`, in which
 case the config file is optional.
+
+The preset leaves out conventions a linter checks exactly. Effect's language
+service, [`@effect/tsgo`](https://github.com/Effect-TS/tsgo) on TypeScript 7,
+checks these seven, which the preset checked through 0.7. Most are off by
+default; `npx @effect/tsgo setup` installs it, and these lines in its plugin
+options in `tsconfig.json` turn them on:
+
+```jsonc
+"diagnosticSeverity": {
+  "strictEffectProvide": "warning", // layers are provided once, at the entry point
+  "leakingRequirements": "warning", // service methods have no requirements
+  "effectFnOpportunity": "warning", // a named function returning an Effect uses Effect.fn
+  "preferSchemaOverJson": "warning", // JSON is decoded with Schema, not JSON.parse
+  "nodeBuiltinImport": "warning", // platform services, not node: builtins
+  "globalFetch": "warning",
+  "globalFetchInEffect": "warning",
+  "processEnv": "warning",
+  "processEnvInEffect": "warning",
+  "globalRandom": "warning", // the Random service, not Math.random
+  "globalRandomInEffect": "warning",
+  "globalErrorInEffectFailure": "warning", // tagged errors, not Error
+  "extendsNativeError": "warning"
+}
+```
+
+`npx @effect/tsgo diagnostics --project tsconfig.json` runs them in CI. Bun
+globals, which the old platform rule also ruled out, need a lint rule of their
+own, such as `no-restricted-globals`.
 
 ### Precedence
 
