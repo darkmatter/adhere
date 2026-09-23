@@ -103,7 +103,7 @@ precedence; in this org it comes from SOPS via `just shell`.
 ## 5. Run and calibrate
 
 ```sh
-adhere validate              # decodes the config and rules, checks contradictions
+adhere validate              # decodes the config and rules, asks Jev about contradictions
 adhere lint                  # or: adhere lint --preset effect
 adhere lint --threshold 0.9  # re-reads the cache, sends nothing
 ```

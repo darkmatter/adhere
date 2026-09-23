@@ -94,16 +94,24 @@ export const lintCommand = Command.make("lint", { preset, threshold }, () =>
   ),
 );
 
+/** Jev, with the key `lint` uses, and the config it reads the model and threshold from. */
+export const validateLayer = (overrides: Overrides) =>
+  JevLive.pipe(
+    Layer.provide([FetchHttpClient.layer, CredentialsLive]),
+    Layer.provideMerge(AdhereConfigLive(overrides)),
+  );
+
 /**
- * `adhere validate`: everything `lint` loads, without Jev. A config, rule file,
- * or preset that does not decode refuses here the way it would refuse `lint`.
+ * `adhere validate`: everything `lint` loads, then Jev on whether any two rules
+ * that apply to the same files contradict. A config, rule file, or preset that
+ * does not decode refuses here the way it would refuse `lint`.
  */
 export const validateCommand = Command.make("validate", { preset }, () =>
   Effect.gen(function* () {
     const config = yield* AdhereConfig;
     const path = yield* Path.Path;
     const entries = config.scopedRules ?? globalRuleSet(config.rules, path.resolve());
-    const contradictions = findContradictions(entries);
+    const contradictions = yield* findContradictions(entries, config.threshold);
     const loaded = `${entries.length} ${entries.length === 1 ? "rule" : "rules"} loaded.`;
     yield* Console.log([loaded, formatContradictions(contradictions)].join("\n"));
     if (contradictions.length > 0) {
@@ -112,9 +120,9 @@ export const validateCommand = Command.make("validate", { preset }, () =>
   }),
 ).pipe(
   Command.withDescription(
-    "Load the config, rule files, and presets the way lint does, without calling Jev, and check the rules for contradictions.",
+    "Load the config, rule files, and presets the way lint does, then ask Jev whether any two rules that apply to the same files contradict each other.",
   ),
-  Command.provide((input) => AdhereConfigLive({ presets: chosenPresets(input.preset) })),
+  Command.provide((input) => validateLayer({ presets: chosenPresets(input.preset) })),
 );
 
 /** `adhere init`: the scaffold. */

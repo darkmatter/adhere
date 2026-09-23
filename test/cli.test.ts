@@ -28,7 +28,7 @@ describe("cli", () => {
     }
   });
 
-  it("validates a repo's rules without calling Jev", async () => {
+  it("validates a single rule without asking Jev, since it has nothing to compare", async () => {
     const root = join(tmpdir(), `adhere-validate-${Date.now()}`);
     await mkdir(join(root, ".adhere"), { recursive: true });
     await writeFile(
@@ -82,5 +82,29 @@ describe("cli", () => {
     await expect(stat(join(configHome, "adhere", "credentials.json"))).rejects.toMatchObject({
       code: "ENOENT",
     });
+  });
+
+  it("asks Jev to compare rules that share files, and refuses without an API key", async () => {
+    const root = join(tmpdir(), `adhere-validate-key-${Date.now()}`);
+    await mkdir(join(root, ".adhere"), { recursive: true });
+    for (const name of ["ports", "secrets"]) {
+      await writeFile(
+        join(root, ".adhere", `${name}.md`),
+        `---\ndescription: Rule about ${name}.\n---\n\n${name}()\n`,
+        "utf8",
+      );
+    }
+    // No key from the environment, and none saved where a config directory would hold one.
+    const { TYPESAFE_API_KEY: _key, ...env } = process.env;
+
+    const refused = await execFileAsync("bun", [main, "validate"], {
+      cwd: root,
+      env: { ...env, XDG_CONFIG_HOME: join(root, "config") },
+    }).then(
+      () => undefined,
+      (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) => error,
+    );
+    expect(refused?.code).toBe(1);
+    expect(`${refused?.stdout}${refused?.stderr}`).toContain("TYPESAFE_API_KEY");
   });
 });

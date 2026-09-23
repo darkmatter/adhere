@@ -2,12 +2,18 @@ import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { Credentials } from "#services/Credentials.ts";
 import {
   blockBody,
+  type ComparedRule,
+  conflictBody,
+  contradictBody,
   Jev,
   JevUnavailable,
   judgeBody,
   type Lines,
   locateBody,
+  namedPairs,
   needsBlocks,
+  type Pair,
+  pairProbability,
   type Rules,
 } from "#services/Jev.ts";
 import { Effect, Layer, Record, Schedule, Schema } from "effect";
@@ -76,6 +82,28 @@ export const JevLive = Layer.effect(Jev)(
       return chosen(answers);
     });
 
-    return Jev.of({ judge, locate });
+    const conflicts = Effect.fn("Jev.conflicts")(function* (
+      rules: ReadonlyArray<ComparedRule>,
+      partners: ReadonlyArray<ReadonlyArray<number>>,
+    ) {
+      const { answers } = yield* ask(conflictBody(config.model, rules, partners), ChoiceAnswers);
+      return namedPairs(answers, partners);
+    });
+
+    const contradicts = Effect.fn("Jev.contradicts")(function* (
+      rules: ReadonlyArray<ComparedRule>,
+      pairs: ReadonlyArray<Pair>,
+    ) {
+      return yield* Effect.forEach(
+        pairs,
+        (pair) =>
+          Effect.map(ask(contradictBody(config.model, rules, pair), NoulAnswers), ({ answers }) =>
+            pairProbability(answers, pair),
+          ),
+        { concurrency: 8 },
+      );
+    });
+
+    return Jev.of({ judge, locate, conflicts, contradicts });
   }),
 );

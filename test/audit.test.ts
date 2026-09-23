@@ -17,7 +17,7 @@ import { tokenize } from "../src/highlight.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
-import { applicableRules, loadAdhereRuleSet, loadRules } from "../src/rules.ts";
+import { applicableRules, loadAdhereRuleSet, loadRules, type RuleEntry } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
 import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
 import {
@@ -26,7 +26,18 @@ import {
   CredentialsUnavailable,
 } from "../src/services/Credentials.ts";
 import { JevLive } from "../src/services/Jev.http.ts";
-import { blockBody, Jev, judgeBody, locateBody, type Rules } from "../src/services/Jev.ts";
+import {
+  blockBody,
+  conflictBody,
+  contradictBody,
+  Jev,
+  judgeBody,
+  locateBody,
+  namedPairs,
+  type Pair,
+  pairProbability,
+  type Rules,
+} from "../src/services/Jev.ts";
 import { isInSkippedTree, SourceWalker } from "../src/services/SourceWalker.ts";
 import { render, runAudit } from "../src/workflows/audit.ts";
 
@@ -78,6 +89,8 @@ const recordingJev = (answers: {
         calls.locate.push(rules);
         return asked(answers.locate, rules);
       }),
+    conflicts: () => Effect.die("an audit compares no rules"),
+    contradicts: () => Effect.die("an audit compares no rules"),
   });
   return { calls, layer };
 };
@@ -521,36 +534,141 @@ describe("source walker", () => {
 });
 
 describe("contradictions", () => {
-  it("finds opposite textual rules that overlap in scope", () => {
-    const contradictions = findContradictions([
-      {
-        id: "style/use-services",
-        file: "/repo/.adhere/style/use-services.md",
-        scope: "/repo",
-        rule: { description: "Use service classes for IO.", reference: "class Api {}" },
+  const entry = (id: string, scope: string, description: string): RuleEntry => ({
+    id,
+    scope,
+    file: `${scope}/.adhere/${id}.md`,
+    rule: { description, reference: `${id}()` },
+  });
+  const entries = [
+    entry("style/use-services", "/repo", "Use service classes for IO."),
+    entry("style/plain-functions", "/repo/packages/api", "IO is plain functions, not classes."),
+    entry("style/unrelated", "/repo/packages/web", "Avoid mutable globals."),
+    entry("style/use-services", "/repo/packages/api", "API services are classes too."),
+  ];
+
+  const comparingJev = (
+    named: ReadonlyArray<Pair>,
+    probabilities: Readonly<Record<string, number>>,
+  ) => {
+    const calls = {
+      conflicts: [] as Array<ReadonlyArray<ReadonlyArray<number>>>,
+      contradicts: [] as Array<ReadonlyArray<Pair>>,
+    };
+    const layer = Layer.succeed(Jev, {
+      judge: () => Effect.die("comparing rules judges no file"),
+      locate: () => Effect.die("comparing rules judges no file"),
+      conflicts: (_rules, partners) =>
+        Effect.sync(() => {
+          calls.conflicts.push(partners);
+          return named;
+        }),
+      contradicts: (_rules, pairs) =>
+        Effect.sync(() => {
+          calls.contradicts.push(pairs);
+          return pairs.map(([first, second]) => probabilities[`${first}-${second}`] ?? 0);
+        }),
+    });
+    return { calls, layer };
+  };
+
+  it("offers each rule the rules sharing its files, then reports the pairs Jev confirms", async () => {
+    const jev = comparingJev(
+      [
+        [0, 1],
+        [1, 0],
+        [3, 1],
+      ],
+      { "0-1": 0.9, "1-3": 0.4 },
+    );
+    const contradictions = await Effect.runPromise(
+      findContradictions(entries, 0.7).pipe(Effect.provide(jev.layer)),
+    );
+
+    // A shared id is shadowing, and packages/api and packages/web share no files.
+    expect(jev.calls.conflicts).toEqual([[[1, 2], [0, 3], [0], [1]]]);
+    expect(jev.calls.contradicts).toEqual([
+      [
+        [0, 1],
+        [1, 3],
+      ],
+    ]);
+    expect(contradictions).toEqual([{ first: entries[0], second: entries[1], probability: 0.9 }]);
+    const report = formatContradictions(contradictions);
+    expect(report).toContain("1. No code can follow both (0.90):");
+    expect(report).toContain("/repo/.adhere/style/use-services.md");
+    expect(report).toContain("/repo/packages/api/.adhere/style/plain-functions.md");
+  });
+
+  it("asks nothing when no two rules share files", async () => {
+    const jev = comparingJev([], {});
+    const contradictions = await Effect.runPromise(
+      findContradictions(entries.slice(1, 3), 0.7).pipe(Effect.provide(jev.layer)),
+    );
+    expect(jev.calls).toEqual({ conflicts: [], contradicts: [] });
+    expect(contradictions).toEqual([]);
+  });
+
+  it("conflicts: per rule a choice among the rules sharing its files; then a noul per pair", () => {
+    const compared = [
+      { id: "x", rule: { description: "X.", reference: "x()" } },
+      { id: "y", rule: { description: "Y.", avoid: "y()" } },
+      { id: "z", rule: { description: "Z.", reference: "z()" } },
+    ];
+    const state = {
+      rules: {
+        "0": { id: "x", description: "X.", reference: "x()" },
+        "1": { id: "y", description: "Y.", avoid: "y()" },
       },
-      {
-        id: "style/avoid-services",
-        file: "/repo/packages/api/.adhere/style/avoid-services.md",
-        scope: "/repo/packages/api",
-        rule: {
-          description: "Do not use service classes for IO.",
-          reference: "const Api = {}",
+    };
+    const choice = (rule: string, criteria: Record<string, string>) => ({
+      type: "choice",
+      instructions: `Each choice other than none is the rule in state.rules under its key. Which of them demands the opposite of what state.rules["${rule}"] demands of the same code, so that following one breaks the other? Choose none if code can follow each of them alongside it.`,
+      criteria: { none: "None of them", ...criteria },
+    });
+
+    expect(conflictBody("jev-latest", compared, [[1], [0], []])).toEqual({
+      model: "jev-latest",
+      state,
+      questions: { "0:0": choice("0", { "1": "Y." }), "1:0": choice("1", { "0": "X." }) },
+    });
+    expect(contradictBody("jev-latest", compared, [0, 1])).toEqual({
+      model: "jev-latest",
+      state,
+      questions: {
+        "0-1": {
+          type: "noul",
+          instructions:
+            'Do state.rules["0"] and state.rules["1"] demand opposite things of the same code, so that following one breaks the other? Answer no if code can follow both, or if they are about different things.',
         },
       },
-      {
-        id: "style/unrelated",
-        file: "/repo/packages/web/.adhere/style/unrelated.md",
-        scope: "/repo/packages/web",
-        rule: { description: "Avoid mutable globals.", reference: "x()" },
-      },
-    ]);
+    });
+  });
 
-    expect(contradictions).toHaveLength(1);
-    expect(formatContradictions(contradictions)).toContain("/repo/.adhere/style/use-services.md");
-    expect(formatContradictions(contradictions)).toContain(
-      "/repo/packages/api/.adhere/style/avoid-services.md",
+  it("reads a pair from each chosen partner that was offered, and a pair's probability", () => {
+    const partners = [[1, 2], [0], [0]];
+    expect(
+      namedPairs(
+        { "0:0": { choice: "2" }, "1:0": { choice: "none" }, "2:0": { choice: "7" } },
+        partners,
+      ),
+    ).toEqual([[0, 2]]);
+    expect(pairProbability({ "0-2": { noul: 0.8 } }, [0, 2])).toBe(0.8);
+    expect(pairProbability({ "0-2": { noul: 0.8 } }, [0, 1])).toBe(0);
+  });
+
+  it("conflicts: a rule with more partners than a choice holds gets one question per chunk", () => {
+    const compared = Array.from({ length: 300 }, (_, index) => ({
+      id: `r${index}`,
+      rule: { description: `R${index}.`, reference: "r()" },
+    }));
+    const partners = compared.map((_, index) =>
+      index === 0 ? Array.from({ length: 299 }, (__, other) => other + 1) : [],
     );
+    const { questions } = conflictBody("jev-latest", compared, partners);
+    expect(Object.keys(questions)).toEqual(["0:0", "0:1"]);
+    expect(Object.keys(questions["0:0"]?.criteria ?? {})).toHaveLength(255);
+    expect(Object.keys(questions["0:1"]?.criteria ?? {})).toHaveLength(46);
   });
 });
 

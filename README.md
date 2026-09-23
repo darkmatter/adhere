@@ -30,9 +30,9 @@ with a TypeSafe AI API key: the one `adhere login` saved, or
 
 ```sh
 adhere init                          # .adhere/config.ts and two example rules
-adhere validate                      # check the config and rules, without Jev
 echo ".adhere/cache/" >> .gitignore
 adhere login                         # save your TypeSafe AI API key, once
+adhere validate                      # check the rules, and ask Jev whether any contradict
 adhere lint                          # audit the working directory
 ```
 
@@ -68,7 +68,7 @@ refusal prints its reason.
 adhere lint                    # audit the working directory
 adhere lint --preset effect    # add a built-in rule set; the config becomes optional
 adhere lint --threshold 0.8    # replace the config's threshold; per-rule thresholds still apply
-adhere validate                # load the config and rules without Jev, check for contradictions
+adhere validate                # load the config and rules, ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
 adhere login                   # save a TypeSafe AI API key for later runs
 adhere logout                  # delete the saved key
@@ -99,20 +99,24 @@ kept, and no second one is added, even with `--force`.
 ### Validate
 
 `adhere validate` loads the config, rule files, and presets the way `lint`
-does, without calling Jev, so a file that fails to decode refuses here too, and
-it prints how many rules it loaded. `--preset` adds a built-in rule set, as for
-`lint`. It then checks the rules for local textual contradictions: it exits 1
-and prints the conflicting rule files when overlapping rule scopes contain
-opposite textual directives for the same topic, such as "Use service classes
-for IO" and "Do not use service classes for IO". Same-id nested rules are
-treated as intentional shadowing rather than contradictions.
+does, so a file that fails to decode refuses here too, and it prints how many
+rules it loaded. `--preset` adds a built-in rule set, as for `lint`. It then
+asks Jev whether any two rules that apply to the same files contradict, so that
+no code can follow both: one request names, per rule, the rule it conflicts
+with, if any, and each named pair then gets a probability from a request of
+its own, holding only those two rules, since other rules beside them dilute
+the judgment. A pair above
+the threshold is printed with both rule files, and the exit code is 1. Two
+rules with the same id are not compared: a nested rule that shares an id
+shadows the other on purpose. When no two rules share files nothing is sent;
+otherwise `validate` needs the API key, as `lint` does.
 
 ### Login
 
 `adhere login` prompts for a TypeSafe AI API key, masking what you type, and
 saves it to `~/.config/adhere/credentials.json`, or under `$XDG_CONFIG_HOME`
 when that is set, readable only by you. Piped input is read instead of a
-prompt: `adhere login < key.txt`. `lint` uses the saved key, but
+prompt: `adhere login < key.txt`. `lint` and `validate` use the saved key, but
 `TYPESAFE_API_KEY`, when set, takes precedence, so CI can pass a key without a
 login. `adhere logout` deletes the saved key.
 
