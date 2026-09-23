@@ -56,12 +56,7 @@ const exists = (path: string): Promise<boolean> =>
     () => false,
   );
 
-const writeScaffoldFile = (
-  root: string,
-  path: string,
-  contents: string,
-  options: InitOptions,
-) =>
+const writeScaffoldFile = (root: string, path: string, contents: string, options: InitOptions) =>
   Effect.tryPromise({
     try: async () => {
       const target = join(root, path);

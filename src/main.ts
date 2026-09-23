@@ -1,9 +1,5 @@
 #!/usr/bin/env bun
-import {
-  auditCommand,
-  runContradictionsCommand,
-  runInitCommand,
-} from "#cli.ts";
+import { auditCommand, runContradictionsCommand, runInitCommand } from "#cli.ts";
 import { AdhereConfigLive } from "#services/AdhereConfig.ts";
 import { BunRuntime, BunServices } from "@effect/platform-bun";
 import { Effect } from "effect";

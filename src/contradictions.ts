@@ -19,11 +19,7 @@ const normalized = (path: string): string => path.replaceAll("\\", "/");
 const scopesOverlap = (a: string, b: string): boolean => {
   const first = normalized(a);
   const second = normalized(b);
-  return (
-    first === second ||
-    first.startsWith(`${second}/`) ||
-    second.startsWith(`${first}/`)
-  );
+  return first === second || first.startsWith(`${second}/`) || second.startsWith(`${first}/`);
 };
 
 const polarityOf = (text: string): Polarity | undefined => {
@@ -72,20 +68,16 @@ export const findContradictions = (
       contradictions.push({
         first,
         second,
-        reason:
-          "overlapping scopes contain opposite textual directives for the same topic",
+        reason: "overlapping scopes contain opposite textual directives for the same topic",
       });
     }
   }
   return contradictions;
 };
 
-const locationOf = (entry: RuleEntry): string =>
-  `${entry.id} (${entry.file ?? entry.scope})`;
+const locationOf = (entry: RuleEntry): string => `${entry.id} (${entry.file ?? entry.scope})`;
 
-export const formatContradictions = (
-  contradictions: ReadonlyArray<Contradiction>,
-): string => {
+export const formatContradictions = (contradictions: ReadonlyArray<Contradiction>): string => {
   if (contradictions.length === 0) {
     return "No contradictions found among configured rules.";
   }

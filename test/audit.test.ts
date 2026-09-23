@@ -3,10 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Crypto, Effect, FileSystem, Layer, Path, Record } from "effect";
 import { describe, expect, it } from "vite-plus/test";
-import {
-  findContradictions,
-  formatContradictions,
-} from "../src/contradictions.ts";
+import { findContradictions, formatContradictions } from "../src/contradictions.ts";
 import {
   AdhereConfig as AdhereConfigSchema,
   decodeConfig,
@@ -313,10 +310,8 @@ describe("nested .adhere rules", () => {
     const tree: Record<string, string> = {
       "/repo/.adhere/style/service.md": "---\ndescription: root\n---\nroot()\n",
       "/repo/.adhere/cache/ignored.md": "---\ndescription: cache\n---\ncache()\n",
-      "/repo/packages/api/.adhere/style/service.md":
-        "---\ndescription: api\n---\napi()\n",
-      "/repo/packages/api/.adhere/api/schema.md":
-        "---\ndescription: schema\n---\nschema()\n",
+      "/repo/packages/api/.adhere/style/service.md": "---\ndescription: api\n---\napi()\n",
+      "/repo/packages/api/.adhere/api/schema.md": "---\ndescription: schema\n---\nschema()\n",
     };
     const fs = FileSystem.layerNoop({
       readDirectory: () =>
@@ -427,9 +422,7 @@ describe("contradictions", () => {
     ]);
 
     expect(contradictions).toHaveLength(1);
-    expect(formatContradictions(contradictions)).toContain(
-      "/repo/.adhere/style/use-services.md",
-    );
+    expect(formatContradictions(contradictions)).toContain("/repo/.adhere/style/use-services.md");
     expect(formatContradictions(contradictions)).toContain(
       "/repo/packages/api/.adhere/style/avoid-services.md",
     );
@@ -441,10 +434,7 @@ describe("init", () => {
     const root = join(tmpdir(), `adhere-init-${Date.now()}`);
     await Effect.runPromise(initProject(root));
     const config = await readFile(join(root, "adhere.config.ts"), "utf8");
-    const rule = await readFile(
-      join(root, ".adhere", "style", "prefer-small-files.md"),
-      "utf8",
-    );
+    const rule = await readFile(join(root, ".adhere", "style", "prefer-small-files.md"), "utf8");
 
     expect(config).toContain("satisfies Config");
     expect(rule).toContain("description:");
