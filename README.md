@@ -168,10 +168,13 @@ derives `0.3.0` from `v0.3.0`, and runs `bun run release -- --ci 0.3.0`.
 Release-it bumps `package.json`, commits `chore: release v0.3.0` back to
 `main`, skips npm publish, and creates the GitHub Release for the existing tag.
 
-Publishing stays in `.github/workflows/publish.yaml`: the published GitHub
-Release triggers the OIDC trusted-publisher job, which verifies that
-`package.json` matches the release tag and then runs
-`npm publish --access public --provenance`. No npm token is used.
+Publishing stays in `.github/workflows/publish.yaml`: after release-it
+finishes, `.github/workflows/release.yaml` calls the reusable publish workflow
+directly, avoiding a chained GitHub Release event created by `GITHUB_TOKEN`.
+The publish workflow verifies that `package.json` matches the release tag and
+then runs `npm publish --access public --provenance`. No npm token is used.
+The publish workflow can also be run manually for an already-created release
+tag if a publish needs to be retried.
 
 ## How a file is judged
 

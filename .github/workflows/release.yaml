@@ -60,3 +60,12 @@ jobs:
         run: bun run release -- --ci "${{ steps.release.outputs.version }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: release
+    uses: ./.github/workflows/publish.yaml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      tag_name: ${{ github.ref_name }}

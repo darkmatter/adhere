@@ -1,8 +1,18 @@
 name: Publish
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag_name:
+        description: "Release tag to publish, for example v0.3.0."
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag to publish, for example v0.3.0."
+        required: true
+        type: string
 
 permissions:
   id-token: write
@@ -23,11 +33,17 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
       - name: Verify release tag matches package version
+        env:
+          TAG_NAME: ${{ inputs.tag_name }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${TAG_NAME#v}"
+          if [[ "$version" == "$TAG_NAME" || ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tags must look like vX.Y.Z, optionally with a prerelease/build suffix." >&2
+            exit 1
+          fi
           package_version="$(node -p "require('./package.json').version")"
           if [ "$version" != "$package_version" ]; then
-            echo "Release tag $GITHUB_REF_NAME does not match package.json version $package_version." >&2
+            echo "Release tag $TAG_NAME does not match package.json version $package_version." >&2
             exit 1
           fi
       - run: bun install --frozen-lockfile
