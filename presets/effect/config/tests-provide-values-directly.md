@@ -8,9 +8,9 @@ Effect.runPromise(
     Effect.provide(
       Layer.succeed(ApiConfig, {
         apiKey: Redacted.make("test-key"),
-        baseUrl: "https://test.example.com"
-      })
-    )
-  )
-)
+        baseUrl: "https://test.example.com",
+      }),
+    ),
+  ),
+);
 ```

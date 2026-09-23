@@ -19,7 +19,5 @@ export const presets = {
   effect: { rules: new URL("effect/", presetsRoot) },
 } as const satisfies Record<string, Preset>;
 
-export const presetNames = ["effect"] as const satisfies ReadonlyArray<
-  keyof typeof presets
->;
+export const presetNames = ["effect"] as const satisfies ReadonlyArray<keyof typeof presets>;
 export type PresetName = (typeof presetNames)[number];

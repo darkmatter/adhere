@@ -26,9 +26,7 @@ export const AdhereConfig = Schema.Struct({
    * A record of rules, or a directory path relative to the config file.
    * Unset: `.adhere/` when that directory exists, otherwise no rules.
    */
-  rules: Schema.optionalKey(
-    Schema.Union([Schema.Record(Schema.String, Rule), Schema.String]),
-  ),
+  rules: Schema.optionalKey(Schema.Union([Schema.Record(Schema.String, Rule), Schema.String])),
 });
 
 /** Where a repo keeps its rule files by default. The cache lives under it. */
@@ -75,10 +73,7 @@ export interface Overrides {
 export const presetsOf = (
   config: Pick<AdhereConfig, "presets">,
   overrides: Overrides,
-): ReadonlyArray<PresetName> => [
-    ...(overrides.presets ?? []),
-    ...config.presets,
-  ];
+): ReadonlyArray<PresetName> => [...(overrides.presets ?? []), ...config.presets];
 
 /**
  * Precedence, highest first: command line, config file, presets in order
@@ -98,16 +93,8 @@ export const resolveConfig = (
     applied.map((preset) => preset[key]).findLast((value) => value !== undefined);
   return {
     model: config.model ?? last("model") ?? DEFAULT_MODEL,
-    threshold:
-      overrides.threshold ??
-      config.threshold ??
-      last("threshold") ??
-      DEFAULT_THRESHOLD,
-    rules: Object.assign(
-      {},
-      ...applied.map((preset) => preset.rules),
-      config.rules,
-    ),
+    threshold: overrides.threshold ?? config.threshold ?? last("threshold") ?? DEFAULT_THRESHOLD,
+    rules: Object.assign({}, ...applied.map((preset) => preset.rules), config.rules),
   };
 };
 
@@ -116,9 +103,7 @@ export class ConfigUnavailable extends Schema.TaggedError<ConfigUnavailable>()(
   { message: Schema.String },
 ) {}
 
-export const decodeConfig = (
-  value: unknown,
-): Effect.Effect<AdhereConfig, ConfigUnavailable> =>
+export const decodeConfig = (value: unknown): Effect.Effect<AdhereConfig, ConfigUnavailable> =>
   Schema.decodeUnknownEffect(AdhereConfig)(value).pipe(
     Effect.mapError((problem) =>
       ConfigUnavailable.make({

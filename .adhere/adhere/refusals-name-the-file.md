@@ -7,9 +7,11 @@ Adhere's own rule. A refusal is the only thing the user sees, so it points
 at the file it is about.
 
 ```ts
-const front = yield* Schema.decodeUnknownEffect(FrontMatter)(fields).pipe(
-  Effect.mapError((problem) =>
-    ConfigUnavailable.make({ message: `${file}: ${problem.message}` }),
-  ),
-)
+const front =
+  yield *
+  Schema.decodeUnknownEffect(FrontMatter)(fields).pipe(
+    Effect.mapError((problem) =>
+      ConfigUnavailable.make({ message: `${file}: ${problem.message}` }),
+    ),
+  );
 ```

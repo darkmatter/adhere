@@ -1,9 +1,7 @@
 import type { AuditResult, Finding } from "#workflows/audit.ts";
 
 const displayPath = (file: string, root: string | undefined): string =>
-  root !== undefined && file.startsWith(`${root}/`)
-    ? file.slice(root.length + 1)
-    : file;
+  root !== undefined && file.startsWith(`${root}/`) ? file.slice(root.length + 1) : file;
 
 const counted = (count: number, one: string, many: string): string =>
   `${count} ${count === 1 ? one : many}`;
@@ -12,15 +10,11 @@ const counted = (count: number, one: string, many: string): string =>
 const paint = (code: string, text: string, enabled: boolean): string =>
   enabled ? `\u001b[${code}m${text}\u001b[0m` : text;
 
-const red = (text: string, enabled: boolean) =>
-  paint("38;2;219;91;81;1", text, enabled);
-const blue = (text: string, enabled: boolean) =>
-  paint("38;2;5;125;160;1", text, enabled);
+const red = (text: string, enabled: boolean) => paint("38;2;219;91;81;1", text, enabled);
+const blue = (text: string, enabled: boolean) => paint("38;2;5;125;160;1", text, enabled);
 const dim = (text: string, enabled: boolean) => paint("2", text, enabled);
-const pink = (text: string, enabled: boolean) =>
-  paint("38;2;255;0;175", text, enabled);
-const helpTint = (text: string, enabled: boolean) =>
-  paint("38;2;180;105;245", text, enabled);
+const pink = (text: string, enabled: boolean) => paint("38;2;255;0;175", text, enabled);
+const helpTint = (text: string, enabled: boolean) => paint("38;2;180;105;245", text, enabled);
 
 export interface RenderOptions {
   /** Color the frame the way `vp lint` does on a terminal. */
@@ -64,10 +58,7 @@ const frame = (finding: Finding, options: RenderOptions): ReadonlyArray<string> 
  * The report, in the default `vp lint` layout. Diagnostics are separated by
  * a blank line. Color is on when the caller is writing to a terminal.
  */
-export const render = (
-  result: AuditResult,
-  options: RenderOptions = {},
-): ReadonlyArray<string> => {
+export const render = (result: AuditResult, options: RenderOptions = {}): ReadonlyArray<string> => {
   const lines: Array<string> = [];
   for (const finding of result.findings) {
     if (lines.length > 0) lines.push("");

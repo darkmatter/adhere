@@ -4,10 +4,9 @@ import { Context, type Effect, Record, Schema } from "effect";
 export type { Rules };
 export type Lines = ReadonlyArray<string>;
 
-export class JevUnavailable extends Schema.TaggedError<JevUnavailable>()(
-  "JevUnavailable",
-  { message: Schema.String },
-) {}
+export class JevUnavailable extends Schema.TaggedError<JevUnavailable>()("JevUnavailable", {
+  message: Schema.String,
+}) {}
 
 export class Jev extends Context.Service<
   Jev,
@@ -43,11 +42,7 @@ const stateOf = (lines: Lines, rules: Rules) => ({
   })),
 });
 
-const lineCriteria = (
-  lines: Lines,
-  from: number,
-  to: number,
-): Record<string, string> => {
+const lineCriteria = (lines: Lines, from: number, to: number): Record<string, string> => {
   const criteria: Record<string, string> = {};
   for (let n = from; n <= Math.min(to, lines.length); n++) {
     const text = lines[n - 1] ?? "";
@@ -81,11 +76,7 @@ export const locateBody = (
       criteria:
         block === undefined
           ? lineCriteria(lines, 1, lines.length)
-          : lineCriteria(
-              lines,
-              block * LINES_PER_BLOCK + 1,
-              (block + 1) * LINES_PER_BLOCK,
-            ),
+          : lineCriteria(lines, block * LINES_PER_BLOCK + 1, (block + 1) * LINES_PER_BLOCK),
     };
   }),
 });

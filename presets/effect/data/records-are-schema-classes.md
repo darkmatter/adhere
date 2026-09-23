@@ -10,7 +10,7 @@ export class User extends Schema.Class<User>("User")({
   createdAt: Schema.Date,
 }) {
   get displayName() {
-    return `${this.name} (${this.email})`
+    return `${this.name} (${this.email})`;
   }
 }
 ```

@@ -60,9 +60,7 @@ export const parseRuleMarkdown = (
         message: `${file}: a rule starts with front matter between --- lines`,
       });
     }
-    const front = yield* Schema.decodeUnknownEffect(FrontMatter)(
-      parseFrontMatter(match[1]),
-    ).pipe(
+    const front = yield* Schema.decodeUnknownEffect(FrontMatter)(parseFrontMatter(match[1])).pipe(
       Effect.mapError((problem) =>
         ConfigUnavailable.make({ message: `${file}: ${problem.message}` }),
       ),

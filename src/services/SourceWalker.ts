@@ -53,15 +53,11 @@ const refused = (problem: { readonly message: string }): WalkUnavailable =>
   WalkUnavailable.make({ message: problem.message });
 
 /** `readdir(recursive)` yields paths relative to the root it read: root them. */
-const rooted = (root: string, paths: ReadonlyArray<string>) =>
-  paths.map((rel) => `${root}/${rel}`);
+const rooted = (root: string, paths: ReadonlyArray<string>) => paths.map((rel) => `${root}/${rel}`);
 
 /** What the root actually contains: only paths the audit reads. */
-const scannable = (
-  root: string,
-  paths: ReadonlyArray<string>,
-  self: string,
-) => rooted(root, paths).filter((file) => isScannable(file, self));
+const scannable = (root: string, paths: ReadonlyArray<string>, self: string) =>
+  rooted(root, paths).filter((file) => isScannable(file, self));
 
 /** One root's paths, filtered to what the audit reads. */
 const listRoot = Effect.fn("SourceWalker.listRoot")(
@@ -72,12 +68,11 @@ const listRoot = Effect.fn("SourceWalker.listRoot")(
 );
 
 /** One scannable path, read into lines. */
-const readFile = Effect.fn("SourceWalker.readFile")(
-  (fs: FileSystem.FileSystem, path: string) =>
-    Effect.map(fs.readFileString(path), (content): ScannedFile => ({
-      path,
-      lines: content.split("\n"),
-    })),
+const readFile = Effect.fn("SourceWalker.readFile")((fs: FileSystem.FileSystem, path: string) =>
+  Effect.map(fs.readFileString(path), (content): ScannedFile => ({
+    path,
+    lines: content.split("\n"),
+  })),
 );
 
 /** Read a batch of paths; the inner loop hoisted out of `forEach`. */
@@ -99,13 +94,9 @@ const scanDirs = Effect.fn("SourceWalker.scanDirs")(function* (
   root: string,
 ) {
   const found = yield* Effect.forEach(WORKSPACE_DIRS, (dir) =>
-    Effect.map(fs.exists(`${root}/${dir}`), (exists) =>
-      exists ? dir : undefined,
-    ),
+    Effect.map(fs.exists(`${root}/${dir}`), (exists) => (exists ? dir : undefined)),
   );
-  const present = found.filter(
-    (dir): dir is (typeof WORKSPACE_DIRS)[number] => dir !== undefined,
-  );
+  const present = found.filter((dir): dir is (typeof WORKSPACE_DIRS)[number] => dir !== undefined);
   return present.length > 0 ? present : ["."];
 });
 
@@ -121,9 +112,7 @@ export const SourceWalkerLive = Layer.effect(SourceWalker)(
     const path = yield* Path.Path;
     // No segments: Path resolves against the working directory.
     const root = path.resolve();
-    const self = yield* path
-      .fromFileUrl(new URL("../../", import.meta.url))
-      .pipe(Effect.orDie);
+    const self = yield* path.fromFileUrl(new URL("../../", import.meta.url)).pipe(Effect.orDie);
     const walk = Effect.fn("SourceWalker.files")(function* () {
       const dirs = yield* scanDirs(fs, root).pipe(Effect.mapError(refused));
       const trees = yield* Effect.forEach(dirs, (dir) =>

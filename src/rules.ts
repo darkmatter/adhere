@@ -98,9 +98,7 @@ export const loadRules = Effect.fn("loadRules")(function* (directory: string) {
   const rules = yield* Effect.forEach(files, (relative) =>
     Effect.gen(function* () {
       const file = path.join(directory, relative);
-      const text = yield* fs
-        .readFileString(file)
-        .pipe(Effect.mapError(refused(directory)));
+      const text = yield* fs.readFileString(file).pipe(Effect.mapError(refused(directory)));
       const id: RuleId = relative.slice(0, -".md".length).split(path.sep).join("/");
       return [id, yield* parseRuleMarkdown(text, file)] as const;
     }),

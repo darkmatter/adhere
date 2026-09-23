@@ -3,13 +3,11 @@ description: A call over the network, such as an HTTP request, a database query,
 ---
 
 ```ts
-const retryPolicy = Schedule.exponential("100 millis").pipe(
-  Schedule.both(Schedule.recurs(3))
-)
+const retryPolicy = Schedule.exponential("100 millis").pipe(Schedule.both(Schedule.recurs(3)));
 
 const resilientCall = HttpClient.get("https://api.example.com/users").pipe(
   Effect.timeout("2 seconds"),
   Effect.retry(retryPolicy),
-  Effect.timeout("10 seconds")
-)
+  Effect.timeout("10 seconds"),
+);
 ```

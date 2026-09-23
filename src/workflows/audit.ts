@@ -58,8 +58,7 @@ export const runAudit: Effect.Effect<
       ? config.rules
       : applicableRules(file, config.scopedRules);
 
-  const rulesOf = (some: Readonly<Record<RuleId, PreparedRule>>) =>
-    Record.map(some, (k) => k.rule);
+  const rulesOf = (some: Readonly<Record<RuleId, PreparedRule>>) => Record.map(some, (k) => k.rule);
 
   const auditFile = Effect.fn("audit.file")(function* (file: ScannedFile) {
     if (file.lines.length > MAX_LINES) return fileResult("skipped", []);
@@ -84,9 +83,7 @@ export const runAudit: Effect.Effect<
     );
     const pending = Record.filter(prepared, (_, id) => kept[id] === undefined);
 
-    const probabilities = isEmpty(pending)
-      ? {}
-      : yield* jev.judge(file.lines, rulesOf(pending));
+    const probabilities = isEmpty(pending) ? {} : yield* jev.judge(file.lines, rulesOf(pending));
     const judged: Record<RuleId, Judgment> = { ...kept };
     for (const [id, probability] of Object.entries(probabilities)) {
       const k = pending[id];
@@ -96,14 +93,10 @@ export const runAudit: Effect.Effect<
     const flagged = Record.filter(prepared, (k, id) => {
       const judgment = judged[id];
       return (
-        judgment !== undefined &&
-        judgment.probability > k.threshold &&
-        judgment.line === undefined
+        judgment !== undefined && judgment.probability > k.threshold && judgment.line === undefined
       );
     });
-    const lines = isEmpty(flagged)
-      ? {}
-      : yield* jev.locate(file.lines, rulesOf(flagged));
+    const lines = isEmpty(flagged) ? {} : yield* jev.locate(file.lines, rulesOf(flagged));
     const located = Record.map(judged, (judgment, id) => {
       const line = lines[id];
       return line === undefined
@@ -117,9 +110,7 @@ export const runAudit: Effect.Effect<
     const findings = Object.entries(located)
       .flatMap(([id, judgment]): ReadonlyArray<Finding> => {
         const k = prepared[id];
-        return k !== undefined &&
-          judgment.line !== undefined &&
-          judgment.probability > k.threshold
+        return k !== undefined && judgment.line !== undefined && judgment.probability > k.threshold
           ? [
               {
                 rule: id,

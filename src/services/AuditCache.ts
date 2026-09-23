@@ -21,9 +21,7 @@ const hexOf = (bytes: Uint8Array): string =>
 
 export const sha256 = Effect.fn("AuditCache.sha256")(function* (text: string) {
   const crypto = yield* Crypto.Crypto;
-  const digest = yield* crypto
-    .digest("SHA-256", new TextEncoder().encode(text))
-    .pipe(Effect.orDie);
+  const digest = yield* crypto.digest("SHA-256", new TextEncoder().encode(text)).pipe(Effect.orDie);
   return hexOf(digest);
 });
 
@@ -35,12 +33,10 @@ export class AuditCache extends Context.Service<
   }
 >()("@drkmttr/adhere/services/AuditCache") {}
 
-const openStore = Effect.fn("AuditCache.openStore")(function* (
-  directory: string,
-) {
-  const context = yield* Layer.build(
-    KeyValueStore.layerFileSystem(directory),
-  ).pipe(Effect.catchCause(() => Layer.build(KeyValueStore.layerMemory)));
+const openStore = Effect.fn("AuditCache.openStore")(function* (directory: string) {
+  const context = yield* Layer.build(KeyValueStore.layerFileSystem(directory)).pipe(
+    Effect.catchCause(() => Layer.build(KeyValueStore.layerMemory)),
+  );
   return Context.get(context, KeyValueStore.KeyValueStore);
 });
 
@@ -60,9 +56,7 @@ export const AuditCacheLive = Layer.effect(AuditCache)(
           Effect.orElseSucceed(() => undefined),
         ),
       put: (filePath, entry) =>
-        Effect.flatMap(keyOf(filePath), (key) => entries.set(key, entry)).pipe(
-          Effect.ignore,
-        ),
+        Effect.flatMap(keyOf(filePath), (key) => entries.set(key, entry)).pipe(Effect.ignore),
     });
   }),
 );

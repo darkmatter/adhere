@@ -6,7 +6,6 @@ export interface ScannedFile {
 }
 
 /** A source walker's refusal: the tree it was asked to read is not readable. */
-export class WalkUnavailable extends Schema.TaggedError<WalkUnavailable>()(
-  "WalkUnavailable",
-  { message: Schema.String },
-) {}
+export class WalkUnavailable extends Schema.TaggedError<WalkUnavailable>()("WalkUnavailable", {
+  message: Schema.String,
+}) {}

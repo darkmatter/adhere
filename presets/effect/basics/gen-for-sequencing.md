@@ -4,8 +4,8 @@ description: Sequential effectful steps are written with Effect.gen and yield*, 
 
 ```ts
 const program = Effect.gen(function* () {
-  const data = yield* fetchData
-  yield* Effect.logInfo(`Processing data: ${data}`)
-  return yield* processData(data)
-})
+  const data = yield* fetchData;
+  yield* Effect.logInfo(`Processing data: ${data}`);
+  return yield* processData(data);
+});
 ```

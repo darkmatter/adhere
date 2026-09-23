@@ -20,13 +20,7 @@ import type { ScannedFile } from "../src/models/Audit.ts";
 import { applicableRules, loadAdhereRuleSet, loadRules } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
 import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
-import {
-  blockBody,
-  Jev,
-  judgeBody,
-  locateBody,
-  type Rules,
-} from "../src/services/Jev.ts";
+import { blockBody, Jev, judgeBody, locateBody, type Rules } from "../src/services/Jev.ts";
 import { SourceWalker } from "../src/services/SourceWalker.ts";
 import { render, runAudit } from "../src/workflows/audit.ts";
 
@@ -172,10 +166,7 @@ describe("request bodies", () => {
   });
 
   it("over 255 lines: a choice over 20-line blocks, then a choice inside the chosen block", () => {
-    const long = Array.from(
-      { length: 300 },
-      (_, index) => `const v${index + 1} = ${index + 1};`,
-    );
+    const long = Array.from({ length: 300 }, (_, index) => `const v${index + 1} = ${index + 1};`);
     const blocks = blockBody("jev-latest", long, { a });
     expect(blocks.questions.a?.type).toBe("choice");
     expect(blocks.questions.a?.instructions).toBe(
@@ -233,19 +224,13 @@ describe("config", () => {
     const bare = await Effect.runPromise(loaded({}));
     expect(resolveConfig(bare).threshold).toBe(0.7);
     expect(resolveConfig(bare, { presets: ["effect"] }, registry).threshold).toBe(0.9);
-    const configured = await Effect.runPromise(
-      loaded({ presets: ["effect"], threshold: 0.6 }),
-    );
+    const configured = await Effect.runPromise(loaded({ presets: ["effect"], threshold: 0.6 }));
     expect(resolveConfig(configured, {}, registry).threshold).toBe(0.6);
-    expect(resolveConfig(configured, { threshold: 0.85 }, registry).threshold).toBe(
-      0.85,
-    );
+    expect(resolveConfig(configured, { threshold: 0.85 }, registry).threshold).toBe(0.85);
   });
 
   it("refuses an unknown preset", async () => {
-    const refused = await Effect.runPromise(
-      Effect.flip(decodeConfig({ presets: ["react"] })),
-    );
+    const refused = await Effect.runPromise(Effect.flip(decodeConfig({ presets: ["react"] })));
     expect(refused._tag).toBe("ConfigUnavailable");
     expect(refused.message).toContain("effect");
   });
@@ -260,8 +245,7 @@ describe("config", () => {
 });
 
 describe("markdown rules", () => {
-  const parse = (text: string) =>
-    Effect.runPromise(parseRuleMarkdown(text, "rules/a.md"));
+  const parse = (text: string) => Effect.runPromise(parseRuleMarkdown(text, "rules/a.md"));
 
   it("front matter is the description and threshold; the fenced block is the reference", async () => {
     const rule = await parse(
@@ -283,8 +267,7 @@ describe("markdown rules", () => {
     expect(rule).toEqual({
       description: "Ports are branded.",
       threshold: 0.8,
-      reference:
-        'const Port = Schema.Int.pipe(Schema.brand("Port"))\ntype Port = typeof Port.Type',
+      reference: 'const Port = Schema.Int.pipe(Schema.brand("Port"))\ntype Port = typeof Port.Type',
     });
   });
 

@@ -26,10 +26,9 @@ import { FetchHttpClient } from "effect/unstable/http";
 // import map, hence the relative path.
 import skill from "../skills/adhere/SKILL.md" with { type: "text" };
 
-class FindingsReported extends Schema.TaggedError<FindingsReported>()(
-  "FindingsReported",
-  { count: Schema.Finite },
-) {
+class FindingsReported extends Schema.TaggedError<FindingsReported>()("FindingsReported", {
+  count: Schema.Finite,
+}) {
   readonly [Runtime.errorReported] = false;
 }
 
@@ -49,9 +48,7 @@ class UsageReported extends Schema.TaggedError<UsageReported>()(
 
 const preset = Flag.choice("preset", presetNames).pipe(
   Flag.optional,
-  Flag.withDescription(
-    "Add a built-in rule set. With a preset, adhere.config.ts is optional.",
-  ),
+  Flag.withDescription("Add a built-in rule set. With a preset, adhere.config.ts is optional."),
 );
 
 const threshold = Flag.float("threshold").pipe(
@@ -69,9 +66,7 @@ export const auditLayer = (overrides: Overrides) =>
   ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)));
 
 /** `adhere skill`: the agent skill for writing rules, as shipped in the binary. */
-export const skillCommand = Command.make("skill", {}, () =>
-  Console.log(skill.trimEnd()),
-).pipe(
+export const skillCommand = Command.make("skill", {}, () => Console.log(skill.trimEnd())).pipe(
   Command.withDescription(
     "Print the agent skill that gathers a repo's conventions into rules and configures adhere. Pipe it into .agents/skills/adhere/SKILL.md or hand it to an agent.",
   ),
@@ -84,9 +79,7 @@ const audit = Command.make("adhere", { preset, threshold }, () =>
     const color = yield* stdio.stdoutIsTerminal;
     const path = yield* Path.Path;
     // One write: separate Console.log calls have interleaved out of order here.
-    yield* Console.log(
-      render(result, { color, root: path.resolve() }).join("\n"),
-    );
+    yield* Console.log(render(result, { color, root: path.resolve() }).join("\n"));
     if (result.findings.length > 0) {
       yield* FindingsReported.make({ count: result.findings.length });
     }

@@ -21,11 +21,7 @@ import {
 import { Context, Effect, FileSystem, Layer, Path, Record } from "effect";
 
 /** Where a config may live, relative to the working directory. Exactly one may exist. */
-export const CONFIG_FILES = [
-  "adhere.config.ts",
-  ".adhere/config.ts",
-  ".adhere.config.ts",
-] as const;
+export const CONFIG_FILES = ["adhere.config.ts", ".adhere/config.ts", ".adhere.config.ts"] as const;
 
 export class AdhereConfig extends Context.Service<
   AdhereConfig,
@@ -49,10 +45,7 @@ const loadConfigFile = Effect.fn("AdhereConfig.load")(function* (file: string) {
   );
 });
 
-const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (
-  name: PresetName,
-  base: string,
-) {
+const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (name: PresetName, base: string) {
   const preset: Preset = presets[name];
   const rules = yield* materializeRules(preset.rules, base);
   return [name, { ...preset, rules } satisfies Loaded<Preset>] as const;
@@ -73,11 +66,7 @@ export const AdhereConfigLive = (overrides: Overrides) =>
       const present = (target: string) =>
         fs
           .exists(path.join(cwd, target))
-          .pipe(
-            Effect.mapError((problem) =>
-              ConfigUnavailable.make({ message: problem.message }),
-            ),
-          );
+          .pipe(Effect.mapError((problem) => ConfigUnavailable.make({ message: problem.message })));
       const found = yield* Effect.filter(CONFIG_FILES, present);
       if (found.length > 1) {
         return yield* ConfigUnavailable.make({

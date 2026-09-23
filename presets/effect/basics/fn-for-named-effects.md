@@ -4,8 +4,8 @@ description: A named function that returns an Effect is defined with Effect.fn s
 
 ```ts
 const processUser = Effect.fn("processUser")(function* (userId: string) {
-  yield* Effect.logInfo(`Processing user ${userId}`)
-  const user = yield* getUser(userId)
-  return yield* processData(user)
-})
+  yield* Effect.logInfo(`Processing user ${userId}`);
+  const user = yield* getUser(userId);
+  return yield* processData(user);
+});
 ```
