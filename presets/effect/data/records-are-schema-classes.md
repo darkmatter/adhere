@@ -1,8 +1,8 @@
 ---
-description: Domain records should be defined with Schema.Class, not with a plain interface or type alias.
+description: Domain records must be defined with Schema.Class, never with a plain interface or type alias.
 ---
 
-```ts
+```ts must
 export class User extends Schema.Class<User>("User")({
   id: UserId,
   name: Schema.String,
@@ -12,5 +12,12 @@ export class User extends Schema.Class<User>("User")({
   get displayName() {
     return `${this.name} (${this.email})`;
   }
+}
+```
+
+```ts never
+interface Invoice {
+  readonly id: InvoiceId;
+  readonly total: Money;
 }
 ```

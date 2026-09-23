@@ -1,8 +1,8 @@
 ---
-description: File, path, process, terminal, and HTTP access goes through Effect's platform services (FileSystem, Path, ChildProcess, Terminal, HttpClient, KeyValueStore), acquired with yield*, not through node: builtins, Bun globals, or fetch. The Bun implementations should be provided once at the entry point with BunServices.layer.
+description: File, path, process, terminal, and HTTP access must go through Effect's platform services (FileSystem, Path, ChildProcess, Terminal, HttpClient, KeyValueStore), acquired with yield*, never through node: builtins, Bun globals, or fetch. The Bun implementations must be provided once at the entry point with BunServices.layer.
 ---
 
-```ts
+```ts must
 import { Effect, FileSystem, Path } from "effect";
 import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import { BunRuntime, BunServices } from "@effect/platform-bun";
@@ -17,4 +17,10 @@ const program = Effect.gen(function* () {
 });
 
 program.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+```
+
+```ts never
+import { readFileSync } from "node:fs";
+
+const settings = readFileSync("settings.json", "utf8");
 ```

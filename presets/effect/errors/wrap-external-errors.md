@@ -1,8 +1,8 @@
 ---
-description: An error from an external library should be wrapped in a tagged error with a Schema.Defect field, not passed through raw.
+description: An error from an external library must be wrapped in a tagged error with a Schema.Defect field, never passed through raw.
 ---
 
-```ts
+```ts must
 class ApiError extends Schema.TaggedError<ApiError>()("ApiError", {
   endpoint: Schema.String,
   statusCode: Schema.Number,
@@ -21,4 +21,9 @@ const fetchUser = (id: string) =>
         }),
     ),
   );
+```
+
+```ts never
+const charge = (amount: number) =>
+  Effect.tryPromise(() => stripe.charges.create({ amount, currency: "usd" }));
 ```

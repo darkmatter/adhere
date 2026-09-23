@@ -1,8 +1,8 @@
 ---
-description: A typed error should be for a failure the caller can handle. A bug or invariant violation should be a defect.
+description: A typed error must be for a failure the caller can handle. A bug or invariant violation must be a defect, never a typed error.
 ---
 
-```ts
+```ts must
 const recovered: Effect.Effect<string, ValidationError> = program.pipe(
   Effect.catchTag("HttpError", (error) =>
     Effect.gen(function* () {
@@ -16,4 +16,15 @@ const main = Effect.gen(function* () {
   const config = yield* loadConfig.pipe(Effect.orDie);
   yield* Effect.log(`Starting on port ${config.port}`);
 });
+```
+
+```ts never
+class CacheCorrupted extends Schema.TaggedError<CacheCorrupted>()("CacheCorrupted", {
+  key: Schema.String,
+}) {}
+
+const entry = yield* cache.get(key);
+if (entry !== undefined && entry.key !== key) {
+  return yield* new CacheCorrupted({ key });
+}
 ```

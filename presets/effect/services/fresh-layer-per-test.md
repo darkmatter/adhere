@@ -1,8 +1,8 @@
 ---
-description: Each it.effect provides its own layer. it.layer should be used only to share an expensive resource across a suite.
+description: Each it.effect must provide its own layer. it.layer must be used only to share an expensive resource across a suite, never a cheap one.
 ---
 
-```ts
+```ts must
 it.effect("starts at zero", () =>
   Effect.gen(function* () {
     const counter = yield* Counter;
@@ -17,4 +17,11 @@ it.effect("increments without leaking", () =>
     expect(yield* counter.get()).toBe(1);
   }).pipe(Effect.provide(Counter.layer)),
 );
+```
+
+```ts never
+it.layer(Counter.layer)("Counter", (it) => {
+  it.effect("starts at zero", () => Effect.gen(function* () { /* ... */ }));
+  it.effect("increments", () => Effect.gen(function* () { /* ... */ }));
+});
 ```

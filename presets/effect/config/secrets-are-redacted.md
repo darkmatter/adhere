@@ -1,8 +1,8 @@
 ---
-description: A token, password, or key should be read with Config.redacted.
+description: A token, password, or key must be read with Config.redacted, never with Config.string.
 ---
 
-```ts
+```ts must
 const program = Effect.gen(function* () {
   const apiKey = yield* Config.redacted("API_KEY");
 
@@ -12,4 +12,8 @@ const program = Effect.gen(function* () {
 
   return headers;
 });
+```
+
+```ts never
+const token = yield* Config.string("GITHUB_TOKEN");
 ```

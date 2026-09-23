@@ -1,12 +1,19 @@
 ---
-description: A service exposes readonly members and does not expose mutable state.
+description: A service must expose only readonly members, never mutable state.
 ---
 
-```ts
+```ts must
 class Logger extends Context.Service<
   Logger,
   {
     readonly log: (message: string) => Effect.Effect<void>;
   }
 >()("@app/Logger") {}
+```
+
+```ts never
+class Counter extends Context.Service<
+  Counter,
+  { count: number; readonly increment: () => Effect.Effect<void> }
+>()("@app/Counter") {}
 ```

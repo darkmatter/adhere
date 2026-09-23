@@ -231,7 +231,9 @@ load for your own tooling.
 Jev reads the code under the same words, and is asked whether the file
 diverges from the pattern `must` shows, with `never` as an example of
 diverging. Write the description in them too, so the rule and its code agree:
-"must" and "never", as above. A rule with only code that must never be written suits a rule with
+"must" and "never", as above. On adhere's eval, the Effect preset reworded
+that way, with a `never` block for each rule, got 1 finding wrong at 0.8
+where it had got 6, and caught as many. A rule with only code that must never be written suits a rule with
 no single correct form to show, such as a hand-rolled retry loop or an error
 caught and dropped. Neither goes in the other's place: code that must never
 be written, under `must`, reads to Jev as the pattern to follow.

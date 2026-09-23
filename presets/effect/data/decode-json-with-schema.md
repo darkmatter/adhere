@@ -1,8 +1,8 @@
 ---
-description: JSON crossing a boundary should be decoded with Schema.fromJsonString, not JSON.parse followed by a cast.
+description: JSON crossing a boundary must be decoded with Schema.fromJsonString, never with JSON.parse followed by a cast.
 ---
 
-```ts
+```ts must
 const MoveFromJson = Schema.fromJsonString(Move);
 
 const program = Effect.gen(function* () {
@@ -11,4 +11,8 @@ const program = Effect.gen(function* () {
   const json = yield* Schema.encodeEffect(MoveFromJson)(move);
   return json;
 });
+```
+
+```ts never
+const settings = JSON.parse(text) as Settings;
 ```

@@ -1,8 +1,8 @@
 ---
-description: Service method signatures have no requirements. Dependencies should be acquired inside the layer, not declared on the method.
+description: Service method signatures must have no requirements. Dependencies must be acquired inside the layer, never declared on the method.
 ---
 
-```ts
+```ts must
 class Database extends Context.Service<
   Database,
   {
@@ -10,4 +10,11 @@ class Database extends Context.Service<
     readonly execute: (sql: string) => Effect.Effect<void>;
   }
 >()("@app/Database") {}
+```
+
+```ts never
+class Orders extends Context.Service<
+  Orders,
+  { readonly save: (order: Order) => Effect.Effect<void, SaveError, Database> }
+>()("@app/Orders") {}
 ```

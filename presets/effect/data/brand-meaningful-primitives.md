@@ -1,8 +1,8 @@
 ---
-description: A primitive with semantic meaning, such as an id, email, URL, port, or count, should be a branded schema.
+description: A primitive with semantic meaning, such as an id, email, URL, port, or count, must be a branded schema, never a bare string or number.
 ---
 
-```ts
+```ts must
 export const UserId = Schema.String.pipe(Schema.brand("UserId"));
 export type UserId = typeof UserId.Type;
 
@@ -14,4 +14,13 @@ export const Port = Schema.Int.pipe(
   Schema.brand("Port"),
 );
 export type Port = typeof Port.Type;
+```
+
+```ts never
+type AccountId = string;
+
+const Session = Schema.Struct({
+  accountId: Schema.String,
+  retries: Schema.Number,
+});
 ```
