@@ -37,10 +37,10 @@ with a TypeSafe AI API key: the one `adhere login` saved, or
 
 ```sh
 adhere init                          # .adhere/config.ts and two example rules
-echo ".adhere/cache/" >> .gitignore
 adhere login                         # save your TypeSafe AI API key, once
 adhere validate                      # Checks your rules' wording, and contradictions using Jev
 adhere lint                          # audit the working directory
+git add .adhere                      # commit the rules, and the judgments they cost
 ```
 
 Without a config or rules, `adhere lint --preset effect` audits against the
@@ -442,17 +442,42 @@ beats all of the above for that rule.
 
 ## Cache
 
-Judgments are cached in `.adhere/cache/` (add it to `.gitignore`), one entry
-per file. An entry stores the file's content hash and, per rule, the
-probability, the located line, and a fingerprint of the model and the
-question asked for the rule, which carries the rule's text. A changed file
-re-judges every rule for that file. An edited rule re-judges only that rule,
-and an adhere that asks its questions differently re-judges every rule once.
-A lowered threshold locates cached judgments that are newly above it without
-judging again. Entries depend on content, not on the
-machine, so restoring `.adhere/cache/` between CI runs skips unchanged files.
-The cache also keeps the linter check's answers, one tally per rule, under a
-key that changes with the rule's text and the model.
+Judgments are cached in `.adhere/cache/`. Commit it. Every judgment is a paid
+request, and Jev's answers vary a little from run to run, so a committed cache
+gives everyone and CI the same findings without paying for them again, and a
+pull request changes the judgments of only the files it changes.
+
+`files/` holds Jev's answers by the content they are about: each cache file is
+named for the hash of a source file's content, so a moved or copied file keeps
+its judgments, and identical files share them. Each answer sits under a
+fingerprint of the model and the question asked for the rule, which carries
+the rule's text. A changed file re-judges every rule for that file. An edited
+rule re-judges only that rule, and an adhere that asks its questions
+differently re-judges every rule once. A lowered threshold locates cached
+judgments that are newly above it without judging again. `tallies/` keeps the
+linter check's answers, one tally per rule, under a key that changes with the
+rule's text and the model.
+
+A cache file is written once and never changed: it is also named for the hash
+of its own text. Two branches that judge the same code add files rather than
+edit them, so git merges the cache without a conflict. After a run that reads
+every file, adhere prunes the cache: it deletes answers about content no file
+has and answers to rule texts no rule asks, and folds what is left into one
+file per content. A run narrowed by `--filter` does not prune. To keep the
+cache out of diffs, mark it as generated in `.gitattributes`:
+
+```text
+.adhere/cache/** linguist-generated -diff
+```
+
+Anyone who can commit can also write a cache file saying that code passes.
+Where lint gates a merge, lint a pull request against the cache as merged,
+not as the pull request has it; only the files it changes are judged again:
+
+```sh
+rm -rf .adhere/cache && git checkout origin/main -- .adhere/cache
+adhere lint --yes
+```
 
 The API key is read only when a request is about to be sent. A run where
 every file is cached needs no key and no network.

@@ -103,7 +103,8 @@ export default {
 } satisfies Config;
 ```
 
-Add `.adhere/cache/` to `.gitignore`. Uncached files need a TypeSafe AI API
+Commit `.adhere/cache/` with the code, so the team and CI reuse its judgments
+instead of paying for them again. Uncached files need a TypeSafe AI API
 key: one saved by `adhere login`, or `TYPESAFE_API_KEY`, which takes
 precedence; in this org it comes from SOPS via `just shell`.
 

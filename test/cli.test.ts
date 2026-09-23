@@ -119,4 +119,33 @@ describe("cli", () => {
     expect(refused?.code).toBe(1);
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("TYPESAFE_API_KEY");
   });
+
+  it("prunes the cache after a run that read every file, and not after a filtered one", async () => {
+    const root = join(tmpdir(), `adhere-prune-${Date.now()}`);
+    const cache = join(root, ".adhere", "cache");
+    await mkdir(join(cache, "files"), { recursive: true });
+    await writeFile(
+      join(root, ".adhere", "ports.md"),
+      '---\ndescription: A port must be a branded integer.\n---\n\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\n',
+      "utf8",
+    );
+    await writeFile(join(root, "server.ts"), "export const port = 3000;\n", "utf8");
+    // Answers about content no file has, and a file from the layout before content keys.
+    const stale = join(cache, "files", `${"0".repeat(64)}.0123456789abcdef.json`);
+    const old = join(cache, "f".repeat(64));
+    await writeFile(stale, '{\n  "answers": {}\n}\n', "utf8");
+    await writeFile(old, "{}", "utf8");
+    const exists = (file: string) =>
+      stat(file).then(
+        () => true,
+        () => false,
+      );
+
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    await execFileAsync("bun", [main, "lint", "--limit", "0", "--filter", "*.ts"], { cwd: root });
+    expect([await exists(stale), await exists(old)]).toEqual([true, true]);
+
+    await execFileAsync("bun", [main, "lint", "--limit", "0"], { cwd: root });
+    expect([await exists(stale), await exists(old)]).toEqual([false, false]);
+  });
 });

@@ -2,7 +2,7 @@ import { type Examples, examplesOf, type Rule, type RuleId } from "#config.ts";
 import { type Excerpt, excerptOf } from "#excerpt.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
-import { AuditCache, type Judgment, sha256, type Tally } from "#services/AuditCache.ts";
+import { AuditCache, answersOf, type Judgment, sha256, type Tally } from "#services/AuditCache.ts";
 import {
   fits,
   Jev,
@@ -18,7 +18,7 @@ import {
 import { SourceWalker } from "#services/SourceWalker.ts";
 import { SAMPLE, tallyKeyOf } from "#mechanical.ts";
 import { applicableRules } from "#rules.ts";
-import { type Crypto, Duration, Effect, Record, Semaphore } from "effect";
+import { type Crypto, Duration, Effect, Record, Result, Semaphore } from "effect";
 
 export interface Finding {
   readonly rule: RuleId;
@@ -198,12 +198,11 @@ export const planAudit = (
           ),
       ).pipe(Effect.map(Record.fromEntries));
       const hash = yield* sha256(file.lines.join("\n"));
-      const entry = yield* cache.get(file.path);
-      const remembered = entry?.hash === hash ? entry.judgments : {};
-      const kept = Record.filter(
-        remembered,
-        (judgment, id) => judgment.fingerprint === prepared[id]?.fingerprint,
-      );
+      const answers = yield* cache.get(hash, file.path);
+      const kept: Record<RuleId, Judgment> = Record.filterMap(prepared, ({ fingerprint }) => {
+        const answer = answers[fingerprint];
+        return answer === undefined ? Result.failVoid : Result.succeed({ fingerprint, ...answer });
+      });
       const pending = Record.filter(prepared, (_, id) => kept[id] === undefined);
       yield* Effect.logTrace(
         `plan ${file.path}: ${sizeOf(prepared)} rules, ${sizeOf(kept)} cached, ${sizeOf(pending)} to judge`,
@@ -391,7 +390,7 @@ export const executeAudit = (
       });
 
       const cached = isEmpty(pending) && isEmpty(flagged);
-      if (!cached) yield* cache.put(file.path, { hash, judgments: located });
+      if (!cached) yield* cache.put(hash, answersOf(located));
 
       const findings = Object.entries(located)
         .flatMap(([id, judgment]): ReadonlyArray<Finding> => {
@@ -485,6 +484,28 @@ export const executeAudit = (
       findings: results.flatMap((result) => result.findings),
     };
   });
+
+/**
+ * Deletes from the cache what the files and rules of a run no longer need:
+ * answers about content no file has, answers to rule texts no rule asks, and
+ * tallies of rules gone. Only after a run that read every file; a run narrowed
+ * by `--filter` cannot tell what the files it left out need.
+ */
+export const pruneCache = Effect.fn("audit.prune")(function* (plan: AuditPlan) {
+  const config = yield* AdhereConfig;
+  const cache = yield* AuditCache;
+  const read = plan.files.filter((file) => !file.skipped);
+  const prepared = read.flatMap((file) => Object.values(file.prepared));
+  const tallies = yield* Effect.forEach(new Set(prepared.map(({ rule }) => rule)), (rule) =>
+    tallyKeyOf(config.model, rule),
+  );
+  const deleted = yield* cache.prune({
+    hashes: new Set(read.map((file) => file.hash)),
+    fingerprints: new Set(prepared.map(({ fingerprint }) => fingerprint)),
+    tallies: new Set(tallies),
+  });
+  yield* Effect.logDebug(`cache pruned: ${deleted} ${deleted === 1 ? "file" : "files"} deleted`);
+});
 
 /** Plans the run and executes it, without asking and without a counter. */
 export const runAudit: Effect.Effect<

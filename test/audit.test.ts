@@ -1,5 +1,6 @@
 import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripVTControlCharacters } from "node:util";
@@ -38,7 +39,14 @@ import {
   type RuleSet,
 } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
-import { AuditCache, CacheEntry, type Tally } from "../src/services/AuditCache.ts";
+import {
+  type Answers,
+  AuditCache,
+  AuditCacheLive,
+  CacheEntry,
+  type Live,
+  type Tally,
+} from "../src/services/AuditCache.ts";
 import {
   Credentials,
   CredentialsLive,
@@ -81,6 +89,7 @@ import {
   type FileDone,
   type FilePlan,
   planAudit,
+  pruneCache,
   render,
   runAudit,
 } from "../src/workflows/audit.ts";
@@ -106,21 +115,28 @@ const testCrypto = Layer.succeed(
   }),
 );
 
+/** Answers by content hash, as the cache keeps them; `pruned` holds what each prune was told is live. */
 const memoryCache = (
-  seed: Readonly<Record<string, CacheEntry>> = {},
+  seed: Readonly<Record<string, Answers>> = {},
   tallies: Map<string, Tally> = new Map(),
+  pruned: Array<Live> = [],
 ) => {
-  const entries = new Map<string, CacheEntry>(Object.entries(seed));
+  const entries = new Map<string, Answers>(Object.entries(seed));
   return Layer.succeed(AuditCache, {
-    get: (path) => Effect.sync(() => entries.get(path)),
-    put: (path, entry) =>
+    get: (hash) => Effect.sync(() => entries.get(hash) ?? {}),
+    put: (hash, answers) =>
       Effect.sync(() => {
-        entries.set(path, entry);
+        entries.set(hash, { ...entries.get(hash), ...answers });
       }),
     tally: (key) => Effect.sync(() => tallies.get(key)),
     putTally: (key, tally) =>
       Effect.sync(() => {
         tallies.set(key, tally);
+      }),
+    prune: (live) =>
+      Effect.sync(() => {
+        pruned.push(live);
+        return 0;
       }),
   });
 };
@@ -1464,20 +1480,58 @@ describe("pipeline", () => {
     expect(edited.judged).toBe(1);
   });
 
+  it("answers a file from the cache wherever its content moves", async () => {
+    const cache = memoryCache();
+    await audit({
+      rules,
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
+      cache,
+    });
+
+    const moved = { ...source, path: "/repo/src/moved.ts" };
+    const again = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    const result = await audit({ rules, jev: again.layer, cache, files: [moved] });
+    expect(again.calls).toEqual({ judge: [], locate: [] });
+    expect(result.findings).toEqual([{ ...findingA, file: moved.path }]);
+  });
+
+  it("prunes to what a run that read every file needs: its contents, rule texts, and tallies", async () => {
+    const pruned: Array<Live> = [];
+    const plan = await Effect.runPromise(
+      planAudit().pipe(
+        Effect.tap(pruneCache),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules }),
+            Layer.succeed(SourceWalker, { files: Effect.succeed([source]) }),
+            memoryCache({}, new Map(), pruned),
+            testCrypto,
+          ),
+        ),
+      ),
+    );
+    const prepared = plan.files.flatMap((file) => Object.values(file.prepared));
+    const tallies = await Effect.runPromise(
+      Effect.forEach([a, b], (rule) => tallyKeyOf("jev-latest", rule)).pipe(
+        Effect.provide(testCrypto),
+      ),
+    );
+    expect(pruned).toEqual([
+      {
+        hashes: new Set(plan.files.map((file) => file.hash)),
+        fingerprints: new Set(prepared.map(({ fingerprint }) => fingerprint)),
+        tallies: new Set(tallies),
+      },
+    ]);
+  });
+
   it("re-judges what an earlier question judged, and a rule that gains code never to write", async () => {
     const hexByte = (byte: number) => byte.toString(16).padStart(2, "0");
     const hex = (text: string) => Array.from(new TextEncoder().encode(text), hexByte).join("");
-    // The entry as adhere 0.4 wrote it: the fingerprint hashed model, description, and reference.
+    // An answer under the fingerprint adhere 0.4 used: model, description, and reference.
     const cache = memoryCache({
-      [source.path]: {
-        hash: hex(source.lines.join("\n")),
-        judgments: {
-          a: {
-            fingerprint: hex(`jev-latest${a.description}${a.must}`),
-            probability: 0.9,
-            line: 2,
-          },
-        },
+      [hex(source.lines.join("\n"))]: {
+        [hex(`jev-latest${a.description}${a.must}`)]: { probability: 0.9, line: 2 },
       },
     });
 
@@ -2181,5 +2235,151 @@ describe("jev over http", () => {
       _tag: "Failure",
       failure: { _tag: "JevUnavailable" },
     });
+  });
+});
+
+describe("cache files", () => {
+  const directory = join(process.cwd(), ".adhere", "cache");
+  const sha = (text: string) => createHash("sha256").update(text).digest("hex");
+  const sha256Crypto = Layer.succeed(
+    Crypto.Crypto,
+    Crypto.make({
+      randomBytes: (size) => new Uint8Array(size),
+      digest: (_algorithm, data) =>
+        Effect.sync(() => new Uint8Array(createHash("sha256").update(data).digest())),
+    }),
+  );
+
+  /** Files in a map of path to text; listing a directory gives its direct children. */
+  const memoryFiles = (seed: Readonly<Record<string, string>> = {}) => {
+    const files = new Map(Object.entries(seed));
+    const layer = FileSystem.layerNoop({
+      readDirectory: (path) =>
+        Effect.sync(() => [
+          ...new Set(
+            [...files.keys()]
+              .filter((file) => file.startsWith(`${path}/`))
+              .map((file) => file.slice(path.length + 1).split("/")[0] ?? ""),
+          ),
+        ]),
+      readFileString: (path) => Effect.succeed(files.get(path) ?? ""),
+      writeFileString: (path, text) =>
+        Effect.sync(() => {
+          files.set(path, text);
+        }),
+      makeDirectory: () => Effect.void,
+      remove: (path) =>
+        Effect.sync(() => {
+          files.delete(path);
+        }),
+    });
+    return { files, layer };
+  };
+
+  const run = <A>(
+    fs: Layer.Layer<FileSystem.FileSystem>,
+    program: Effect.Effect<A, never, AuditCache>,
+  ) =>
+    Effect.runPromise(
+      program.pipe(
+        Effect.provide(
+          AuditCacheLive.pipe(Layer.provide(Layer.mergeAll(fs, Path.layer, sha256Crypto))),
+        ),
+      ),
+    );
+
+  /** The names of the cache's files in `folder`, in order. */
+  const listed = (files: ReadonlyMap<string, string>, folder: string) =>
+    [...files.keys()]
+      .filter((file) => file.startsWith(`${directory}/${folder}/`))
+      .map((file) => file.slice(`${directory}/${folder}/`.length))
+      .sort();
+
+  it("adds a file for each new set of answers, named for the content and its own text, and reads their union", async () => {
+    const memory = memoryFiles();
+    const union = await run(
+      memory.layer,
+      Effect.gen(function* () {
+        const cache = yield* AuditCache;
+        yield* cache.put("c0ffee", { f1: { probability: 0.1 } });
+        yield* cache.put("c0ffee", { f2: { probability: 0.9, line: 3 } });
+        yield* cache.put("c0ffee", { f2: { probability: 0.9, line: 3 } });
+        return yield* cache.get("c0ffee", join(process.cwd(), "src/a.ts"));
+      }),
+    );
+    expect(union).toEqual({ f1: { probability: 0.1 }, f2: { probability: 0.9, line: 3 } });
+    const first = '{\n  "answers": {\n    "f1": {\n      "probability": 0.1\n    }\n  }\n}\n';
+    expect(listed(memory.files, "files")).toHaveLength(2);
+    expect(memory.files.get(`${directory}/files/c0ffee.${sha(first).slice(0, 16)}.json`)).toBe(
+      first,
+    );
+  });
+
+  it("carries entries and tallies over from the layout before content keys, with relative paths", async () => {
+    const file = join(process.cwd(), "src/a.ts");
+    const memory = memoryFiles({
+      [`${directory}/${sha(file)}`]: JSON.stringify({
+        hash: "c0ffee",
+        judgments: { a: { fingerprint: "f1", probability: 0.8, line: 2 } },
+      }),
+      [`${directory}/${sha("\u0000tally\u0000k1")}`]: JSON.stringify({ files: { [file]: 0.3 } }),
+    });
+    const [answers, stale, tally] = await run(
+      memory.layer,
+      Effect.gen(function* () {
+        const cache = yield* AuditCache;
+        return [
+          yield* cache.get("c0ffee", file),
+          // The same path with other content: the old entry was about an earlier version.
+          yield* cache.get("decade", file),
+          yield* cache.tally("k1"),
+        ] as const;
+      }),
+    );
+    expect(answers).toEqual({ f1: { probability: 0.8, line: 2 } });
+    expect(stale).toEqual({});
+    expect(tally).toEqual({ files: { [file]: 0.3 } });
+    expect(listed(memory.files, "files")).toHaveLength(1);
+    const [kept] = listed(memory.files, "tallies");
+    expect(memory.files.get(`${directory}/tallies/${kept}`)).toBe(
+      '{\n  "files": {\n    "src/a.ts": 0.3\n  }\n}\n',
+    );
+  });
+
+  it("prunes what no file or rule needs, folds each group into one file, and deletes the old layout", async () => {
+    const memory = memoryFiles({ [`${directory}/${"0".repeat(64)}`]: "{}" });
+    const [deleted, kept] = await run(
+      memory.layer,
+      Effect.gen(function* () {
+        const cache = yield* AuditCache;
+        yield* cache.put("live", { f1: { probability: 0.1 } });
+        yield* cache.put("live", {
+          f1: { probability: 0.1, line: 4 },
+          stale: { probability: 0.5 },
+        });
+        yield* cache.put("gone", { f1: { probability: 0.2 } });
+        yield* cache.putTally("k1", { files: { [join(process.cwd(), "src/a.ts")]: 0.3 } });
+        yield* cache.putTally("k1", { files: { [join(process.cwd(), "src/b.ts")]: 0.6 } });
+        yield* cache.putTally("k2", { files: {} });
+        const deleted = yield* cache.prune({
+          hashes: new Set(["live"]),
+          fingerprints: new Set(["f1"]),
+          tallies: new Set(["k1"]),
+        });
+        return [deleted, yield* cache.get("live", join(process.cwd(), "src/a.ts"))] as const;
+      }),
+    );
+    expect(kept).toEqual({ f1: { probability: 0.1, line: 4 } });
+    const folded =
+      '{\n  "answers": {\n    "f1": {\n      "probability": 0.1,\n      "line": 4\n    }\n  }\n}\n';
+    expect(listed(memory.files, "files")).toEqual([`live.${sha(folded).slice(0, 16)}.json`]);
+    const tallies = listed(memory.files, "tallies");
+    expect(tallies).toHaveLength(1);
+    expect(memory.files.get(`${directory}/tallies/${tallies[0]}`)).toBe(
+      '{\n  "files": {\n    "src/a.ts": 0.3,\n    "src/b.ts": 0.6\n  }\n}\n',
+    );
+    expect(memory.files.has(`${directory}/${"0".repeat(64)}`)).toBe(false);
+    // Two files for live content and one for gone, two for k1 and one for k2, and the old file.
+    expect(deleted).toBe(7);
   });
 });

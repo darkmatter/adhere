@@ -8,6 +8,7 @@ import {
   executeAudit,
   type FileDone,
   planAudit,
+  pruneCache,
   render,
 } from "#workflows/audit.ts";
 import {
@@ -180,6 +181,8 @@ export const lintCommand = Command.make(
       const result = yield* executeAudit(plan, counter.update).pipe(
         Effect.onExit((exit) => counter.finish(Exit.isFailure(exit))),
       );
+      // Only a run that read every file knows what the cache still needs.
+      if (input.filter.length === 0) yield* pruneCache(plan);
       const color = yield* stdio.stdoutIsTerminal;
       const path = yield* Path.Path;
       // One write: separate Console.log calls have interleaved out of order here.
