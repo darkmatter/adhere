@@ -27,9 +27,11 @@ import {
   Effect,
   Exit,
   Layer,
+  LogLevel,
   Option,
   Path,
   Redacted,
+  References,
   Runtime,
   Schema,
   Stdio,
@@ -118,8 +120,9 @@ const toStderr = (text: string) =>
  * anything else it stays quiet, so a log gets the plan and the report rather
  * than a line per file. A failed run keeps its last count on screen.
  */
-const counterFor = (plan: AuditPlan) => {
-  const live = process.stderr.isTTY === true;
+const counterFor = (plan: AuditPlan, logging: LogLevel.LogLevel) => {
+  // Log lines at debug or below would land between redraws and garble the counter.
+  const live = process.stderr.isTTY === true && LogLevel.isGreaterThan(logging, "Debug");
   let progress: Progress = { files: 0, requests: 0, findings: 0 };
   const draw = () => (live ? toStderr(`\r\u001b[2K${progressLine(progress, plan)}`) : Effect.void);
   return {
@@ -170,7 +173,7 @@ export const lintCommand = Command.make(
           return yield* Cancelled.make({});
         }
       }
-      const counter = counterFor(plan);
+      const counter = counterFor(plan, yield* References.MinimumLogLevel);
       yield* counter.start;
       const result = yield* executeAudit(plan, counter.update).pipe(
         Effect.onExit((exit) => counter.finish(Exit.isFailure(exit))),

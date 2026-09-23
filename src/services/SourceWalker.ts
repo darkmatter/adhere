@@ -79,9 +79,16 @@ const scannable = (root: string, paths: ReadonlyArray<string>, self: string, kee
 /** One root's paths, filtered to what the audit reads. */
 const listRoot = Effect.fn("SourceWalker.listRoot")(
   (fs: FileSystem.FileSystem, root: string, self: string, keep: Keep) =>
-    Effect.map(fs.readDirectory(root, { recursive: true }), (paths) =>
-      scannable(root, paths, self, keep),
-    ),
+    Effect.flatMap(fs.readDirectory(root, { recursive: true }), (paths) => {
+      const files = scannable(root, paths, self, keep);
+      // The paths listed against the files kept: node_modules shows as the difference.
+      return Effect.as(
+        Effect.logDebug(
+          `listed ${root}: ${paths.length} paths, ${files.length} source files to read`,
+        ),
+        files,
+      );
+    }),
 );
 
 /** One scannable path, read into lines. */
@@ -89,7 +96,7 @@ const readFile = Effect.fn("SourceWalker.readFile")((fs: FileSystem.FileSystem, 
   Effect.map(fs.readFileString(path), (content): ScannedFile => ({
     path,
     lines: content.split("\n"),
-  })),
+  })).pipe(Effect.tap((file) => Effect.logTrace(`read ${path}: ${file.lines.length} lines`))),
 );
 
 /** Read a batch of paths; the inner loop hoisted out of `forEach`. */

@@ -78,6 +78,7 @@ adhere lint --yes              # send the requests without asking first
 adhere lint --limit 500        # judge at most 500 checks; the rest wait for the next run
 adhere lint --rpm 30           # send at most 30 requests a minute
 adhere lint --filter 'src/**'  # read only the files a glob matches
+adhere lint --log-level debug  # log each request to Jev on stderr
 adhere validate                # load the config and rules, ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
 adhere login                   # save a TypeSafe AI API key for later runs
@@ -127,6 +128,22 @@ more, and start a pattern with `!` to leave out what it matches. Together:
 
 ```sh
 adhere lint --filter 'packages/api/**' --filter '!**/generated/**' --limit 200 --rpm 30
+```
+
+### Logging a run
+
+`--log-level debug` logs a run's work on stderr: the config it loaded, how many
+paths it listed and how many of them it reads, and each request to Jev, with
+the file it is for, about how many tokens it carries, the HTTP status, how long
+it took, and Cloudflare's Ray ID. A failed attempt is logged even when a retry
+hides it. `--log-level trace` adds each file as it is read, planned, and
+answered from the cache, and the first 4000 characters of any error Jev's API
+answers with. The counter stays off at these levels, since its redraws would
+garble the lines, and stdout still carries only the report, so the log can go
+to a file of its own:
+
+```sh
+adhere lint --log-level debug 2> adhere.log
 ```
 
 ### What gets read

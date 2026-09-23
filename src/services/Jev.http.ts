@@ -19,6 +19,7 @@ import {
   pairProbability,
   requestsOf,
   type Rules,
+  tokensOf,
 } from "#services/Jev.ts";
 import { type Cause, Duration, Effect, Layer, Option, Record, Schedule, Schema } from "effect";
 import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http";
@@ -35,6 +36,14 @@ const ChoiceAnswers = Schema.Struct({
 });
 
 const refused = (message: string) => JevUnavailable.make({ message });
+
+/** A failed attempt, for the log: the status and Ray ID when Jev's side answered, the cause otherwise. */
+const attemptFailure = (
+  problem: HttpClientError.HttpClientError | RateLimiter.RateLimiterError | Cause.TimeoutError,
+): string =>
+  HttpClientError.isHttpClientError(problem) && problem.reason._tag === "StatusCodeError"
+    ? `HTTP ${problem.reason.response.status}, Ray ID ${problem.reason.response.headers["cf-ray"] ?? "none"}`
+    : problem.message;
 
 /** Jev's error body, on one line and cut short, or nothing when it sent none. */
 const detailOf = (body: string): string => {
@@ -68,7 +77,14 @@ const failed = (
   }
   const { response } = problem.reason;
   return Effect.flatMap(
-    Effect.orElseSucceed(response.text, () => ""),
+    Effect.orElseSucceed(response.text, () => "").pipe(
+      Effect.tap((body) =>
+        Effect.logDebug(
+          `Jev answered HTTP ${response.status}, ${response.headers["content-type"] ?? "no content type"}, ${body.length} characters, Ray ID ${response.headers["cf-ray"] ?? "none"}`,
+        ),
+      ),
+      Effect.tap((body) => Effect.logTrace(`Jev's answer: ${body.slice(0, 4000)}`)),
+    ),
     (body): Effect.Effect<never, JevOverflow | JevBlocked | JevUnavailable> =>
       response.status === 400 && isOverflow(body)
         ? Effect.fail(JevOverflow.make())
@@ -124,13 +140,18 @@ export const JevLive = Layer.effect(Jev)(
           );
     const client = paced.pipe(
       HttpClient.transformResponse(Effect.timeout("30 seconds")),
+      // Every failed attempt, including those retried, so a log shows what retrying hid.
+      HttpClient.transformResponse(
+        Effect.tapError((problem) => Effect.logDebug(`attempt failed: ${attemptFailure(problem)}`)),
+      ),
       HttpClient.retryTransient({
         schedule: Schedule.exponential("500 millis"),
         times: 3,
       }),
     );
 
-    const ask = <A>(body: Body, Answers: Schema.Codec<A, unknown, never, never>) =>
+    /** One request. `kind` names the question for the log: judge, locate, blocks, and so on. */
+    const ask = <A>(kind: string, body: Body, Answers: Schema.Codec<A, unknown, never, never>) =>
       Effect.gen(function* () {
         // Read here, not in the layer: a run with nothing pending needs no key.
         const apiKey = yield* credentials.apiKey.pipe(
@@ -140,9 +161,16 @@ export const JevLive = Layer.effect(Jev)(
           HttpClientRequest.post(SYSTEM_ONE),
           body,
         ).pipe(Effect.orDie);
-        const response = yield* client
-          .execute(HttpClientRequest.bearerToken(request, apiKey))
-          .pipe(Effect.catch(failed));
+        const questions = Object.keys(body.questions).length;
+        yield* Effect.logDebug(
+          `${kind}: sending ${questions} ${questions === 1 ? "question" : "questions"}, about ${tokensOf(body)} tokens`,
+        );
+        const [elapsed, response] = yield* Effect.timed(
+          client.execute(HttpClientRequest.bearerToken(request, apiKey)).pipe(Effect.catch(failed)),
+        );
+        yield* Effect.logDebug(
+          `${kind}: HTTP ${response.status} in ${Math.round(Duration.toMillis(elapsed))} ms, Ray ID ${response.headers["cf-ray"] ?? "none"}`,
+        );
         return yield* HttpClientResponse.schemaBodyJson(Answers)(response).pipe(
           Effect.mapError((problem) =>
             refused(`System One response did not decode: ${problem.message}`),
@@ -152,6 +180,7 @@ export const JevLive = Layer.effect(Jev)(
 
     /** Every answer to a body, over as many requests as Jev's context needs. */
     const answersTo = <A>(
+      kind: string,
       body: Body,
       Answers: Schema.Codec<
         { readonly answers: Readonly<Record<string, A>> },
@@ -161,7 +190,7 @@ export const JevLive = Layer.effect(Jev)(
       >,
     ) =>
       Effect.map(
-        Effect.forEach(requestsOf(body), (request) => ask(request, Answers)),
+        Effect.forEach(requestsOf(body), (request) => ask(kind, request, Answers)),
         (responses) =>
           responses.reduce<Record<string, A>>(
             (answers, response) => ({ ...answers, ...response.answers }),
@@ -170,7 +199,7 @@ export const JevLive = Layer.effect(Jev)(
       );
 
     const judge = Effect.fn("Jev.judge")(function* (lines: Lines, rules: Rules) {
-      const answers = yield* answersTo(judgeBody(config.model, lines, rules), NoulAnswers);
+      const answers = yield* answersTo("judge", judgeBody(config.model, lines, rules), NoulAnswers);
       return Record.map(answers, (answer) => answer.noul);
     });
 
@@ -179,10 +208,10 @@ export const JevLive = Layer.effect(Jev)(
 
     const locate = Effect.fn("Jev.locate")(function* (lines: Lines, rules: Rules) {
       const blocks = needsBlocks(lines)
-        ? chosen(yield* answersTo(blockBody(config.model, lines, rules), ChoiceAnswers))
+        ? chosen(yield* answersTo("blocks", blockBody(config.model, lines, rules), ChoiceAnswers))
         : undefined;
       return chosen(
-        yield* answersTo(locateBody(config.model, lines, rules, blocks), ChoiceAnswers),
+        yield* answersTo("locate", locateBody(config.model, lines, rules, blocks), ChoiceAnswers),
       );
     });
 
@@ -191,6 +220,7 @@ export const JevLive = Layer.effect(Jev)(
       partners: ReadonlyArray<ReadonlyArray<number>>,
     ) {
       const answers = yield* answersTo(
+        "conflicts",
         conflictBody(config.model, rules, partners),
         ChoiceAnswers,
       ).pipe(refuseOverflow);
@@ -205,7 +235,9 @@ export const JevLive = Layer.effect(Jev)(
         pairs,
         (pair) =>
           Effect.map(
-            ask(contradictBody(config.model, rules, pair), NoulAnswers).pipe(refuseOverflow),
+            ask("contradicts", contradictBody(config.model, rules, pair), NoulAnswers).pipe(
+              refuseOverflow,
+            ),
             ({ answers }) => pairProbability(answers, pair),
           ),
         { concurrency: 8 },

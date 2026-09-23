@@ -13,7 +13,7 @@ import {
 } from "#services/Jev.ts";
 import { SourceWalker } from "#services/SourceWalker.ts";
 import { applicableRules } from "#rules.ts";
-import { type Crypto, Effect, Record } from "effect";
+import { type Crypto, Duration, Effect, Record } from "effect";
 
 export interface Finding {
   readonly rule: RuleId;
@@ -168,6 +168,7 @@ export const planAudit = (
       const rules = configuredRules(file.path);
       // Too long for Jev's context: skipped and counted, rather than refused mid-run.
       if (!fits(file.lines, rules)) {
+        yield* Effect.logTrace(`plan ${file.path}: too long for Jev's context, skipped`);
         return {
           file,
           skipped: true,
@@ -195,6 +196,9 @@ export const planAudit = (
         (judgment, id) => judgment.fingerprint === prepared[id]?.fingerprint,
       );
       const pending = Record.filter(prepared, (_, id) => kept[id] === undefined);
+      yield* Effect.logTrace(
+        `plan ${file.path}: ${sizeOf(prepared)} rules, ${sizeOf(kept)} cached, ${sizeOf(pending)} to judge`,
+      );
       return {
         file,
         skipped: false,
@@ -324,9 +328,9 @@ export const executeAudit = (
     });
 
     const auditFile = Effect.fn("audit.file")(function* (plan: FilePlan) {
-      const { result, requests } = plan.skipped
-        ? { result: fileResult("skipped", []), requests: 0 }
-        : yield* judgeFile(plan).pipe(
+      const judging = plan.skipped
+        ? Effect.succeed({ result: fileResult("skipped", []), requests: 0 })
+        : judgeFile(plan).pipe(
             // Jev counted more than `fits` estimated. Its count decides: skipped the same way.
             Effect.catchTag("JevOverflow", () =>
               Effect.succeed({
@@ -346,6 +350,17 @@ export const executeAudit = (
               }),
             ),
           );
+      // Everything logged while judging a file, requests included, names the file.
+      // A file that sent nothing, whether cached or too long, is a trace line: a
+      // large repo's cache would otherwise bury the requests.
+      const [, { result, requests }] = yield* Effect.timed(judging).pipe(
+        Effect.tap(([elapsed, { result, requests }]) =>
+          (requests > 0 ? Effect.logDebug : Effect.logTrace)(
+            `${result.status}: ${requests} ${requests === 1 ? "request" : "requests"}, ${result.findings.length} ${result.findings.length === 1 ? "finding" : "findings"}, ${Math.round(Duration.toMillis(elapsed))} ms`,
+          ),
+        ),
+        Effect.annotateLogs("file", plan.file.path),
+      );
       yield* progress({ requests, findings: result.findings.length });
       return result;
     });
