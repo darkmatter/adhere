@@ -1,5 +1,6 @@
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
+import { CONFIG_FILES } from "#config.ts";
 import { Effect } from "effect";
 
 export interface InitResult {
@@ -44,8 +45,10 @@ export const loadCustomerProfile = (customerId: CustomerId) =>
 \`\`\`
 `;
 
+const CONFIG_PATH = CONFIG_FILES[0];
+
 const files = [
-  ["adhere.config.ts", CONFIG],
+  [CONFIG_PATH, CONFIG],
   [".adhere/style/prefer-small-files.md", SMALL_FILES],
   [".adhere/style/name-domain-actions.md", NAME_EFFECTS],
 ] as const;
@@ -55,6 +58,15 @@ const exists = (path: string): Promise<boolean> =>
     () => true,
     () => false,
   );
+
+/** A config at another accepted path. Scaffolding a second one would refuse every run. */
+const otherConfig = (root: string) =>
+  Effect.promise(async () => {
+    for (const file of CONFIG_FILES) {
+      if (file !== CONFIG_PATH && (await exists(join(root, file)))) return file;
+    }
+    return undefined;
+  });
 
 const writeScaffoldFile = (root: string, path: string, contents: string, options: InitOptions) =>
   Effect.tryPromise({
@@ -79,7 +91,12 @@ export const initProject = (
   Effect.gen(function* () {
     const created: Array<string> = [];
     const skipped: Array<string> = [];
+    const existing = yield* otherConfig(root);
     for (const [path, contents] of files) {
+      if (path === CONFIG_PATH && existing !== undefined) {
+        skipped.push(existing);
+        continue;
+      }
       const status = yield* writeScaffoldFile(root, path, contents, options);
       if (status === "created") {
         created.push(relative(root, join(root, path)));

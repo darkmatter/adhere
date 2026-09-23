@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Crypto, Effect, FileSystem, Layer, Path, Record } from "effect";
@@ -433,7 +433,7 @@ describe("init", () => {
   it("scaffolds config and example rules without clobbering existing files", async () => {
     const root = join(tmpdir(), `adhere-init-${Date.now()}`);
     await Effect.runPromise(initProject(root));
-    const config = await readFile(join(root, "adhere.config.ts"), "utf8");
+    const config = await readFile(join(root, ".adhere", "config.ts"), "utf8");
     const rule = await readFile(join(root, ".adhere", "style", "prefer-small-files.md"), "utf8");
 
     expect(config).toContain("satisfies Config");
@@ -441,8 +441,20 @@ describe("init", () => {
 
     const second = await Effect.runPromise(initProject(root));
     expect(second.created).toEqual([]);
-    expect(second.skipped).toContain("adhere.config.ts");
+    expect(second.skipped).toContain(".adhere/config.ts");
     expect(second.skipped).toContain(".adhere/style/prefer-small-files.md");
+  });
+
+  it("keeps a config at another accepted path instead of adding a second one", async () => {
+    const root = join(tmpdir(), `adhere-init-existing-${Date.now()}`);
+    await mkdir(root, { recursive: true });
+    await writeFile(join(root, "adhere.config.ts"), "export default {};\n", "utf8");
+
+    const result = await Effect.runPromise(initProject(root, { force: true }));
+
+    expect(result.skipped).toContain("adhere.config.ts");
+    expect(result.created).not.toContain(".adhere/config.ts");
+    await expect(access(join(root, ".adhere", "config.ts"))).rejects.toThrow();
   });
 });
 

@@ -44,9 +44,11 @@ Skip rules a preset already covers. Run `adhere --help` and read
 
 ## 3. Write each rule as a file
 
-Default location `.adhere/<topic>/<slug>.md`. If the repo already has `docs/`,
-use `docs/adhere/<topic>/<slug>.md` and set `rules: "./docs/adhere"` in the
-config. The path without `.md` is the rule id.
+Default location `.adhere/<topic>/<slug>.md`, next to the config and the
+cache. Use `docs/adhere/<topic>/<slug>.md` with `rules: "./docs/adhere"` in the
+config only when the user wants rules kept with the repo's docs; rules read
+that way apply project-wide, and nested `.adhere/` directories are not read.
+The path without `.md` is the rule id.
 
 ````md
 ---
@@ -73,10 +75,10 @@ Rules for the rule:
 
 ## 4. Configure
 
-Pick one config location: `adhere.config.ts`, `.adhere/config.ts`, or
-`.adhere.config.ts`. A config is optional when `.adhere/` exists or a preset is
-passed on the command line. Use a type-only import so the file also loads
-under the native binary:
+Put the config at `.adhere/config.ts`. `adhere.config.ts` and
+`.adhere.config.ts` also load; keep one. A config is optional when `.adhere/`
+exists or a preset is passed on the command line. Use a type-only import so
+the file also loads under the native binary:
 
 ```ts
 import type { Config } from "@drkmttr/adhere";
