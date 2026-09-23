@@ -97,16 +97,20 @@ const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line
   ];
 };
 
-/** The reference as the hint. A rule without one shows its code to avoid instead, labeled so. */
+/**
+ * The code to write as the hint. A rule with only code not to write shows
+ * that instead, labeled with its word: `never`, or `should not`.
+ */
 const hint = (finding: Finding): ReadonlyArray<Line> => {
+  const { good, bad } = finding.examples;
   const [label, code] =
-    finding.reference === undefined ? ["avoid", finding.avoid ?? ""] : ["hint", finding.reference];
+    good === undefined ? [bad?.word ?? "hint", bad?.code ?? ""] : ["hint", good.code];
   return hanging(span(`  ${label}: `, "label"), codeLines(code));
 };
 
 /**
  * One diagnostic, in the frame `vp lint` prints on a terminal: a red header,
- * the offending line, a pink underline, and the reference code as the hint.
+ * the offending line, a pink underline, and the code to write as the hint.
  */
 const frame = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => [
   header(finding),

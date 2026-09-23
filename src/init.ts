@@ -20,34 +20,36 @@ export default {
 `;
 
 const SMALL_FILES = `---
-description: Prefer small focused files with one primary responsibility.
+description: A file should be small and focused, with one primary responsibility.
 threshold: 0.8
 ---
 
-Use this rule as a template for repository-specific conventions.
+A guideline, so its description and its code say should. A rule that must
+hold says must and never instead, as name-domain-actions does. Use this rule
+as a template for repository-specific conventions.
 
-\`\`\`ts
+\`\`\`ts should
 export const parsePort = (value: string) =>
   Port.make(Number.parseInt(value, 10));
 \`\`\`
 `;
 
 const NAME_EFFECTS = `---
-description: Name functions after the domain action they perform.
+description: A function must be named after the domain action it performs, never after a generic verb like handle.
 threshold: 0.8
 ---
 
-\`\`\`ts
+\`\`\`ts must
 export const loadCustomerProfile = (customerId: CustomerId) =>
   Effect.gen(function* () {
     return yield* CustomerStore.find(customerId);
   });
 \`\`\`
 
-A fence tagged \`avoid\` shows what a violation looks like. It is optional, and
+A fence tagged \`never\` shows what a violation looks like. It is optional, and
 a rule can have one without the block above.
 
-\`\`\`ts avoid
+\`\`\`ts never
 export const handle = (id: string) =>
   Effect.gen(function* () {
     return yield* CustomerStore.find(id);

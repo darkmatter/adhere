@@ -1,13 +1,13 @@
 ---
 name: adhere
-description: Gather a repository's non-deterministic coding conventions into adhere rules (Markdown files with a description and reference code judged by Jev), configure adhere, run it, and calibrate thresholds. Use when setting up adhere in a repo, when the user asks to turn conventions, AGENTS.md guidance, ADRs, or review feedback into lint rules a normal linter cannot express, or when tuning adhere findings.
+description: Gather a repository's non-deterministic coding conventions into adhere rules (Markdown files with a description and code that must, or must never, be written, judged by Jev), configure adhere, run it, and calibrate thresholds. Use when setting up adhere in a repo, when the user asks to turn conventions, AGENTS.md guidance, ADRs, or review feedback into lint rules a normal linter cannot express, or when tuning adhere findings.
 ---
 
 # Gather adhere rules from a repo
 
 adhere is a linter for rules a normal linter cannot check. Each rule is one
-sentence plus a block of correct code; Jev judges every source file against it
-and returns a probability. Your job is to find the conventions a repo already
+sentence in RFC 2119's words plus code that must be written and code that must
+never be; Jev judges every source file against it and returns a probability. Your job is to find the conventions a repo already
 has, write the ones that need judgment as rule files, and tune until the
 report is trustworthy.
 
@@ -52,32 +52,39 @@ The path without `.md` is the rule id.
 
 ````md
 ---
-description: One sentence stating the pattern positively. Name what is done, then what it replaces.
+description: One sentence saying what code must be, then what it must never be.
 threshold: 0.8
 ---
 
 Optional prose for readers on GitHub. adhere ignores it.
 
-```ts
+```ts must
 // Correct code lifted from this repo, trimmed to the pattern.
 ```
 
-```ts avoid
+```ts never
 // Optional: the incorrect form this rule catches, as it appeared in the repo.
 ```
 ````
 
 Rules for the rule:
 
-- `description` is one sentence, positive, specific. Jev reads it with the
-  reference; vague words ("properly", "correctly") give it nothing to judge.
-- The reference is real code from the repo, not invented, and only correct
+- `description` is one sentence, specific, in the same words as the fences:
+  what code must be, and what it must never be. Jev reads the description
+  with the code, and "must" in both is one demand; vague words ("properly",
+  "correctly") give it nothing to judge.
+- The `must` block is real code from the repo, not invented, and only correct
   code: Jev compares files to it, so incorrect code there teaches the wrong
-  thing. Incorrect code goes in a fence tagged `avoid`, which Jev reads as what
-  a violation looks like. Add one when violations have a recognizable shape,
-  ideally one found in the repo's history. A rule with no single correct form
-  can be only an `avoid` block.
-- One pattern per file. Two patterns in one reference blur the probability.
+  thing. Incorrect code goes in a fence tagged `never`, which Jev reads as what
+  a violation looks like. Add one whenever violations have a recognizable
+  shape, ideally one found in the repo's history: over the effect preset, a
+  `never` block raised how well Jev told violations from compliant code under
+  every wording tried. A rule with no single correct form can be only a
+  `never` block.
+- A convention that is a guideline rather than a requirement says "should" in
+  its description and tags its fences `should` and `should not`. A rule is one
+  or the other; it cannot mix the two.
+- One pattern per file. Two patterns in one `must` block blur the probability.
 - `threshold` is optional. Start without it; set it in step 5 if needed.
 
 ## 4. Configure
@@ -113,8 +120,8 @@ Then, per rule, read the findings and decide:
 - Many hits at 0.80 to 0.90, mostly not violations: the description is too
   broad. Narrow it (say what is out of scope) or raise that rule's
   `threshold`. Prefer narrowing; a threshold hides, a sentence explains.
-- Hits on code that follows the pattern through a different API: the
-  reference is too specific. Use the repo's most general correct example.
+- Hits on code that follows the pattern through a different API: the `must`
+  block is too specific. Use the repo's most general correct example.
 - Zero hits: plant a deliberate violation in a scratch file, run, confirm the
   rule fires, remove the file. A rule that cannot fire is not a rule.
 - Hits at 0.9 and above: read them first. They are usually real.

@@ -1,4 +1,4 @@
-import type { Rule, RuleId, Rules } from "#config.ts";
+import { type Example, examplesOf, type Rule, type RuleId, type Rules } from "#config.ts";
 import { Context, type Effect, Record, Schema } from "effect";
 
 export type { Rules };
@@ -91,19 +91,23 @@ const stateOf = (lines: Lines) => ({
   code: lines.map((line, index) => `${index + 1} | ${line}`).join("\n"),
 });
 
-/** The rule as its questions carry it: the description, and its code on either side. */
-const ruleFields = (rule: Rule) => ({
-  rule: rule.description,
-  ...(rule.reference === undefined ? {} : { reference: rule.reference }),
-  ...(rule.avoid === undefined ? {} : { avoid: rule.avoid }),
-});
+/** The field an example goes under in a question: its word, with `should not` as `should_not`. */
+const fieldOf = (example: Example): string => example.word.replace(" ", "_");
 
-/** A rule's text as a comparison of rules reads it. Code a rule lacks is left out, not sent empty. */
-const ruleState = ({ description, reference, avoid }: Rule) => ({
-  description,
-  ...(reference === undefined ? {} : { reference }),
-  ...(avoid === undefined ? {} : { avoid }),
-});
+/** A rule's examples under their words. Code a rule lacks is left out, not sent empty. */
+const exampleFields = (rule: Rule): Record<string, string> => {
+  const { good, bad } = examplesOf(rule);
+  return {
+    ...(good === undefined ? {} : { [fieldOf(good)]: good.code }),
+    ...(bad === undefined ? {} : { [fieldOf(bad)]: bad.code }),
+  };
+};
+
+/** The rule as its questions carry it: the description, and its examples under their words. */
+const ruleFields = (rule: Rule) => ({ rule: rule.description, ...exampleFields(rule) });
+
+/** A rule's text as a comparison of rules reads it. */
+const ruleState = (rule: Rule) => ({ description: rule.description, ...exampleFields(rule) });
 
 /**
  * The compared rules a question mentions, keyed by index: ids alone would
@@ -122,24 +126,31 @@ const comparedState = (rules: ReadonlyArray<ComparedRule>, mentioned: Iterable<n
 
 /**
  * Whether the file breaks the rule. The rule rides in the question, not the
- * state, so each question reads its own rule and no other. A rule with a
- * reference asks whether the file diverges from it, with the code to avoid
- * as an example when there is some. A rule without one asks whether the file
- * contains the code to avoid. The criteria draw the line at the rule's scope:
- * a file with no code the rule is about is a no.
+ * state, so each question reads its own rule and no other, its code under its
+ * own words: `must` and `never`, or a guideline's `should` and `should_not`.
+ * A rule with code to write asks whether the file diverges from it, with the
+ * code not to write as an example when there is some. A rule without any
+ * asks whether the file contains the code not to write. The criteria draw the
+ * line at the rule's scope: a file with no code the rule is about is a no.
+ *
+ * On the eval, "diverge from the pattern shown in `must`" judged better than
+ * asking whether code "must be written the way `must` shows": the same words,
+ * but a pattern to compare rather than code to match.
  */
 export const judgeQuestion = (rule: Rule) => {
-  const example = rule.avoid === undefined ? "" : ", for example by doing what `avoid` shows";
+  const { good, bad } = examplesOf(rule);
+  const avoided = fieldOf(bad ?? { word: "never", code: "" });
+  const example = bad === undefined ? "" : `, for example by doing what \`${avoided}\` shows`;
   const [question, yes, no] =
-    rule.reference === undefined
+    good === undefined
       ? [
-          "Does `code` contain the pattern shown in `avoid`, which `rule` rules out? Answer no if nothing in this file resembles it.",
-          "`code` contains the pattern shown in `avoid`",
-          "`code` has nothing like `avoid`",
+          `Does \`code\` contain the pattern shown in \`${avoided}\`, which \`rule\` rules out? Answer no if nothing in this file resembles it.`,
+          `\`code\` contains the pattern shown in \`${avoided}\``,
+          `\`code\` has nothing like \`${avoided}\``,
         ]
       : [
-          `Does \`code\` diverge from the pattern shown in \`reference\`${example}, as described by \`rule\`? Answer no if the pattern does not apply to this file.`,
-          `\`code\` diverges from the pattern shown in \`reference\`${example}`,
+          `Does \`code\` diverge from the pattern shown in \`${fieldOf(good)}\`${example}, as described by \`rule\`? Answer no if the pattern does not apply to this file.`,
+          `\`code\` diverges from the pattern shown in \`${fieldOf(good)}\`${example}`,
           "`code` follows the pattern",
         ];
   return {
@@ -153,12 +164,15 @@ export const judgeQuestion = (rule: Rule) => {
 };
 
 /** What the offending line does, for the line and block questions. */
-const offense = (rule: Rule): string =>
-  rule.reference === undefined
-    ? "shows the pattern in `avoid`"
-    : rule.avoid === undefined
-      ? "diverges from `reference`"
-      : "diverges from `reference` or resembles `avoid`";
+const offense = (rule: Rule): string => {
+  const { good, bad } = examplesOf(rule);
+  const avoided = `\`${fieldOf(bad ?? { word: "never", code: "" })}\``;
+  return good === undefined
+    ? `shows the pattern in ${avoided}`
+    : bad === undefined
+      ? `diverges from \`${fieldOf(good)}\``
+      : `diverges from \`${fieldOf(good)}\` or resembles ${avoided}`;
+};
 
 const lineCriteria = (lines: Lines, from: number, to: number): Record<string, string> => {
   const criteria: Record<string, string> = {};

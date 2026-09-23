@@ -1,9 +1,9 @@
 # adhere
 
 A linter for rules a normal linter cannot check. A rule is a one-sentence
-description like "business logic should live in services", plus correct 
-reference code / code to avoid / or both. For each
-source file, adhere asks [Jev](https://typesafe.ai) (TypeSafe AI's System One
+description in RFC 2119's words, like "business logic must live in services",
+with code that must be written that way, code that must never be, or both. For
+each source file, adhere asks [Jev](https://typesafe.ai) (TypeSafe AI's System One
 model) whether the file breaks each rule, gets a calibrated probability per
 rule, and reports the ones above a threshold with the line Jev points at. The
 report uses the same frame as `vp lint`.
@@ -61,8 +61,8 @@ Found 1 error.
 ```
 
 The header is the rule id, Jev's probability, and the rule's description. The
-hint is the rule's reference; a rule with only code to avoid shows that code,
-labeled `avoid:`, instead. On a terminal, the report is in color and the code
+hint is the rule's code that must be written; a rule with only code that must
+never be written shows that code, labeled `never:`, instead. On a terminal, the report is in color and the code
 in it is highlighted. The exit code is 0 when nothing is reported and 1 when
 something is. It is also 1 when the run refuses, for example on an invalid
 config or rule file, a missing API key, or an unknown command or flag; a
@@ -166,12 +166,12 @@ export default {
   rules: {
     "data/brand-meaningful-primitives": {
       description:
-        "A primitive with semantic meaning, such as an id, email, URL, port, or count, should be a branded schema.",
-      reference: `
+        "A primitive with semantic meaning, such as an id, email, URL, port, or count, must be a branded schema.",
+      must: `
 const UserId = Schema.String.pipe(Schema.brand("UserId"))
 type UserId = typeof UserId.Type
 `,
-      avoid: "type UserId = string", // optional: what a violation looks like
+      never: "type UserId = string", // optional: what a violation looks like
       threshold: 0.8, // optional per-rule override
     },
   },
@@ -196,44 +196,53 @@ config and the cache (neither is read as a rule). The path without `.md` is the
 rule id, so `.adhere/data/brand-ports.md` is `data/brand-ports`. When that
 directory exists, it is read without any config.
 
-A file is front matter, then a body. The first fenced code block in the body
-is the reference; prose around it renders on GitHub and is ignored. Without a
-fence, the whole body is the reference. A fence tagged `avoid` after its
-language holds code to avoid instead: what a violation looks like.
+A file is front matter, then a body. The body's code goes in fences tagged,
+after the language, with RFC 2119's words: `must` for code that must be
+written, and `never` for code that must never be, which is what a violation
+looks like. Prose around them renders on GitHub and is ignored. An untagged
+fence is code that must be written, and without a fence the whole body is.
+`avoid`, the tag before 0.7, reads as `never`.
 
 ````md
 ---
-description: A port is a branded, range-checked integer, not a bare number.
+description: A port must be a branded, range-checked integer, never a bare number.
 threshold: 0.8
 ---
 
 Why: a bare `number` accepts 70000 and -1.
 
-```ts
+```ts must
 const Port = Schema.Int.pipe(
   Schema.check(Schema.isBetween({ minimum: 1, maximum: 65535 })),
   Schema.brand("Port"),
 );
 ```
 
-Not this:
-
-```ts avoid
+```ts never
 const port: number = Number(process.env.PORT);
 ```
 ````
 
-`description` is required, with a reference, code to avoid, or both.
+`description` is required, with code under `must`, `never`, or both.
 `threshold` is optional. A file that fails validation refuses the run with its
 path in the message. `loadRules(directory)` from the package root does the same
 load for your own tooling.
 
-With a reference, Jev is asked whether the file diverges from it, and code to
-avoid, when there is some, is its example of diverging. With only code to
-avoid, Jev is asked whether the file contains it. That suits a rule with no
-single correct form to show, such as a hand-rolled retry loop or an error
-caught and dropped. Neither goes in the other's place: code to avoid in the
-reference reads to Jev as the pattern to follow.
+Jev reads the code under the same words, and is asked whether the file
+diverges from the pattern `must` shows, with `never` as an example of
+diverging. Write the description in them too, so the rule and its code agree:
+"must" and "never", as above. A rule with only code that must never be written suits a rule with
+no single correct form to show, such as a hand-rolled retry loop or an error
+caught and dropped. Neither goes in the other's place: code that must never
+be written, under `must`, reads to Jev as the pattern to follow.
+
+A rule that is a guideline rather than a requirement says "should" instead:
+in its description, and in fences tagged `should` and `should not` (`should`
+and `shouldNot` inline in a config). Jev then reads the code under `should`
+and `should_not`. A rule is one or the
+other, so it cannot mix `must` or `never` with `should` or `should not`. In a
+config, `reference` and `avoid`, the names before 0.7, read as `must` and
+`never`.
 
 Nested `.adhere/` directories are also discovered, except under
 `node_modules/`, `dist/`, and the other skipped directories (above). A rule in
@@ -281,10 +290,12 @@ beats all of the above for that rule.
 
 1. One Jev request per file. The state is the file's numbered lines and
    nothing else. Each rule is one `noul` (yes/no probability) question that
-   carries the rule's description, reference, and code to avoid: whether the
-   file diverges from the reference or, for a rule with only code to avoid,
-   whether it contains that code. Criteria for each answer draw the line at
-   the rule's scope, so a file with no code the rule is about is a no. Since
+   carries the rule's description and its code under its words, `must` and
+   `never` (or a guideline's `should` and `should_not`): whether the file
+   diverges from the pattern `must` shows, with `never` as an example of
+   diverging, or, for a rule with only code that must never be written,
+   whether the file contains that code. Criteria for each answer draw the line
+   at the rule's scope, so a file with no code the rule is about is a no. Since
    no rule sits in the shared state, a rule's probability depends only on the
    file and that rule, not on which other rules share the request. Every
    question shares the state cost of the request.

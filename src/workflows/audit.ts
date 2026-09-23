@@ -1,4 +1,4 @@
-import type { Rule, RuleId } from "#config.ts";
+import { type Examples, examplesOf, type Rule, type RuleId } from "#config.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, type Judgment, sha256 } from "#services/AuditCache.ts";
@@ -18,8 +18,7 @@ import { type Crypto, Effect, Record } from "effect";
 export interface Finding {
   readonly rule: RuleId;
   readonly description: string;
-  readonly reference?: string;
-  readonly avoid?: string;
+  readonly examples: Examples;
   readonly file: string;
   readonly line: number;
   readonly snippet: string;
@@ -233,8 +232,7 @@ export const executeAudit = (
                 {
                   rule: id,
                   description: k.rule.description,
-                  reference: k.rule.reference,
-                  avoid: k.rule.avoid,
+                  examples: examplesOf(k.rule),
                   file: file.path,
                   line: judgment.line,
                   snippet: judgment.snippet ?? "",

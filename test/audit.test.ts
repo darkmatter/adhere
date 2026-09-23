@@ -57,11 +57,11 @@ import { describePlan, progressLine, sendQuestion } from "../src/workflows/forma
 
 const a = {
   description: "Ports are branded.",
-  reference: '\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\ntype Port = typeof Port.Type\n',
+  must: '\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\ntype Port = typeof Port.Type\n',
 };
 const b = {
   description: "Secrets are redacted.",
-  reference: 'const key = yield* Config.redacted("API_KEY")',
+  must: 'const key = yield* Config.redacted("API_KEY")',
 };
 const rules: Rules = { a, b };
 const code1 = ["const port = 3000;"];
@@ -147,7 +147,7 @@ const audit = (options: {
 const findingA = {
   rule: "a",
   description: a.description,
-  reference: a.reference,
+  examples: { good: { word: "must" as const, code: a.must } },
   file: "/repo/src/server.ts",
   line: 2,
   snippet: "const port: number = Number(process.env.PORT);",
@@ -158,9 +158,9 @@ describe("request bodies", () => {
   const code = ["const x = 1;", "", "  const y = 2;"];
   const numbered = "1 | const x = 1;\n2 | \n3 |   const y = 2;";
   const diverges =
-    "Does `code` diverge from the pattern shown in `reference`, as described by `rule`? Answer no if the pattern does not apply to this file.";
+    "Does `code` diverge from the pattern shown in `must`, as described by `rule`? Answer no if the pattern does not apply to this file.";
   const scoped = {
-    true: "`code` diverges from the pattern shown in `reference`, in code that `rule` is about",
+    true: "`code` diverges from the pattern shown in `must`, in code that `rule` is about",
     false: "`code` follows the pattern, or has no code that `rule` is about",
   };
 
@@ -171,12 +171,12 @@ describe("request bodies", () => {
       questions: {
         a: {
           type: "noul",
-          instructions: { question: diverges, rule: a.description, reference: a.reference },
+          instructions: { question: diverges, rule: a.description, must: a.must },
           criteria: scoped,
         },
         b: {
           type: "noul",
-          instructions: { question: diverges, rule: b.description, reference: b.reference },
+          instructions: { question: diverges, rule: b.description, must: b.must },
           criteria: scoped,
         },
       },
@@ -191,9 +191,9 @@ describe("request bodies", () => {
         a: {
           type: "choice",
           instructions: {
-            question: "Which line of `code` most clearly diverges from `reference`?",
+            question: "Which line of `code` most clearly diverges from `must`?",
             rule: a.description,
-            reference: a.reference,
+            must: a.must,
           },
           criteria: { "1": "const x = 1;", "3": "const y = 2;" },
         },
@@ -201,47 +201,59 @@ describe("request bodies", () => {
     });
   });
 
-  it("a rule with code to avoid: asked whether the file contains it, or diverges as it shows", () => {
-    const avoidOnly = { description: "Domain code does not throw.", avoid: 'throw new Error("x")' };
-    const both = { ...a, avoid: "const port: number = 3000" };
-    expect(judgeBody("jev-latest", code, { c: avoidOnly, d: both }).questions).toEqual({
-      c: {
-        type: "noul",
-        instructions: {
-          question:
-            "Does `code` contain the pattern shown in `avoid`, which `rule` rules out? Answer no if nothing in this file resembles it.",
-          rule: avoidOnly.description,
-          avoid: avoidOnly.avoid,
-        },
-        criteria: {
-          true: "`code` contains the pattern shown in `avoid`, in code that `rule` is about",
-          false: "`code` has nothing like `avoid`, or has no code that `rule` is about",
-        },
+  it("carries the code under the rule's words: must and never, or should and should not", () => {
+    const both = { ...a, never: "const port: number = 3000" };
+    const neverOnly = {
+      description: "Domain code must never throw.",
+      never: 'throw new Error("x")',
+    };
+    const guideline = {
+      description: "A file should be small.",
+      should: "export const one = 1;",
+      shouldNot: "export const a = 1, b = 2;",
+    };
+    const questions = judgeBody("jev-latest", code, { both, neverOnly, guideline }).questions;
+    expect(questions.both).toEqual({
+      type: "noul",
+      instructions: {
+        question:
+          "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+        rule: both.description,
+        must: both.must,
+        never: both.never,
       },
-      d: {
-        type: "noul",
-        instructions: {
-          question:
-            "Does `code` diverge from the pattern shown in `reference`, for example by doing what `avoid` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
-          rule: both.description,
-          reference: both.reference,
-          avoid: both.avoid,
-        },
-        criteria: {
-          true: "`code` diverges from the pattern shown in `reference`, for example by doing what `avoid` shows, in code that `rule` is about",
-          false: scoped.false,
-        },
+      criteria: {
+        true: "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+        false: scoped.false,
       },
+    });
+    expect(questions.neverOnly).toEqual({
+      type: "noul",
+      instructions: {
+        question:
+          "Does `code` contain the pattern shown in `never`, which `rule` rules out? Answer no if nothing in this file resembles it.",
+        rule: neverOnly.description,
+        never: neverOnly.never,
+      },
+      criteria: {
+        true: "`code` contains the pattern shown in `never`, in code that `rule` is about",
+        false: "`code` has nothing like `never`, or has no code that `rule` is about",
+      },
+    });
+    expect(questions.guideline?.instructions).toEqual({
+      question:
+        "Does `code` diverge from the pattern shown in `should`, for example by doing what `should_not` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+      rule: guideline.description,
+      should: guideline.should,
+      should_not: guideline.shouldNot,
     });
 
-    const located = locateBody("jev-latest", code, { c: avoidOnly, d: both }).questions;
-    expect(located.c?.instructions).toEqual({
-      question: "Which line of `code` most clearly shows the pattern in `avoid`?",
-      rule: avoidOnly.description,
-      avoid: avoidOnly.avoid,
-    });
-    expect(located.d?.instructions.question).toBe(
-      "Which line of `code` most clearly diverges from `reference` or resembles `avoid`?",
+    const located = locateBody("jev-latest", code, { both, neverOnly }).questions;
+    expect(located.both?.instructions.question).toBe(
+      "Which line of `code` most clearly diverges from `must` or resembles `never`?",
+    );
+    expect(located.neverOnly?.instructions.question).toBe(
+      "Which line of `code` most clearly shows the pattern in `never`?",
     );
   });
 
@@ -250,10 +262,9 @@ describe("request bodies", () => {
     const blocks = blockBody("jev-latest", long, { a });
     expect(blocks.questions.a?.type).toBe("choice");
     expect(blocks.questions.a?.instructions).toEqual({
-      question:
-        "Which block of `code` contains the line that most clearly diverges from `reference`?",
+      question: "Which block of `code` contains the line that most clearly diverges from `must`?",
       rule: a.description,
-      reference: a.reference,
+      must: a.must,
     });
     expect(Object.keys(blocks.questions.a?.criteria ?? {})).toHaveLength(15);
     expect(blocks.questions.a?.criteria["0"]).toBe("const v1 = 1;...");
@@ -270,7 +281,7 @@ describe("request bodies", () => {
 
 describe("jev's context", () => {
   /** A rule whose question comes to about `tokens` by `tokensOf`'s count. */
-  const sized = (tokens: number) => ({ description: "Sized.", reference: "x".repeat(tokens * 3) });
+  const sized = (tokens: number) => ({ description: "Sized.", must: "x".repeat(tokens * 3) });
   const linesOf = (count: number, line: string) => Array.from({ length: count }, () => line);
   const line = "export const value = compute(input);";
 
@@ -316,17 +327,17 @@ const loaded = (config: typeof AdhereConfigSchema.Encoded, rules: Rules = {}) =>
 describe("config", () => {
   it("applies the default model and threshold", async () => {
     const config = await Effect.runPromise(
-      loaded({}, { "data/brand": { description: "d", reference: "r" } }),
+      loaded({}, { "data/brand": { description: "d", must: "r" } }),
     );
     expect(resolveConfig(config)).toEqual({
       model: "jev-latest",
       threshold: 0.8,
-      rules: { "data/brand": { description: "d", reference: "r" } },
+      rules: { "data/brand": { description: "d", must: "r" } },
     });
   });
 
   it("folds presets into the rules, with a config rule winning over a preset rule", async () => {
-    const override = { description: "mine", reference: "mine" };
+    const override = { description: "mine", must: "mine" };
     const preset: Loaded<Preset> = { rules: { a, b } };
     const config = await Effect.runPromise(loaded({}, { a: override }));
     const resolved = resolveConfig(config, { presets: ["effect"] }, { effect: preset });
@@ -359,25 +370,37 @@ describe("config", () => {
     expect(refused.message).toContain("effect");
   });
 
-  it("refuses a rule with neither a reference nor code to avoid", async () => {
-    const refused = await Effect.runPromise(
-      Effect.flip(decodeConfig({ rules: { "data/brand": { description: "d" } } })),
+  it("refuses a rule without an example, or one that is both a requirement and a guideline", async () => {
+    const refusal = (rule: typeof AdhereConfigSchema.Encoded.rules) =>
+      Effect.runPromise(Effect.flip(decodeConfig({ rules: rule })));
+    const bare = await refusal({ "data/brand": { description: "d" } });
+    expect(bare._tag).toBe("ConfigUnavailable");
+    expect(bare.message).toContain("a rule needs an example: must, never, should, or shouldNot");
+    const mixed = await refusal({ "data/brand": { description: "d", must: "a()", should: "b()" } });
+    expect(mixed.message).toContain(
+      "a rule is a requirement (must, never) or a guideline (should, shouldNot), not both",
     );
-    expect(refused._tag).toBe("ConfigUnavailable");
-    expect(refused.message).toContain("a rule needs a reference, code to avoid, or both");
   });
 
-  it("accepts a rule with only code to avoid", async () => {
-    const rule = { description: "Domain code does not throw.", avoid: "throw new Error()" };
-    const config = await Effect.runPromise(decodeConfig({ rules: { "errors/no-throw": rule } }));
-    expect(config.rules).toEqual({ "errors/no-throw": rule });
+  it("accepts a rule with only code never to write, and a guideline", async () => {
+    const never = { description: "Domain code does not throw.", never: "throw new Error()" };
+    const guideline = { description: "A file should be small.", should: "export const one = 1;" };
+    const config = await Effect.runPromise(decodeConfig({ rules: { never, guideline } }));
+    expect(config.rules).toEqual({ never, guideline });
+  });
+
+  it("reads reference and avoid, the names before 0.7, as must and never", async () => {
+    const config = await Effect.runPromise(
+      decodeConfig({ rules: { old: { description: "d", reference: "a()", avoid: "b()" } } }),
+    );
+    expect(config.rules).toEqual({ old: { description: "d", must: "a()", never: "b()" } });
   });
 });
 
 describe("markdown rules", () => {
   const parse = (text: string) => Effect.runPromise(parseRuleMarkdown(text, "rules/a.md"));
 
-  it("front matter is the description and threshold; the fenced block is the reference", async () => {
+  it("front matter is the description and threshold; an untagged fence is code to write", async () => {
     const rule = await parse(
       [
         "---",
@@ -397,16 +420,40 @@ describe("markdown rules", () => {
     expect(rule).toEqual({
       description: "Ports are branded.",
       threshold: 0.8,
-      reference: 'const Port = Schema.Int.pipe(Schema.brand("Port"))\ntype Port = typeof Port.Type',
+      must: 'const Port = Schema.Int.pipe(Schema.brand("Port"))\ntype Port = typeof Port.Type',
     });
   });
 
-  it("without a fence, the whole body is the reference", async () => {
+  it("without a fence, the whole body is code to write", async () => {
     const rule = await parse("---\ndescription: d\n---\nconst x = 1\n");
-    expect(rule).toEqual({ description: "d", reference: "const x = 1" });
+    expect(rule).toEqual({ description: "d", must: "const x = 1" });
   });
 
-  it("a fence tagged avoid is the code to avoid, before or after the reference", async () => {
+  it("fences tagged must and never, or should and should not, hold code under those words", async () => {
+    const fenced = (...fences: ReadonlyArray<string>) =>
+      parse(
+        `---\ndescription: d\n---\n\n${fences.map((fence) => `\`\`\`${fence}\n\`\`\``).join("\n\n")}\n`,
+      );
+    expect(await fenced("ts never\nb()", "ts must\na()")).toEqual({
+      description: "d",
+      must: "a()",
+      never: "b()",
+    });
+    expect(await fenced("ts should\na()", "ts should not\nb()")).toEqual({
+      description: "d",
+      should: "a()",
+      shouldNot: "b()",
+    });
+    // An untagged fence is code to write at the rule's level: should, in a guideline.
+    expect(await fenced("ts\na()", "ts should not\nb()")).toEqual({
+      description: "d",
+      should: "a()",
+      shouldNot: "b()",
+    });
+    expect(await fenced("ts must not\nb()")).toEqual({ description: "d", never: "b()" });
+  });
+
+  it("a fence tagged avoid, the word before 0.7, is code never to write", async () => {
     const rule = await parse(
       [
         "---",
@@ -429,18 +476,18 @@ describe("markdown rules", () => {
     );
     expect(rule).toEqual({
       description: "A domain failure is a tagged error.",
-      reference: 'class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {}) {}',
-      avoid: 'throw new Error("not found")',
+      must: 'class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {}) {}',
+      never: 'throw new Error("not found")',
     });
   });
 
-  it("a rule can be only code to avoid", async () => {
+  it("a rule can be only code never to write", async () => {
     const rule = await parse(
       "---\ndescription: A module has no default export.\n---\n\n```ts avoid\nexport default {}\n```\n",
     );
     expect(rule).toEqual({
       description: "A module has no default export.",
-      avoid: "export default {}",
+      never: "export default {}",
     });
   });
 
@@ -448,7 +495,21 @@ describe("markdown rules", () => {
     const refused = await Effect.runPromise(
       Effect.flip(parseRuleMarkdown("---\ndescription: d\n---\n\n", "rules/a.md")),
     );
-    expect(refused.message).toContain("rules/a.md: the body needs reference code");
+    expect(refused.message).toContain("rules/a.md: the body needs code");
+  });
+
+  it("refuses a rule that is both a requirement and a guideline, naming the file", async () => {
+    const refused = await Effect.runPromise(
+      Effect.flip(
+        parseRuleMarkdown(
+          "---\ndescription: d\n---\n\n```ts must\na()\n```\n\n```ts should not\nb()\n```\n",
+          "rules/a.md",
+        ),
+      ),
+    );
+    expect(refused.message).toBe(
+      "rules/a.md: a rule is a requirement (must, never) or a guideline (should, should not), not both",
+    );
   });
 
   it("refuses a file without a description, naming the file", async () => {
@@ -476,9 +537,9 @@ describe("markdown rules", () => {
       loadRules("/repo/rules").pipe(Effect.provide(Layer.merge(fs, Path.layer))),
     );
     expect(rules).toEqual({
-      README: { description: "readme", reference: "not a rule" },
-      "basics/gen": { description: "gen", reference: "gen()" },
-      "data/brand": { description: "brand", reference: "brand()" },
+      README: { description: "readme", must: "not a rule" },
+      "basics/gen": { description: "gen", must: "gen()" },
+      "data/brand": { description: "brand", must: "brand()" },
     });
   });
 });
@@ -511,19 +572,19 @@ describe("nested .adhere rules", () => {
         id: "style/service",
         file: "/repo/.adhere/style/service.md",
         scope: "/repo",
-        rule: { description: "root", reference: "root()" },
+        rule: { description: "root", must: "root()" },
       },
       {
         id: "api/schema",
         file: "/repo/packages/api/.adhere/api/schema.md",
         scope: "/repo/packages/api",
-        rule: { description: "schema", reference: "schema()" },
+        rule: { description: "schema", must: "schema()" },
       },
       {
         id: "style/service",
         file: "/repo/packages/api/.adhere/style/service.md",
         scope: "/repo/packages/api",
-        rule: { description: "api", reference: "api()" },
+        rule: { description: "api", must: "api()" },
       },
     ]);
   });
@@ -551,10 +612,10 @@ describe("nested .adhere rules", () => {
   });
 
   it("applies root rules globally and lets the nearest nested rule shadow the same id", () => {
-    const rootOnly = { description: "Root only.", reference: "rootOnly()" };
-    const rootShadowed = { description: "Root service.", reference: "root()" };
-    const apiShadow = { description: "API service.", reference: "api()" };
-    const apiOnly = { description: "API only.", reference: "apiOnly()" };
+    const rootOnly = { description: "Root only.", must: "rootOnly()" };
+    const rootShadowed = { description: "Root service.", must: "root()" };
+    const apiShadow = { description: "API service.", must: "api()" };
+    const apiOnly = { description: "API only.", must: "apiOnly()" };
 
     const entries = [
       {
@@ -610,7 +671,7 @@ describe("contradictions", () => {
     id,
     scope,
     file: `${scope}/.adhere/${id}.md`,
-    rule: { description, reference: `${id}()` },
+    rule: { description, must: `${id}()` },
   });
   const entries = [
     entry("style/use-services", "/repo", "Use service classes for IO."),
@@ -683,14 +744,14 @@ describe("contradictions", () => {
 
   it("conflicts: per rule a choice among the rules sharing its files; then a noul per pair", () => {
     const compared = [
-      { id: "x", rule: { description: "X.", reference: "x()" } },
-      { id: "y", rule: { description: "Y.", avoid: "y()" } },
-      { id: "z", rule: { description: "Z.", reference: "z()" } },
+      { id: "x", rule: { description: "X.", must: "x()" } },
+      { id: "y", rule: { description: "Y.", never: "y()" } },
+      { id: "z", rule: { description: "Z.", must: "z()" } },
     ];
     const state = {
       rules: {
-        "0": { id: "x", description: "X.", reference: "x()" },
-        "1": { id: "y", description: "Y.", avoid: "y()" },
+        "0": { id: "x", description: "X.", must: "x()" },
+        "1": { id: "y", description: "Y.", never: "y()" },
       },
     };
     const choice = (rule: string, criteria: Record<string, string>) => ({
@@ -732,7 +793,7 @@ describe("contradictions", () => {
   it("conflicts: a rule with more partners than a choice holds gets one question per chunk", () => {
     const compared = Array.from({ length: 300 }, (_, index) => ({
       id: `r${index}`,
-      rule: { description: `R${index}.`, reference: "r()" },
+      rule: { description: `R${index}.`, must: "r()" },
     }));
     const partners = compared.map((_, index) =>
       index === 0 ? Array.from({ length: 299 }, (__, other) => other + 1) : [],
@@ -939,7 +1000,7 @@ describe("pipeline", () => {
       findings: [findingA],
     });
 
-    const editedB = { ...b, reference: 'const token = yield* Config.redacted("TOKEN")' };
+    const editedB = { ...b, must: 'const token = yield* Config.redacted("TOKEN")' };
     const third = recordingJev({ judge: { a: 0.9, b: 0.3 }, locate: { a: 2 } });
     const edited = await audit({ rules: { a, b: editedB }, jev: third.layer, cache });
     expect(third.calls).toEqual({ judge: [{ b: editedB }], locate: [] });
@@ -947,7 +1008,7 @@ describe("pipeline", () => {
     expect(edited.judged).toBe(1);
   });
 
-  it("re-judges what an earlier question judged, and a rule that gains code to avoid", async () => {
+  it("re-judges what an earlier question judged, and a rule that gains code never to write", async () => {
     const hexByte = (byte: number) => byte.toString(16).padStart(2, "0");
     const hex = (text: string) => Array.from(new TextEncoder().encode(text), hexByte).join("");
     // The entry as adhere 0.4 wrote it: the fingerprint hashed model, description, and reference.
@@ -956,7 +1017,7 @@ describe("pipeline", () => {
         hash: hex(source.lines.join("\n")),
         judgments: {
           a: {
-            fingerprint: hex(`jev-latest${a.description}${a.reference}`),
+            fingerprint: hex(`jev-latest${a.description}${a.must}`),
             probability: 0.9,
             line: 2,
             snippet: findingA.snippet,
@@ -974,11 +1035,16 @@ describe("pipeline", () => {
     await audit({ rules: { a }, jev: again.layer, cache });
     expect(again.calls).toEqual({ judge: [], locate: [] });
 
-    const withAvoid = { ...a, avoid: "const port: number = 3000" };
+    const withNever = { ...a, never: "const port: number = 3000" };
     const edited = recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } });
-    const result = await audit({ rules: { a: withAvoid }, jev: edited.layer, cache });
-    expect(edited.calls.judge).toEqual([{ a: withAvoid }]);
-    expect(result.findings).toEqual([{ ...findingA, avoid: withAvoid.avoid }]);
+    const result = await audit({ rules: { a: withNever }, jev: edited.layer, cache });
+    expect(edited.calls.judge).toEqual([{ a: withNever }]);
+    expect(result.findings).toEqual([
+      {
+        ...findingA,
+        examples: { ...findingA.examples, bad: { word: "never", code: withNever.never } },
+      },
+    ]);
   });
 
   it("skips a file too long for Jev's context, and judges the rest", async () => {
@@ -1089,7 +1155,7 @@ describe("highlight", () => {
 describe("render", () => {
   const result = { files: 1, judged: 1, cached: 0, skipped: 0, findings: [findingA] };
 
-  it("prints the vp-lint frame with the reference as the hint", () => {
+  it("prints the vp-lint frame with the code to write as the hint", () => {
     expect(render(result, { root: "/repo" }).join("\n")).toBe(
       [
         "  × a (0.90): Ports are branded.",
@@ -1106,11 +1172,11 @@ describe("render", () => {
     );
   });
 
-  it("shows the code to avoid, labeled, for a rule without a reference", () => {
-    const { reference: _, ...withoutReference } = findingA;
-    const finding = { ...withoutReference, avoid: 'throw new Error("x")\nthrow new Error("y")' };
+  it("shows the code never to write, labeled with its word, for a rule without code to write", () => {
+    const code = 'throw new Error("x")\nthrow new Error("y")';
+    const finding = { ...findingA, examples: { bad: { word: "never" as const, code } } };
     const lines = render({ ...result, findings: [finding] }, { root: "/repo" });
-    expect(lines).toContain('  avoid: throw new Error("x")');
+    expect(lines).toContain('  never: throw new Error("x")');
     expect(lines).toContain('         throw new Error("y")');
     expect(lines.some((line) => line.includes("hint:"))).toBe(false);
   });
@@ -1134,9 +1200,8 @@ describe("render", () => {
   });
 
   it("adds color and nothing else, and closes every color on the line that opens it", () => {
-    const reference =
-      "/* Decoded once,\n\n   at the edge. */\nconst message = `${file}:\n  ${line}`;";
-    const findings = [{ ...findingA, reference }];
+    const code = "/* Decoded once,\n\n   at the edge. */\nconst message = `${file}:\n  ${line}`;";
+    const findings = [{ ...findingA, examples: { good: { word: "must" as const, code } } }];
     const colored = render({ ...result, findings }, { color: true });
     expect(colored.map((line) => stripVTControlCharacters(line))).toEqual(
       render({ ...result, findings }),
@@ -1343,7 +1408,7 @@ describe("jev over http", () => {
 
   it("asks what one request cannot hold over several, and merges the answers", async () => {
     // About 30k tokens a question: two fit in a 64k request, a third does not.
-    const big = { description: "Big.", reference: "x".repeat(90_000) };
+    const big = { description: "Big.", must: "x".repeat(90_000) };
     const { asked, judged } = judge(Effect.succeed(Redacted.make("tsk_saved")), {
       a: big,
       b: big,

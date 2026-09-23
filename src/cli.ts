@@ -154,7 +154,7 @@ export const lintCommand = Command.make("lint", { preset, threshold, yes }, (inp
   }),
 ).pipe(
   Command.withDescription(
-    "Audit the working directory against reference code from .adhere/config.ts or a preset, judged by Jev.",
+    "Audit the working directory against the rules in .adhere/ or a preset, judged by Jev.",
   ),
   Command.provide((input) =>
     auditLayer({
@@ -274,7 +274,7 @@ export const skillCommand = Command.make("skill", {}, () => Console.log(skill.tr
 
 /** The whole CLI. Bare `adhere` prints its help. */
 export const cli = Command.make("adhere").pipe(
-  Command.withDescription("Lint a repository against reference code in .adhere/, judged by Jev."),
+  Command.withDescription("Lint a repository against the rules in .adhere/, judged by Jev."),
   Command.withExamples([
     { command: "adhere init", description: "Scaffold .adhere/config.ts and two example rules" },
     { command: "adhere validate", description: "Check the config and rules without calling Jev" },

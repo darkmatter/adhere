@@ -1,26 +1,28 @@
-import { ConfigUnavailable, type Rule } from "#config.ts";
+import { ConfigUnavailable, type Example, type Rule } from "#config.ts";
 import { Effect, Schema } from "effect";
 
 /**
  * A rule as a Markdown file:
  *
  *     ---
- *     description: One sentence naming the pattern.
+ *     description: One sentence saying what code must be, or never be.
  *     threshold: 0.8
  *     ---
  *     Any prose, rendered on GitHub and ignored by adhere.
  *
- *     ```ts
- *     const reference = "the correct code"
+ *     ```ts must
+ *     const written = "code that must be written this way"
  *     ```
  *
- *     ```ts avoid
- *     const avoided = "what a violation looks like"
+ *     ```ts never
+ *     const avoided = "code that must never be written this way"
  *     ```
  *
- * The reference is the first fenced code block; `avoid` in a fence's info
- * string marks the code to avoid instead. A rule has either or both. Without a
- * fence, the whole body is the reference. `threshold` is optional.
+ * A fence's info string names its code with RFC 2119's words: `must` and
+ * `never` for a requirement, `should` and `should not` for a guideline. The
+ * first fence under each word is that example, and a rule has either or both.
+ * An untagged fence is the code to write, and without a fence the whole body
+ * is. `avoid`, the word before 0.7, means `never`. `threshold` is optional.
  */
 const FrontMatter = Schema.Struct({
   description: Schema.String,
@@ -29,7 +31,6 @@ const FrontMatter = Schema.Struct({
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 const FENCE = /^ {0,3}(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n {0,3}\1[ \t]*$/gm;
-const AVOID = "avoid";
 
 const unquote = (value: string): string => {
   const trimmed = value.trim();
@@ -50,17 +51,27 @@ const parseFrontMatter = (block: string): Record<string, string> => {
   return fields;
 };
 
+type Word = Example["word"];
+
 interface Fence {
-  readonly avoid: boolean;
+  /** The word the info string names the code with; none for an untagged fence. */
+  readonly word: Word | undefined;
   readonly code: string;
 }
 
+/** `must not`, like `never` and the older `avoid`, names code never to write. */
+const wordOf = (info: string): Word | undefined => {
+  const words = info.trim().toLowerCase().split(/\s+/);
+  const not = words.includes("not");
+  if (words.includes("never") || words.includes("avoid")) return "never";
+  if (words.includes("should")) return not ? "should not" : "should";
+  if (words.includes("must")) return not ? "never" : "must";
+  return undefined;
+};
+
 const fencesOf = (body: string): ReadonlyArray<Fence> =>
   Array.from(body.matchAll(FENCE), (match) => ({
-    avoid: (match[2] ?? "")
-      .trim()
-      .split(/\s+/)
-      .some((word) => word.toLowerCase() === AVOID),
+    word: wordOf(match[2] ?? ""),
     code: (match[3] ?? "").trim(),
   }));
 
@@ -68,16 +79,32 @@ const fencesOf = (body: string): ReadonlyArray<Fence> =>
 const nonEmpty = (code: string | undefined): string | undefined =>
   code === undefined || code.length === 0 ? undefined : code;
 
-/** The reference and the code to avoid, each left out when the body has none. */
-const codeOf = (body: string): Pick<Rule, "reference" | "avoid"> => {
+type Code = Pick<Rule, "must" | "never" | "should" | "shouldNot">;
+
+/**
+ * Each example the body has, under its word. An untagged fence is the code
+ * to write: `should` in a guideline, which a `should` or `should not` fence
+ * makes the rule, and `must` otherwise.
+ */
+const codeOf = (body: string): Code => {
   const fences = fencesOf(body);
-  const reference = nonEmpty(
-    fences.length === 0 ? body.trim() : fences.find((fence) => !fence.avoid)?.code,
-  );
-  const avoid = nonEmpty(fences.find((fence) => fence.avoid)?.code);
+  if (fences.length === 0) {
+    const must = nonEmpty(body.trim());
+    return must === undefined ? {} : { must };
+  }
+  const first = (word: Word | undefined) =>
+    nonEmpty(fences.find((fence) => fence.word === word)?.code);
+  const guideline = fences.some((fence) => fence.word === "should" || fence.word === "should not");
+  const untagged = first(undefined);
+  const must = first("must") ?? (guideline ? undefined : untagged);
+  const never = first("never");
+  const should = first("should") ?? (guideline ? untagged : undefined);
+  const shouldNot = first("should not");
   return {
-    ...(reference === undefined ? {} : { reference }),
-    ...(avoid === undefined ? {} : { avoid }),
+    ...(must === undefined ? {} : { must }),
+    ...(never === undefined ? {} : { never }),
+    ...(should === undefined ? {} : { should }),
+    ...(shouldNot === undefined ? {} : { shouldNot }),
   };
 };
 
@@ -98,9 +125,16 @@ export const parseRuleMarkdown = (
       ),
     );
     const code = codeOf(match[2]);
-    if (code.reference === undefined && code.avoid === undefined) {
+    const requirement = code.must !== undefined || code.never !== undefined;
+    const guideline = code.should !== undefined || code.shouldNot !== undefined;
+    if (requirement && guideline) {
       return yield* ConfigUnavailable.make({
-        message: `${file}: the body needs reference code, a fence tagged avoid, or both`,
+        message: `${file}: a rule is a requirement (must, never) or a guideline (should, should not), not both`,
+      });
+    }
+    if (!requirement && !guideline) {
+      return yield* ConfigUnavailable.make({
+        message: `${file}: the body needs code, in a fence tagged must, never, should, or should not, or untagged`,
       });
     }
     return { ...front, ...code };

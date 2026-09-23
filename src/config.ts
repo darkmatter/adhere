@@ -1,24 +1,78 @@
 import { type PresetName, presetNames } from "#presets.ts";
 import type { RuleSet } from "#rules.ts";
-import { Effect, Schema } from "effect";
+import { Effect, Schema, SchemaTransformation } from "effect";
 
 export type RuleId = string;
 
-export const Rule = Schema.Struct({
+/**
+ * A rule's examples, named in RFC 2119's words, which Jev reads as written. A
+ * requirement shows code that `must` be written and code that must `never`
+ * be. A guideline, which asks for less, shows code that `should` be written
+ * and code that `shouldNot` be.
+ */
+const RuleFields = Schema.Struct({
   description: Schema.String,
-  /** Correct code: the pattern a file should follow. */
-  reference: Schema.optionalKey(Schema.String),
-  /** Incorrect code: what a violation looks like. */
-  avoid: Schema.optionalKey(Schema.String),
+  must: Schema.optionalKey(Schema.String),
+  never: Schema.optionalKey(Schema.String),
+  should: Schema.optionalKey(Schema.String),
+  shouldNot: Schema.optionalKey(Schema.String),
   threshold: Schema.optionalKey(Schema.Finite),
-}).check(
-  Schema.makeFilter((rule) =>
-    rule.reference !== undefined || rule.avoid !== undefined
-      ? undefined
-      : "a rule needs a reference, code to avoid, or both",
-  ),
-);
+});
+
+/** Before 0.7, a rule's examples were `reference` and `avoid`: read as `must` and `never`. */
+export const Rule = Schema.Struct({
+  ...RuleFields.fields,
+  reference: Schema.optionalKey(Schema.String),
+  avoid: Schema.optionalKey(Schema.String),
+})
+  .pipe(
+    Schema.decodeTo(
+      RuleFields,
+      SchemaTransformation.transform({
+        decode: ({ reference, avoid, ...rule }) => ({
+          ...rule,
+          ...(rule.must === undefined && reference !== undefined ? { must: reference } : {}),
+          ...(rule.never === undefined && avoid !== undefined ? { never: avoid } : {}),
+        }),
+        encode: (rule) => rule,
+      }),
+    ),
+  )
+  .check(
+    Schema.makeFilter((rule) => {
+      const requirement = rule.must !== undefined || rule.never !== undefined;
+      const guideline = rule.should !== undefined || rule.shouldNot !== undefined;
+      return requirement && guideline
+        ? "a rule is a requirement (must, never) or a guideline (should, shouldNot), not both"
+        : requirement || guideline
+          ? undefined
+          : "a rule needs an example: must, never, should, or shouldNot";
+    }),
+  );
 export interface Rule extends Schema.Schema.Type<typeof Rule> {}
+
+/** One of a rule's examples, under the word it is written with. */
+export interface Example {
+  readonly word: "must" | "never" | "should" | "should not";
+  readonly code: string;
+}
+
+/** A rule's code to write and code not to write, each when the rule has it. */
+export interface Examples {
+  readonly good?: Example;
+  readonly bad?: Example;
+}
+
+/** A guideline's examples are `should` and `should not`; any other rule's, `must` and `never`. */
+export const examplesOf = (rule: Rule): Examples => {
+  const guideline = rule.should !== undefined || rule.shouldNot !== undefined;
+  const good = guideline ? rule.should : rule.must;
+  const bad = guideline ? rule.shouldNot : rule.never;
+  return {
+    ...(good === undefined ? {} : { good: { word: guideline ? "should" : "must", code: good } }),
+    ...(bad === undefined ? {} : { bad: { word: guideline ? "should not" : "never", code: bad } }),
+  };
+};
 
 export type Rules = Readonly<Record<RuleId, Rule>>;
 

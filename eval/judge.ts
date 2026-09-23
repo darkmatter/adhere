@@ -12,7 +12,7 @@
  * per file per arm. With a path, also writes every probability and each
  * request's size and token usage there.
  */
-import { DEFAULT_THRESHOLD, type Rule } from "#config.ts";
+import { DEFAULT_THRESHOLD, examplesOf, type Rule } from "#config.ts";
 import { loadRules } from "#rules.ts";
 import { Credentials, CredentialsLive } from "#services/Credentials.ts";
 import {
@@ -35,20 +35,25 @@ type Ask = (model: string, lines: Lines, rules: Rules) => Body;
 
 const numbered = (lines: Lines) => lines.map((line, index) => `${index + 1} | ${line}`).join("\n");
 
+/** A rule as 0.4 held it: the code to write as `reference`, and the code not to as `avoid`. */
+const asHeld = (rule: Rule) => {
+  const { good, bad } = examplesOf(rule);
+  return {
+    description: rule.description,
+    ...(good === undefined ? {} : { reference: good.code }),
+    ...(bad === undefined ? {} : { avoid: bad.code }),
+  };
+};
+
 /** adhere 0.4: every rule in the state, each question reaching its own rule by path. */
 const inState: Ask = (model, lines, rules) => {
-  const field = (id: string, key: keyof Rule) => `state.rules["${id}"].${key}`;
+  const held = Record.map(rules, asHeld);
+  const field = (id: string, key: "avoid" | "description" | "reference") =>
+    `state.rules["${id}"].${key}`;
   return {
     model,
-    state: {
-      code: numbered(lines),
-      rules: Record.map(rules, ({ description, reference, avoid }) => ({
-        description,
-        ...(reference === undefined ? {} : { reference }),
-        ...(avoid === undefined ? {} : { avoid }),
-      })),
-    },
-    questions: Record.map(rules, (rule, id) => ({
+    state: { code: numbered(lines), rules: held },
+    questions: Record.map(held, (rule, id) => ({
       type: "noul",
       instructions:
         rule.reference === undefined
