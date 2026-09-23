@@ -28,7 +28,7 @@ describe("cli", () => {
     }
   });
 
-  it("validates a single rule without asking Jev, since it has nothing to compare", async () => {
+  it("validates a single rule without asking Jev, and says how its wording differs from the tips", async () => {
     const root = join(tmpdir(), `adhere-validate-${Date.now()}`);
     await mkdir(join(root, ".adhere"), { recursive: true });
     await writeFile(
@@ -37,10 +37,21 @@ describe("cli", () => {
       "utf8",
     );
 
+    // It exits 0: the tips are advice, and one rule has nothing to contradict.
     const { stdout } = await execFileAsync("bun", [main, "validate"], { cwd: root });
 
-    expect(stdout).toContain("1 rule loaded.");
-    expect(stdout).toContain("No contradictions found among configured rules.");
+    expect(stdout).toBe(
+      [
+        "1 rule loaded.",
+        "1 rule is not worded as the rule writing tips recommend:",
+        "  ports (.adhere/ports.md)",
+        '    The description does not say "must", though the rule has a must example.',
+        "    The rule has no never example. Rules with one example of each kind judge best.",
+        "Rule writing tips: https://github.com/darkmatter/adhere#rule-writing-tips",
+        "No contradictions found among configured rules.",
+        "",
+      ].join("\n"),
+    );
   });
 
   /** `adhere <args>` with `input` piped to stdin and config kept under `configHome`. */

@@ -1,6 +1,7 @@
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { stripVTControlCharacters } from "node:util";
 import {
   ConfigProvider,
@@ -27,6 +28,7 @@ import { excerptOf } from "../src/excerpt.ts";
 import { tokenize } from "../src/highlight.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
+import { presets } from "../src/presets.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
 import { applicableRules, loadAdhereRuleSet, loadRules, type RuleEntry } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
@@ -56,6 +58,7 @@ import {
   tokensOf,
 } from "../src/services/Jev.ts";
 import { isInSkippedTree, passesFilter, SourceWalker } from "../src/services/SourceWalker.ts";
+import { formatStrays, straysAmong, strayingOf, TIPS_URL } from "../src/wording.ts";
 import {
   type AuditPlan,
   executeAudit,
@@ -828,6 +831,134 @@ describe("contradictions", () => {
   });
 });
 
+describe("wording", () => {
+  it("a rule worded as the tips recommend strays by nothing, whole words in any case", () => {
+    expect(
+      strayingOf({
+        description: "A port must be branded, never a bare number.",
+        must: "a()",
+        never: "b()",
+      }),
+    ).toEqual([]);
+    expect(
+      strayingOf({ description: "Ports MUST be branded. Never bare.", must: "a()", never: "b()" }),
+    ).toEqual([]);
+    expect(
+      strayingOf({
+        description: "A file should be small, and should not do two jobs.",
+        should: "a()",
+        shouldNot: "b()",
+      }),
+    ).toEqual([]);
+  });
+
+  it("a description that does not say a word its code is under strays by each such word", () => {
+    expect(
+      strayingOf({
+        description: "A port is branded, not a bare number.",
+        must: "a()",
+        never: "b()",
+      }),
+    ).toEqual([
+      { _tag: "Unsaid", word: "must" },
+      { _tag: "Unsaid", word: "never" },
+    ]);
+    // Part of a word is not the word.
+    expect(strayingOf({ description: "Mustard, nevermore.", must: "a()", never: "b()" })).toEqual([
+      { _tag: "Unsaid", word: "must" },
+      { _tag: "Unsaid", word: "never" },
+    ]);
+    expect(
+      strayingOf({ description: "A file should be small.", should: "a()", shouldNot: "b()" }),
+    ).toEqual([{ _tag: "Unsaid", word: "should not" }]);
+  });
+
+  it("code to write without code that breaks the rule strays; code that breaks it alone does not", () => {
+    expect(strayingOf({ description: "Ports must be branded.", must: "a()" })).toEqual([
+      { _tag: "Unshown", word: "never" },
+    ]);
+    expect(strayingOf({ description: "A file should be small.", should: "a()" })).toEqual([
+      { _tag: "Unshown", word: "should not" },
+    ]);
+    expect(strayingOf({ description: "Code must never retry by hand.", never: "b()" })).toEqual([]);
+  });
+
+  it("a description in the other kind of rule's words strays by each", () => {
+    expect(
+      strayingOf({
+        description: "A port must be branded and should never be a bare number.",
+        must: "a()",
+        never: "b()",
+      }),
+    ).toEqual([{ _tag: "Mixed", word: "should" }]);
+    expect(
+      strayingOf({
+        description: "A file should be small and should not do two jobs; it must never grow.",
+        should: "a()",
+        shouldNot: "b()",
+      }),
+    ).toEqual([
+      { _tag: "Mixed", word: "must" },
+      { _tag: "Mixed", word: "never" },
+    ]);
+  });
+
+  it("lists each rule that strays, with its file and how, then the tips", () => {
+    const entries: ReadonlyArray<RuleEntry> = [
+      {
+        id: "data/ports",
+        scope: "/repo",
+        file: "/repo/.adhere/data/ports.md",
+        rule: { description: "A port is branded.", must: "a()" },
+      },
+      {
+        id: "data/ids",
+        scope: "/repo",
+        rule: {
+          description: "An id must be branded, never a bare string.",
+          must: "a()",
+          never: "b()",
+        },
+      },
+      {
+        id: "style/small",
+        scope: "/repo",
+        rule: { description: "A file must be small.", should: "a()", shouldNot: "b()" },
+      },
+    ];
+    expect(formatStrays(straysAmong(entries), "/repo")).toEqual([
+      "2 rules are not worded as the rule writing tips recommend:",
+      "  data/ports (.adhere/data/ports.md)",
+      '    The description does not say "must", though the rule has a must example.',
+      "    The rule has no never example. Rules with one example of each kind judge best.",
+      "  style/small",
+      '    The description does not say "should", though the rule has a should example.',
+      '    The description does not say "should not", though the rule has a should not example.',
+      '    The description says "must", a requirement\'s word, but the rule is a guideline.',
+      `Rule writing tips: ${TIPS_URL}`,
+    ]);
+    expect(formatStrays(straysAmong(entries.slice(1, 2)), "/repo")).toEqual([
+      "Every rule is worded as the rule writing tips recommend.",
+    ]);
+  });
+
+  it("every rule of the effect preset is worded as the tips recommend", async () => {
+    const fs = FileSystem.layerNoop({
+      readDirectory: (directory) => Effect.promise(() => readdir(directory, { recursive: true })),
+      readFileString: (file) => Effect.promise(() => readFile(file, "utf8")),
+    });
+    const rules = await Effect.runPromise(
+      loadRules(fileURLToPath(presets.effect.rules)).pipe(
+        Effect.provide(Layer.merge(fs, Path.layer)),
+      ),
+    );
+    expect(Object.keys(rules)).toHaveLength(26);
+    expect(Record.filter(Record.map(rules, strayingOf), (straying) => straying.length > 0)).toEqual(
+      {},
+    );
+  });
+});
+
 describe("init", () => {
   it("scaffolds config and example rules without clobbering existing files", async () => {
     const root = join(tmpdir(), `adhere-init-${Date.now()}`);
@@ -842,6 +973,17 @@ describe("init", () => {
     expect(second.created).toEqual([]);
     expect(second.skipped).toContain(".adhere/config.ts");
     expect(second.skipped).toContain(".adhere/style/prefer-small-files.md");
+  });
+
+  it("scaffolds example rules worded as the rule writing tips recommend", async () => {
+    const root = join(tmpdir(), `adhere-init-wording-${Date.now()}`);
+    await Effect.runPromise(initProject(root));
+
+    for (const name of ["prefer-small-files", "name-domain-actions"]) {
+      const file = join(root, ".adhere", "style", `${name}.md`);
+      const rule = await Effect.runPromise(parseRuleMarkdown(await readFile(file, "utf8"), file));
+      expect(strayingOf(rule)).toEqual([]);
+    }
   });
 
   it("keeps a config at another accepted path instead of adding a second one", async () => {

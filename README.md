@@ -38,7 +38,7 @@ with a TypeSafe AI API key: the one `adhere login` saved, or
 adhere init                          # .adhere/config.ts and two example rules
 echo ".adhere/cache/" >> .gitignore
 adhere login                         # save your TypeSafe AI API key, once
-adhere validate                      # Checks your rules for contradictions using Jev
+adhere validate                      # Checks your rules' wording, and contradictions using Jev
 adhere lint                          # audit the working directory
 ```
 
@@ -87,7 +87,7 @@ adhere lint --limit 500        # judge at most 500 checks; the rest wait for the
 adhere lint --rpm 30           # send at most 30 requests a minute
 adhere lint --filter 'src/**'  # read only the files a glob matches
 adhere lint --log-level debug  # log each request to Jev on stderr
-adhere validate                # load the config and rules, ask Jev whether any contradict
+adhere validate                # check the rules' wording; ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
 adhere login                   # save a TypeSafe AI API key for later runs
 adhere logout                  # delete the saved key
@@ -175,16 +175,31 @@ kept, and no second one is added, even with `--force`.
 
 `adhere validate` loads the config, rule files, and presets the way `lint`
 does, so a file that fails to decode refuses here too, and it prints how many
-rules it loaded. `--preset` adds a built-in rule set, as for `lint`. It then
-asks Jev whether any two rules that apply to the same files contradict, so that
-no code can follow both: one request names, per rule, the rule it conflicts
-with, if any, and each named pair then gets a probability from a request of
-its own, holding only those two rules, since other rules beside them dilute
-the judgment. A pair above
-the threshold is printed with both rule files, and the exit code is 1. Two
-rules with the same id are not compared: a nested rule that shares an id
-shadows the other on purpose. When no two rules share files nothing is sent;
-otherwise `validate` needs the API key, as `lint` does.
+rules it loaded. `--preset` adds a built-in rule set, as for `lint`.
+
+Next it checks each rule's wording against the
+[rule writing tips](#rule-writing-tips), which sends nothing, and prints each
+rule worded otherwise with its file and how:
+
+- its description does not say a word its code is under, such as "never"
+  beside a `never` block;
+- it has code to write but no example of code that breaks it;
+- its description says the other kind of rule's words: "should" in a
+  requirement, or "must" or "never" in a guideline.
+
+A rule with only code that must never be written needs no `must` example, as
+[Rules as Markdown files](#rules-as-markdown-files) explains. The tips are
+advice, so the wording does not change the exit code.
+
+It then asks Jev whether any two rules that apply to the same files
+contradict, so that no code can follow both: one request names, per rule, the
+rule it conflicts with, if any, and each named pair then gets a probability
+from a request of its own, holding only those two rules, since other rules
+beside them dilute the judgment. A pair above the threshold is printed with
+both rule files, and the exit code is 1. Two rules with the same id are not
+compared: a nested rule that shares an id shadows the other on purpose. When
+no two rules share files nothing is sent; otherwise `validate` needs the API
+key, as `lint` does.
 
 ### Login
 
@@ -334,7 +349,8 @@ violations with the fewest false positives. In general:
 
 On the Effect preset, rules written this way cut the findings Jev got wrong at
 the default threshold from 6 to 1, and caught as many violations. For more
-about the evaluations, see [the eval](eval/README.md).
+about the evaluations, see [the eval](eval/README.md). `adhere validate` lists
+each rule worded otherwise.
 
 ### Presets
 

@@ -22,6 +22,7 @@ import { findContradictions, formatContradictions } from "#contradictions.ts";
 import { initProject } from "#init.ts";
 import { type PresetName, presetNames } from "#presets.ts";
 import { globalRuleSet } from "#rules.ts";
+import { formatStrays, straysAmong } from "#wording.ts";
 import {
   Console,
   Effect,
@@ -210,25 +211,30 @@ export const validateLayer = (overrides: Overrides) =>
   );
 
 /**
- * `adhere validate`: everything `lint` loads, then Jev on whether any two rules
- * that apply to the same files contradict. A config, rule file, or preset that
- * does not decode refuses here the way it would refuse `lint`.
+ * `adhere validate`: everything `lint` loads, then how each rule's wording
+ * differs from the README's rule writing tips, then Jev on whether any two
+ * rules that apply to the same files contradict. Only a contradiction fails
+ * the run: the tips are advice. A config, rule file, or preset that does not
+ * decode refuses here the way it would refuse `lint`.
  */
 export const validateCommand = Command.make("validate", { preset }, () =>
   Effect.gen(function* () {
     const config = yield* AdhereConfig;
     const path = yield* Path.Path;
-    const entries = config.scopedRules ?? globalRuleSet(config.rules, path.resolve());
-    const contradictions = yield* findContradictions(entries, config.threshold);
+    const root = path.resolve();
+    const entries = config.scopedRules ?? globalRuleSet(config.rules, root);
     const loaded = `${entries.length} ${entries.length === 1 ? "rule" : "rules"} loaded.`;
-    yield* Console.log([loaded, formatContradictions(contradictions)].join("\n"));
+    // The wording needs no request, so it shows before Jev is asked anything.
+    yield* Console.log([loaded, ...formatStrays(straysAmong(entries), root)].join("\n"));
+    const contradictions = yield* findContradictions(entries, config.threshold);
+    yield* Console.log(formatContradictions(contradictions));
     if (contradictions.length > 0) {
       return yield* ContradictionsReported.make({ count: contradictions.length });
     }
   }),
 ).pipe(
   Command.withDescription(
-    "Load the config, rule files, and presets the way lint does, then ask Jev whether any two rules that apply to the same files contradict each other.",
+    "Load the config, rule files, and presets the way lint does, check each rule's wording against the README's rule writing tips, then ask Jev whether any two rules that apply to the same files contradict each other.",
   ),
   Command.provide((input) => validateLayer({ presets: chosenPresets(input.preset) })),
 );
@@ -315,7 +321,10 @@ export const cli = Command.make("adhere").pipe(
   Command.withDescription("Lint a repository against the rules in .adhere/, judged by Jev."),
   Command.withExamples([
     { command: "adhere init", description: "Scaffold .adhere/config.ts and two example rules" },
-    { command: "adhere validate", description: "Check the config and rules without calling Jev" },
+    {
+      command: "adhere validate",
+      description: "Check the rules' wording, and ask Jev whether any contradict",
+    },
     { command: "adhere login", description: "Save your TypeSafe AI API key for later runs" },
     { command: "adhere lint", description: "Audit the working directory" },
     {
