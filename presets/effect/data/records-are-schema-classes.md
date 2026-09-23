@@ -1,5 +1,5 @@
 ---
-description: Domain records are defined with Schema.Class, not with a plain interface or type alias.
+description: Domain records should be defined with Schema.Class, not with a plain interface or type alias.
 ---
 
 ```ts

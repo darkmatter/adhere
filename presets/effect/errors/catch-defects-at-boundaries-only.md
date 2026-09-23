@@ -1,5 +1,5 @@
 ---
-description: Defects are caught only at a system boundary for logging or shutdown, never in business logic.
+description: Defects should be caught only at a system boundary for logging or shutdown, never in business logic.
 ---
 
 ```ts

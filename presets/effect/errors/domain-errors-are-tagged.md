@@ -1,5 +1,5 @@
 ---
-description: A domain failure is a Schema.TaggedError with its own tag.
+description: A domain failure should be a Schema.TaggedError with its own tag.
 ---
 
 ```ts

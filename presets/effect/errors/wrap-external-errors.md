@@ -1,5 +1,5 @@
 ---
-description: An error from an external library is wrapped in a tagged error with a Schema.Defect field, not passed through raw.
+description: An error from an external library should be wrapped in a tagged error with a Schema.Defect field, not passed through raw.
 ---
 
 ```ts

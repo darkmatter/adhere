@@ -1,5 +1,5 @@
 ---
-description: Layers are provided once at the program entry. A module that is not an entry point does not call Effect.provide.
+description: Layers should be provided once at the program entry. A module that is not an entry point does not call Effect.provide.
 ---
 
 ```ts

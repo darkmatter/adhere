@@ -1,5 +1,5 @@
 ---
-description: A test implementation of a service is built with Layer.sync or Layer.succeed over in-memory state.
+description: A test implementation of a service should be built with Layer.sync or Layer.succeed over in-memory state.
 ---
 
 ```ts

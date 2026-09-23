@@ -1,5 +1,5 @@
 ---
-description: The result of a parameterized layer constructor is stored in a module constant before it is used in more than one place.
+description: The result of a parameterized layer constructor should be stored in a module constant before it is used in more than one place.
 ---
 
 ```ts

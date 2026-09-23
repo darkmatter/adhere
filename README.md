@@ -141,7 +141,7 @@ export default {
   rules: {
     "data/brand-meaningful-primitives": {
       description:
-        "A primitive with semantic meaning, such as an id, email, URL, port, or count, is a branded schema.",
+        "A primitive with semantic meaning, such as an id, email, URL, port, or count, should be a branded schema.",
       reference: `
 const UserId = Schema.String.pipe(Schema.brand("UserId"))
 type UserId = typeof UserId.Type

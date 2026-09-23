@@ -1,5 +1,5 @@
 ---
-description: Service method signatures have no requirements. Dependencies are acquired inside the layer, not declared on the method.
+description: Service method signatures have no requirements. Dependencies should be acquired inside the layer, not declared on the method.
 ---
 
 ```ts

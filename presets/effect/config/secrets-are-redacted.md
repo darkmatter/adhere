@@ -1,5 +1,5 @@
 ---
-description: A token, password, or key is read with Config.redacted.
+description: A token, password, or key should be read with Config.redacted.
 ---
 
 ```ts

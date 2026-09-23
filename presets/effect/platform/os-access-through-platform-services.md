@@ -1,5 +1,5 @@
 ---
-description: File, path, process, terminal, and HTTP access goes through Effect's platform services (FileSystem, Path, ChildProcess, Terminal, HttpClient, KeyValueStore), acquired with yield*, not through node: builtins, Bun globals, or fetch. The Bun implementations are provided once at the entry point with BunServices.layer.
+description: File, path, process, terminal, and HTTP access goes through Effect's platform services (FileSystem, Path, ChildProcess, Terminal, HttpClient, KeyValueStore), acquired with yield*, not through node: builtins, Bun globals, or fetch. The Bun implementations should be provided once at the entry point with BunServices.layer.
 ---
 
 ```ts

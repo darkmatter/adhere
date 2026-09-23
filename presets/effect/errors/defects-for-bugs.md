@@ -1,5 +1,5 @@
 ---
-description: A typed error is for a failure the caller can handle. A bug or invariant violation is a defect.
+description: A typed error should be for a failure the caller can handle. A bug or invariant violation should be a defect.
 ---
 
 ```ts

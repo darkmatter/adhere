@@ -1,5 +1,5 @@
 ---
-description: A config value with constraints is read with Config.schema, not mapped and checked by hand.
+description: A config value with constraints should be read with Config.schema, not mapped and checked by hand.
 ---
 
 ```ts

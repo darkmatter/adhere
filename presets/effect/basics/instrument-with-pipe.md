@@ -1,5 +1,5 @@
 ---
-description: Timeouts, retries, logging, and spans are attached with .pipe, not written into the body of the effect.
+description: Timeouts, retries, logging, and spans should be attached with .pipe, not written into the body of the effect.
 ---
 
 ```ts

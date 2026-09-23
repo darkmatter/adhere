@@ -1,5 +1,5 @@
 ---
-description: Structured variants are Schema.TaggedClass in a Schema.Union and are matched with Match.tag and Match.exhaustive.
+description: Structured variants should be Schema.TaggedClass in a Schema.Union and matched with Match.tag and Match.exhaustive.
 ---
 
 ```ts

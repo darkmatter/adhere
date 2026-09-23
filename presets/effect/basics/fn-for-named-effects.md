@@ -1,5 +1,5 @@
 ---
-description: A named function that returns an Effect is defined with Effect.fn so the call site is traced.
+description: A named function that returns an Effect should be defined with Effect.fn so the call site is traced.
 ---
 
 ```ts

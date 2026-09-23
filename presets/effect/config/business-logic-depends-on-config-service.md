@@ -1,5 +1,5 @@
 ---
-description: Business logic depends on a config service. Config primitives are read only inside that service's layer.
+description: Business logic depends on a config service. Config primitives should be read only inside that service's layer.
 ---
 
 ```ts

@@ -1,5 +1,5 @@
 ---
-description: A primitive with semantic meaning, such as an id, email, URL, port, or count, is a branded schema.
+description: A primitive with semantic meaning, such as an id, email, URL, port, or count, should be a branded schema.
 ---
 
 ```ts

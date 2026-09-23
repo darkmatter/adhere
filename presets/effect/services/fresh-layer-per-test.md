@@ -1,5 +1,5 @@
 ---
-description: Each it.effect provides its own layer. it.layer is used only to share an expensive resource across a suite.
+description: Each it.effect provides its own layer. it.layer should be used only to share an expensive resource across a suite.
 ---
 
 ```ts

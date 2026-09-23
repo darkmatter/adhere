@@ -1,5 +1,5 @@
 ---
-description: JSON crossing a boundary is decoded with Schema.fromJsonString, not JSON.parse followed by a cast.
+description: JSON crossing a boundary should be decoded with Schema.fromJsonString, not JSON.parse followed by a cast.
 ---
 
 ```ts

@@ -1,5 +1,5 @@
 ---
-description: Sequential effectful steps are written with Effect.gen and yield*, not nested flatMap or callback chains.
+description: Sequential effectful steps should be written with Effect.gen and yield*, not nested flatMap or callback chains.
 ---
 
 ```ts
