@@ -1,6 +1,7 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { stripVTControlCharacters } from "node:util";
 import { Crypto, Effect, FileSystem, Layer, Path, Record } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { findContradictions, formatContradictions } from "../src/contradictions.ts";
@@ -11,6 +12,7 @@ import {
   type Preset,
   resolveConfig,
 } from "../src/config.ts";
+import { tokenize } from "../src/highlight.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
@@ -657,6 +659,48 @@ describe("pipeline", () => {
   });
 });
 
+describe("highlight", () => {
+  /** Each line of the code, with every classified token marked `[kind text]`. */
+  const marked = (code: string) =>
+    tokenize(code).map((line) =>
+      line.map(({ text, kind }) => (kind === undefined ? text : `[${kind} ${text}]`)).join(""),
+    );
+
+  it("marks keywords, type names, constants, strings, and comments", () => {
+    expect(marked('const port: number = Number(process.env.PORT ?? "80"); // why')).toEqual([
+      '[keyword const] port: [type number] = [type Number](process.env.PORT ?? [string "80"]); [comment // why]',
+    ]);
+  });
+
+  it("reads a word after a dot or before a colon as a property, not a keyword", () => {
+    expect(marked('cache.get(key); ({ type: "noul" as const })')).toEqual([
+      'cache.get(key); ({ type: [string "noul"] [keyword as] [keyword const] })',
+    ]);
+  });
+
+  it("reads a slash as a regex where an expression can start, and as division after a value", () => {
+    expect(marked("const fence = /[/]`{3,}/g; const half = total / 2 / scale;")).toEqual([
+      "[keyword const] fence = [string /[/]`{3,}/g]; [keyword const] half = total / [constant 2] / scale;",
+    ]);
+  });
+
+  it("cuts a comment or template that crosses lines into one token per line", () => {
+    expect(marked("/* one\n\n   two */ const s = `a\n${b}`;")).toEqual([
+      "[comment /* one]",
+      "",
+      "[comment    two */] [keyword const] s = [string `a]",
+      "[string ${b}`];",
+    ]);
+  });
+
+  it("gives back every character of the input, however malformed", () => {
+    for (const code of ['"unterminated', "/* open", "`open\n\n", "a\r\nb", "é → 🎉", "y / z /"]) {
+      const text = tokenize(code).map((line) => line.map((token) => token.text).join(""));
+      expect(text.join("\n")).toBe(code);
+    }
+  });
+});
+
 describe("render", () => {
   const result = { files: 1, judged: 1, cached: 0, skipped: 0, findings: [findingA] };
 
@@ -691,5 +735,29 @@ describe("render", () => {
     expect(colored).toContain("\u001b[38;2;219;91;81;1m×");
     expect(colored).toContain("\u001b[38;2;5;125;160;1m/repo/src/server.ts");
     expect(colored.endsWith("1 file, 1 judged, 0 cached, 2 skipped.")).toBe(true);
+  });
+
+  it("highlights the offending line and the hint on a terminal", () => {
+    const sgr = (code: string, text: string) => `\u001b[${code}m${text}\u001b[0m`;
+    const colored = render(result, { color: true });
+    expect(colored).toContain(
+      ` ${sgr("2", "2")} │ ${sgr("34", "const")} port: ${sgr("36", "number")} = ${sgr("36", "Number")}(process.env.PORT);`,
+    );
+    expect(colored).toContain(
+      `${sgr("38;2;180;105;245", "  hint: ")}${sgr("34", "const")} ${sgr("36", "Port")} = ${sgr("36", "Schema")}.${sgr("36", "Int")}.pipe(${sgr("36", "Schema")}.brand(${sgr("32", '"Port"')}))`,
+    );
+  });
+
+  it("adds color and nothing else, and closes every color on the line that opens it", () => {
+    const reference =
+      "/* Decoded once,\n\n   at the edge. */\nconst message = `${file}:\n  ${line}`;";
+    const findings = [{ ...findingA, reference }];
+    const colored = render({ ...result, findings }, { color: true });
+    expect(colored.map((line) => stripVTControlCharacters(line))).toEqual(
+      render({ ...result, findings }),
+    );
+    for (const line of colored) {
+      expect(line.split("\u001b[").length - 1).toBe(2 * (line.split("\u001b[0m").length - 1));
+    }
   });
 });

@@ -1,11 +1,12 @@
+import { type Kind, tokenize } from "#highlight.ts";
 import type { AuditResult, Finding } from "#workflows/audit.ts";
 
 /**
- * The report as data: lines of spans, each span a part of the frame named by
- * its role. Layout measures text; only `serialize` turns a role into color, so
- * no width or blank line ever sees an escape code.
+ * The report as data: lines of spans, each span a part of the frame or a
+ * token of code, named by its role. Layout measures text; only `serialize`
+ * turns a role into color, so no width or blank line ever sees an escape code.
  */
-type Role = "error" | "path" | "lineNumber" | "underline" | "label";
+type Role = "error" | "path" | "lineNumber" | "underline" | "label" | Kind;
 
 interface Span {
   readonly text: string;
@@ -15,8 +16,10 @@ interface Span {
 type Line = ReadonlyArray<Span>;
 
 /**
- * SGR parameters per role, matching `vp lint`: truecolor (`38;2;R;G;B`), bold
- * with a trailing `;1`, and a dim line number.
+ * SGR parameters per role. The frame's match `vp lint`: truecolor
+ * (`38;2;R;G;B`), bold with a trailing `;1`, and a dim line number. The code's
+ * are the terminal's own colors (`3N`), so the user's theme picks shades that
+ * read on its background; none is magenta, which would run into the label.
  */
 const THEME: Readonly<Record<Role, string>> = {
   error: "38;2;219;91;81;1",
@@ -24,17 +27,24 @@ const THEME: Readonly<Record<Role, string>> = {
   lineNumber: "2",
   underline: "38;2;255;0;175",
   label: "38;2;180;105;245",
+  comment: "2",
+  string: "32",
+  constant: "33",
+  keyword: "34",
+  type: "36",
 };
 
 const span = (text: string, role?: Role): Span => (role === undefined ? { text } : { text, role });
 
 const isBlank = (line: Line): boolean => line.every((part) => part.text.trim().length === 0);
 
-/** A line as text, colored by role on a terminal. */
+/** A line as text, colored by role on a terminal. Whitespace has no color to show. */
 const serialize = (line: Line, color: boolean): string =>
   line
     .map(({ text, role }) =>
-      color && role !== undefined ? `\u001b[${THEME[role]}m${text}\u001b[0m` : text,
+      color && role !== undefined && text.trim().length > 0
+        ? `\u001b[${THEME[role]}m${text}\u001b[0m`
+        : text,
     )
     .join("");
 
@@ -45,9 +55,13 @@ const hanging = (label: Span, lines: ReadonlyArray<Line>): ReadonlyArray<Line> =
   return [[label, ...first], ...rest.map((line) => (isBlank(line) ? [] : [indent, ...line]))];
 };
 
-/** Code as lines, without the blank lines at either end. */
+/** Code as lines of spans, each token in the role of its kind. */
+const highlighted = (code: string): ReadonlyArray<Line> =>
+  tokenize(code).map((tokens) => tokens.map(({ text, kind }) => span(text, kind)));
+
+/** Code as highlighted lines, without the blank lines at either end. */
 const codeLines = (code: string): ReadonlyArray<Line> => {
-  const lines = code.split("\n").map((line) => [span(line)]);
+  const lines = highlighted(code);
   const first = lines.findIndex((line) => !isBlank(line));
   const last = lines.findLastIndex((line) => !isBlank(line));
   return first < 0 ? [] : lines.slice(first, last + 1);
@@ -72,10 +86,12 @@ const header = (finding: Finding): Line => [
 const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => {
   const number = String(finding.line);
   const gutter = span(" ".repeat(number.length + 2));
+  // A snippet is one line: `snippetOf` trims it out of the file.
+  const [code = []] = highlighted(finding.snippet);
   const underline = "─".repeat(Math.max(1, finding.snippet.trim().length));
   return [
     [gutter, span("╭─["), span(displayPath(finding.file, root), "path"), span(`:${number}:1]`)],
-    [span(" "), span(number, "lineNumber"), span(" │ "), span(finding.snippet)],
+    [span(" "), span(number, "lineNumber"), span(" │ "), ...code],
     [gutter, span("· "), span(underline, "underline")],
     [gutter, span("╰────")],
   ];
@@ -112,7 +128,7 @@ const summary = (result: AuditResult): ReadonlyArray<Line> => {
 };
 
 export interface RenderOptions {
-  /** Color the frame the way `vp lint` does on a terminal. */
+  /** Color the frame the way `vp lint` does on a terminal, and highlight the code. */
   readonly color?: boolean;
   readonly root?: string;
 }

@@ -55,8 +55,9 @@ Found 1 error.
 
 The header is the rule id, Jev's probability, and the rule's description. The
 hint is the rule's reference; a rule with only code to avoid shows that code,
-labeled `avoid:`, instead. The exit code is 0 when nothing is reported and 1
-when something is. It is also 1 when the run refuses, for example on an invalid
+labeled `avoid:`, instead. On a terminal, the report is in color and the code
+in it is highlighted. The exit code is 0 when nothing is reported and 1 when
+something is. It is also 1 when the run refuses, for example on an invalid
 config or rule file, a missing `TYPESAFE_API_KEY`, or an unknown command or
 flag; a refusal prints its reason.
 
