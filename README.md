@@ -73,7 +73,7 @@ refusal prints its reason.
 ```sh
 adhere lint                    # audit the working directory
 adhere lint --preset effect    # add a built-in rule set; the config becomes optional
-adhere lint --threshold 0.8    # replace the config's threshold; per-rule thresholds still apply
+adhere lint --threshold 0.9    # replace the config's threshold; per-rule thresholds still apply
 adhere lint --yes              # send the requests without asking first
 adhere validate                # load the config and rules, ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
@@ -161,7 +161,7 @@ import type { Config } from "@drkmttr/adhere";
 
 export default {
   model: "jev-latest", // optional, default "jev-latest"
-  threshold: 0.7, // optional, default 0.7
+  threshold: 0.8, // optional, default 0.8
   presets: ["effect"], // optional, built-in rule sets
   rules: {
     "data/brand-meaningful-primitives": {
@@ -273,7 +273,7 @@ case the config file is optional.
 ### Precedence
 
 Highest first: `--threshold` on the command line, the config file, presets in
-order (a later preset wins), then the defaults `jev-latest` and `0.7`. A rule
+order (a later preset wins), then the defaults `jev-latest` and `0.8`. A rule
 in `rules` replaces a preset rule with the same id. A rule's own `threshold`
 beats all of the above for that rule.
 

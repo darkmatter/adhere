@@ -110,7 +110,7 @@ adhere lint --threshold 0.9  # re-reads the cache, sends nothing
 
 Then, per rule, read the findings and decide:
 
-- Many hits at 0.70 to 0.80, mostly not violations: the description is too
+- Many hits at 0.80 to 0.90, mostly not violations: the description is too
   broad. Narrow it (say what is out of scope) or raise that rule's
   `threshold`. Prefer narrowing; a threshold hides, a sentence explains.
 - Hits on code that follows the pattern through a different API: the

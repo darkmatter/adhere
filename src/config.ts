@@ -86,7 +86,7 @@ export type Loaded<T extends { readonly rules?: unknown }> = Omit<T, "rules"> & 
 };
 
 export const DEFAULT_MODEL = "jev-latest";
-export const DEFAULT_THRESHOLD = 0.7;
+export const DEFAULT_THRESHOLD = 0.8;
 
 /** A config with its presets folded in and every default applied. */
 export interface ResolvedConfig {

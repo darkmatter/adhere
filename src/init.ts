@@ -15,7 +15,7 @@ export interface InitOptions {
 const CONFIG = `import type { Config } from "@drkmttr/adhere";
 
 export default {
-  threshold: 0.7,
+  threshold: 0.8,
 } satisfies Config;
 `;
 

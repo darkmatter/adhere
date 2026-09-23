@@ -320,7 +320,7 @@ describe("config", () => {
     );
     expect(resolveConfig(config)).toEqual({
       model: "jev-latest",
-      threshold: 0.7,
+      threshold: 0.8,
       rules: { "data/brand": { description: "d", reference: "r" } },
     });
   });
@@ -343,10 +343,10 @@ describe("config", () => {
     expect(decoded.rules).toBe("./team-rules");
   });
 
-  it("threshold precedence: command line, then config, then preset, then 0.7", async () => {
+  it("threshold precedence: command line, then config, then preset, then 0.8", async () => {
     const registry = { effect: { threshold: 0.9, rules: {} } };
     const bare = await Effect.runPromise(loaded({}));
-    expect(resolveConfig(bare).threshold).toBe(0.7);
+    expect(resolveConfig(bare).threshold).toBe(0.8);
     expect(resolveConfig(bare, { presets: ["effect"] }, registry).threshold).toBe(0.9);
     const configured = await Effect.runPromise(loaded({ presets: ["effect"], threshold: 0.6 }));
     expect(resolveConfig(configured, {}, registry).threshold).toBe(0.6);

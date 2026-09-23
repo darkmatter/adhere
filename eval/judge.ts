@@ -12,7 +12,7 @@
  * per file per arm. With a path, also writes every probability and each
  * request's size and token usage there.
  */
-import type { Rule } from "#config.ts";
+import { DEFAULT_THRESHOLD, type Rule } from "#config.ts";
 import { loadRules } from "#rules.ts";
 import { Credentials, CredentialsLive } from "#services/Credentials.ts";
 import {
@@ -30,7 +30,6 @@ import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 
 const SYSTEM_ONE = "https://api.typesafe.ai/v1/systemone";
 const MODEL = "jev-latest";
-const THRESHOLD = 0.7;
 
 type Ask = (model: string, lines: Lines, rules: Rules) => Body;
 
@@ -134,7 +133,7 @@ const auc = (positives: ReadonlyArray<number>, negatives: ReadonlyArray<number>)
 };
 
 const above = (probabilities: ReadonlyArray<number>) =>
-  `${probabilities.filter((p) => p > THRESHOLD).length}/${probabilities.length}`;
+  `${probabilities.filter((p) => p > DEFAULT_THRESHOLD).length}/${probabilities.length}`;
 
 const row = (cells: ReadonlyArray<string>) => `| ${cells.join(" | ")} |`;
 
@@ -251,10 +250,10 @@ const main = Effect.gen(function* () {
         "arm",
         "AUC",
         "rules separated",
-        `breaks > ${THRESHOLD}`,
-        `follows > ${THRESHOLD}`,
-        `off-target > ${THRESHOLD}`,
-        `src > ${THRESHOLD}`,
+        `breaks > ${DEFAULT_THRESHOLD}`,
+        `follows > ${DEFAULT_THRESHOLD}`,
+        `off-target > ${DEFAULT_THRESHOLD}`,
+        `src > ${DEFAULT_THRESHOLD}`,
         "used / estimated tokens",
       ],
       arms.map(([arm]) => [
