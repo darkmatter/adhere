@@ -153,6 +153,26 @@ are treated as intentional shadowing rather than contradictions.
 machine and still loads the repo's `config.ts` and Markdown rules from disk.
 For another platform, add `--target`, for example `bun-darwin-arm64`.
 
+## Release
+
+Releases are cut by CI from pushed version tags. From a clean, up-to-date
+`main`, push the release tag:
+
+```sh
+git tag v0.3.0
+git push origin v0.3.0
+```
+
+The tag push starts `.github/workflows/release.yaml`, which checks out `main`,
+derives `0.3.0` from `v0.3.0`, and runs `bun run release -- --ci 0.3.0`.
+Release-it bumps `package.json`, commits `chore: release v0.3.0` back to
+`main`, skips npm publish, and creates the GitHub Release for the existing tag.
+
+Publishing stays in `.github/workflows/publish.yaml`: the published GitHub
+Release triggers the OIDC trusted-publisher job, which verifies that
+`package.json` matches the release tag and then runs
+`npm publish --access public --provenance`. No npm token is used.
+
 ## How a file is judged
 
 1. One Jev request per file, with the file's numbered lines and every rule as
