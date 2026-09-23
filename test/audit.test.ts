@@ -1870,10 +1870,10 @@ describe("render", () => {
   const sgr = (code: string, text: string) => `\u001b[${code}m${text}\u001b[0m`;
 
   it("colors only the rule red in the header on a terminal and counts skipped files", () => {
-    const red = "38;2;184;20;81;1";
+    const red = "38;2;164;20;71;1";
     const colored = render({ ...result, skipped: 2 }, { color: true }).join("\n");
     expect(colored).toContain(
-      `  ${sgr(red, "×")} ${sgr(red, "a")} (${sgr("38;5;156", "0.90")}): ${sgr("38;2;245;245;250", "Ports are branded.")}`,
+      `  ${sgr(red, "×")} ${sgr(red, "a")} (${sgr("38;5;156", "0.90")}): ${sgr("38;2;230;230;255", "Ports are branded.")}`,
     );
     expect(colored).toContain("\u001b[38;2;5;125;160;1m/repo/src/server.ts");
     expect(colored.endsWith("1 file, 1 judged, 0 cached, 2 skipped.")).toBe(true);
