@@ -77,6 +77,15 @@ To add a study, write `studies/<name>.ts` that calls `runStudy` from
 `harness.ts` with its arms, and `studies/<name>.md` with the question, the
 arms' exact wording, the results, and what was decided.
 
+## Other repos
+
+`repos/` holds `adhere lint`'s findings on other codebases, one directory per
+repo and one file per rule, as pairs to label. The harness does not score them
+yet.
+
+- [alchemy](repos/alchemy/README.md): 4,916 findings from 25 rules, on
+  alchemy-run/alchemy at `8a284d0`.
+
 ## Studies
 
 All on jev-1.13.0, on 2026-09-23, and scored against `labels.json` as
