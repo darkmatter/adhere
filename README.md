@@ -431,3 +431,7 @@ runs. The publish workflow can be run manually for an already-created release
 tag if a publish needs to be retried; it skips every package whose version is
 already on npm. The main package's `files` list keeps it to `bin/`, `src/`,
 `presets/`, and `skills/`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

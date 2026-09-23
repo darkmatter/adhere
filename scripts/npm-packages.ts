@@ -11,7 +11,7 @@
  */
 import packageJson from "../package.json";
 import { $ } from "bun";
-import { rm } from "node:fs/promises";
+import { copyFile, rm } from "node:fs/promises";
 
 process.chdir(new URL("../", import.meta.url).pathname);
 
@@ -37,10 +37,13 @@ const build = async () => {
     const executable = platform.os === "win32" ? "adhere.exe" : "adhere";
     await rm(directory, { recursive: true, force: true });
     await $`bun build --compile --minify --sourcemap --target=${platform.target} src/main.ts --asset ./presets --outfile ${directory}/bin/${executable}`;
+    // The executable is a copy of the software, so it carries the license.
+    await copyFile("LICENSE", `${directory}/LICENSE`);
     await writeJson(`${directory}/package.json`, {
       name: packageName(platform),
       version: packageJson.version,
       description: `The adhere executable for ${platform.os}-${platform.cpu}. Install ${packageJson.name}, which depends on it.`,
+      license: packageJson.license,
       repository: packageJson.repository,
       os: [platform.os],
       cpu: [platform.cpu],

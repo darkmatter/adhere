@@ -3,6 +3,7 @@
   "version": "0.7.1",
   "private": false,
   "description": "Lints a repository against the rules in .adhere/, judged by Jev.",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/darkmatter/adhere.git"
