@@ -61,15 +61,22 @@ Optional prose for readers on GitHub. adhere ignores it.
 ```ts
 // Correct code lifted from this repo, trimmed to the pattern.
 ```
+
+```ts avoid
+// Optional: the incorrect form this rule catches, as it appeared in the repo.
+```
 ````
 
 Rules for the rule:
 
 - `description` is one sentence, positive, specific. Jev reads it with the
   reference; vague words ("properly", "correctly") give it nothing to judge.
-- The reference is real code from the repo, not invented. Never include
-  incorrect code; Jev compares files to the reference, so a "bad" example
-  teaches the wrong thing.
+- The reference is real code from the repo, not invented, and only correct
+  code: Jev compares files to it, so incorrect code there teaches the wrong
+  thing. Incorrect code goes in a fence tagged `avoid`, which Jev reads as what
+  a violation looks like. Add one when violations have a recognizable shape,
+  ideally one found in the repo's history. A rule with no single correct form
+  can be only an `avoid` block.
 - One pattern per file. Two patterns in one reference blur the probability.
 - `threshold` is optional. Start without it; set it in step 5 if needed.
 

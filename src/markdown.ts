@@ -14,8 +14,13 @@ import { Effect, Schema } from "effect";
  *     const reference = "the correct code"
  *     ```
  *
- * The reference is the first fenced code block. Without a fence, it is the
- * whole body. `threshold` is optional.
+ *     ```ts avoid
+ *     const avoided = "what a violation looks like"
+ *     ```
+ *
+ * The reference is the first fenced code block; `avoid` in a fence's info
+ * string marks the code to avoid instead. A rule has either or both. Without a
+ * fence, the whole body is the reference. `threshold` is optional.
  */
 const FrontMatter = Schema.Struct({
   description: Schema.String,
@@ -23,7 +28,8 @@ const FrontMatter = Schema.Struct({
 });
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
-const FENCE = /^ {0,3}(`{3,}|~{3,})[^\n]*\n([\s\S]*?)\n {0,3}\1[ \t]*$/m;
+const FENCE = /^ {0,3}(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n {0,3}\1[ \t]*$/gm;
+const AVOID = "avoid";
 
 const unquote = (value: string): string => {
   const trimmed = value.trim();
@@ -44,9 +50,35 @@ const parseFrontMatter = (block: string): Record<string, string> => {
   return fields;
 };
 
-const referenceOf = (body: string): string => {
-  const fence = FENCE.exec(body);
-  return (fence?.[2] ?? body).trim();
+interface Fence {
+  readonly avoid: boolean;
+  readonly code: string;
+}
+
+const fencesOf = (body: string): ReadonlyArray<Fence> =>
+  Array.from(body.matchAll(FENCE), (match) => ({
+    avoid: (match[2] ?? "")
+      .trim()
+      .split(/\s+/)
+      .some((word) => word.toLowerCase() === AVOID),
+    code: (match[3] ?? "").trim(),
+  }));
+
+/** An empty block counts as no block. */
+const nonEmpty = (code: string | undefined): string | undefined =>
+  code === undefined || code.length === 0 ? undefined : code;
+
+/** The reference and the code to avoid, each left out when the body has none. */
+const codeOf = (body: string): Pick<Rule, "reference" | "avoid"> => {
+  const fences = fencesOf(body);
+  const reference = nonEmpty(
+    fences.length === 0 ? body.trim() : fences.find((fence) => !fence.avoid)?.code,
+  );
+  const avoid = nonEmpty(fences.find((fence) => fence.avoid)?.code);
+  return {
+    ...(reference === undefined ? {} : { reference }),
+    ...(avoid === undefined ? {} : { avoid }),
+  };
 };
 
 export const parseRuleMarkdown = (
@@ -65,11 +97,11 @@ export const parseRuleMarkdown = (
         ConfigUnavailable.make({ message: `${file}: ${problem.message}` }),
       ),
     );
-    const reference = referenceOf(match[2]);
-    if (reference.length === 0) {
+    const code = codeOf(match[2]);
+    if (code.reference === undefined && code.avoid === undefined) {
       return yield* ConfigUnavailable.make({
-        message: `${file}: the body is the reference code and cannot be empty`,
+        message: `${file}: the body needs reference code, a fence tagged avoid, or both`,
       });
     }
-    return { ...front, reference };
+    return { ...front, ...code };
   });

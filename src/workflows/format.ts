@@ -24,8 +24,8 @@ export interface RenderOptions {
 
 const isBlank = (line: string): boolean => line.trim().length === 0;
 
-const referenceLines = (reference: string): ReadonlyArray<string> => {
-  const lines = reference.split("\n");
+const codeLines = (code: string): ReadonlyArray<string> => {
+  const lines = code.split("\n");
   const first = lines.findIndex((line) => !isBlank(line));
   if (first < 0) return [];
   let last = lines.length - 1;
@@ -36,12 +36,16 @@ const referenceLines = (reference: string): ReadonlyArray<string> => {
 /**
  * One diagnostic, in the frame `vp lint` prints on a terminal: a red header,
  * the offending line, a pink underline, and the reference code as the hint.
+ * A rule without a reference shows its code to avoid instead, labeled so.
  */
 const frame = (finding: Finding, options: RenderOptions): ReadonlyArray<string> => {
   const color = options.color === true;
   const digits = String(finding.line);
   const gutter = " ".repeat(digits.length + 2);
-  const [hint = "", ...rest] = referenceLines(finding.reference);
+  const [label, code] =
+    finding.reference === undefined ? ["avoid", finding.avoid ?? ""] : ["hint", finding.reference];
+  const prefix = `  ${label}: `;
+  const [hint = "", ...rest] = codeLines(code);
   const header = `${finding.rule} (${finding.probability.toFixed(2)})`;
   return [
     `  ${red("×", color)} ${red(header, color)}: ${red(finding.description, color)}`,
@@ -49,8 +53,8 @@ const frame = (finding: Finding, options: RenderOptions): ReadonlyArray<string> 
     ` ${dim(digits, color)} │ ${finding.snippet}`,
     `${gutter}· ${pink("─".repeat(Math.max(1, finding.snippet.trim().length)), color)}`,
     `${gutter}╰────`,
-    `${helpTint("  hint: ", color)}${hint}`,
-    ...rest.map((line) => (isBlank(line) ? "" : `        ${line}`)),
+    `${helpTint(prefix, color)}${hint}`,
+    ...rest.map((line) => (isBlank(line) ? "" : `${" ".repeat(prefix.length)}${line}`)),
   ];
 };
 

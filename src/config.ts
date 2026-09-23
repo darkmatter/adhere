@@ -6,9 +6,18 @@ export type RuleId = string;
 
 export const Rule = Schema.Struct({
   description: Schema.String,
-  reference: Schema.String,
+  /** Correct code: the pattern a file should follow. */
+  reference: Schema.optionalKey(Schema.String),
+  /** Incorrect code: what a violation looks like. */
+  avoid: Schema.optionalKey(Schema.String),
   threshold: Schema.optionalKey(Schema.Finite),
-});
+}).check(
+  Schema.makeFilter((rule) =>
+    rule.reference !== undefined || rule.avoid !== undefined
+      ? undefined
+      : "a rule needs a reference, code to avoid, or both",
+  ),
+);
 export interface Rule extends Schema.Schema.Type<typeof Rule> {}
 
 export type Rules = Readonly<Record<RuleId, Rule>>;

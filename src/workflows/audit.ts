@@ -10,7 +10,8 @@ import { type Crypto, Effect, Record } from "effect";
 export interface Finding {
   readonly rule: RuleId;
   readonly description: string;
-  readonly reference: string;
+  readonly reference?: string;
+  readonly avoid?: string;
   readonly file: string;
   readonly line: number;
   readonly snippet: string;
@@ -43,6 +44,19 @@ const fileResult = (
 
 const isEmpty = Record.isEmptyReadonlyRecord;
 
+/**
+ * What a judgment depends on besides the file. A rule without code to avoid
+ * hashes what every rule hashed before `avoid` existed, so its cached
+ * judgments survive the upgrade.
+ */
+const fingerprintOf = (model: string, rule: Rule) =>
+  sha256(
+    model +
+      rule.description +
+      (rule.reference ?? "") +
+      (rule.avoid === undefined ? "" : `\u0000avoid\u0000${rule.avoid}`),
+  );
+
 export const runAudit: Effect.Effect<
   AuditResult,
   WalkUnavailable | JevUnavailable,
@@ -66,7 +80,7 @@ export const runAudit: Effect.Effect<
       Object.entries(configuredRules(file.path)),
       ([id, rule]) =>
         Effect.map(
-          sha256(config.model + rule.description + rule.reference),
+          fingerprintOf(config.model, rule),
           (fingerprint) =>
             [
               id,
@@ -116,6 +130,7 @@ export const runAudit: Effect.Effect<
                 rule: id,
                 description: k.rule.description,
                 reference: k.rule.reference,
+                avoid: k.rule.avoid,
                 file: file.path,
                 line: judgment.line,
                 snippet: judgment.snippet ?? "",

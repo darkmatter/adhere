@@ -1,9 +1,9 @@
 # adhere
 
-A linter for rules a normal linter cannot check. A rule is a piece of correct
-reference code plus a one-sentence description. For each source file, adhere
-asks [Jev](https://typesafe.ai) (TypeSafe AI's System One model) whether the
-file diverges from each rule's reference, gets a calibrated probability per
+A linter for rules a normal linter cannot check. A rule is a one-sentence
+description plus correct reference code, code to avoid, or both. For each
+source file, adhere asks [Jev](https://typesafe.ai) (TypeSafe AI's System One
+model) whether the file breaks each rule, gets a calibrated probability per
 rule, and reports the ones above a threshold with the line Jev points at. The
 report uses the same frame as `vp lint`.
 
@@ -54,7 +54,8 @@ Found 1 error.
 ```
 
 The header is the rule id, Jev's probability, and the rule's description. The
-hint is the rule's reference. The exit code is 0 when nothing is reported and 1
+hint is the rule's reference; a rule with only code to avoid shows that code,
+labeled `avoid:`, instead. The exit code is 0 when nothing is reported and 1
 when something is. It is also 1 when the run refuses, for example on an invalid
 config or rule file, a missing `TYPESAFE_API_KEY`, or an unknown command or
 flag; a refusal prints its reason.
@@ -128,6 +129,7 @@ export default {
 const UserId = Schema.String.pipe(Schema.brand("UserId"))
 type UserId = typeof UserId.Type
 `,
+      avoid: "type UserId = string", // optional: what a violation looks like
       threshold: 0.8, // optional per-rule override
     },
   },
@@ -154,7 +156,8 @@ directory exists, it is read without any config.
 
 A file is front matter, then a body. The first fenced code block in the body
 is the reference; prose around it renders on GitHub and is ignored. Without a
-fence, the whole body is the reference.
+fence, the whole body is the reference. A fence tagged `avoid` after its
+language holds code to avoid instead: what a violation looks like.
 
 ````md
 ---
@@ -170,11 +173,25 @@ const Port = Schema.Int.pipe(
   Schema.brand("Port"),
 );
 ```
+
+Not this:
+
+```ts avoid
+const port: number = Number(process.env.PORT);
+```
 ````
 
-`description` is required. `threshold` is optional. A file that fails
-validation refuses the run with its path in the message. `loadRules(directory)`
-from the package root does the same load for your own tooling.
+`description` is required, with a reference, code to avoid, or both.
+`threshold` is optional. A file that fails validation refuses the run with its
+path in the message. `loadRules(directory)` from the package root does the same
+load for your own tooling.
+
+With a reference, Jev is asked whether the file diverges from it, and code to
+avoid, when there is some, is its example of diverging. With only code to
+avoid, Jev is asked whether the file contains it. That suits a rule with no
+single correct form to show, such as a hand-rolled retry loop or an error
+caught and dropped. Neither goes in the other's place: code to avoid in the
+reference reads to Jev as the pattern to follow.
 
 Nested `.adhere/` directories are also discovered, except under
 `node_modules/`, `dist/`, and the other skipped directories (above). A rule in
@@ -221,8 +238,10 @@ beats all of the above for that rule.
 ## How a file is judged
 
 1. One Jev request per file, with the file's numbered lines and every rule as
-   the state, and one `noul` (yes/no probability) question per rule. Every
-   question shares the state cost of the request.
+   the state, and one `noul` (yes/no probability) question per rule: whether
+   the file diverges from the reference or, for a rule with only code to
+   avoid, whether it contains that code. Every question shares the state cost
+   of the request.
 2. A second request only when at least one rule's probability is above its
    threshold: one `choice` question per flagged rule over the file's non-blank
    lines, which yields the line to report. A file with more than 255 non-blank

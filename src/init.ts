@@ -43,6 +43,16 @@ export const loadCustomerProfile = (customerId: CustomerId) =>
     return yield* CustomerStore.find(customerId);
   });
 \`\`\`
+
+A fence tagged \`avoid\` shows what a violation looks like. It is optional, and
+a rule can have one without the block above.
+
+\`\`\`ts avoid
+export const handle = (id: string) =>
+  Effect.gen(function* () {
+    return yield* CustomerStore.find(id);
+  });
+\`\`\`
 `;
 
 const CONFIG_PATH = CONFIG_FILES[0];

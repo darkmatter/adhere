@@ -1,4 +1,4 @@
-import type { RuleId, Rules } from "#config.ts";
+import type { Rule, RuleId, Rules } from "#config.ts";
 import { Context, type Effect, Record, Schema } from "effect";
 
 export type { Rules };
@@ -36,11 +36,35 @@ export const needsBlocks = (lines: Lines): boolean =>
 
 const stateOf = (lines: Lines, rules: Rules) => ({
   code: lines.map((line, index) => `${index + 1} | ${line}`).join("\n"),
-  rules: Record.map(rules, ({ description, reference }) => ({
+  rules: Record.map(rules, ({ description, reference, avoid }) => ({
     description,
-    reference,
+    ...(reference === undefined ? {} : { reference }),
+    ...(avoid === undefined ? {} : { avoid }),
   })),
 });
+
+const field = (id: RuleId, key: "avoid" | "description" | "reference") =>
+  `state.rules["${id}"].${key}`;
+
+/**
+ * A rule with a reference asks whether the file diverges from it, with the
+ * code to avoid as an example when there is some. A rule without one asks
+ * whether the file contains the code to avoid.
+ */
+const judgeInstructions = (id: RuleId, rule: Rule): string =>
+  rule.reference === undefined
+    ? `Does state.code contain the pattern shown in ${field(id, "avoid")}, which ${field(id, "description")} rules out? Answer no if nothing in this file resembles it.`
+    : `Does state.code diverge from the pattern shown in ${field(id, "reference")}${
+        rule.avoid === undefined ? "" : `, for example by doing what ${field(id, "avoid")} shows`
+      }, as described by ${field(id, "description")}? Answer no if the pattern does not apply to this file.`;
+
+/** What the offending line does, for the line and block questions. */
+const offense = (id: RuleId, rule: Rule): string =>
+  rule.reference === undefined
+    ? `shows the pattern in ${field(id, "avoid")}`
+    : rule.avoid === undefined
+      ? `diverges from ${field(id, "reference")}`
+      : `diverges from ${field(id, "reference")} or resembles ${field(id, "avoid")}`;
 
 const lineCriteria = (lines: Lines, from: number, to: number): Record<string, string> => {
   const criteria: Record<string, string> = {};
@@ -54,9 +78,9 @@ const lineCriteria = (lines: Lines, from: number, to: number): Record<string, st
 export const judgeBody = (model: string, lines: Lines, rules: Rules) => ({
   model,
   state: stateOf(lines, rules),
-  questions: Record.map(rules, (_, id) => ({
+  questions: Record.map(rules, (rule, id) => ({
     type: "noul" as const,
-    instructions: `Does state.code diverge from the pattern shown in state.rules["${id}"].reference, as described by state.rules["${id}"].description? Answer no if the pattern does not apply to this file.`,
+    instructions: judgeInstructions(id, rule),
   })),
 });
 
@@ -68,11 +92,11 @@ export const locateBody = (
 ) => ({
   model,
   state: stateOf(lines, rules),
-  questions: Record.map(rules, (_, id) => {
+  questions: Record.map(rules, (rule, id) => {
     const block = blocks?.[id];
     return {
       type: "choice" as const,
-      instructions: `Which line of state.code most clearly diverges from state.rules["${id}"].reference?`,
+      instructions: `Which line of state.code most clearly ${offense(id, rule)}?`,
       criteria:
         block === undefined
           ? lineCriteria(lines, 1, lines.length)
@@ -92,9 +116,9 @@ export const blockBody = (model: string, lines: Lines, rules: Rules) => {
   return {
     model,
     state: stateOf(lines, rules),
-    questions: Record.map(rules, (_, id) => ({
+    questions: Record.map(rules, (rule, id) => ({
       type: "choice" as const,
-      instructions: `Which block of state.code contains the line that most clearly diverges from state.rules["${id}"].reference?`,
+      instructions: `Which block of state.code contains the line that most clearly ${offense(id, rule)}?`,
       criteria,
     })),
   };

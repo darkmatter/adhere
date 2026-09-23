@@ -40,8 +40,8 @@ const testCrypto = Layer.succeed(
   }),
 );
 
-const memoryCache = () => {
-  const entries = new Map<string, CacheEntry>();
+const memoryCache = (seed: Readonly<Record<string, CacheEntry>> = {}) => {
+  const entries = new Map<string, CacheEntry>(Object.entries(seed));
   return Layer.succeed(AuditCache, {
     get: (path) => Effect.sync(() => entries.get(path)),
     put: (path, entry) =>
@@ -162,6 +162,39 @@ describe("request bodies", () => {
     });
   });
 
+  it("a rule with code to avoid: asked whether the file contains it, or diverges as it shows", () => {
+    const avoidOnly = { description: "Domain code does not throw.", avoid: 'throw new Error("x")' };
+    const both = { ...a, avoid: "const port: number = 3000" };
+    const judged = judgeBody("jev-latest", code, { c: avoidOnly, d: both });
+
+    expect(judged.state.rules).toEqual({
+      c: { description: avoidOnly.description, avoid: avoidOnly.avoid },
+      d: { description: both.description, reference: both.reference, avoid: both.avoid },
+    });
+    expect(judged.questions).toEqual({
+      c: {
+        type: "noul",
+        instructions:
+          'Does state.code contain the pattern shown in state.rules["c"].avoid, which state.rules["c"].description rules out? Answer no if nothing in this file resembles it.',
+      },
+      d: {
+        type: "noul",
+        instructions:
+          'Does state.code diverge from the pattern shown in state.rules["d"].reference, for example by doing what state.rules["d"].avoid shows, as described by state.rules["d"].description? Answer no if the pattern does not apply to this file.',
+      },
+    });
+    expect(locateBody("jev-latest", code, { c: avoidOnly, d: both }).questions).toMatchObject({
+      c: {
+        instructions:
+          'Which line of state.code most clearly shows the pattern in state.rules["c"].avoid?',
+      },
+      d: {
+        instructions:
+          'Which line of state.code most clearly diverges from state.rules["d"].reference or resembles state.rules["d"].avoid?',
+      },
+    });
+  });
+
   it("over 255 lines: a choice over 20-line blocks, then a choice inside the chosen block", () => {
     const long = Array.from({ length: 300 }, (_, index) => `const v${index + 1} = ${index + 1};`);
     const blocks = blockBody("jev-latest", long, { a });
@@ -232,12 +265,18 @@ describe("config", () => {
     expect(refused.message).toContain("effect");
   });
 
-  it("refuses a rule without a reference", async () => {
+  it("refuses a rule with neither a reference nor code to avoid", async () => {
     const refused = await Effect.runPromise(
       Effect.flip(decodeConfig({ rules: { "data/brand": { description: "d" } } })),
     );
     expect(refused._tag).toBe("ConfigUnavailable");
-    expect(refused.message).toContain("reference");
+    expect(refused.message).toContain("a rule needs a reference, code to avoid, or both");
+  });
+
+  it("accepts a rule with only code to avoid", async () => {
+    const rule = { description: "Domain code does not throw.", avoid: "throw new Error()" };
+    const config = await Effect.runPromise(decodeConfig({ rules: { "errors/no-throw": rule } }));
+    expect(config.rules).toEqual({ "errors/no-throw": rule });
   });
 });
 
@@ -271,6 +310,51 @@ describe("markdown rules", () => {
   it("without a fence, the whole body is the reference", async () => {
     const rule = await parse("---\ndescription: d\n---\nconst x = 1\n");
     expect(rule).toEqual({ description: "d", reference: "const x = 1" });
+  });
+
+  it("a fence tagged avoid is the code to avoid, before or after the reference", async () => {
+    const rule = await parse(
+      [
+        "---",
+        "description: A domain failure is a tagged error.",
+        "---",
+        "",
+        "Not this:",
+        "",
+        "```ts avoid",
+        'throw new Error("not found")',
+        "```",
+        "",
+        "This:",
+        "",
+        "```ts",
+        'class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {}) {}',
+        "```",
+        "",
+      ].join("\n"),
+    );
+    expect(rule).toEqual({
+      description: "A domain failure is a tagged error.",
+      reference: 'class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {}) {}',
+      avoid: 'throw new Error("not found")',
+    });
+  });
+
+  it("a rule can be only code to avoid", async () => {
+    const rule = await parse(
+      "---\ndescription: A module has no default export.\n---\n\n```ts avoid\nexport default {}\n```\n",
+    );
+    expect(rule).toEqual({
+      description: "A module has no default export.",
+      avoid: "export default {}",
+    });
+  });
+
+  it("refuses a body with no code, naming the file", async () => {
+    const refused = await Effect.runPromise(
+      Effect.flip(parseRuleMarkdown("---\ndescription: d\n---\n\n", "rules/a.md")),
+    );
+    expect(refused.message).toContain("rules/a.md: the body needs reference code");
   });
 
   it("refuses a file without a description, naming the file", async () => {
@@ -529,6 +613,36 @@ describe("pipeline", () => {
     expect(edited.judged).toBe(1);
   });
 
+  it("keeps judgments cached before avoid existed, and re-judges a rule that gains code to avoid", async () => {
+    const hexByte = (byte: number) => byte.toString(16).padStart(2, "0");
+    const hex = (text: string) => Array.from(new TextEncoder().encode(text), hexByte).join("");
+    // The entry as an earlier adhere wrote it: the fingerprint hashed model, description, and reference.
+    const cache = memoryCache({
+      [source.path]: {
+        hash: hex(source.lines.join("\n")),
+        judgments: {
+          a: {
+            fingerprint: hex(`jev-latest${a.description}${a.reference}`),
+            probability: 0.9,
+            line: 2,
+            snippet: findingA.snippet,
+          },
+        },
+      },
+    });
+
+    const upgraded = recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } });
+    const kept = await audit({ rules: { a }, jev: upgraded.layer, cache });
+    expect(upgraded.calls).toEqual({ judge: [], locate: [] });
+    expect(kept.findings).toEqual([findingA]);
+
+    const withAvoid = { ...a, avoid: "const port: number = 3000" };
+    const edited = recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } });
+    const result = await audit({ rules: { a: withAvoid }, jev: edited.layer, cache });
+    expect(edited.calls.judge).toEqual([{ a: withAvoid }]);
+    expect(result.findings).toEqual([{ ...findingA, avoid: withAvoid.avoid }]);
+  });
+
   it("locates a cached judgment when a lower threshold flags it", async () => {
     const cache = memoryCache();
     const strict = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
@@ -561,6 +675,15 @@ describe("render", () => {
         "1 file, 1 judged, 0 cached.",
       ].join("\n"),
     );
+  });
+
+  it("shows the code to avoid, labeled, for a rule without a reference", () => {
+    const { reference: _, ...withoutReference } = findingA;
+    const finding = { ...withoutReference, avoid: 'throw new Error("x")\nthrow new Error("y")' };
+    const lines = render({ ...result, findings: [finding] }, { root: "/repo" });
+    expect(lines).toContain('  avoid: throw new Error("x")');
+    expect(lines).toContain('         throw new Error("y")');
+    expect(lines.some((line) => line.includes("hint:"))).toBe(false);
   });
 
   it("colors the header red on a terminal and counts skipped files", () => {
