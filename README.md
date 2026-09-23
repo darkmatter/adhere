@@ -308,5 +308,6 @@ before it can be given trusted publishers on npmjs.com. npm checks the
 workflow that started the run, so every package has two: `release.yaml`, which
 calls the publish workflow for tag releases, and `publish.yaml`, for manual
 runs. The publish workflow can be run manually for an already-created release
-tag if a publish needs to be retried; it skips platform packages whose version
-is already on npm.
+tag if a publish needs to be retried; it skips every package whose version is
+already on npm. The main package's `files` list keeps it to `bin/`, `src/`,
+`presets/`, and `skills/`.

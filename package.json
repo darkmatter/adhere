@@ -17,6 +17,12 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "bin",
+    "src",
+    "presets",
+    "skills"
+  ],
   "publishConfig": {
     "access": "public"
   },
