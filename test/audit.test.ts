@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Crypto, Effect, FileSystem, Layer, Path, Record } from "effect";
 import { describe, expect, it } from "vite-plus/test";
+import packageJson from "../package.json" with { type: "json" };
 import { findContradictions, formatContradictions } from "../src/contradictions.ts";
 import {
   AdhereConfig as AdhereConfigSchema,
@@ -20,6 +22,8 @@ import { AuditCache, type CacheEntry } from "../src/services/AuditCache.ts";
 import { blockBody, Jev, judgeBody, locateBody, type Rules } from "../src/services/Jev.ts";
 import { SourceWalker } from "../src/services/SourceWalker.ts";
 import { render, runAudit } from "../src/workflows/audit.ts";
+
+const repoRoot = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
 
 const a = {
   description: "Ports are branded.",
@@ -115,6 +119,21 @@ const findingA = {
   snippet: "const port: number = Number(process.env.PORT);",
   probability: 0.9,
 };
+
+describe("cli metadata", () => {
+  it("prints the package.json version", () => {
+    const result = Bun.spawnSync({
+      cmd: [process.execPath, "src/main.ts", "--version"],
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr.toString()).toBe("");
+    expect(result.stdout.toString().trim()).toBe(`adhere v${packageJson.version}`);
+  });
+});
 
 describe("request bodies", () => {
   const code = ["const x = 1;", "", "  const y = 2;"];

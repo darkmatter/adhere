@@ -153,6 +153,18 @@ are treated as intentional shadowing rather than contradictions.
 machine and still loads the repo's `config.ts` and Markdown rules from disk.
 For another platform, add `--target`, for example `bun-darwin-arm64`.
 
+## Release
+
+Bump `package.json`'s `version` in a PR and merge it to `main`. From that clean
+`main` checkout, run:
+
+```sh
+bun run release
+```
+
+The script creates GitHub release tag `v$(package.json version)` with generated
+notes. Publishing is still triggered by the GitHub Release `published` event.
+
 ## How a file is judged
 
 1. One Jev request per file, with the file's numbered lines and every rule as
