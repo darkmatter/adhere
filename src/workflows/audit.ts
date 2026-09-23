@@ -98,12 +98,16 @@ const rulesOf = (some: Readonly<Record<RuleId, PreparedRule>>) => Record.map(som
 const sizeOf = (some: Readonly<Record<string, unknown>>): number => Object.keys(some).length;
 
 /** A refusal that names the file it stopped at. Files finished before it are already cached. */
-const inFile = (file: ScannedFile) =>
-  Effect.mapError((problem: JevUnavailable) =>
-    JevUnavailable.make({
-      message: `${file.path}: ${problem.message}. Files judged before it are cached, so a rerun continues from there.`,
-    }),
-  );
+const inFile =
+  (file: ScannedFile) =>
+  <A, E, R>(self: Effect.Effect<A, E, R>) =>
+    Effect.mapError(self, (problem) =>
+      problem instanceof JevUnavailable
+        ? JevUnavailable.make({
+            message: `${file.path}: ${problem.message}. Files judged before it are cached, so a rerun continues from there.`,
+          })
+        : problem,
+    );
 
 export const planAudit: Effect.Effect<
   AuditPlan,
@@ -181,18 +185,14 @@ export const executeAudit = (
     const jev = yield* Jev;
     const cache = yield* AuditCache;
 
-    const auditFile = Effect.fn("audit.file")(function* ({
+    /** Judges and locates one file the plan left pending, with the requests that took. */
+    const judgeFile = Effect.fn("audit.judgeFile")(function* ({
       file,
-      skipped,
       hash,
       prepared,
       kept,
       pending,
     }: FilePlan) {
-      if (skipped) {
-        yield* progress({ requests: 0, findings: 0 });
-        return fileResult("skipped", []);
-      }
       const probabilities = isEmpty(pending)
         ? {}
         : yield* jev.judge(file.lines, rulesOf(pending)).pipe(inFile(file));
@@ -244,13 +244,28 @@ export const executeAudit = (
             : [];
         })
         .sort((a, b) => a.line - b.line);
-      yield* progress({
+      return {
+        result: fileResult(cached ? "cached" : "judged", findings),
         requests:
           (isEmpty(pending) ? 0 : judgeRequests(file.lines, rulesOf(pending))) +
           (isEmpty(flagged) ? 0 : locateRequests(file.lines, rulesOf(flagged))),
-        findings: findings.length,
-      });
-      return fileResult(cached ? "cached" : "judged", findings);
+      };
+    });
+
+    const auditFile = Effect.fn("audit.file")(function* (plan: FilePlan) {
+      const { result, requests } = plan.skipped
+        ? { result: fileResult("skipped", []), requests: 0 }
+        : yield* judgeFile(plan).pipe(
+            // Jev counted more than `fits` estimated. Its count decides: skipped the same way.
+            Effect.catchTag("JevOverflow", () =>
+              Effect.succeed({
+                result: fileResult("skipped", []),
+                requests: judgeRequests(plan.file.lines, rulesOf(plan.pending)),
+              }),
+            ),
+          );
+      yield* progress({ requests, findings: result.findings.length });
+      return result;
     });
 
     const results = yield* Effect.forEach(plan.files, auditFile, { concurrency: 8 });

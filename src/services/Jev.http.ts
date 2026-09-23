@@ -7,6 +7,7 @@ import {
   conflictBody,
   contradictBody,
   Jev,
+  JevOverflow,
   JevUnavailable,
   judgeBody,
   type Lines,
@@ -18,7 +19,7 @@ import {
   requestsOf,
   type Rules,
 } from "#services/Jev.ts";
-import { type Cause, Effect, Layer, Record, Schedule, Schema } from "effect";
+import { type Cause, Effect, Layer, Option, Record, Schedule, Schema } from "effect";
 import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http";
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 
@@ -39,20 +40,40 @@ const detailOf = (body: string): string => {
   return text.length === 0 ? "" : `: ${text.slice(0, 300)}`;
 };
 
+/** What Jev answers, with a 400, to a request over its context. */
+const Overflowed = Schema.fromJsonString(
+  Schema.Struct({ detail: Schema.Struct({ error_type: Schema.Literal("max_tokens_exceeded") }) }),
+);
+const isOverflow = (body: string): boolean =>
+  Option.isSome(Schema.decodeUnknownOption(Overflowed)(body));
+
 /**
- * A failed request as a refusal: for an answer outside 2xx, its status and
- * what Jev said, since the status alone does not say why; otherwise the cause.
+ * A request that failed. A 400 saying the request is over Jev's context is a
+ * `JevOverflow`, which skips the file. Any other answer outside 2xx refuses
+ * the run with its status and what Jev said, since the status alone does not
+ * say why, and a request that got no answer refuses with the cause.
  */
-const refusalOf = (problem: HttpClientError.HttpClientError | Cause.TimeoutError) => {
+const failed = (problem: HttpClientError.HttpClientError | Cause.TimeoutError) => {
   if (!HttpClientError.isHttpClientError(problem) || problem.reason._tag !== "StatusCodeError") {
-    return Effect.succeed(refused(`System One request failed: ${problem.message}`));
+    return Effect.fail(refused(`System One request failed: ${problem.message}`));
   }
   const { response } = problem.reason;
-  return Effect.map(
+  return Effect.flatMap(
     Effect.orElseSucceed(response.text, () => ""),
-    (body) => refused(`Jev answered HTTP ${response.status}${detailOf(body)}`),
+    (body): Effect.Effect<never, JevOverflow | JevUnavailable> =>
+      response.status === 400 && isOverflow(body)
+        ? Effect.fail(JevOverflow.make())
+        : Effect.fail(refused(`Jev answered HTTP ${response.status}${detailOf(body)}`)),
   );
 };
+
+/** Comparing rules has no file to skip, so a request over Jev's context refuses instead. */
+const refuseOverflow = <A>(
+  self: Effect.Effect<A, JevOverflow | JevUnavailable>,
+): Effect.Effect<A, JevUnavailable> =>
+  Effect.catchTag(self, "JevOverflow", () =>
+    Effect.fail(refused("Comparing the rules took a request over Jev's context")),
+  );
 
 export const JevLive = Layer.effect(Jev)(
   Effect.gen(function* () {
@@ -79,7 +100,7 @@ export const JevLive = Layer.effect(Jev)(
         ).pipe(Effect.orDie);
         const response = yield* client
           .execute(HttpClientRequest.bearerToken(request, apiKey))
-          .pipe(Effect.catch((problem) => Effect.flatMap(refusalOf(problem), Effect.fail)));
+          .pipe(Effect.catch(failed));
         return yield* HttpClientResponse.schemaBodyJson(Answers)(response).pipe(
           Effect.mapError((problem) =>
             refused(`System One response did not decode: ${problem.message}`),
@@ -127,7 +148,10 @@ export const JevLive = Layer.effect(Jev)(
       rules: ReadonlyArray<ComparedRule>,
       partners: ReadonlyArray<ReadonlyArray<number>>,
     ) {
-      const answers = yield* answersTo(conflictBody(config.model, rules, partners), ChoiceAnswers);
+      const answers = yield* answersTo(
+        conflictBody(config.model, rules, partners),
+        ChoiceAnswers,
+      ).pipe(refuseOverflow);
       return namedPairs(answers, partners);
     });
 
@@ -138,8 +162,9 @@ export const JevLive = Layer.effect(Jev)(
       return yield* Effect.forEach(
         pairs,
         (pair) =>
-          Effect.map(ask(contradictBody(config.model, rules, pair), NoulAnswers), ({ answers }) =>
-            pairProbability(answers, pair),
+          Effect.map(
+            ask(contradictBody(config.model, rules, pair), NoulAnswers).pipe(refuseOverflow),
+            ({ answers }) => pairProbability(answers, pair),
           ),
         { concurrency: 8 },
       );

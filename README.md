@@ -297,7 +297,9 @@ beats all of the above for that rule.
    about three bytes a token. When a file's questions would not fit in one
    request, they are split across several. A file whose code and longest
    question would not fit together, or that has more than 5100 lines, is
-   skipped and counted in the summary, and the rest of the run goes on.
+   skipped and counted in the summary, and the rest of the run goes on. So is
+   a file Jev itself counts as over its context, which text denser than the
+   estimate, such as CJK, can cause.
 
 ## Cache
 

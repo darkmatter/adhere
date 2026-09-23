@@ -8,17 +8,23 @@ export class JevUnavailable extends Schema.TaggedError<JevUnavailable>()("JevUna
   message: Schema.String,
 }) {}
 
+/**
+ * Jev's refusal of a request over its context. `fits` keeps such files from
+ * being sent, but by an estimate; this is Jev's own count disagreeing.
+ */
+export class JevOverflow extends Schema.TaggedError<JevOverflow>()("JevOverflow", {}) {}
+
 export class Jev extends Context.Service<
   Jev,
   {
     readonly judge: (
       lines: Lines,
       rules: Rules,
-    ) => Effect.Effect<Record<RuleId, number>, JevUnavailable>;
+    ) => Effect.Effect<Record<RuleId, number>, JevUnavailable | JevOverflow>;
     readonly locate: (
       lines: Lines,
       rules: Rules,
-    ) => Effect.Effect<Record<RuleId, number>, JevUnavailable>;
+    ) => Effect.Effect<Record<RuleId, number>, JevUnavailable | JevOverflow>;
     /**
      * Per rule, the partner Jev names as impossible to follow in the same code,
      * as `[rule, partner]` indexes into `rules`. A rule Jev names none for is
@@ -66,8 +72,9 @@ const encoder = new TextEncoder();
 
 /**
  * An estimate, meant to run high, of the tokens Jev reads for a value: one
- * per three bytes of its JSON. Code runs a little over three bytes a token,
- * prose about four.
+ * per three bytes of its JSON. Jev 1.13 reads numbered TypeScript at 3.2
+ * bytes a token, and this ran 12 to 16 percent high on the eval's requests.
+ * Text that packs more tokens into its bytes, such as CJK, can outrun it.
  */
 export const tokensOf = (value: unknown): number =>
   Math.ceil(encoder.encode(JSON.stringify(value)).length / 3);

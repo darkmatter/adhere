@@ -32,6 +32,7 @@ import {
   contradictBody,
   fits,
   Jev,
+  JevOverflow,
   JevUnavailable,
   judgeBody,
   locateBody,
@@ -1005,6 +1006,30 @@ describe("pipeline", () => {
     });
   });
 
+  it("skips a file Jev says is over its context, and judges the rest", async () => {
+    const dense: ScannedFile = {
+      path: "/repo/src/strings.ts",
+      lines: ["// 字", "// 字", "// 字", "// 字"],
+    };
+    const jev = Layer.succeed(Jev, {
+      judge: (lines) =>
+        lines.length === dense.lines.length
+          ? Effect.fail(JevOverflow.make())
+          : Effect.succeed({ a: 0.9, b: 0.2 }),
+      locate: () => Effect.succeed({ a: 2 }),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const result = await audit({ rules, jev, cache: memoryCache(), files: [source, dense] });
+    expect(result).toEqual({
+      files: 2,
+      judged: 1,
+      cached: 0,
+      skipped: 1,
+      findings: [findingA],
+    });
+  });
+
   it("locates a cached judgment when a lower threshold flags it", async () => {
     const cache = memoryCache();
     const strict = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
@@ -1243,21 +1268,18 @@ describe("credentials", () => {
 describe("jev over http", () => {
   /**
    * Judges one file through the live client, which answers 0.25 to every
-   * question it is sent, recording each request's authorization header and
-   * question ids. `respond` replaces the answer, to send a failure instead.
+   * question it is sent, or sends `reply` instead, recording each request's
+   * authorization header and question ids.
    */
   const judge = (
     key: Effect.Effect<Redacted.Redacted<string>, CredentialsUnavailable>,
     judgedRules: Rules = { a },
-    respond?: () => Response,
+    reply?: () => Response,
   ) => {
     const authorizations: Array<string | undefined> = [];
     const asked: Array<ReadonlyArray<string>> = [];
     const client = HttpClient.make((request) => {
       authorizations.push(request.headers.authorization);
-      if (respond !== undefined) {
-        return Effect.succeed(HttpClientResponse.fromWeb(request, respond()));
-      }
       const body: { readonly questions: Record<string, unknown> } =
         request.body._tag === "Uint8Array"
           ? JSON.parse(new TextDecoder().decode(request.body.body))
@@ -1265,7 +1287,9 @@ describe("jev over http", () => {
       const ids = Object.keys(body.questions);
       asked.push(ids);
       const answers = Object.fromEntries(ids.map((id) => [id, { noul: 0.25 }]));
-      return Effect.succeed(HttpClientResponse.fromWeb(request, Response.json({ answers })));
+      return Effect.succeed(
+        HttpClientResponse.fromWeb(request, reply?.() ?? Response.json({ answers })),
+      );
     });
     const layer = JevLive.pipe(
       Layer.provide([
@@ -1330,5 +1354,21 @@ describe("jev over http", () => {
       success: { a: 0.25, b: 0.25, c: 0.25 },
     });
     expect(asked).toEqual([["a", "b"], ["c"]]);
+  });
+
+  it("reads Jev's max_tokens_exceeded as an overflow, and any other 400 as a refusal", async () => {
+    const key = Effect.succeed(Redacted.make("tsk_saved"));
+    const overflow = () =>
+      Response.json({ detail: { error_type: "max_tokens_exceeded" } }, { status: 400 });
+    expect(await judge(key, { a }, overflow).judged).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "JevOverflow" },
+    });
+
+    const invalid = () => Response.json({ detail: "questions: field required" }, { status: 400 });
+    expect(await judge(key, { a }, invalid).judged).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "JevUnavailable" },
+    });
   });
 });
