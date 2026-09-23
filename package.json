@@ -5,10 +5,10 @@
   "description": "Lints a repository against reference code in adhere.config.ts, judged by Jev.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/darkmatter/adhere.git"
+    "url": "git+https://github.com/darkmatter/adhere.git"
   },
   "bin": {
-    "adhere": "./src/main.ts"
+    "adhere": "src/main.ts"
   },
   "type": "module",
   "imports": {
