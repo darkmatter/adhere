@@ -11,6 +11,12 @@
   "bin": {
     "adhere": "bin/adhere.js"
   },
+  "files": [
+    "bin",
+    "src",
+    "presets",
+    "skills"
+  ],
   "type": "module",
   "imports": {
     "#*": "./src/*"
@@ -18,12 +24,6 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "files": [
-    "bin",
-    "src",
-    "presets",
-    "skills"
-  ],
   "publishConfig": {
     "access": "public"
   },

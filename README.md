@@ -10,7 +10,7 @@ report uses the same frame as `vp lint`.
 
 Deterministic rules (substring matches, type checks) belong in a normal linter.
 
-A preset for effect is included which can be run without setup: 
+A preset for effect is included which can be run without setup:
 
 ```sh
 TYPESAFE_API_KEY=xxx npx @drkmttr/adhere lint --preset effect

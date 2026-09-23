@@ -21,10 +21,9 @@ import {
 } from "#rules.ts";
 import { Context, Effect, FileSystem, Layer, Path, Record } from "effect";
 
-export class AdhereConfig extends Context.Service<
-  AdhereConfig,
-  ResolvedConfig
->()("@drkmttr/adhere/services/AdhereConfig") {}
+export class AdhereConfig extends Context.Service<AdhereConfig, ResolvedConfig>()(
+  "@drkmttr/adhere/services/AdhereConfig",
+) {}
 
 const loadConfigFile = Effect.fn("AdhereConfig.load")(function* (file: string) {
   const path = yield* Path.Path;
@@ -72,14 +71,12 @@ export const AdhereConfigLive = (overrides: Overrides) =>
         });
       }
       const configFile = found[0];
-      const hasPreset =
-        overrides.presets !== undefined && overrides.presets.length > 0;
+      const hasPreset = overrides.presets !== undefined && overrides.presets.length > 0;
       const config: Decoded =
         configFile === undefined
           ? yield* decodeConfig({})
           : yield* loadConfigFile(path.join(cwd, configFile));
-      const discoveredEntries =
-        config.rules === undefined ? yield* loadAdhereRuleSet(cwd) : [];
+      const discoveredEntries = config.rules === undefined ? yield* loadAdhereRuleSet(cwd) : [];
       const hasProjectRules = discoveredEntries.length > 0;
       if (configFile === undefined && !hasProjectRules && !hasPreset) {
         return yield* ConfigUnavailable.make({
@@ -89,14 +86,10 @@ export const AdhereConfigLive = (overrides: Overrides) =>
       const projectEntries: RuleSet =
         config.rules === undefined
           ? discoveredEntries
-          : globalRuleSet(
-              yield* materializeRules(config.rules ?? {}, cwd),
-              cwd,
-            );
+          : globalRuleSet(yield* materializeRules(config.rules ?? {}, cwd), cwd);
       const rules = applicableRules(cwd, projectEntries);
-      const registry = yield* Effect.forEach(
-        presetsOf(config, overrides),
-        (name) => loadPreset(name, cwd),
+      const registry = yield* Effect.forEach(presetsOf(config, overrides), (name) =>
+        loadPreset(name, cwd),
       ).pipe(Effect.map(Record.fromEntries));
       const resolved = resolveConfig({ ...config, rules }, overrides, registry);
       const presetEntries = Object.entries(registry).flatMap(([, preset]) =>
