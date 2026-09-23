@@ -43,7 +43,7 @@ import {
   type Rules,
   tokensOf,
 } from "../src/services/Jev.ts";
-import { isInSkippedTree, SourceWalker } from "../src/services/SourceWalker.ts";
+import { isInSkippedTree, passesFilter, SourceWalker } from "../src/services/SourceWalker.ts";
 import {
   type AuditPlan,
   executeAudit,
@@ -657,6 +657,17 @@ describe("nested .adhere rules", () => {
 });
 
 describe("source walker", () => {
+  it("keeps the files a filter's globs match, and leaves out what a ! pattern matches", () => {
+    expect(passesFilter("src/a.ts", [])).toBe(true);
+    expect(passesFilter("src/deep/a.ts", ["src/**"])).toBe(true);
+    expect(passesFilter("lib/a.ts", ["src/**"])).toBe(false);
+    expect(passesFilter("src/billing.service.ts", ["**/*.service.ts"])).toBe(true);
+    expect(passesFilter("packages/web/a.ts", ["packages/{api,web}/**"])).toBe(true);
+    expect(passesFilter("src/gen/a.ts", ["src/**", "!src/gen/**"])).toBe(false);
+    expect(passesFilter("src/a.ts", ["!src/gen/**"])).toBe(true);
+    expect(passesFilter("src\\a.ts", ["src/*.ts"])).toBe(true);
+  });
+
   it("skips dependency, generated, and .adhere trees by whole path segment", () => {
     expect(isInSkippedTree("src/server.ts")).toBe(false);
     expect(isInSkippedTree("vendorized/lib.ts")).toBe(false);
@@ -838,9 +849,10 @@ const planOf = (options: {
   readonly rules: Rules;
   readonly files: ReadonlyArray<ScannedFile>;
   readonly cache: Layer.Layer<AuditCache>;
+  readonly limit?: number;
 }) =>
   Effect.runPromise(
-    planAudit.pipe(
+    planAudit({ limit: options.limit }).pipe(
       Effect.provide(
         Layer.mergeAll(
           Layer.succeed(AdhereConfig, {
@@ -875,6 +887,7 @@ describe("plan", () => {
       checks: 4,
       cached: 2,
       skipped: 0,
+      deferred: 0,
       requests: 1,
     });
   });
@@ -941,28 +954,95 @@ describe("plan", () => {
     prepared: {},
     kept: {},
     pending: {},
+    deferred: 0,
   });
   const summary = (fields: Omit<AuditPlan, "files">, files = 200): AuditPlan => ({
     files: Array.from({ length: files }, (_, index) => filePlan(`/repo/${index}.ts`)),
     ...fields,
   });
 
+  it("judges at most --limit checks, in path order, and leaves the rest waiting", async () => {
+    const cache = memoryCache();
+    // other.ts sorts first, so it takes a and b, and server.ts gets the last one.
+    const three = await planOf({ rules, files: [source, other], cache, limit: 3 });
+    expect(three.files.map((plan) => [Object.keys(plan.pending), plan.deferred])).toEqual([
+      [["a", "b"], 0],
+      [["a"], 1],
+    ]);
+    expect({ deferred: three.deferred, requests: three.requests }).toEqual({
+      deferred: 1,
+      requests: 2,
+    });
+
+    const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    const two = await planOf({ rules, files: [source, other], cache, limit: 2 });
+    const result = await Effect.runPromise(
+      executeAudit(two).pipe(Effect.provide(Layer.merge(jev.layer, cache))),
+    );
+    expect(jev.calls.judge).toEqual([{ a, b }]);
+    expect({ judged: result.judged, waiting: result.waiting }).toEqual({ judged: 1, waiting: 1 });
+
+    // The next run judges what waited, and asks nothing already cached.
+    const next = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    await Effect.runPromise(
+      executeAudit(await planOf({ rules, files: [source, other], cache, limit: 2 })).pipe(
+        Effect.provide(Layer.merge(next.layer, cache)),
+      ),
+    );
+    expect(next.calls.judge).toEqual([{ a, b }]);
+  });
+
   it("describes the plan: checks, the cache's share, and the requests the rest take", () => {
-    const partly = summary({ rules: 14, checks: 2800, cached: 1400, skipped: 3, requests: 197 });
+    const partly = summary({
+      rules: 14,
+      checks: 2800,
+      cached: 1400,
+      skipped: 3,
+      deferred: 0,
+      requests: 197,
+    });
     expect(describePlan(partly)).toEqual([
       "200 files and 14 rules: 2800 checks, 1400 cached, 3 files too long to judge.",
       "Judging the other 1400 takes 197 requests to Jev, plus 1 or more for each file with a finding.",
     ]);
     expect(sendQuestion(partly)).toBe("Send 197 requests to Jev?");
     expect(
-      describePlan(summary({ rules: 1, checks: 1, cached: 0, skipped: 0, requests: 1 }, 1)),
+      describePlan(
+        summary({ rules: 1, checks: 1, cached: 0, skipped: 0, deferred: 0, requests: 1 }, 1),
+      ),
     ).toEqual([
       "1 file and 1 rule: 1 check.",
       "Judging them takes 1 request to Jev, plus 1 or more for each file with a finding.",
     ]);
     expect(
-      describePlan(summary({ rules: 2, checks: 4, cached: 4, skipped: 0, requests: 0 }, 2))[1],
+      describePlan(
+        summary({ rules: 2, checks: 4, cached: 4, skipped: 0, deferred: 0, requests: 0 }, 2),
+      )[1],
     ).toBe("The cache answers every check.");
+    const limited = summary({
+      rules: 14,
+      checks: 2800,
+      cached: 1400,
+      skipped: 0,
+      deferred: 900,
+      requests: 42,
+    });
+    expect(describePlan(limited, { filter: ["src/**"], rpm: 30 })).toEqual([
+      "200 files matching the filter and 14 rules: 2800 checks, 1400 cached.",
+      "Judging 500 of the other 1400 takes 42 requests to Jev, plus 1 or more for each file with a finding. At 30 a minute, they take about 1 minute. The other 900 wait for a later run.",
+    ]);
+    expect(
+      describePlan(
+        summary({ rules: 2, checks: 4, cached: 0, skipped: 0, deferred: 4, requests: 0 }, 2),
+      )[1],
+    ).toBe("The limit leaves all 4 unjudged checks for a later run.");
+    const one = summary(
+      { rules: 1, checks: 4, cached: 0, skipped: 0, deferred: 1, requests: 3 },
+      4,
+    );
+    expect(describePlan(one)[1]).toBe(
+      "Judging 3 of them takes 3 requests to Jev, plus 1 or more for each file with a finding. The other 1 waits for a later run.",
+    );
     expect(progressLine({ files: 37, requests: 41, findings: 1 }, partly)).toBe(
       "37/200 files, 41 requests sent, 1 finding",
     );
@@ -980,6 +1060,7 @@ describe("pipeline", () => {
       judged: 1,
       cached: 0,
       skipped: 0,
+      waiting: 0,
       findings: [findingA],
     });
   });
@@ -997,6 +1078,7 @@ describe("pipeline", () => {
       judged: 0,
       cached: 1,
       skipped: 0,
+      waiting: 0,
       findings: [findingA],
     });
 
@@ -1068,6 +1150,7 @@ describe("pipeline", () => {
       judged: 1,
       cached: 0,
       skipped: 1,
+      waiting: 0,
       findings: [findingA],
     });
   });
@@ -1092,6 +1175,7 @@ describe("pipeline", () => {
       judged: 1,
       cached: 0,
       skipped: 1,
+      waiting: 0,
       findings: [findingA],
     });
   });
@@ -1153,7 +1237,7 @@ describe("highlight", () => {
 });
 
 describe("render", () => {
-  const result = { files: 1, judged: 1, cached: 0, skipped: 0, findings: [findingA] };
+  const result = { files: 1, judged: 1, cached: 0, skipped: 0, waiting: 0, findings: [findingA] };
 
   it("prints the vp-lint frame with the code to write as the hint", () => {
     expect(render(result, { root: "/repo" }).join("\n")).toBe(
@@ -1331,6 +1415,37 @@ describe("credentials", () => {
 });
 
 describe("jev over http", () => {
+  it("sends at most --rpm requests a minute, evenly spaced", async () => {
+    const sent: Array<number> = [];
+    const client = HttpClient.make((request) => {
+      sent.push(Date.now());
+      return Effect.succeed(
+        HttpClientResponse.fromWeb(request, Response.json({ answers: { a: { noul: 0.25 } } })),
+      );
+    });
+    const layer = JevLive.pipe(
+      Layer.provide([
+        Layer.succeed(HttpClient.HttpClient, client),
+        // 1200 a minute is one every 50 milliseconds.
+        Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules: {}, rpm: 1200 }),
+        Layer.succeed(Credentials, {
+          apiKey: Effect.succeed(Redacted.make("tsk_saved")),
+          file: Effect.succeed("/config/adhere/credentials.json"),
+          save: () => Effect.void,
+          remove: Effect.succeed(false),
+        }),
+      ]),
+    );
+    const four = Effect.gen(function* () {
+      const jev = yield* Jev;
+      for (let request = 0; request < 4; request++) yield* jev.judge(["const port = 3000;"], { a });
+    });
+    await Effect.runPromise(Effect.provide(four, layer));
+    const first = sent[0] ?? 0;
+    expect(sent).toHaveLength(4);
+    expect((sent.at(-1) ?? first) - first).toBeGreaterThanOrEqual(140);
+  });
+
   /**
    * Judges one file through the live client, which answers 0.25 to every
    * question it is sent, or sends `reply` instead, recording each request's

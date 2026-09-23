@@ -68,6 +68,33 @@ const threshold = Flag.float("threshold").pipe(
   ),
 );
 
+const limit = Flag.integer("limit").pipe(
+  Flag.filter(
+    (checks) => checks >= 0,
+    (checks) => `--limit is a number of checks, 0 or more, not ${checks}.`,
+  ),
+  Flag.optional,
+  Flag.withDescription(
+    "Judge at most this many checks. The rest wait for a later run, which picks up where this one stopped, since judgments are cached. --limit 0 shows the plan and judges nothing.",
+  ),
+);
+
+const rpm = Flag.integer("rpm").pipe(
+  Flag.filter(
+    (requests) => requests > 0,
+    (requests) => `--rpm is a number of requests a minute, more than 0, not ${requests}.`,
+  ),
+  Flag.optional,
+  Flag.withDescription("Send at most this many requests to Jev a minute, evenly spaced."),
+);
+
+const filter = Flag.string("filter").pipe(
+  Flag.atLeast(0),
+  Flag.withDescription(
+    "Read only files whose path from the working directory matches this glob, such as 'src/**' or '**/*.service.ts'. Repeat it for more; a pattern starting with ! leaves out what it matches.",
+  ),
+);
+
 const yes = Flag.boolean("yes").pipe(
   Flag.withAlias("y"),
   Flag.withDefault(false),
@@ -114,53 +141,61 @@ const force = Flag.boolean("force").pipe(
 const chosenPresets = (flag: Option.Option<PresetName>): ReadonlyArray<PresetName> =>
   Option.isSome(flag) ? [flag.value] : [];
 
-export const auditLayer = (overrides: Overrides) =>
+export const auditLayer = (overrides: Overrides, filter: ReadonlyArray<string> = []) =>
   Layer.mergeAll(
-    SourceWalkerLive,
+    SourceWalkerLive(filter),
     AuditCacheLive,
     JevLive.pipe(Layer.provide([FetchHttpClient.layer, CredentialsLive])),
   ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)));
 
 /** `adhere lint`: the audit. */
-export const lintCommand = Command.make("lint", { preset, threshold, yes }, (input) =>
-  Effect.gen(function* () {
-    const stdio = yield* Stdio.Stdio;
-    const plan = yield* planAudit;
-    yield* toStderr(`${describePlan(plan).join("\n")}\n`);
-    // A prompt draws on stdout, so it needs a terminal at both ends: none when
-    // the report is redirected, or in CI.
-    const interactive = (yield* stdio.stdinIsTerminal) && (yield* stdio.stdoutIsTerminal);
-    if (plan.requests > 0 && interactive && !input.yes) {
-      const send = yield* Prompt.run(
-        Prompt.confirm({ message: sendQuestion(plan), initial: true }),
-      );
-      if (!send) {
-        yield* toStderr("Nothing sent.\n");
-        return yield* Cancelled.make({});
+export const lintCommand = Command.make(
+  "lint",
+  { preset, threshold, yes, limit, rpm, filter },
+  (input) =>
+    Effect.gen(function* () {
+      const stdio = yield* Stdio.Stdio;
+      const plan = yield* planAudit({ limit: Option.getOrUndefined(input.limit) });
+      const limits = { filter: input.filter, rpm: Option.getOrUndefined(input.rpm) };
+      yield* toStderr(`${describePlan(plan, limits).join("\n")}\n`);
+      // A prompt draws on stdout, so it needs a terminal at both ends: none when
+      // the report is redirected, or in CI.
+      const interactive = (yield* stdio.stdinIsTerminal) && (yield* stdio.stdoutIsTerminal);
+      if (plan.requests > 0 && interactive && !input.yes) {
+        const send = yield* Prompt.run(
+          Prompt.confirm({ message: sendQuestion(plan), initial: true }),
+        );
+        if (!send) {
+          yield* toStderr("Nothing sent.\n");
+          return yield* Cancelled.make({});
+        }
       }
-    }
-    const counter = counterFor(plan);
-    yield* counter.start;
-    const result = yield* executeAudit(plan, counter.update).pipe(
-      Effect.onExit((exit) => counter.finish(Exit.isFailure(exit))),
-    );
-    const color = yield* stdio.stdoutIsTerminal;
-    const path = yield* Path.Path;
-    // One write: separate Console.log calls have interleaved out of order here.
-    yield* Console.log(render(result, { color, root: path.resolve() }).join("\n"));
-    if (result.findings.length > 0) {
-      yield* FindingsReported.make({ count: result.findings.length });
-    }
-  }),
+      const counter = counterFor(plan);
+      yield* counter.start;
+      const result = yield* executeAudit(plan, counter.update).pipe(
+        Effect.onExit((exit) => counter.finish(Exit.isFailure(exit))),
+      );
+      const color = yield* stdio.stdoutIsTerminal;
+      const path = yield* Path.Path;
+      // One write: separate Console.log calls have interleaved out of order here.
+      yield* Console.log(render(result, { color, root: path.resolve() }).join("\n"));
+      if (result.findings.length > 0) {
+        yield* FindingsReported.make({ count: result.findings.length });
+      }
+    }),
 ).pipe(
   Command.withDescription(
     "Audit the working directory against the rules in .adhere/ or a preset, judged by Jev.",
   ),
   Command.provide((input) =>
-    auditLayer({
-      presets: chosenPresets(input.preset),
-      threshold: Option.getOrUndefined(input.threshold),
-    }),
+    auditLayer(
+      {
+        presets: chosenPresets(input.preset),
+        threshold: Option.getOrUndefined(input.threshold),
+        rpm: Option.getOrUndefined(input.rpm),
+      },
+      input.filter,
+    ),
   ),
 );
 

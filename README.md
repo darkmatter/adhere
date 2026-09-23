@@ -75,6 +75,9 @@ adhere lint                    # audit the working directory
 adhere lint --preset effect    # add a built-in rule set; the config becomes optional
 adhere lint --threshold 0.9    # replace the config's threshold; per-rule thresholds still apply
 adhere lint --yes              # send the requests without asking first
+adhere lint --limit 500        # judge at most 500 checks; the rest wait for the next run
+adhere lint --rpm 30           # send at most 30 requests a minute
+adhere lint --filter 'src/**'  # read only the files a glob matches
 adhere validate                # load the config and rules, ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
 adhere login                   # save a TypeSafe AI API key for later runs
@@ -103,6 +106,21 @@ stderr shows the files done, the requests sent, and the findings so far, and
 the report goes to stdout. A request Jev refuses stops the run with the file,
 the HTTP status, and Jev's reason. Files finished before it are cached, so
 running again continues from there.
+
+### Limiting a run
+
+Three flags bound what a run does. `--limit <checks>` judges at most that many
+checks, taken in path order; the rest wait, and since judgments are cached, the
+next run with the same limit picks up where this one stopped. `--limit 0` shows
+the plan and judges nothing. `--rpm <requests>` sends at most that many requests
+to Jev a minute, evenly spaced, retries included, and the plan says about how
+long they take. `--filter <glob>` reads only the files whose path from the
+working directory matches, such as `src/**` or `**/*.service.ts`; repeat it for
+more, and start a pattern with `!` to leave out what it matches. Together:
+
+```sh
+adhere lint --filter 'packages/api/**' --filter '!**/generated/**' --limit 200 --rpm 30
+```
 
 ### What gets read
 

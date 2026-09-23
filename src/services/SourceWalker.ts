@@ -1,3 +1,4 @@
+import { matchesGlob } from "node:path";
 import { Context, Effect, FileSystem, Layer, Path } from "effect";
 import { ADHERE_DIRECTORY, SKIPPED_DIRECTORIES } from "#config.ts";
 import type { ScannedFile } from "#models/Audit.ts";
@@ -31,6 +32,22 @@ export const isInSkippedTree = (relative: string): boolean =>
     .split(/[\\/]/)
     .some((segment) => segment === ADHERE_DIRECTORY || SKIPPED_DIRECTORIES.has(segment));
 
+/**
+ * Whether a path, relative to the working directory, passes a run's filter.
+ * A pattern is a glob; one starting with `!` leaves out what it matches. A
+ * path passes when no `!` pattern matches it and either another pattern does
+ * or there are none.
+ */
+export const passesFilter = (relative: string, patterns: ReadonlyArray<string>): boolean => {
+  const path = relative.replaceAll("\\", "/");
+  const matches = (pattern: string) => matchesGlob(path, pattern);
+  const include = patterns.filter((pattern) => !pattern.startsWith("!"));
+  const exclude = patterns
+    .filter((pattern) => pattern.startsWith("!"))
+    .map((pattern) => pattern.slice(1));
+  return (include.length === 0 || include.some(matches)) && !exclude.some(matches);
+};
+
 const isInside = (file: string, root: string): boolean =>
   file === root || file.startsWith(`${root}/`);
 
@@ -49,18 +66,21 @@ const refused = (problem: { readonly message: string }): WalkUnavailable =>
 /** `readdir(recursive)` yields paths relative to the root it read: root them. */
 const rooted = (root: string, paths: ReadonlyArray<string>) => paths.map((rel) => `${root}/${rel}`);
 
+/** A test on a path relative to the root being read: whether the run wants it. */
+type Keep = (relative: string) => boolean;
+
 /** What the root actually contains: only paths the audit reads. */
-const scannable = (root: string, paths: ReadonlyArray<string>, self: string) =>
+const scannable = (root: string, paths: ReadonlyArray<string>, self: string, keep: Keep) =>
   rooted(
     root,
-    paths.filter((relative) => !isInSkippedTree(relative)),
+    paths.filter((relative) => !isInSkippedTree(relative) && keep(relative)),
   ).filter((file) => isScannable(file, self));
 
 /** One root's paths, filtered to what the audit reads. */
 const listRoot = Effect.fn("SourceWalker.listRoot")(
-  (fs: FileSystem.FileSystem, root: string, self: string) =>
+  (fs: FileSystem.FileSystem, root: string, self: string, keep: Keep) =>
     Effect.map(fs.readDirectory(root, { recursive: true }), (paths) =>
-      scannable(root, paths, self),
+      scannable(root, paths, self, keep),
     ),
 );
 
@@ -78,8 +98,8 @@ const readEach = (fs: FileSystem.FileSystem, paths: ReadonlyArray<string>) =>
 
 /** One root's files, in directory order: read every scannable path. */
 const readRoot = Effect.fn("SourceWalker.readRoot")(
-  (fs: FileSystem.FileSystem, root: string, self: string) =>
-    Effect.flatMap(listRoot(fs, root, self), (paths) => readEach(fs, paths)),
+  (fs: FileSystem.FileSystem, root: string, self: string, keep: Keep) =>
+    Effect.flatMap(listRoot(fs, root, self, keep), (paths) => readEach(fs, paths)),
 );
 
 /**
@@ -103,20 +123,24 @@ const scanDirs = Effect.fn("SourceWalker.scanDirs")(function* (
  * The scan root is the current working directory, so the audit reads the
  * repository it is run in.
  */
-export const SourceWalkerLive = Layer.effect(SourceWalker)(
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    // No segments: Path resolves against the working directory.
-    const root = path.resolve();
-    const self = yield* path.fromFileUrl(new URL("../../", import.meta.url)).pipe(Effect.orDie);
-    const walk = Effect.fn("SourceWalker.files")(function* () {
-      const dirs = yield* scanDirs(fs, root).pipe(Effect.mapError(refused));
-      const trees = yield* Effect.forEach(dirs, (dir) =>
-        readRoot(fs, path.join(root, dir), self).pipe(Effect.mapError(refused)),
-      );
-      return trees.flat();
-    });
-    return SourceWalker.of({ files: walk() });
-  }),
-);
+export const SourceWalkerLive = (filter: ReadonlyArray<string> = []) =>
+  Layer.effect(SourceWalker)(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      // No segments: Path resolves against the working directory.
+      const root = path.resolve();
+      const self = yield* path.fromFileUrl(new URL("../../", import.meta.url)).pipe(Effect.orDie);
+      const walk = Effect.fn("SourceWalker.files")(function* () {
+        const dirs = yield* scanDirs(fs, root).pipe(Effect.mapError(refused));
+        const trees = yield* Effect.forEach(dirs, (dir) =>
+          readRoot(fs, path.join(root, dir), self, (relative) =>
+            // Filter patterns are relative to the working directory, not the tree read.
+            passesFilter(dir === "." ? relative : `${dir}/${relative}`, filter),
+          ).pipe(Effect.mapError(refused)),
+        );
+        return trees.flat();
+      });
+      return SourceWalker.of({ files: walk() });
+    }),
+  );

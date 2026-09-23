@@ -30,11 +30,13 @@ export interface AuditResult {
   readonly judged: number;
   readonly cached: number;
   readonly skipped: number;
+  /** Files whose checks `--limit` left for a later run, none judged in this one. */
+  readonly waiting: number;
   readonly findings: ReadonlyArray<Finding>;
 }
 
 interface FileResult {
-  readonly status: "judged" | "cached" | "skipped";
+  readonly status: "judged" | "cached" | "skipped" | "waiting";
   readonly findings: ReadonlyArray<Finding>;
 }
 
@@ -69,6 +71,8 @@ export interface FilePlan {
   /** Cached judgments still valid for the file's content and the rule's text. */
   readonly kept: Readonly<Record<RuleId, Judgment>>;
   readonly pending: Readonly<Record<RuleId, PreparedRule>>;
+  /** Pending checks `--limit` leaves for a later run. */
+  readonly deferred: number;
 }
 
 /** A run worked out from the files, the rules, and the cache, before any request. */
@@ -82,6 +86,8 @@ export interface AuditPlan {
   readonly cached: number;
   /** Files too long to judge. */
   readonly skipped: number;
+  /** Checks `--limit` leaves for a later run. */
+  readonly deferred: number;
   /** Requests to Jev that judging the other checks takes. Locating findings adds 1 or more per file. */
   readonly requests: number;
 }
@@ -108,69 +114,110 @@ const inFile =
         : problem,
     );
 
-export const planAudit: Effect.Effect<
+/**
+ * The plan with at most `limit` checks left to judge, taken in path order.
+ * Past the limit a file's other checks wait for a later run; judgments are
+ * cached, so a rerun picks up where this one stopped.
+ */
+const withinLimit = (planned: ReadonlyArray<FilePlan>, limit: number): ReadonlyArray<FilePlan> => {
+  let left = limit;
+  return planned.map((plan) => {
+    const ids = Object.keys(plan.pending);
+    const taken = new Set(ids.slice(0, left));
+    left -= taken.size;
+    return taken.size === ids.length
+      ? plan
+      : {
+          ...plan,
+          pending: Record.filter(plan.pending, (_, id) => taken.has(id)),
+          deferred: ids.length - taken.size,
+        };
+  });
+};
+
+export interface PlanOptions {
+  /** Judge at most this many checks; the rest wait for a later run. */
+  readonly limit?: number;
+}
+
+export const planAudit = (
+  options: PlanOptions = {},
+): Effect.Effect<
   AuditPlan,
   WalkUnavailable,
   AdhereConfig | AuditCache | Crypto.Crypto | SourceWalker
-> = Effect.gen(function* () {
-  const config = yield* AdhereConfig;
-  const cache = yield* AuditCache;
-  const files = yield* (yield* SourceWalker).files;
+> =>
+  Effect.gen(function* () {
+    const config = yield* AdhereConfig;
+    const cache = yield* AuditCache;
+    const files = yield* (yield* SourceWalker).files;
 
-  const configuredRules = (file: string) =>
-    config.scopedRules === undefined ? config.rules : applicableRules(file, config.scopedRules);
+    const configuredRules = (file: string) =>
+      config.scopedRules === undefined ? config.rules : applicableRules(file, config.scopedRules);
 
-  const planFile = Effect.fn("audit.plan")(function* (file: ScannedFile) {
-    const rules = configuredRules(file.path);
-    // Too long for Jev's context: skipped and counted, rather than refused mid-run.
-    if (!fits(file.lines, rules)) {
+    const planFile = Effect.fn("audit.plan")(function* (file: ScannedFile) {
+      const rules = configuredRules(file.path);
+      // Too long for Jev's context: skipped and counted, rather than refused mid-run.
+      if (!fits(file.lines, rules)) {
+        return {
+          file,
+          skipped: true,
+          hash: "",
+          prepared: {},
+          kept: {},
+          pending: {},
+          deferred: 0,
+        } satisfies FilePlan;
+      }
+      const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
+        Object.entries(rules),
+        ([id, rule]) =>
+          Effect.map(
+            fingerprintOf(config.model, rule),
+            (fingerprint) =>
+              [id, { rule, fingerprint, threshold: rule.threshold ?? config.threshold }] as const,
+          ),
+      ).pipe(Effect.map(Record.fromEntries));
+      const hash = yield* sha256(file.lines.join("\n"));
+      const entry = yield* cache.get(file.path);
+      const remembered = entry?.hash === hash ? entry.judgments : {};
+      const kept = Record.filter(
+        remembered,
+        (judgment, id) => judgment.fingerprint === prepared[id]?.fingerprint,
+      );
+      const pending = Record.filter(prepared, (_, id) => kept[id] === undefined);
       return {
         file,
-        skipped: true,
-        hash: "",
-        prepared: {},
-        kept: {},
-        pending: {},
+        skipped: false,
+        hash,
+        prepared,
+        kept,
+        pending,
+        deferred: 0,
       } satisfies FilePlan;
-    }
-    const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
-      Object.entries(rules),
-      ([id, rule]) =>
-        Effect.map(
-          fingerprintOf(config.model, rule),
-          (fingerprint) =>
-            [id, { rule, fingerprint, threshold: rule.threshold ?? config.threshold }] as const,
-        ),
-    ).pipe(Effect.map(Record.fromEntries));
-    const hash = yield* sha256(file.lines.join("\n"));
-    const entry = yield* cache.get(file.path);
-    const remembered = entry?.hash === hash ? entry.judgments : {};
-    const kept = Record.filter(
-      remembered,
-      (judgment, id) => judgment.fingerprint === prepared[id]?.fingerprint,
-    );
-    const pending = Record.filter(prepared, (_, id) => kept[id] === undefined);
-    return { file, skipped: false, hash, prepared, kept, pending } satisfies FilePlan;
-  });
+    });
 
-  const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
-  const planned: ReadonlyArray<FilePlan> = yield* Effect.forEach(sorted, planFile, {
-    concurrency: 8,
+    const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
+    const everything: ReadonlyArray<FilePlan> = yield* Effect.forEach(sorted, planFile, {
+      concurrency: 8,
+    });
+    const planned =
+      options.limit === undefined ? everything : withinLimit(everything, options.limit);
+    const judged = planned.filter((plan) => !plan.skipped);
+    const total = (count: (plan: FilePlan) => number) =>
+      judged.reduce((sum, plan) => sum + count(plan), 0);
+    return {
+      files: planned,
+      rules: new Set(judged.flatMap((plan) => Object.keys(plan.prepared))).size,
+      checks: total((plan) => sizeOf(plan.prepared)),
+      cached: total((plan) => sizeOf(plan.kept)),
+      skipped: planned.length - judged.length,
+      deferred: total((plan) => plan.deferred),
+      requests: total((plan) =>
+        isEmpty(plan.pending) ? 0 : judgeRequests(plan.file.lines, rulesOf(plan.pending)),
+      ),
+    };
   });
-  const judged = planned.filter((plan) => !plan.skipped);
-  const total = (count: (plan: FilePlan) => number) =>
-    judged.reduce((sum, plan) => sum + count(plan), 0);
-  return {
-    files: planned,
-    rules: new Set(judged.flatMap((plan) => Object.keys(plan.prepared))).size,
-    checks: total((plan) => sizeOf(plan.prepared)),
-    cached: total((plan) => sizeOf(plan.kept)),
-    skipped: planned.length - judged.length,
-    requests: total((plan) =>
-      isEmpty(plan.pending) ? 0 : judgeRequests(plan.file.lines, rulesOf(plan.pending)),
-    ),
-  };
-});
 
 /**
  * Judges what the plan left pending and locates the findings, a file at a
@@ -191,6 +238,7 @@ export const executeAudit = (
       prepared,
       kept,
       pending,
+      deferred,
     }: FilePlan) {
       const probabilities = isEmpty(pending)
         ? {}
@@ -243,7 +291,7 @@ export const executeAudit = (
         })
         .sort((a, b) => a.line - b.line);
       return {
-        result: fileResult(cached ? "cached" : "judged", findings),
+        result: fileResult(cached ? (deferred > 0 ? "waiting" : "cached") : "judged", findings),
         requests:
           (isEmpty(pending) ? 0 : judgeRequests(file.lines, rulesOf(pending))) +
           (isEmpty(flagged) ? 0 : locateRequests(file.lines, rulesOf(flagged))),
@@ -274,6 +322,7 @@ export const executeAudit = (
       judged: count("judged"),
       cached: count("cached"),
       skipped: count("skipped"),
+      waiting: count("waiting"),
       findings: results.flatMap((result) => result.findings),
     };
   });
@@ -283,6 +332,6 @@ export const runAudit: Effect.Effect<
   AuditResult,
   WalkUnavailable | JevUnavailable,
   AdhereConfig | AuditCache | Crypto.Crypto | Jev | SourceWalker
-> = Effect.flatMap(planAudit, (plan) => executeAudit(plan));
+> = Effect.flatMap(planAudit(), (plan) => executeAudit(plan));
 
 export { type RenderOptions, render } from "#workflows/format.ts";

@@ -148,6 +148,8 @@ export interface ResolvedConfig {
   readonly threshold: number;
   readonly rules: Rules;
   readonly scopedRules?: RuleSet;
+  /** Requests to Jev a minute, at most. Unset, requests go out as fast as they are made. */
+  readonly rpm?: number;
 }
 
 /** Command-line values that apply on top of the config file. */
@@ -155,6 +157,8 @@ export interface Overrides {
   readonly presets?: ReadonlyArray<PresetName>;
   /** Replaces the config's global threshold. Per-rule thresholds still win. */
   readonly threshold?: number;
+  /** Throttles requests to Jev to at most this many a minute. */
+  readonly rpm?: number;
 }
 
 /** The presets a run applies, command-line ones first. */
@@ -183,6 +187,7 @@ export const resolveConfig = (
     model: config.model ?? last("model") ?? DEFAULT_MODEL,
     threshold: overrides.threshold ?? config.threshold ?? last("threshold") ?? DEFAULT_THRESHOLD,
     rules: Object.assign({}, ...applied.map((preset) => preset.rules), config.rules),
+    ...(overrides.rpm === undefined ? {} : { rpm: overrides.rpm }),
   };
 };
 

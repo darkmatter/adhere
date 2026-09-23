@@ -124,6 +124,7 @@ const summary = (result: AuditResult): ReadonlyArray<Line> => {
     `${result.judged} judged`,
     `${result.cached} cached`,
     ...(result.skipped > 0 ? [`${result.skipped} skipped`] : []),
+    ...(result.waiting > 0 ? [`${result.waiting} waiting`] : []),
   ];
   return [
     [span(`Found ${counted(result.findings.length, "error", "errors")}.`)],
@@ -153,18 +154,56 @@ export const render = (result: AuditResult, options: RenderOptions = {}): Readon
  * between them and how many the cache answers, then what judging the rest
  * takes.
  */
-export const describePlan = (plan: AuditPlan): ReadonlyArray<string> => {
+/** What a run was asked to keep to, for the plan to say. */
+export interface RunLimits {
+  readonly filter?: ReadonlyArray<string>;
+  readonly rpm?: number;
+}
+
+/** About how long `requests` take at `rpm`: seconds under a minute, minutes past it. */
+const durationAt = (requests: number, rpm: number): string => {
+  const seconds = Math.ceil((requests / rpm) * 60);
+  return seconds < 60
+    ? counted(seconds, "second", "seconds")
+    : counted(Math.round(seconds / 60), "minute", "minutes");
+};
+
+export const describePlan = (plan: AuditPlan, limits: RunLimits = {}): ReadonlyArray<string> => {
   const cached = plan.cached > 0 ? `, ${plan.cached} cached` : "";
   const skipped =
     plan.skipped > 0 ? `, ${counted(plan.skipped, "file", "files")} too long to judge` : "";
-  const found = `${counted(plan.files.length, "file", "files")} and ${counted(plan.rules, "rule", "rules")}: ${counted(plan.checks, "check", "checks")}${cached}${skipped}.`;
+  const matching = (limits.filter?.length ?? 0) > 0 ? " matching the filter" : "";
+  const found = `${counted(plan.files.length, "file", "files")}${matching} and ${counted(plan.rules, "rule", "rules")}: ${counted(plan.checks, "check", "checks")}${cached}${skipped}.`;
+  const pending = plan.checks - plan.cached;
+  const waiting =
+    plan.deferred > 0
+      ? ` The other ${plan.deferred} ${plan.deferred === 1 ? "waits" : "wait"} for a later run.`
+      : "";
   if (plan.requests === 0) {
-    return [found, plan.checks === 0 ? "Nothing to judge." : "The cache answers every check."];
+    const none =
+      plan.deferred > 0
+        ? plan.deferred === 1
+          ? "The limit leaves the 1 unjudged check for a later run."
+          : `The limit leaves all ${plan.deferred} unjudged checks for a later run.`
+        : plan.checks === 0
+          ? "Nothing to judge."
+          : "The cache answers every check.";
+    return [found, none];
   }
-  const rest = plan.cached > 0 ? `the other ${plan.checks - plan.cached}` : "them";
+  const judging = pending - plan.deferred;
+  const rest =
+    plan.deferred > 0
+      ? `${judging} of ${plan.cached > 0 ? `the other ${pending}` : "them"}`
+      : plan.cached > 0
+        ? `the other ${pending}`
+        : "them";
+  const pace =
+    limits.rpm === undefined
+      ? ""
+      : ` At ${limits.rpm} a minute, they take about ${durationAt(plan.requests, limits.rpm)}.`;
   return [
     found,
-    `Judging ${rest} takes ${counted(plan.requests, "request", "requests")} to Jev, plus 1 or more for each file with a finding.`,
+    `Judging ${rest} takes ${counted(plan.requests, "request", "requests")} to Jev, plus 1 or more for each file with a finding.${pace}${waiting}`,
   ];
 };
 

@@ -19,9 +19,10 @@ import {
   requestsOf,
   type Rules,
 } from "#services/Jev.ts";
-import { type Cause, Effect, Layer, Option, Record, Schedule, Schema } from "effect";
+import { type Cause, Duration, Effect, Layer, Option, Record, Schedule, Schema } from "effect";
 import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http";
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
+import { RateLimiter } from "effect/unstable/persistence";
 
 const SYSTEM_ONE = "https://api.typesafe.ai/v1/systemone";
 
@@ -53,7 +54,9 @@ const isOverflow = (body: string): boolean =>
  * the run with its status and what Jev said, since the status alone does not
  * say why, and a request that got no answer refuses with the cause.
  */
-const failed = (problem: HttpClientError.HttpClientError | Cause.TimeoutError) => {
+const failed = (
+  problem: HttpClientError.HttpClientError | RateLimiter.RateLimiterError | Cause.TimeoutError,
+) => {
   if (!HttpClientError.isHttpClientError(problem) || problem.reason._tag !== "StatusCodeError") {
     return Effect.fail(refused(`System One request failed: ${problem.message}`));
   }
@@ -79,8 +82,27 @@ export const JevLive = Layer.effect(Jev)(
   Effect.gen(function* () {
     const config = yield* AdhereConfig;
     const credentials = yield* Credentials;
-    const client = (yield* HttpClient.HttpClient).pipe(
-      HttpClient.filterStatusOk,
+    const http = (yield* HttpClient.HttpClient).pipe(HttpClient.filterStatusOk);
+    // `--rpm`: one request per 60/rpm seconds, evenly spaced rather than in a
+    // burst each minute. Before the retries, so a retry waits its turn too.
+    type Failure = HttpClientError.HttpClientError | RateLimiter.RateLimiterError;
+    const paced: HttpClient.HttpClient.With<Failure> =
+      config.rpm === undefined
+        ? // The same client, typed to fail the ways the throttled one can.
+          HttpClient.transformResponse(
+            http,
+            (response): Effect.Effect<HttpClientResponse.HttpClientResponse, Failure> => response,
+          )
+        : http.pipe(
+            HttpClient.withRateLimiter({
+              limiter: yield* RateLimiter.RateLimiter,
+              key: "jev",
+              algorithm: "token-bucket",
+              limit: 1,
+              window: Duration.millis(60_000 / config.rpm),
+            }),
+          );
+    const client = paced.pipe(
       HttpClient.transformResponse(Effect.timeout("30 seconds")),
       HttpClient.retryTransient({
         schedule: Schedule.exponential("500 millis"),
@@ -172,4 +194,4 @@ export const JevLive = Layer.effect(Jev)(
 
     return Jev.of({ judge, locate, conflicts, contradicts });
   }),
-);
+).pipe(Layer.provide(RateLimiter.layer.pipe(Layer.provide(RateLimiter.layerStoreMemory))));
