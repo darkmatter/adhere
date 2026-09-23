@@ -1,6 +1,6 @@
 {
   "name": "@drkmttr/adhere",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": false,
   "description": "Lints a repository against reference code in .adhere/, judged by Jev.",
   "repository": {
