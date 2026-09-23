@@ -9,10 +9,100 @@ report uses the same frame as `vp lint`.
 
 Deterministic rules (substring matches, type checks) belong in a normal linter.
 
+## Install
+
+```sh
+npm install --global @drkmttr/adhere   # or: bun add --global @drkmttr/adhere
+```
+
+To pin the version in a repo, for CI or scripts, add it as a dev dependency
+and run `npx adhere`. To try it without installing, run
+`npx @drkmttr/adhere` or `bunx @drkmttr/adhere`.
+
+`adhere` is a prebuilt executable for macOS and Linux on arm64 and x64 and for
+Windows on x64. It needs Node to start, and no Bun.
+
+adhere sends each file it judges to Jev at `api.typesafe.ai`, authenticated
+with a TypeSafe AI API key in `TYPESAFE_API_KEY`.
+
+## Quick start
+
+```sh
+adhere init                          # .adhere/config.ts and two example rules
+echo ".adhere/cache/" >> .gitignore
+export TYPESAFE_API_KEY=...
+adhere                               # audit the working directory
+```
+
+Without a config or rules, `adhere --preset effect` audits against the
+built-in Effect rules. A finding looks like this:
+
+```text
+  × data/brand-ports (0.93): A port is a branded, range-checked integer, not a bare number.
+   ╭─[src/server.ts:4:1]
+ 4 │ const port: number = Number(process.env.PORT ?? 3000);
+   · ──────────────────────────────────────────────────────
+   ╰────
+  hint: const Port = Schema.Int.pipe(
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 65535 })),
+          Schema.brand("Port"),
+        );
+
+Found 1 error.
+42 files, 3 judged, 39 cached.
+```
+
+The header is the rule id, Jev's probability, and the rule's description. The
+hint is the rule's reference. The exit code is 0 when nothing is reported and 1
+when something is. It is also 1 when the run refuses, for example on an invalid
+config or rule file, a missing `TYPESAFE_API_KEY`, or an unknown flag; a
+refusal prints its reason.
+
+## Usage
+
+```sh
+adhere                    # audit the working directory
+adhere --preset effect    # add a built-in rule set; the config becomes optional
+adhere --threshold 0.8    # replace the config's threshold; per-rule thresholds still apply
+adhere init [--force]     # scaffold .adhere/config.ts and two example rules
+adhere contradictions     # check the project's rules for contradicting directives
+adhere skill              # print the agent skill (below)
+```
+
+`adhere --help` lists every flag, and `adhere --completions <shell>` prints a
+completion script. `init` and `contradictions` take `--help` too.
+
+### What gets read
+
+`adhere` reads the `.ts` files under the working directory, except `.d.ts`,
+`.test.ts`, and config files. When the working directory contains `agents/`,
+`apps/`, or `packages/`, only those trees are read. Paths under
+`node_modules/`, `dist/`, `coverage/`, `vendor/`, `e2e/`, `references/`,
+`.adhere/`, `.agents/`, `.claude/`, `.direnv/`, `.alchemy/`, or `.vite/` are
+skipped. `.tsx` files are not read, and `.gitignore` is not consulted.
+
+### Init
+
+`adhere init` writes `.adhere/config.ts` and two example rules. It is safe to
+rerun: by default it reports existing files as skipped and does not clobber
+them. `--force` overwrites them. A config already at another accepted path is
+kept, and no second one is added, even with `--force`.
+
+### Contradictions
+
+`adhere contradictions` checks only this project's configured rules for local
+textual contradictions. It exits 1 and prints the conflicting rule files when
+overlapping rule scopes contain opposite textual directives for the same
+topic, such as "Use service classes for IO" and "Do not use service classes
+for IO". Same-id nested rules are treated as intentional shadowing rather than
+contradictions.
+
 ## Config
 
-A config file in the working directory of the repo being audited, at one of
-these paths (keep one):
+A config file is optional. Without one, adhere reads the rule files in
+`.adhere/` and any `--preset`. A config names presets, sets the model and
+thresholds, or gives rules inline. It sits in the working directory of the
+repo being audited, at one of these paths (keep one):
 
 - `.adhere/config.ts`, the default, next to the rules
 - `adhere.config.ts`
@@ -40,9 +130,15 @@ type UserId = typeof UserId.Type
 ```
 
 The default export is decoded with Effect `Schema`. An invalid shape refuses
-the run. The `import type` is erased at runtime, so the file also loads under
-the native executable, where `@drkmttr/adhere` is not installed. With the
-package installed, `defineConfig({...})` does the same thing.
+the run. The `import type` is erased at runtime. `defineConfig({...})` from
+`@drkmttr/adhere` does the same thing as `satisfies Config`, and the executable
+supplies it whether or not the repo has the package installed; the editor's
+types come from the package as a dev dependency. A config can import other
+files by relative path, but no packages besides `@drkmttr/adhere`: the
+executable does not resolve `node_modules`.
+
+`rules` in the config, inline as above or as a directory (below), replaces the
+`.adhere/` rule files: none of them, root or nested, is read then.
 
 ### Rules as Markdown files
 
@@ -50,32 +146,6 @@ A repo's own rules live in `.adhere/`, one `*.md` file per rule, next to the
 config and the cache (neither is read as a rule). The path without `.md` is the
 rule id, so `.adhere/data/brand-ports.md` is `data/brand-ports`. When that
 directory exists, it is read without any config.
-
-`.adhere/` is the default rather than `docs/adhere/` because it keeps
-everything adhere owns in one directory: the config and the cache are tool
-state, not documentation, and would stay in `.adhere/` anyway. A nested
-`.adhere/` also scopes its rules to the directory that contains it (below). The
-cost is visibility: a dot directory is hidden from `ls`, and from `rg` without
-`--hidden`. A repo that would rather keep its rules with the rest of its
-documentation can point `rules` at `docs/adhere/`:
-
-```ts
-export default { presets: ["effect"], rules: "./docs/adhere" } satisfies Config;
-```
-
-Rules read through `rules` apply project-wide; nested `.adhere/` directories
-are not read then. A config is otherwise needed only to name presets or set
-thresholds.
-
-Nested `.adhere/` directories are also discovered. A rule in
-`packages/api/.adhere/data/brand-ports.md` has the same id,
-`data/brand-ports`, but applies only to files under `packages/api/`. Root
-`.adhere/` rules apply project-wide. If a nested rule has the same id as a root
-rule, the nearest containing `.adhere/` shadows the less-specific rule for that
-subtree; outside that subtree, the root rule still applies. There is no broader
-priority system: presets are global, project rules override preset rules with
-the same id, and nested project rules override less-specific project rules with
-the same id for files in their subtree.
 
 A file is front matter, then a body. The first fenced code block in the body
 is the reference; prose around it renders on GitHub and is ignored. Without a
@@ -101,6 +171,30 @@ const Port = Schema.Int.pipe(
 validation refuses the run with its path in the message. `loadRules(directory)`
 from the package root does the same load for your own tooling.
 
+Nested `.adhere/` directories are also discovered. A rule in
+`packages/api/.adhere/data/brand-ports.md` has the same id,
+`data/brand-ports`, but applies only to files under `packages/api/`. Root
+`.adhere/` rules apply project-wide. If a nested rule has the same id as a root
+rule, the nearest containing `.adhere/` shadows the less-specific rule for that
+subtree; outside that subtree, the root rule still applies. There is no broader
+priority system: presets are global, project rules override preset rules with
+the same id, and nested project rules override less-specific project rules with
+the same id for files in their subtree.
+
+`.adhere/` is the default rather than `docs/adhere/` because it keeps
+everything adhere owns in one directory: the config and the cache are tool
+state, not documentation, and would stay in `.adhere/` anyway. A nested
+`.adhere/` also scopes its rules to the directory that contains it (above). The
+cost is visibility: a dot directory is hidden from `ls`, and from `rg` without
+`--hidden`. A repo that would rather keep its rules with the rest of its
+documentation can point `rules` at `docs/adhere/`:
+
+```ts
+export default { presets: ["effect"], rules: "./docs/adhere" } satisfies Config;
+```
+
+Rules read through `rules` apply project-wide.
+
 ### Presets
 
 A preset has the shape of a config without `presets`: `rules`, and optionally
@@ -118,20 +212,40 @@ order (a later preset wins), then the defaults `jev-latest` and `0.7`. A rule
 in `rules` replaces a preset rule with the same id. A rule's own `threshold`
 beats all of the above for that rule.
 
-## Install
+## How a file is judged
 
-```sh
-npm install --global @drkmttr/adhere   # or: bun add --global @drkmttr/adhere
-```
+1. One Jev request per file, with the file's numbered lines and every rule as
+   the state, and one `noul` (yes/no probability) question per rule. Every
+   question shares the state cost of the request.
+2. A second request only when at least one rule's probability is above its
+   threshold: one `choice` question per flagged rule over the file's non-blank
+   lines, which yields the line to report. A file with more than 255 non-blank
+   lines is located in two steps (a block of 20 lines, then a line inside it).
+   Files longer than 5100 lines are skipped and counted in the summary.
 
-`adhere` is the native executable (below), compiled for macOS and Linux on
-arm64 and x64 and for Windows on x64. Each platform's is its own package,
-`@drkmttr/adhere-<platform>-<arch>`, and an optional dependency of
-`@drkmttr/adhere` that the install fetches only on that platform. The package's
-`bin/adhere.js` runs it with Node, so neither Bun nor adhere's runtime
-dependencies are needed.
+## Cache
 
-## Run
+Judgments are cached in `.adhere/cache/` (add it to `.gitignore`), one entry
+per file. An entry stores the file's content hash and, per rule, the
+probability, the located line, and a fingerprint of the rule's text and model.
+A changed file re-judges every rule for that file. An edited rule re-judges
+only that rule. A lowered threshold locates cached judgments that are newly
+above it without judging again. Entries depend on content, not on the
+machine, so restoring `.adhere/cache/` between CI runs skips unchanged files.
+
+`TYPESAFE_API_KEY` is read only when a request is about to be sent. A run
+where every file is cached needs no key and no network.
+
+## Agent skill
+
+[`skills/adhere/SKILL.md`](./skills/adhere/SKILL.md) teaches an agent to
+gather a repo's conventions into rule files, configure adhere, and calibrate
+thresholds. Install it with the [skills](https://github.com/vercel-labs/skills)
+CLI: `skills add darkmatter/adhere`. The binary carries the same file:
+`adhere skill` prints it, so `adhere skill > .agents/skills/adhere/SKILL.md`
+works without a checkout.
+
+## Development
 
 From a checkout, with Bun:
 
@@ -142,32 +256,8 @@ adhere --preset effect
 ```
 
 In a checkout no platform package is installed, so `bin/adhere.js` runs
-`src/main.ts` with Bun instead.
-
-`adhere` audits the working directory. When that directory contains `agents/`,
-`apps/`, or `packages/`, only those trees are read. Exit code 1 when there is
-at least one finding.
-
-Initialize a new project with a config and example rules:
-
-```sh
-adhere init
-adhere init --force  # overwrite the scaffold files if they already exist
-```
-
-The command is safe to rerun: by default it reports existing files as skipped
-and does not clobber them.
-
-Check only this project's configured rules for local textual contradictions:
-
-```sh
-adhere contradictions
-```
-
-It exits 1 and prints the conflicting rule files when overlapping rule scopes
-contain opposite textual directives for the same topic, such as "Use service
-classes for IO" and "Do not use service classes for IO". Same-id nested rules
-are treated as intentional shadowing rather than contradictions.
+`src/main.ts` with Bun instead. `bun run typecheck` runs `tsc` and the linter,
+and `bun run test` runs the tests.
 
 ### Native executable
 
@@ -180,7 +270,12 @@ machine and still loads the repo's `config.ts` and Markdown rules from disk.
 into its package under `dist/npm/`
 ([`scripts/npm-packages.ts`](./scripts/npm-packages.ts)).
 
-## Release
+Each platform's executable is its own npm package,
+`@drkmttr/adhere-<platform>-<arch>`, limited by `os` and `cpu`, and an
+optional dependency of `@drkmttr/adhere`, so an install fetches only its own
+machine's. The package's `bin/adhere.js` finds it and runs it with Node.
+
+### Release
 
 Releases are cut by CI from pushed version tags. From a clean, up-to-date
 `main`, push the release tag:
@@ -202,40 +297,10 @@ The publish workflow verifies that `package.json` matches the release tag,
 builds the platform packages, and publishes each of them before
 `@drkmttr/adhere`, which it first lists them in as `optionalDependencies` at
 the same version. Every publish is `npm publish --access public --provenance`.
-No npm token is used, so a new platform package has to be published once by
-hand and given the trusted publisher on npmjs.com before the job can publish
-it. The publish workflow can also be run manually for an already-created
-release tag if a publish needs to be retried; it skips platform packages whose
-version is already on npm.
-
-## How a file is judged
-
-1. One Jev request per file, with the file's numbered lines and every rule as
-   the state, and one `noul` (yes/no probability) question per rule. Every
-   question shares the state cost of the request.
-2. A second request only when at least one rule's probability is above its
-   threshold: one `choice` question per flagged rule over the file's non-blank
-   lines, which yields the line to report. A file with more than 255 non-blank
-   lines is located in two steps (a block of 20 lines, then a line inside it).
-   Files longer than 5100 lines are skipped and counted in the summary.
-
-## Cache
-
-Judgments are cached in `.adhere/cache/` (add it to `.gitignore`), one entry
-per file. An entry stores the file's content hash and, per rule, the
-probability, the located line, and a fingerprint of the rule's text and model.
-A changed file re-judges every rule for that file. An edited rule re-judges
-only that rule. A lowered threshold locates cached judgments that are newly
-above it without judging again.
-
-`TYPESAFE_API_KEY` is read only when a request is about to be sent. A run
-where every file is cached needs no key and no network.
-
-## Agent skill
-
-[`skills/adhere/SKILL.md`](./skills/adhere/SKILL.md) teaches an agent to
-gather a repo's conventions into rule files, configure adhere, and calibrate
-thresholds. Install it with the [skills](https://github.com/vercel-labs/skills)
-CLI: `skills add darkmatter/adhere`. The binary carries the same file:
-`adhere skill` prints it, so `adhere skill > .agents/skills/adhere/SKILL.md`
-works without a checkout.
+No npm token is used, so a new package has to be published once by hand
+before it can be given trusted publishers on npmjs.com. npm checks the
+workflow that started the run, so every package has two: `release.yaml`, which
+calls the publish workflow for tag releases, and `publish.yaml`, for manual
+runs. The publish workflow can be run manually for an already-created release
+tag if a publish needs to be retried; it skips platform packages whose version
+is already on npm.
