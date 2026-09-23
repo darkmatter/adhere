@@ -281,13 +281,13 @@ beats all of the above for that rule.
 
 1. One Jev request per file. The state is the file's numbered lines and
    nothing else. Each rule is one `noul` (yes/no probability) question that
-   carries the rule: whether the file breaks the rule's description, with
-   criteria for each answer. Yes means part of the file breaks the rule, and
-   the code to avoid is an example of it. No means the file follows the rule
-   or has nothing the rule covers, and the reference is an example of it.
-   Since no rule sits in the shared state, a rule's probability depends only
-   on the file and that rule, not on which other rules share the request.
-   Every question shares the state cost of the request.
+   carries the rule's description, reference, and code to avoid: whether the
+   file diverges from the reference or, for a rule with only code to avoid,
+   whether it contains that code. Criteria for each answer draw the line at
+   the rule's scope, so a file with no code the rule is about is a no. Since
+   no rule sits in the shared state, a rule's probability depends only on the
+   file and that rule, not on which other rules share the request. Every
+   question shares the state cost of the request.
 2. A second request only when at least one rule's probability is above its
    threshold: one `choice` question per flagged rule over the file's non-blank
    lines, which yields the line to report. A file with more than 255 non-blank

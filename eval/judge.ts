@@ -2,7 +2,9 @@
  * Compares ways of asking Jev whether a file breaks a rule. `cases/` plants,
  * for each Effect preset rule, files that break it and files that follow it.
  * Every arm asks every rule of every file, one request per file as a cold
- * `adhere lint` would, over the planted files and adhere's own `src/`.
+ * `adhere lint` would, over the planted files and adhere's own `src/`: 0.4's
+ * rules in the state, adhere's questions without their criteria, and
+ * adhere's questions as it sends them.
  *
  *   bun eval/judge.ts [results.json]
  *
@@ -61,31 +63,20 @@ const inState: Ask = (model, lines, rules) => {
   };
 };
 
-/** The rule in its own question, worded as 0.4 worded it, without criteria. */
-const inQuestion: Ask = (model, lines, rules) => ({
-  model,
-  state: { code: numbered(lines) },
-  questions: Record.map(rules, (rule) => ({
-    type: "noul",
-    instructions: {
-      question:
-        rule.reference === undefined
-          ? "Does `code` contain the pattern shown in `avoid`, which `rule` rules out? Answer no if nothing in this file resembles it."
-          : `Does \`code\` diverge from the pattern shown in \`reference\`${
-              rule.avoid === undefined ? "" : ", for example by doing what `avoid` shows"
-            }, as described by \`rule\`? Answer no if the pattern does not apply to this file.`,
-      rule: rule.description,
-      ...(rule.reference === undefined ? {} : { reference: rule.reference }),
-      ...(rule.avoid === undefined ? {} : { avoid: rule.avoid }),
-    },
-  })),
-});
+/** adhere's questions without their criteria, which TypeSafe says to try both with and without. */
+const withoutCriteria: Ask = (model, lines, rules) => {
+  const body = judgeBody(model, lines, rules);
+  return {
+    ...body,
+    questions: Record.map(body.questions, ({ type, instructions }) => ({ type, instructions })),
+  };
+};
 
-/** In report order. `criteria` is what adhere sends. */
+/** In report order. `current` is what adhere sends. */
 const arms: ReadonlyArray<readonly [string, Ask]> = [
   ["0.4", inState],
-  ["in-question", inQuestion],
-  ["criteria", judgeBody],
+  ["no criteria", withoutCriteria],
+  ["current", judgeBody],
 ];
 
 type Label = "breaks" | "follows";

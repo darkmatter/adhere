@@ -156,10 +156,12 @@ const findingA = {
 describe("request bodies", () => {
   const code = ["const x = 1;", "", "  const y = 2;"];
   const numbered = "1 | const x = 1;\n2 | \n3 |   const y = 2;";
-  const question = "Does `code` break `rule`?";
-  const breaks = "Part of `code` breaks `rule`";
-  const follows =
-    "Every part of `code` that `rule` covers follows it, or `rule` covers no part of `code`";
+  const diverges =
+    "Does `code` diverge from the pattern shown in `reference`, as described by `rule`? Answer no if the pattern does not apply to this file.";
+  const scoped = {
+    true: "`code` diverges from the pattern shown in `reference`, in code that `rule` is about",
+    false: "`code` follows the pattern, or has no code that `rule` is about",
+  };
 
   it("judge: the numbered code is the whole state, and each rule rides in its own noul", () => {
     expect(judgeBody("jev-latest", code, rules)).toEqual({
@@ -168,13 +170,13 @@ describe("request bodies", () => {
       questions: {
         a: {
           type: "noul",
-          instructions: { question, rule: a.description },
-          criteria: { true: { what: breaks }, false: { what: follows, examples: [a.reference] } },
+          instructions: { question: diverges, rule: a.description, reference: a.reference },
+          criteria: scoped,
         },
         b: {
           type: "noul",
-          instructions: { question, rule: b.description },
-          criteria: { true: { what: breaks }, false: { what: follows, examples: [b.reference] } },
+          instructions: { question: diverges, rule: b.description, reference: b.reference },
+          criteria: scoped,
         },
       },
     });
@@ -188,9 +190,9 @@ describe("request bodies", () => {
         a: {
           type: "choice",
           instructions: {
-            question: "Which line of `code` most clearly breaks `rule`?",
+            question: "Which line of `code` most clearly diverges from `reference`?",
             rule: a.description,
-            follows_rule: a.reference,
+            reference: a.reference,
           },
           criteria: { "1": "const x = 1;", "3": "const y = 2;" },
         },
@@ -198,37 +200,48 @@ describe("request bodies", () => {
     });
   });
 
-  it("a rule with code to avoid: that code is an example of a yes", () => {
+  it("a rule with code to avoid: asked whether the file contains it, or diverges as it shows", () => {
     const avoidOnly = { description: "Domain code does not throw.", avoid: 'throw new Error("x")' };
     const both = { ...a, avoid: "const port: number = 3000" };
     expect(judgeBody("jev-latest", code, { c: avoidOnly, d: both }).questions).toEqual({
       c: {
         type: "noul",
-        instructions: { question, rule: avoidOnly.description },
-        criteria: { true: { what: breaks, examples: [avoidOnly.avoid] }, false: { what: follows } },
+        instructions: {
+          question:
+            "Does `code` contain the pattern shown in `avoid`, which `rule` rules out? Answer no if nothing in this file resembles it.",
+          rule: avoidOnly.description,
+          avoid: avoidOnly.avoid,
+        },
+        criteria: {
+          true: "`code` contains the pattern shown in `avoid`, in code that `rule` is about",
+          false: "`code` has nothing like `avoid`, or has no code that `rule` is about",
+        },
       },
       d: {
         type: "noul",
-        instructions: { question, rule: both.description },
+        instructions: {
+          question:
+            "Does `code` diverge from the pattern shown in `reference`, for example by doing what `avoid` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          rule: both.description,
+          reference: both.reference,
+          avoid: both.avoid,
+        },
         criteria: {
-          true: { what: breaks, examples: [both.avoid] },
-          false: { what: follows, examples: [both.reference] },
+          true: "`code` diverges from the pattern shown in `reference`, for example by doing what `avoid` shows, in code that `rule` is about",
+          false: scoped.false,
         },
       },
     });
 
     const located = locateBody("jev-latest", code, { c: avoidOnly, d: both }).questions;
     expect(located.c?.instructions).toEqual({
-      question: "Which line of `code` most clearly breaks `rule`?",
+      question: "Which line of `code` most clearly shows the pattern in `avoid`?",
       rule: avoidOnly.description,
-      breaks_rule: avoidOnly.avoid,
+      avoid: avoidOnly.avoid,
     });
-    expect(located.d?.instructions).toEqual({
-      question: "Which line of `code` most clearly breaks `rule`?",
-      rule: both.description,
-      follows_rule: both.reference,
-      breaks_rule: both.avoid,
-    });
+    expect(located.d?.instructions.question).toBe(
+      "Which line of `code` most clearly diverges from `reference` or resembles `avoid`?",
+    );
   });
 
   it("over 255 lines: a choice over 20-line blocks, then a choice inside the chosen block", () => {
@@ -236,9 +249,10 @@ describe("request bodies", () => {
     const blocks = blockBody("jev-latest", long, { a });
     expect(blocks.questions.a?.type).toBe("choice");
     expect(blocks.questions.a?.instructions).toEqual({
-      question: "Which block of `code` contains the line that most clearly breaks `rule`?",
+      question:
+        "Which block of `code` contains the line that most clearly diverges from `reference`?",
       rule: a.description,
-      follows_rule: a.reference,
+      reference: a.reference,
     });
     expect(Object.keys(blocks.questions.a?.criteria ?? {})).toHaveLength(15);
     expect(blocks.questions.a?.criteria["0"]).toBe("const v1 = 1;...");
