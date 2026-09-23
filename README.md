@@ -254,11 +254,15 @@ beats all of the above for that rule.
 
 ## How a file is judged
 
-1. One Jev request per file, with the file's numbered lines and every rule as
-   the state, and one `noul` (yes/no probability) question per rule: whether
-   the file diverges from the reference or, for a rule with only code to
-   avoid, whether it contains that code. Every question shares the state cost
-   of the request.
+1. One Jev request per file. The state is the file's numbered lines and
+   nothing else. Each rule is one `noul` (yes/no probability) question that
+   carries the rule: whether the file breaks the rule's description, with
+   criteria for each answer. Yes means part of the file breaks the rule, and
+   the code to avoid is an example of it. No means the file follows the rule
+   or has nothing the rule covers, and the reference is an example of it.
+   Since no rule sits in the shared state, a rule's probability depends only
+   on the file and that rule, not on which other rules share the request.
+   Every question shares the state cost of the request.
 2. A second request only when at least one rule's probability is above its
    threshold: one `choice` question per flagged rule over the file's non-blank
    lines, which yields the line to report. A file with more than 255 non-blank
@@ -269,10 +273,12 @@ beats all of the above for that rule.
 
 Judgments are cached in `.adhere/cache/` (add it to `.gitignore`), one entry
 per file. An entry stores the file's content hash and, per rule, the
-probability, the located line, and a fingerprint of the rule's text and model.
-A changed file re-judges every rule for that file. An edited rule re-judges
-only that rule. A lowered threshold locates cached judgments that are newly
-above it without judging again. Entries depend on content, not on the
+probability, the located line, and a fingerprint of the model and the
+question asked for the rule, which carries the rule's text. A changed file
+re-judges every rule for that file. An edited rule re-judges only that rule,
+and an adhere that asks its questions differently re-judges every rule once.
+A lowered threshold locates cached judgments that are newly above it without
+judging again. Entries depend on content, not on the
 machine, so restoring `.adhere/cache/` between CI runs skips unchanged files.
 
 The API key is read only when a request is about to be sent. A run where

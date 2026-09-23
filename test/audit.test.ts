@@ -140,80 +140,79 @@ const findingA = {
 
 describe("request bodies", () => {
   const code = ["const x = 1;", "", "  const y = 2;"];
+  const numbered = "1 | const x = 1;\n2 | \n3 |   const y = 2;";
+  const question = "Does `code` break `rule`?";
+  const breaks = "Part of `code` breaks `rule`";
+  const follows =
+    "Every part of `code` that `rule` covers follows it, or `rule` covers no part of `code`";
 
-  it("judge: one noul per rule over the numbered code and the rules", () => {
+  it("judge: the numbered code is the whole state, and each rule rides in its own noul", () => {
     expect(judgeBody("jev-latest", code, rules)).toEqual({
       model: "jev-latest",
-      state: {
-        code: "1 | const x = 1;\n2 | \n3 |   const y = 2;",
-        rules: {
-          a: { description: a.description, reference: a.reference },
-          b: { description: b.description, reference: b.reference },
-        },
-      },
+      state: { code: numbered },
       questions: {
         a: {
           type: "noul",
-          instructions:
-            'Does state.code diverge from the pattern shown in state.rules["a"].reference, as described by state.rules["a"].description? Answer no if the pattern does not apply to this file.',
+          instructions: { question, rule: a.description },
+          criteria: { true: { what: breaks }, false: { what: follows, examples: [a.reference] } },
         },
         b: {
           type: "noul",
-          instructions:
-            'Does state.code diverge from the pattern shown in state.rules["b"].reference, as described by state.rules["b"].description? Answer no if the pattern does not apply to this file.',
+          instructions: { question, rule: b.description },
+          criteria: { true: { what: breaks }, false: { what: follows, examples: [b.reference] } },
         },
       },
     });
   });
 
-  it("locate: one choice per rule with a criterion per non-blank line", () => {
+  it("locate: one choice per rule, carrying the rule, with a criterion per non-blank line", () => {
     expect(locateBody("jev-latest", code, { a })).toEqual({
       model: "jev-latest",
-      state: {
-        code: "1 | const x = 1;\n2 | \n3 |   const y = 2;",
-        rules: { a: { description: a.description, reference: a.reference } },
-      },
+      state: { code: numbered },
       questions: {
         a: {
           type: "choice",
-          instructions:
-            'Which line of state.code most clearly diverges from state.rules["a"].reference?',
+          instructions: {
+            question: "Which line of `code` most clearly breaks `rule`?",
+            rule: a.description,
+            follows_rule: a.reference,
+          },
           criteria: { "1": "const x = 1;", "3": "const y = 2;" },
         },
       },
     });
   });
 
-  it("a rule with code to avoid: asked whether the file contains it, or diverges as it shows", () => {
+  it("a rule with code to avoid: that code is an example of a yes", () => {
     const avoidOnly = { description: "Domain code does not throw.", avoid: 'throw new Error("x")' };
     const both = { ...a, avoid: "const port: number = 3000" };
-    const judged = judgeBody("jev-latest", code, { c: avoidOnly, d: both });
+    expect(judgeBody("jev-latest", code, { c: avoidOnly, d: both }).questions).toEqual({
+      c: {
+        type: "noul",
+        instructions: { question, rule: avoidOnly.description },
+        criteria: { true: { what: breaks, examples: [avoidOnly.avoid] }, false: { what: follows } },
+      },
+      d: {
+        type: "noul",
+        instructions: { question, rule: both.description },
+        criteria: {
+          true: { what: breaks, examples: [both.avoid] },
+          false: { what: follows, examples: [both.reference] },
+        },
+      },
+    });
 
-    expect(judged.state.rules).toEqual({
-      c: { description: avoidOnly.description, avoid: avoidOnly.avoid },
-      d: { description: both.description, reference: both.reference, avoid: both.avoid },
+    const located = locateBody("jev-latest", code, { c: avoidOnly, d: both }).questions;
+    expect(located.c?.instructions).toEqual({
+      question: "Which line of `code` most clearly breaks `rule`?",
+      rule: avoidOnly.description,
+      breaks_rule: avoidOnly.avoid,
     });
-    expect(judged.questions).toEqual({
-      c: {
-        type: "noul",
-        instructions:
-          'Does state.code contain the pattern shown in state.rules["c"].avoid, which state.rules["c"].description rules out? Answer no if nothing in this file resembles it.',
-      },
-      d: {
-        type: "noul",
-        instructions:
-          'Does state.code diverge from the pattern shown in state.rules["d"].reference, for example by doing what state.rules["d"].avoid shows, as described by state.rules["d"].description? Answer no if the pattern does not apply to this file.',
-      },
-    });
-    expect(locateBody("jev-latest", code, { c: avoidOnly, d: both }).questions).toMatchObject({
-      c: {
-        instructions:
-          'Which line of state.code most clearly shows the pattern in state.rules["c"].avoid?',
-      },
-      d: {
-        instructions:
-          'Which line of state.code most clearly diverges from state.rules["d"].reference or resembles state.rules["d"].avoid?',
-      },
+    expect(located.d?.instructions).toEqual({
+      question: "Which line of `code` most clearly breaks `rule`?",
+      rule: both.description,
+      follows_rule: both.reference,
+      breaks_rule: both.avoid,
     });
   });
 
@@ -221,9 +220,11 @@ describe("request bodies", () => {
     const long = Array.from({ length: 300 }, (_, index) => `const v${index + 1} = ${index + 1};`);
     const blocks = blockBody("jev-latest", long, { a });
     expect(blocks.questions.a?.type).toBe("choice");
-    expect(blocks.questions.a?.instructions).toBe(
-      'Which block of state.code contains the line that most clearly diverges from state.rules["a"].reference?',
-    );
+    expect(blocks.questions.a?.instructions).toEqual({
+      question: "Which block of `code` contains the line that most clearly breaks `rule`?",
+      rule: a.description,
+      follows_rule: a.reference,
+    });
     expect(Object.keys(blocks.questions.a?.criteria ?? {})).toHaveLength(15);
     expect(blocks.questions.a?.criteria["0"]).toBe("const v1 = 1;...");
     expect(blocks.questions.a?.criteria["14"]).toBe("const v281 = 281;...");
@@ -740,10 +741,10 @@ describe("pipeline", () => {
     expect(edited.judged).toBe(1);
   });
 
-  it("keeps judgments cached before avoid existed, and re-judges a rule that gains code to avoid", async () => {
+  it("re-judges what an earlier question judged, and a rule that gains code to avoid", async () => {
     const hexByte = (byte: number) => byte.toString(16).padStart(2, "0");
     const hex = (text: string) => Array.from(new TextEncoder().encode(text), hexByte).join("");
-    // The entry as an earlier adhere wrote it: the fingerprint hashed model, description, and reference.
+    // The entry as adhere 0.4 wrote it: the fingerprint hashed model, description, and reference.
     const cache = memoryCache({
       [source.path]: {
         hash: hex(source.lines.join("\n")),
@@ -759,9 +760,13 @@ describe("pipeline", () => {
     });
 
     const upgraded = recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } });
-    const kept = await audit({ rules: { a }, jev: upgraded.layer, cache });
-    expect(upgraded.calls).toEqual({ judge: [], locate: [] });
-    expect(kept.findings).toEqual([findingA]);
+    const rejudged = await audit({ rules: { a }, jev: upgraded.layer, cache });
+    expect(upgraded.calls).toEqual({ judge: [{ a }], locate: [{ a }] });
+    expect(rejudged.findings).toEqual([findingA]);
+
+    const again = recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } });
+    await audit({ rules: { a }, jev: again.layer, cache });
+    expect(again.calls).toEqual({ judge: [], locate: [] });
 
     const withAvoid = { ...a, avoid: "const port: number = 3000" };
     const edited = recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } });

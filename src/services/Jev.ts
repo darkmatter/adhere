@@ -60,16 +60,20 @@ const isBlank = (line: string): boolean => line.trim().length === 0;
 export const needsBlocks = (lines: Lines): boolean =>
   lines.filter((line) => !isBlank(line)).length > CHOICE_LIMIT;
 
-/** A rule's text as Jev reads it. Code a rule lacks is left out, not sent empty. */
+/** The file, numbered so a line question can name a line. The only thing the questions share. */
+const stateOf = (lines: Lines) => ({
+  code: lines.map((line, index) => `${index + 1} | ${line}`).join("\n"),
+});
+
+/** One side of a noul: what it means, with the rule's code for that side as an example. */
+const sideOf = (what: string, example: string | undefined) =>
+  example === undefined ? { what } : { what, examples: [example] };
+
+/** A rule's text as a comparison of rules reads it. Code a rule lacks is left out, not sent empty. */
 const ruleState = ({ description, reference, avoid }: Rule) => ({
   description,
   ...(reference === undefined ? {} : { reference }),
   ...(avoid === undefined ? {} : { avoid }),
-});
-
-const stateOf = (lines: Lines, rules: Rules) => ({
-  code: lines.map((line, index) => `${index + 1} | ${line}`).join("\n"),
-  rules: Record.map(rules, (rule) => ruleState(rule)),
 });
 
 /**
@@ -87,28 +91,30 @@ const comparedState = (rules: ReadonlyArray<ComparedRule>, mentioned: Iterable<n
   return { rules: state };
 };
 
-const field = (id: RuleId, key: "avoid" | "description" | "reference") =>
-  `state.rules["${id}"].${key}`;
-
 /**
- * A rule with a reference asks whether the file diverges from it, with the
- * code to avoid as an example when there is some. A rule without one asks
- * whether the file contains the code to avoid.
+ * Whether the file breaks the rule. The rule rides in the question, not the
+ * state, so each question reads its own rule and no other. The criteria draw
+ * the line: code to avoid is a yes, and the reference is a no, as is a file
+ * with nothing the rule covers.
  */
-const judgeInstructions = (id: RuleId, rule: Rule): string =>
-  rule.reference === undefined
-    ? `Does state.code contain the pattern shown in ${field(id, "avoid")}, which ${field(id, "description")} rules out? Answer no if nothing in this file resembles it.`
-    : `Does state.code diverge from the pattern shown in ${field(id, "reference")}${
-        rule.avoid === undefined ? "" : `, for example by doing what ${field(id, "avoid")} shows`
-      }, as described by ${field(id, "description")}? Answer no if the pattern does not apply to this file.`;
+export const judgeQuestion = (rule: Rule) => ({
+  type: "noul" as const,
+  instructions: { question: "Does `code` break `rule`?", rule: rule.description },
+  criteria: {
+    true: sideOf("Part of `code` breaks `rule`", rule.avoid),
+    false: sideOf(
+      "Every part of `code` that `rule` covers follows it, or `rule` covers no part of `code`",
+      rule.reference,
+    ),
+  },
+});
 
-/** What the offending line does, for the line and block questions. */
-const offense = (id: RuleId, rule: Rule): string =>
-  rule.reference === undefined
-    ? `shows the pattern in ${field(id, "avoid")}`
-    : rule.avoid === undefined
-      ? `diverges from ${field(id, "reference")}`
-      : `diverges from ${field(id, "reference")} or resembles ${field(id, "avoid")}`;
+/** The rule as a line question carries it: the description, and its code on either side. */
+const ruleFields = (rule: Rule) => ({
+  rule: rule.description,
+  ...(rule.reference === undefined ? {} : { follows_rule: rule.reference }),
+  ...(rule.avoid === undefined ? {} : { breaks_rule: rule.avoid }),
+});
 
 const lineCriteria = (lines: Lines, from: number, to: number): Record<string, string> => {
   const criteria: Record<string, string> = {};
@@ -121,11 +127,8 @@ const lineCriteria = (lines: Lines, from: number, to: number): Record<string, st
 
 export const judgeBody = (model: string, lines: Lines, rules: Rules) => ({
   model,
-  state: stateOf(lines, rules),
-  questions: Record.map(rules, (rule, id) => ({
-    type: "noul" as const,
-    instructions: judgeInstructions(id, rule),
-  })),
+  state: stateOf(lines),
+  questions: Record.map(rules, (rule) => judgeQuestion(rule)),
 });
 
 export const locateBody = (
@@ -135,12 +138,15 @@ export const locateBody = (
   blocks?: Readonly<Record<RuleId, number>>,
 ) => ({
   model,
-  state: stateOf(lines, rules),
+  state: stateOf(lines),
   questions: Record.map(rules, (rule, id) => {
     const block = blocks?.[id];
     return {
       type: "choice" as const,
-      instructions: `Which line of state.code most clearly ${offense(id, rule)}?`,
+      instructions: {
+        question: "Which line of `code` most clearly breaks `rule`?",
+        ...ruleFields(rule),
+      },
       criteria:
         block === undefined
           ? lineCriteria(lines, 1, lines.length)
@@ -159,10 +165,13 @@ export const blockBody = (model: string, lines: Lines, rules: Rules) => {
   }
   return {
     model,
-    state: stateOf(lines, rules),
-    questions: Record.map(rules, (rule, id) => ({
+    state: stateOf(lines),
+    questions: Record.map(rules, (rule) => ({
       type: "choice" as const,
-      instructions: `Which block of state.code contains the line that most clearly ${offense(id, rule)}?`,
+      instructions: {
+        question: "Which block of `code` contains the line that most clearly breaks `rule`?",
+        ...ruleFields(rule),
+      },
       criteria,
     })),
   };

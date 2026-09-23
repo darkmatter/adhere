@@ -2,7 +2,7 @@ import type { Rule, RuleId } from "#config.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, type Judgment, sha256 } from "#services/AuditCache.ts";
-import { Jev, type JevUnavailable, MAX_LINES, snippetOf } from "#services/Jev.ts";
+import { Jev, type JevUnavailable, judgeQuestion, MAX_LINES, snippetOf } from "#services/Jev.ts";
 import { SourceWalker } from "#services/SourceWalker.ts";
 import { applicableRules } from "#rules.ts";
 import { type Crypto, Effect, Record } from "effect";
@@ -45,17 +45,12 @@ const fileResult = (
 const isEmpty = Record.isEmptyReadonlyRecord;
 
 /**
- * What a judgment depends on besides the file. A rule without code to avoid
- * hashes what every rule hashed before `avoid` existed, so its cached
- * judgments survive the upgrade.
+ * What a judgment depends on besides the file: the model, and the question
+ * asked for the rule, which carries the rule. An edited rule re-judges
+ * itself, and a question asked differently re-judges every rule.
  */
 const fingerprintOf = (model: string, rule: Rule) =>
-  sha256(
-    model +
-      rule.description +
-      (rule.reference ?? "") +
-      (rule.avoid === undefined ? "" : `\u0000avoid\u0000${rule.avoid}`),
-  );
+  sha256(`${model}\u0000${JSON.stringify(judgeQuestion(rule))}`);
 
 export const runAudit: Effect.Effect<
   AuditResult,
