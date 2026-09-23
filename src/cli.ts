@@ -48,7 +48,7 @@ class UsageReported extends Schema.TaggedError<UsageReported>()(
 
 const preset = Flag.choice("preset", presetNames).pipe(
   Flag.optional,
-  Flag.withDescription("Add a built-in rule set. With a preset, adhere.config.ts is optional."),
+  Flag.withDescription("Add a built-in rule set. With a preset, .adhere/config.ts is optional."),
 );
 
 const threshold = Flag.float("threshold").pipe(
@@ -86,7 +86,7 @@ const audit = Command.make("adhere", { preset, threshold }, () =>
   }),
 ).pipe(
   Command.withDescription(
-    "Audit the working directory against reference code from adhere.config.ts or a preset, judged by Jev.",
+    "Audit the working directory against reference code from .adhere/config.ts or a preset, judged by Jev.",
   ),
   Command.provide((input) =>
     auditLayer({
@@ -98,7 +98,7 @@ const audit = Command.make("adhere", { preset, threshold }, () =>
 
 const INIT_HELP = `Usage: adhere init [--force]
 
-Scaffold adhere.config.ts and example Markdown rules.
+Scaffold .adhere/config.ts and example Markdown rules.
 
 Options:
   --force   Overwrite existing scaffold files

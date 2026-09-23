@@ -1,6 +1,7 @@
 import {
   ADHERE_DIRECTORY,
   type AdhereConfig as Decoded,
+  CONFIG_FILES,
   ConfigUnavailable,
   decodeConfig,
   type Loaded,
@@ -19,9 +20,6 @@ import {
   type RuleSet,
 } from "#rules.ts";
 import { Context, Effect, FileSystem, Layer, Path, Record } from "effect";
-
-/** Where a config may live, relative to the working directory. Exactly one may exist. */
-export const CONFIG_FILES = ["adhere.config.ts", ".adhere/config.ts", ".adhere.config.ts"] as const;
 
 export class AdhereConfig extends Context.Service<
   AdhereConfig,

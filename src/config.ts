@@ -32,6 +32,12 @@ export const AdhereConfig = Schema.Struct({
 /** Where a repo keeps its rule files by default. The cache lives under it. */
 export const ADHERE_DIRECTORY = ".adhere";
 export const CACHE_DIRECTORY = `${ADHERE_DIRECTORY}/cache`;
+/** Where a config may live, relative to the working directory. Exactly one may exist. */
+export const CONFIG_FILES = [
+  `${ADHERE_DIRECTORY}/config.ts`,
+  "adhere.config.ts",
+  ".adhere.config.ts",
+] as const;
 export interface AdhereConfig extends Schema.Schema.Type<typeof AdhereConfig> {}
 
 /** The shape a config file default-exports. */

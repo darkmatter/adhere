@@ -14,8 +14,8 @@ Deterministic rules (substring matches, type checks) belong in a normal linter.
 A config file in the working directory of the repo being audited, at one of
 these paths (keep one):
 
+- `.adhere/config.ts`, the default, next to the rules
 - `adhere.config.ts`
-- `.adhere/config.ts`
 - `.adhere.config.ts`
 
 ```ts
@@ -46,17 +46,26 @@ package installed, `defineConfig({...})` does the same thing.
 
 ### Rules as Markdown files
 
-A repo's own rules live in `.adhere/`, one `*.md` file per rule. The path
-without `.md` is the rule id, so `.adhere/data/brand-ports.md` is
-`data/brand-ports`. When that directory exists, it is read without any config.
-A repo that already has a `docs/` directory may prefer `docs/adhere/`, so the
-rules sit with the rest of its documentation; point `rules` at it:
+A repo's own rules live in `.adhere/`, one `*.md` file per rule, next to the
+config and the cache (neither is read as a rule). The path without `.md` is the
+rule id, so `.adhere/data/brand-ports.md` is `data/brand-ports`. When that
+directory exists, it is read without any config.
+
+`.adhere/` is the default rather than `docs/adhere/` because it keeps
+everything adhere owns in one directory: the config and the cache are tool
+state, not documentation, and would stay in `.adhere/` anyway. A nested
+`.adhere/` also scopes its rules to the directory that contains it (below). The
+cost is visibility: a dot directory is hidden from `ls`, and from `rg` without
+`--hidden`. A repo that would rather keep its rules with the rest of its
+documentation can point `rules` at `docs/adhere/`:
 
 ```ts
 export default { presets: ["effect"], rules: "./docs/adhere" } satisfies Config;
 ```
 
-A config is otherwise needed only to name presets or set thresholds.
+Rules read through `rules` apply project-wide; nested `.adhere/` directories
+are not read then. A config is otherwise needed only to name presets or set
+thresholds.
 
 Nested `.adhere/` directories are also discovered. A rule in
 `packages/api/.adhere/data/brand-ports.md` has the same id,
@@ -100,7 +109,7 @@ A preset has the shape of a config without `presets`: `rules`, and optionally
 [effect-solutions](https://github.com/kitlangton/effect-solutions) docs and the
 [effect/platform](https://effect.website/docs/platform/introduction/) docs.
 Name it in the config, or on the command line with `--preset effect`, in which
-case `adhere.config.ts` is optional.
+case the config file is optional.
 
 ### Precedence
 
