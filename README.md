@@ -231,20 +231,19 @@ load for your own tooling.
 Jev reads the code under the same words, and is asked whether the file
 diverges from the pattern `must` shows, with `never` as an example of
 diverging. Write the description in them too, so the rule and its code agree:
-"must" and "never", as above. On adhere's eval, the Effect preset reworded
-that way, with a `never` block for each rule, got 1 finding wrong at 0.8
-where it had got 6, and caught as many. A rule with only code that must never be written suits a rule with
-no single correct form to show, such as a hand-rolled retry loop or an error
-caught and dropped. Neither goes in the other's place: code that must never
-be written, under `must`, reads to Jev as the pattern to follow.
+"must" and "never", as above.
+
+A rule with only code that must never be written suits a rule with no single
+correct form to show, such as a hand-rolled retry loop or an error caught and
+dropped. Neither goes in the other's place: code that must never be written,
+under `must`, reads to Jev as the pattern to follow.
 
 A rule that is a guideline rather than a requirement says "should" instead:
 in its description, and in fences tagged `should` and `should not` (`should`
 and `shouldNot` inline in a config). Jev then reads the code under `should`
-and `should_not`. A rule is one or the
-other, so it cannot mix `must` or `never` with `should` or `should not`. In a
-config, `reference` and `avoid`, the names before 0.7, read as `must` and
-`never`.
+and `should_not`. A rule is one or the other, so it cannot mix `must` or
+`never` with `should` or `should not`. In a config, `reference` and `avoid`,
+the names before 0.7, read as `must` and `never`.
 
 Nested `.adhere/` directories are also discovered, except under
 `node_modules/`, `dist/`, and the other skipped directories (above). A rule in
@@ -270,6 +269,22 @@ export default { presets: ["effect"], rules: "./docs/adhere" } satisfies Config;
 ```
 
 Rules read through `rules` apply project-wide.
+
+### Rule writing tips
+
+We've evaluated different ways of giving Jev a rule, to catch the most
+violations with the fewest false positives. In general:
+
+- Say "must" for what code must do and "never" for what it must not, in the
+  description and as the fence tags.
+- Give one example of each: one `must` block and one `never` block. Three of
+  each did no better, and several of one kind alone did worse.
+- For a guideline rather than a requirement, say "should" and "should not"
+  the same way.
+
+On the Effect preset, rules written this way cut the findings Jev got wrong at
+the default threshold from 6 to 1, and caught as many violations. For more
+about the evaluations, see [the eval](eval/README.md).
 
 ### Presets
 
