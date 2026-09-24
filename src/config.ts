@@ -161,11 +161,21 @@ export interface Overrides {
   readonly rpm?: number;
 }
 
-/** The presets a run applies, command-line ones first. */
+/**
+ * The presets a run applies, command-line ones first, each once. A topic such
+ * as `effect/basics` is left out when its whole preset is named too, since
+ * the whole preset already holds its rules.
+ */
 export const presetsOf = (
   config: Pick<AdhereConfig, "presets">,
   overrides: Overrides,
-): ReadonlyArray<PresetName> => [...(overrides.presets ?? []), ...config.presets];
+): ReadonlyArray<PresetName> => {
+  const named = [...new Set([...(overrides.presets ?? []), ...config.presets])];
+  return named.filter((name) => {
+    const [whole] = name.split("/");
+    return whole === name || !named.some((other) => other === whole);
+  });
+};
 
 /**
  * Precedence, highest first: command line, config file, presets in order

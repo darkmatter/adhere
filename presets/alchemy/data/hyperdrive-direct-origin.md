@@ -1,0 +1,14 @@
+---
+description: A Hyperdrive connection's origin should be the database's direct endpoint, and clients that connect without Hyperdrive should use the provider's pooled endpoint; Hyperdrive should not point at a provider pooler, which stacks two poolers.
+---
+
+```ts should
+const hyperdrive = yield* Cloudflare.Hyperdrive.Connection("AppHyperdrive", {
+  origin: branch.origin,
+  dev: branch.pooledOrigin,
+});
+```
+
+```ts should not
+const hyperdrive = yield* Cloudflare.Hyperdrive.Connection("AppHyperdrive", { origin: role.pooledOrigin });
+```

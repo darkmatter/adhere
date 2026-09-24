@@ -23,13 +23,14 @@ import {
   decodeConfig,
   type Loaded,
   type Preset,
+  presetsOf,
   resolveConfig,
 } from "../src/config.ts";
 import { excerptOf } from "../src/excerpt.ts";
 import { tokenize } from "../src/highlight.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
-import { presets } from "../src/presets.ts";
+import { presetOf, presets, topicsOf } from "../src/presets.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
 import {
   applicableRules,
@@ -982,20 +983,48 @@ describe("wording", () => {
     ]);
   });
 
-  it("every rule of the effect preset is worded as the tips recommend", async () => {
+  it("every rule of every preset is worded as the tips recommend", async () => {
     const fs = FileSystem.layerNoop({
       readDirectory: (directory) => Effect.promise(() => readdir(directory, { recursive: true })),
       readFileString: (file) => Effect.promise(() => readFile(file, "utf8")),
     });
-    const rules = await Effect.runPromise(
-      loadRules(fileURLToPath(presets.effect.rules)).pipe(
-        Effect.provide(Layer.merge(fs, Path.layer)),
+    for (const preset of Object.values(presets)) {
+      const rules = await Effect.runPromise(
+        loadRules(fileURLToPath(preset.rules)).pipe(Effect.provide(Layer.merge(fs, Path.layer))),
+      );
+      expect(Object.keys(rules).length).toBeGreaterThan(0);
+      expect(
+        Record.filter(Record.map(rules, strayingOf), (straying) => straying.length > 0),
+      ).toEqual({});
+    }
+  });
+});
+
+describe("presets", () => {
+  it("names each preset's topics after its subdirectories", async () => {
+    for (const name of ["effect", "alchemy"] as const) {
+      const entries = await readdir(fileURLToPath(presets[name].rules), { withFileTypes: true });
+      const directories = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+      expect([...topicsOf(name)].sort()).toEqual(directories.sort());
+    }
+  });
+
+  it("reads a topic from its whole preset's directory, keeping the preset's rule ids", () => {
+    expect(presetOf("effect/basics")).toEqual({ rules: presets.effect.rules, topic: "basics" });
+    expect(presetOf("alchemy")).toEqual({ rules: presets.alchemy.rules });
+  });
+
+  it("applies each preset once, and a topic only when its whole preset is not named", () => {
+    expect(
+      presetsOf(
+        { presets: ["effect", "effect/basics", "alchemy/secrets"] },
+        { presets: ["effect"] },
       ),
-    );
-    expect(Object.keys(rules)).toHaveLength(19);
-    expect(Record.filter(Record.map(rules, strayingOf), (straying) => straying.length > 0)).toEqual(
-      {},
-    );
+    ).toEqual(["effect", "alchemy/secrets"]);
+    expect(presetsOf({ presets: ["effect/basics", "effect/data"] }, {})).toEqual([
+      "effect/basics",
+      "effect/data",
+    ]);
   });
 });
 

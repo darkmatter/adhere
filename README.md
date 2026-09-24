@@ -370,12 +370,33 @@ each rule worded otherwise.
 ### Presets
 
 A preset has the shape of a config without `presets`: `rules`, and optionally
-`model` and `threshold`. `effect` is the one preset: 19 Markdown rules in
-[`presets/effect/`](./presets/effect/), lifted from the
-[effect-solutions](https://github.com/kitlangton/effect-solutions) docs and the
-[effect/platform](https://effect.website/docs/platform/introduction/) docs.
-Name it in the config, or on the command line with `--preset effect`, in which
-case the config file is optional.
+`model` and `threshold`. Name one in the config, or on the command line with
+`--preset`, in which case the config file is optional. There are two:
+
+- `effect`: Markdown rules in [`presets/effect/`](./presets/effect/), lifted
+  from the [effect-solutions](https://github.com/kitlangton/effect-solutions)
+  docs and the
+  [effect/platform](https://effect.website/docs/platform/introduction/) docs.
+- `alchemy`: 43 rules in [`presets/alchemy/`](./presets/alchemy/) for code that
+  deploys with [alchemy](https://alchemy.run), lifted from its docs and blog:
+  where Config and bindings are read, which resources keep their data, how
+  secrets stay out of bundles and logs, authorization on public URLs,
+  migrations, durable workflows, and custom providers.
+
+Each preset divides into topics, its subdirectories, and a topic is a preset
+of its own: `--preset effect/basics` applies only the rules under
+`presets/effect/basics/`, and `alchemy/secrets` only alchemy's secrets rules.
+A topic's rules keep the ids they have in the whole preset, so a topic and its
+preset share cached judgments, and naming both applies each rule once.
+
+A preset rule says "must" only where its source makes a requirement, and
+"should" where the source gives advice. In `effect`, three rules are
+guidelines: network calls carry a timeout and a retry schedule, unless their
+client already applies both; test layers are in memory, outside integration
+tests; and tests provide config through a layer. Config validation accepts
+`Config.mapOrFail` as well as `Config.schema`, and the variants rule does not
+rule out a `switch`. The rule that a command handler only parses input is
+gone: the docs show that pattern but do not ask for it.
 
 The preset leaves out conventions a linter checks exactly. Effect's language
 service, [`@effect/tsgo`](https://github.com/Effect-TS/tsgo) on TypeScript 7,
@@ -404,6 +425,12 @@ options in `tsconfig.json` turn them on:
 `npx @effect/tsgo diagnostics --project tsconfig.json` runs them in CI. Bun
 globals, which the old platform rule also ruled out, need a lint rule of their
 own, such as `no-restricted-globals`.
+
+`leakingRequirements` sees a requirement in an operation's type, but not a
+service built by a factory function that takes its dependencies as arguments,
+whose types have no requirements to find. The preset's
+`services/dependencies-through-layers` asks for that, and
+`services/operations-have-no-requirements` for the style it goes with.
 
 ### Precedence
 

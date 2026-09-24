@@ -63,7 +63,9 @@ class ContradictionsReported extends Schema.TaggedError<ContradictionsReported>(
 
 const preset = Flag.choice("preset", presetNames).pipe(
   Flag.optional,
-  Flag.withDescription("Add a built-in rule set. With a preset, .adhere/config.ts is optional."),
+  Flag.withDescription(
+    "Add a built-in rule set, or one of its topics, such as effect/basics. With a preset, .adhere/config.ts is optional.",
+  ),
 );
 
 const threshold = Flag.float("threshold").pipe(

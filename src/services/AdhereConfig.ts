@@ -11,7 +11,7 @@ import {
   type ResolvedConfig,
   resolveConfig,
 } from "#config.ts";
-import { type PresetName, presets } from "#presets.ts";
+import { type PresetName, presetOf } from "#presets.ts";
 import {
   applicableRules,
   globalRuleSet,
@@ -43,8 +43,10 @@ const loadConfigFile = Effect.fn("AdhereConfig.load")(function* (file: string) {
 });
 
 const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (name: PresetName, base: string) {
-  const preset: Preset = presets[name];
-  const rules = yield* materializeRules(preset.rules, base);
+  const { topic, ...preset } = presetOf(name);
+  const all = yield* materializeRules(preset.rules, base);
+  const rules =
+    topic === undefined ? all : Record.filter(all, (_, id) => id.startsWith(`${topic}/`));
   return [name, { ...preset, rules } satisfies Loaded<Preset>] as const;
 });
 
