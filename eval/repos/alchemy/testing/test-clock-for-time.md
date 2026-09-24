@@ -1,10 +1,8 @@
 # testing/test-clock-for-time
 
-A test that depends on time must use TestClock. Real sleeps and it.live must be used only when real time is required.
+A test that depends on time must use TestClock, never a real sleep or it.live, unless the test needs real time.
 
-The preset words it differently now: A test that depends on time must use TestClock, never a real sleep or it.live, unless the test needs real time.
-
-2 findings, from 0.83 down to 0.71. Each showed this hint:
+1 finding, at 0.78. It showed this hint:
 
 ```ts
 it.effect("time-based test", () =>
@@ -17,11 +15,27 @@ it.effect("time-based test", () =>
 );
 ```
 
-Highest probability first: the probability, where Jev pointed, and that line.
+The probability, where Jev pointed, and the code around it, the line marked `>`:
 
 ```text
-0.83 packages/alchemy/test/Fly/Website/fixtures/deployment.ts:78
-     Effect.andThen(Effect.sleep("500 millis")),
-0.71 packages/alchemy/test/Fly/fixtures/http-readiness-control.ts:141
-     schedule: Schedule.spaced("1 second"),
+0.78 packages/alchemy/test/Fly/Website/fixtures/deployment.ts:78:11
+  65 │     const fiber = yield* Stream.range(0, 1799, 1).pipe(
+  66 │       Stream.takeWhile(() => active),
+  67 │       Stream.runForEach(() =>
+  68 │         getText(url).pipe(
+  69 │           Effect.result,
+  70 │           Effect.flatMap((result) =>
+  71 │             Ref.update(samples, (values) => [
+  72 │               ...values,
+  73 │               Result.isSuccess(result)
+  74 │                 ? { body: result.success }
+  75 │                 : { failure: String(result.failure) },
+  76 │             ]),
+  77 │           ),
+> 78 │           Effect.andThen(Effect.sleep("500 millis")),
+  79 │         ),
+  80 │       ),
+  81 │       Effect.timeout("15 minutes"),
+  82 │       Effect.forkScoped,
+  83 │     );
 ```

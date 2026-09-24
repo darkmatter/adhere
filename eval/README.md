@@ -82,7 +82,7 @@ arms' exact wording, the results, and what was decided.
 repo and one file per rule, as pairs to label. The harness does not score them
 yet.
 
-- [alchemy](repos/alchemy/README.md): 4,916 findings from 25 rules, on
+- [alchemy](repos/alchemy/README.md): 3,622 findings from 18 rules, on
   alchemy-run/alchemy at `8a284d0`.
 
 ## Studies
