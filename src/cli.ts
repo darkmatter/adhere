@@ -3,6 +3,7 @@ import { AuditCacheLive } from "#services/AuditCache.ts";
 import { Credentials, CredentialsLive, CredentialsUnavailable } from "#services/Credentials.ts";
 import { JevLive } from "#services/Jev.http.ts";
 import { SourceWalkerLive } from "#services/SourceWalker.ts";
+import { Status } from "#services/Status.ts";
 import {
   type AuditPlan,
   executeAudit,
@@ -141,6 +142,40 @@ const counterFor = (plan: AuditPlan, logging: LogLevel.LogLevel) => {
   };
 };
 
+/**
+ * The status line for what a run does before its plan: walking the checkout,
+ * reading files, planning. On a terminal it is one line of stderr, redrawn at
+ * most every 100 ms and cut to the terminal's width; anywhere else, and at
+ * debug or below, whose log lines would land in it, it shows nothing.
+ */
+const statusLayer = Layer.effect(Status)(
+  Effect.gen(function* () {
+    const logging = yield* References.MinimumLogLevel;
+    if (process.stderr.isTTY !== true || !LogLevel.isGreaterThan(logging, "Debug")) {
+      return Status.defaultValue();
+    }
+    let drawn = 0;
+    let shown = false;
+    return {
+      show: (text: string) =>
+        Effect.sync(() => {
+          const now = Date.now();
+          if (now - drawn < 100) return;
+          drawn = now;
+          shown = true;
+          // A terminal that reports no width, as some report 0, gets 80 columns.
+          const width = (process.stderr.columns || 80) - 1;
+          process.stderr.write(`\r\u001b[2K${text.slice(0, width)}`);
+        }),
+      clear: Effect.sync(() => {
+        if (shown) process.stderr.write("\r\u001b[2K");
+        shown = false;
+        drawn = 0;
+      }),
+    };
+  }),
+);
+
 const force = Flag.boolean("force").pipe(
   Flag.withDefault(false),
   Flag.withDescription("Overwrite existing scaffold files."),
@@ -154,7 +189,7 @@ export const auditLayer = (overrides: Overrides, filter: ReadonlyArray<string> =
     SourceWalkerLive(filter),
     AuditCacheLive,
     JevLive.pipe(Layer.provide([FetchHttpClient.layer, CredentialsLive])),
-  ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)));
+  ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)), Layer.provideMerge(statusLayer));
 
 /** `adhere lint`: the audit. */
 export const lintCommand = Command.make(
@@ -214,7 +249,7 @@ export const validateLayer = (overrides: Overrides) =>
   Layer.merge(
     JevLive.pipe(Layer.provide([FetchHttpClient.layer, CredentialsLive])),
     AuditCacheLive,
-  ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)));
+  ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)), Layer.provideMerge(statusLayer));
 
 /**
  * `adhere validate`: everything `lint` loads, then how each rule's wording

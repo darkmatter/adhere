@@ -101,8 +101,12 @@ prints a completion script.
 
 ### Before and during a run
 
-Before it sends anything, `lint` says on stderr what it found and what judging
-takes:
+Until it knows what judging takes, a status line on stderr says what `lint` is
+doing: looking for `.adhere/` rules, listing and reading the files, then
+planning, each with a count, such as `Planning: 5,120 of 10,333 files`. The
+line is drawn only on a terminal, and not at `--log-level debug` or below,
+whose log lines would land in it. Then `lint` says on stderr what it found and
+what judging takes:
 
 ```text
 200 files and 14 rules: 2800 checks, 1400 cached.

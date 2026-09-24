@@ -78,6 +78,7 @@ import {
 import { isInSkippedTree, passesFilter, SourceWalker } from "../src/services/SourceWalker.ts";
 import { formatStrays, straysAmong, strayingOf, TIPS_URL } from "../src/wording.ts";
 import { walkFiles } from "../src/walk.ts";
+import { Status } from "../src/services/Status.ts";
 import {
   formatLinterCheck,
   SAMPLE,
@@ -629,19 +630,28 @@ describe("walk", () => {
     await symlink(join(root, "src", "a.ts"), join(root, "packages", "api", "alias.ts"));
     await symlink(join(root, "nowhere"), join(root, "src", "dangling"));
 
+    const progress: Array<readonly [number, number]> = [];
     const files = await Effect.runPromise(
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        return yield* walkFiles(fs, path, root, (relative) => {
-          const name = relative.split("/").at(-1);
-          return name !== "node_modules" && name !== ".git";
-        });
+        return yield* walkFiles(
+          fs,
+          path,
+          root,
+          (relative) => {
+            const name = relative.split("/").at(-1);
+            return name !== "node_modules" && name !== ".git";
+          },
+          (directories, found) => Effect.sync(() => progress.push([directories, found])),
+        );
       }).pipe(Effect.provide(realFileSystem)),
     );
 
     // The link to a file is listed; the link to src/, the cycle, and the link to nothing are not.
     expect(files).toEqual(["packages/api/alias.ts", "src/a.ts", "src/deep/b.ts"]);
+    // The root, src/, src/deep/, packages/, and packages/api/ were read, in that many steps.
+    expect(progress.at(-1)).toEqual([5, 3]);
   });
 });
 
@@ -1146,6 +1156,30 @@ describe("plan", () => {
       deferred: 0,
       requests: 1,
     });
+  });
+
+  it("counts the files it has planned on the status line, and clears it after", async () => {
+    const shown: Array<string> = [];
+    const status = Layer.succeed(Status, {
+      show: (text: string) => Effect.sync(() => void shown.push(text)),
+      clear: Effect.sync(() => void shown.push("(cleared)")),
+    });
+
+    await Effect.runPromise(
+      planAudit().pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules }),
+            Layer.succeed(SourceWalker, { files: Effect.succeed([source, other]) }),
+            memoryCache(),
+            testCrypto,
+            status,
+          ),
+        ),
+      ),
+    );
+
+    expect(shown).toEqual(["Planning: 1 of 2 files", "Planning: 2 of 2 files", "(cleared)"]);
   });
 
   it("tells progress each file's requests and findings as it finishes", async () => {

@@ -4,6 +4,7 @@ import { ADHERE_DIRECTORY, SKIPPED_DIRECTORIES } from "#config.ts";
 import type { ScannedFile } from "#models/Audit.ts";
 import { WalkUnavailable } from "#models/Audit.ts";
 import { walkFiles } from "#walk.ts";
+import { clearingStatus, counted, countOf, Status } from "#services/Status.ts";
 
 /** Walks the repository's TypeScript source, skipping what is not ours to read. */
 export class SourceWalker extends Context.Service<
@@ -83,19 +84,27 @@ const scannable = (root: string, paths: ReadonlyArray<string>, self: string, kee
     paths.filter((relative) => !isInSkippedTree(relative) && keep(relative)),
   ).filter((file) => isScannable(file, self));
 
-/** One root's files, filtered to what the audit reads. */
-const listRoot = Effect.fn("SourceWalker.listRoot")(
-  (fs: FileSystem.FileSystem, path: Path.Path, root: string, self: string, keep: Keep) =>
-    Effect.flatMap(walkFiles(fs, path, root, entersForSource), (paths) => {
-      const files = scannable(root, paths, self, keep);
-      return Effect.as(
-        Effect.logDebug(
-          `listed ${root}: ${paths.length} files, ${files.length} source files to read`,
-        ),
-        files,
-      );
-    }),
-);
+/** One root's files, filtered to what the audit reads. `label` names the root on the status line. */
+const listRoot = Effect.fn("SourceWalker.listRoot")(function* (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  root: string,
+  label: string,
+  self: string,
+  keep: Keep,
+) {
+  const status = yield* Status;
+  const paths = yield* walkFiles(fs, path, root, entersForSource, (directories, found) =>
+    status.show(
+      `Listing ${label}: ${countOf(directories, "directory", "directories")}, ${countOf(found, "file", "files")}`,
+    ),
+  );
+  const files = scannable(root, paths, self, keep);
+  yield* Effect.logDebug(
+    `listed ${root}: ${paths.length} files, ${files.length} source files to read`,
+  );
+  return files;
+});
 
 /** One scannable path, read into lines. */
 const readFile = Effect.fn("SourceWalker.readFile")((fs: FileSystem.FileSystem, path: string) =>
@@ -105,14 +114,42 @@ const readFile = Effect.fn("SourceWalker.readFile")((fs: FileSystem.FileSystem, 
   })).pipe(Effect.tap((file) => Effect.logTrace(`read ${path}: ${file.lines.length} lines`))),
 );
 
-/** Read a batch of paths; the inner loop hoisted out of `forEach`. */
-const readEach = (fs: FileSystem.FileSystem, paths: ReadonlyArray<string>) =>
-  Effect.forEach(paths, (path: string) => readFile(fs, path));
+/** Reads a root's paths, several at a time, keeping their order, and counts them on the status line. */
+const readEach = Effect.fn("SourceWalker.readEach")(function* (
+  fs: FileSystem.FileSystem,
+  label: string,
+  paths: ReadonlyArray<string>,
+) {
+  const status = yield* Status;
+  let read = 0;
+  return yield* Effect.forEach(
+    paths,
+    (path: string) =>
+      readFile(fs, path).pipe(
+        Effect.tap(() => {
+          read += 1;
+          return status.show(
+            `Reading ${label}: ${counted(read)} of ${countOf(paths.length, "file", "files")}`,
+          );
+        }),
+      ),
+    { concurrency: 16 },
+  );
+});
 
-/** One root's files, in directory order: read every scannable path. */
+/** One root's files, in path order: read every scannable path. */
 const readRoot = Effect.fn("SourceWalker.readRoot")(
-  (fs: FileSystem.FileSystem, path: Path.Path, root: string, self: string, keep: Keep) =>
-    Effect.flatMap(listRoot(fs, path, root, self, keep), (paths) => readEach(fs, paths)),
+  (
+    fs: FileSystem.FileSystem,
+    path: Path.Path,
+    root: string,
+    label: string,
+    self: string,
+    keep: Keep,
+  ) =>
+    Effect.flatMap(listRoot(fs, path, root, label, self, keep), (paths) =>
+      readEach(fs, label, paths),
+    ),
 );
 
 /**
@@ -147,11 +184,19 @@ export const SourceWalkerLive = (filter: ReadonlyArray<string> = []) =>
       const self = yield* path.fromFileUrl(new URL("../../", import.meta.url)).pipe(Effect.orDie);
       const walk = Effect.fn("SourceWalker.files")(function* () {
         const dirs = yield* scanDirs(fs, root).pipe(Effect.mapError(refused));
-        const trees = yield* Effect.forEach(dirs, (dir) =>
-          readRoot(fs, path, path.join(root, dir), self, (relative) =>
-            // Filter patterns are relative to the working directory, not the tree read.
-            passesFilter(dir === "." ? relative : `${dir}/${relative}`, filter),
-          ).pipe(Effect.mapError(refused)),
+        const trees = yield* clearingStatus(
+          Effect.forEach(dirs, (dir) =>
+            readRoot(
+              fs,
+              path,
+              path.join(root, dir),
+              dir === "." ? "the working directory" : `${dir}/`,
+              self,
+              (relative) =>
+                // Filter patterns are relative to the working directory, not the tree read.
+                passesFilter(dir === "." ? relative : `${dir}/${relative}`, filter),
+            ).pipe(Effect.mapError(refused)),
+          ),
         );
         return trees.flat();
       });

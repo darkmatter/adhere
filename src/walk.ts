@@ -20,12 +20,16 @@ const skipped: Entry = { kind: "skipped" };
  * follow them; on alchemy's checkout it passed 160 GB before the kernel
  * killed it. A symbolic link to a file is listed like the file, and a link
  * to nothing is left out.
+ *
+ * `progress` hears, as each directory is read, how many have been and how
+ * many files they held.
  */
 export const walkFiles = Effect.fn("walkFiles")(function* (
   fs: FileSystem.FileSystem,
   path: Path.Path,
   root: string,
   enter: (relative: string) => boolean,
+  progress: (directories: number, files: number) => Effect.Effect<void> = () => Effect.void,
 ) {
   const entryOf = (relative: string): Effect.Effect<Entry, PlatformError.PlatformError> => {
     const full = path.join(root, relative);
@@ -49,27 +53,32 @@ export const walkFiles = Effect.fn("walkFiles")(function* (
   };
 
   const files: Array<string> = [];
+  let directories = 0;
   let level: ReadonlyArray<string> = [""];
   while (level.length > 0) {
-    const entries = yield* Effect.forEach(
+    const next: Array<string> = [];
+    yield* Effect.forEach(
       level,
       (directory) =>
-        Effect.flatMap(
-          fs.readDirectory(directory === "" ? root : path.join(root, directory)),
-          (names) =>
+        fs.readDirectory(directory === "" ? root : path.join(root, directory)).pipe(
+          Effect.flatMap((names) =>
             Effect.forEach(
               names,
               (name) => entryOf(directory === "" ? name : `${directory}/${name}`),
               { concurrency: 16 },
             ),
+          ),
+          Effect.flatMap((entries) => {
+            for (const entry of entries) {
+              if (entry.kind === "file") files.push(entry.relative);
+              else if (entry.kind === "directory") next.push(entry.relative);
+            }
+            directories += 1;
+            return progress(directories, files.length);
+          }),
         ),
-      { concurrency: 8 },
+      { concurrency: 8, discard: true },
     );
-    const next: Array<string> = [];
-    for (const entry of entries.flat()) {
-      if (entry.kind === "file") files.push(entry.relative);
-      else if (entry.kind === "directory") next.push(entry.relative);
-    }
     level = next;
   }
   return files.sort();

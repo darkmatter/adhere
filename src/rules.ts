@@ -7,6 +7,7 @@ import {
 } from "#config.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { walkFiles } from "#walk.ts";
+import { clearingStatus, countOf, Status } from "#services/Status.ts";
 import { Effect, FileSystem, Path, Record } from "effect";
 
 const refused = (directory: string) => (problem: { readonly message: string }) =>
@@ -124,9 +125,14 @@ export const loadRules = Effect.fn("loadRules")(function* (directory: string) {
 export const loadAdhereRuleSet = Effect.fn("loadAdhereRuleSet")(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const entries = yield* walkFiles(fs, path, root, entersForRules).pipe(
-    Effect.mapError(refused(root)),
-  );
+  const status = yield* Status;
+  const entries = yield* clearingStatus(
+    walkFiles(fs, path, root, entersForRules, (directories) =>
+      status.show(
+        `Looking for .adhere/ rules: ${countOf(directories, "directory", "directories")} read`,
+      ),
+    ),
+  ).pipe(Effect.mapError(refused(root)));
   const files = entries.filter(isNestedRuleFile);
   return yield* Effect.forEach(files, (relative) =>
     Effect.gen(function* () {

@@ -16,6 +16,7 @@ import {
   tokensOf,
 } from "#services/Jev.ts";
 import { SourceWalker } from "#services/SourceWalker.ts";
+import { clearingStatus, counted, countOf, Status } from "#services/Status.ts";
 import { SAMPLE, tallyKeyOf } from "#mechanical.ts";
 import { applicableRules } from "#rules.ts";
 import { type Crypto, Duration, Effect, Record, Result, Semaphore } from "effect";
@@ -281,9 +282,23 @@ export const planAudit = (
     });
 
     const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
-    const everything: ReadonlyArray<FilePlan> = yield* Effect.forEach(sorted, planFile, {
-      concurrency: 8,
-    });
+    const status = yield* Status;
+    let done = 0;
+    const everything: ReadonlyArray<FilePlan> = yield* clearingStatus(
+      Effect.forEach(
+        sorted,
+        (file) =>
+          planFile(file).pipe(
+            Effect.tap(() => {
+              done += 1;
+              return status.show(
+                `Planning: ${counted(done)} of ${countOf(sorted.length, "file", "files")}`,
+              );
+            }),
+          ),
+        { concurrency: 8 },
+      ),
+    );
     const limited =
       options.limit === undefined ? everything : withinLimit(everything, options.limit);
     const planned = yield* withSamples(limited);
