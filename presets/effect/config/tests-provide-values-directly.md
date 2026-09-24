@@ -1,8 +1,8 @@
 ---
-description: A test must supply config with Layer.succeed on the config service, never by setting environment variables or a ConfigProvider.
+description: A test should supply config with Layer.succeed on the config service, and should not set environment variables or a ConfigProvider to do it.
 ---
 
-```ts must
+```ts should
 Effect.runPromise(
   program.pipe(
     Effect.provide(
@@ -15,7 +15,7 @@ Effect.runPromise(
 );
 ```
 
-```ts never
+```ts should not
 beforeAll(() => {
   process.env.DATABASE_URL = "postgres://localhost/test";
 });

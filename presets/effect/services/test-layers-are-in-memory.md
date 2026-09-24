@@ -1,8 +1,8 @@
 ---
-description: A test implementation of a service must be built with Layer.sync or Layer.succeed over in-memory state, never over a real database, network, or file.
+description: A test implementation of a service should be built with Layer.sync or Layer.succeed over in-memory state, and should not reach a real database, network, or file. Integration tests that exercise the real service are not in scope.
 ---
 
-```ts must
+```ts should
 static readonly testLayer = Layer.sync(Cache, () => {
   const store = new Map<string, string>()
 
@@ -13,7 +13,7 @@ static readonly testLayer = Layer.sync(Cache, () => {
 })
 ```
 
-```ts never
+```ts should not
 const EmailTest = Layer.effect(
   Email,
   Effect.gen(function* () {

@@ -1,7 +1,7 @@
 # data/variants-are-tagged-unions
 
-A union of plain objects matched with `switch` breaks the rule; tagged classes
-in a `Schema.Union`, matched exhaustively, follow it.
+A union of hand-written object types joined by a tag field breaks the rule;
+tagged classes in a `Schema.Union` follow it.
 
 ```ts breaks
 import type { Iban, Last4, WalletProvider } from "./primitives.ts";

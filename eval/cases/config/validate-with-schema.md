@@ -1,7 +1,9 @@
 # config/validate-with-schema
 
 Range and choice checks written by hand after reading config break the rule.
-`Config.schema` follows it, next to a free-form label read as a plain string.
+`Config.schema` follows it, next to a free-form label read as a plain string,
+and so does a check in `Config.mapOrFail`, which validates as the value is
+read.
 
 ```ts breaks
 import { Config, Effect } from "effect";
@@ -33,5 +35,26 @@ export const WorkerSettings = Effect.gen(function* () {
   const region = yield* Config.schema(Region, "WORKER_REGION");
   const label = yield* Config.string("WORKER_LABEL");
   return { concurrency, region, label };
+});
+```
+
+```ts follows
+import { Config, ConfigProvider, Effect } from "effect";
+
+const inRange = (name: string, minimum: number, maximum: number) => (value: number) =>
+  value >= minimum && value <= maximum
+    ? Effect.succeed(value)
+    : Effect.fail(
+        new Config.ConfigError(
+          new ConfigProvider.SourceError({ message: `${name} must be ${minimum} to ${maximum}` }),
+        ),
+      );
+
+export const WorkerSettings = Effect.gen(function* () {
+  const concurrency = yield* Config.int("WORKER_CONCURRENCY").pipe(
+    Config.mapOrFail(inRange("WORKER_CONCURRENCY", 1, 64)),
+  );
+  const label = yield* Config.string("WORKER_LABEL");
+  return { concurrency, label };
 });
 ```

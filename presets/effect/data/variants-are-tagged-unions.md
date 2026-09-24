@@ -1,5 +1,5 @@
 ---
-description: Structured variants must be Schema.TaggedClass in a Schema.Union, matched with Match.tag and Match.exhaustive, never a plain union checked with a switch.
+description: Structured variants, alternatives that carry fields, must be Schema.TaggedClass members of a Schema.Union, never hand-written object types joined by a tag field. Simple alternatives without fields may be Schema.Literals.
 ---
 
 ```ts must

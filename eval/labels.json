@@ -103,39 +103,9 @@
   },
   {
     "rule": "basics/instrument-with-pipe",
-    "file": "cli/handlers-delegate#2",
-    "label": "debatable",
-    "note": "Console.log in a handler body: the command's output, arguably not instrumentation."
-  },
-  {
-    "rule": "basics/instrument-with-pipe",
     "file": "src/services/Jev.ts",
     "label": "false",
     "note": "It builds requests and adds no timeouts, retries, logs, or spans. It does contain adhere's question text."
-  },
-  {
-    "rule": "cli/handlers-delegate",
-    "file": "errors/defects-for-bugs#1",
-    "label": "false",
-    "note": "The file has no command handler."
-  },
-  {
-    "rule": "cli/handlers-delegate",
-    "file": "errors/defects-for-bugs#2",
-    "label": "false",
-    "note": "The file has no command handler."
-  },
-  {
-    "rule": "cli/handlers-delegate",
-    "file": "src/cli.ts",
-    "label": "debatable",
-    "note": "Its handlers build the plan, ask to confirm, and count progress: interface work rather than business logic, arguably."
-  },
-  {
-    "rule": "cli/handlers-delegate",
-    "file": "src/services/Jev.ts",
-    "label": "false",
-    "note": "The file has no command handler. It does contain adhere's question text."
   },
   {
     "rule": "config/business-logic-depends-on-config-service",
@@ -206,18 +176,6 @@
   {
     "rule": "data/brand-meaningful-primitives",
     "file": "basics/gen-for-sequencing#3",
-    "label": "debatable",
-    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
-  },
-  {
-    "rule": "data/brand-meaningful-primitives",
-    "file": "cli/handlers-delegate#1",
-    "label": "real",
-    "note": "A customer id as a bare string."
-  },
-  {
-    "rule": "data/brand-meaningful-primitives",
-    "file": "cli/handlers-delegate#2",
     "label": "debatable",
     "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
   },
@@ -346,54 +304,6 @@
     "file": "testing/test-clock-for-time#3",
     "label": "debatable",
     "note": "A localhost URL as a literal string in a test."
-  },
-  {
-    "rule": "data/records-are-schema-classes",
-    "file": "data/variants-are-tagged-unions#1",
-    "label": "real",
-    "note": "Payment variants as a plain type alias."
-  },
-  {
-    "rule": "data/records-are-schema-classes",
-    "file": "src/config.ts",
-    "label": "debatable",
-    "note": "Configuration types, or a Schema.Struct with an interface: arguably not domain records, and not Schema.Class."
-  },
-  {
-    "rule": "data/records-are-schema-classes",
-    "file": "src/contradictions.ts",
-    "label": "real",
-    "note": "Contradiction is a plain interface."
-  },
-  {
-    "rule": "data/records-are-schema-classes",
-    "file": "src/models/Audit.ts",
-    "label": "real",
-    "note": "ScannedFile is a plain interface."
-  },
-  {
-    "rule": "data/records-are-schema-classes",
-    "file": "src/rules.ts",
-    "label": "real",
-    "note": "RuleEntry is a plain interface."
-  },
-  {
-    "rule": "data/records-are-schema-classes",
-    "file": "src/services/AuditCache.ts",
-    "label": "debatable",
-    "note": "Configuration types, or a Schema.Struct with an interface: arguably not domain records, and not Schema.Class."
-  },
-  {
-    "rule": "data/records-are-schema-classes",
-    "file": "src/services/Jev.ts",
-    "label": "real",
-    "note": "ComparedRule and Body are plain interfaces."
-  },
-  {
-    "rule": "data/records-are-schema-classes",
-    "file": "src/workflows/audit.ts",
-    "label": "real",
-    "note": "Finding and AuditResult are plain interfaces."
   },
   {
     "rule": "data/variants-are-tagged-unions",
