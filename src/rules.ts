@@ -6,6 +6,7 @@ import {
   SKIPPED_DIRECTORIES,
 } from "#config.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
+import { walkFiles } from "#walk.ts";
 import { Effect, FileSystem, Path, Record } from "effect";
 
 const refused = (directory: string) => (problem: { readonly message: string }) =>
@@ -35,6 +36,21 @@ const segmentsOf = (relative: string): ReadonlyArray<string> =>
     .filter((segment) => segment.length > 0);
 
 const isMarkdown = (path: string): boolean => path.endsWith(".md");
+
+/**
+ * Whether the rule walk reads into a directory: on the way to a `.adhere/`,
+ * not a skipped tree or `.git`; inside one, anything but its cache, since a
+ * directory there such as `.adhere/e2e/` is a rule topic.
+ */
+const entersForRules = (relative: string): boolean => {
+  const segments = segmentsOf(relative);
+  const name = segments.at(-1) ?? "";
+  const adhere = segments.lastIndexOf(ADHERE_SEGMENT);
+  if (adhere >= 0 && adhere < segments.length - 1) {
+    return !(adhere === segments.length - 2 && name === CACHE_SEGMENT);
+  }
+  return name === ADHERE_SEGMENT || !(SKIPPED_DIRECTORIES.has(name) || name === ".git");
+};
 
 const isNestedRuleFile = (relative: string): boolean => {
   const segments = segmentsOf(relative);
@@ -108,10 +124,10 @@ export const loadRules = Effect.fn("loadRules")(function* (directory: string) {
 export const loadAdhereRuleSet = Effect.fn("loadAdhereRuleSet")(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const entries = yield* fs
-    .readDirectory(root, { recursive: true })
-    .pipe(Effect.mapError(refused(root)));
-  const files = entries.filter(isNestedRuleFile).sort();
+  const entries = yield* walkFiles(fs, path, root, entersForRules).pipe(
+    Effect.mapError(refused(root)),
+  );
+  const files = entries.filter(isNestedRuleFile);
   return yield* Effect.forEach(files, (relative) =>
     Effect.gen(function* () {
       const file = joinPath(path, root, segmentsOf(relative));

@@ -3,6 +3,7 @@ import { Context, Effect, FileSystem, Layer, Path } from "effect";
 import { ADHERE_DIRECTORY, SKIPPED_DIRECTORIES } from "#config.ts";
 import type { ScannedFile } from "#models/Audit.ts";
 import { WalkUnavailable } from "#models/Audit.ts";
+import { walkFiles } from "#walk.ts";
 
 /** Walks the repository's TypeScript source, skipping what is not ours to read. */
 export class SourceWalker extends Context.Service<
@@ -63,8 +64,14 @@ const isScannable = (file: string, self: string): boolean =>
 const refused = (problem: { readonly message: string }): WalkUnavailable =>
   WalkUnavailable.make({ message: problem.message });
 
-/** `readdir(recursive)` yields paths relative to the root it read: root them. */
+/** The walk yields paths relative to the root it read: root them. */
 const rooted = (root: string, paths: ReadonlyArray<string>) => paths.map((rel) => `${root}/${rel}`);
+
+/** Whether the walk reads into a directory: never a skipped tree, `.adhere/`, or `.git`. */
+const entersForSource = (relative: string): boolean => {
+  const name = relative.split("/").at(-1) ?? "";
+  return !(SKIPPED_DIRECTORIES.has(name) || name === ADHERE_DIRECTORY || name === ".git");
+};
 
 /** A test on a path relative to the root being read: whether the run wants it. */
 type Keep = (relative: string) => boolean;
@@ -76,15 +83,14 @@ const scannable = (root: string, paths: ReadonlyArray<string>, self: string, kee
     paths.filter((relative) => !isInSkippedTree(relative) && keep(relative)),
   ).filter((file) => isScannable(file, self));
 
-/** One root's paths, filtered to what the audit reads. */
+/** One root's files, filtered to what the audit reads. */
 const listRoot = Effect.fn("SourceWalker.listRoot")(
-  (fs: FileSystem.FileSystem, root: string, self: string, keep: Keep) =>
-    Effect.flatMap(fs.readDirectory(root, { recursive: true }), (paths) => {
+  (fs: FileSystem.FileSystem, path: Path.Path, root: string, self: string, keep: Keep) =>
+    Effect.flatMap(walkFiles(fs, path, root, entersForSource), (paths) => {
       const files = scannable(root, paths, self, keep);
-      // The paths listed against the files kept: node_modules shows as the difference.
       return Effect.as(
         Effect.logDebug(
-          `listed ${root}: ${paths.length} paths, ${files.length} source files to read`,
+          `listed ${root}: ${paths.length} files, ${files.length} source files to read`,
         ),
         files,
       );
@@ -105,8 +111,8 @@ const readEach = (fs: FileSystem.FileSystem, paths: ReadonlyArray<string>) =>
 
 /** One root's files, in directory order: read every scannable path. */
 const readRoot = Effect.fn("SourceWalker.readRoot")(
-  (fs: FileSystem.FileSystem, root: string, self: string, keep: Keep) =>
-    Effect.flatMap(listRoot(fs, root, self, keep), (paths) => readEach(fs, paths)),
+  (fs: FileSystem.FileSystem, path: Path.Path, root: string, self: string, keep: Keep) =>
+    Effect.flatMap(listRoot(fs, path, root, self, keep), (paths) => readEach(fs, paths)),
 );
 
 /**
@@ -125,8 +131,9 @@ const scanDirs = Effect.fn("SourceWalker.scanDirs")(function* (
 });
 
 /**
- * The real walker: `FileSystem.readDirectory` recursively over the roots,
- * each file read and split into lines. Tests substitute their own tree.
+ * The real walker: the roots walked a directory at a time, skipped trees
+ * left unread, each file read and split into lines. Tests substitute their
+ * own tree.
  * The scan root is the current working directory, so the audit reads the
  * repository it is run in.
  */
@@ -141,7 +148,7 @@ export const SourceWalkerLive = (filter: ReadonlyArray<string> = []) =>
       const walk = Effect.fn("SourceWalker.files")(function* () {
         const dirs = yield* scanDirs(fs, root).pipe(Effect.mapError(refused));
         const trees = yield* Effect.forEach(dirs, (dir) =>
-          readRoot(fs, path.join(root, dir), self, (relative) =>
+          readRoot(fs, path, path.join(root, dir), self, (relative) =>
             // Filter patterns are relative to the working directory, not the tree read.
             passesFilter(dir === "." ? relative : `${dir}/${relative}`, filter),
           ).pipe(Effect.mapError(refused)),

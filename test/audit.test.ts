@@ -1,7 +1,7 @@
-import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripVTControlCharacters } from "node:util";
 import {
@@ -15,6 +15,7 @@ import {
   Redacted,
   Schema,
 } from "effect";
+import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
 import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import { describe, expect, it } from "vite-plus/test";
 import { findContradictions, formatContradictions } from "../src/contradictions.ts";
@@ -76,6 +77,7 @@ import {
 } from "../src/services/Jev.ts";
 import { isInSkippedTree, passesFilter, SourceWalker } from "../src/services/SourceWalker.ts";
 import { formatStrays, straysAmong, strayingOf, TIPS_URL } from "../src/wording.ts";
+import { walkFiles } from "../src/walk.ts";
 import {
   formatLinterCheck,
   SAMPLE,
@@ -600,68 +602,99 @@ describe("markdown rules", () => {
   });
 });
 
+/** Node's file system, as Bun's layer provides it, for tests that walk a real tree. */
+const realFileSystem = Layer.merge(BunFileSystem.layer, Path.layer);
+
+/** Writes each file of `tree` under a new temporary directory, and returns the directory. */
+const onDisk = async (tree: Readonly<Record<string, string>>): Promise<string> => {
+  const root = await mkdtemp(join(tmpdir(), "adhere-tree-"));
+  for (const [relative, content] of Object.entries(tree)) {
+    await mkdir(dirname(join(root, relative)), { recursive: true });
+    await writeFile(join(root, relative), content, "utf8");
+  }
+  return root;
+};
+
+describe("walk", () => {
+  it("lists files a directory at a time, never into a skipped one or through a link to one", async () => {
+    const root = await onDisk({
+      "src/a.ts": "",
+      "src/deep/b.ts": "",
+      "node_modules/pkg/index.ts": "",
+      "packages/api/node_modules/dep/index.ts": "",
+      ".git/HEAD": "",
+    });
+    await symlink(join(root, "src"), join(root, "packages", "api", "linked"));
+    await symlink("..", join(root, "src", "deep", "up"));
+    await symlink(join(root, "src", "a.ts"), join(root, "packages", "api", "alias.ts"));
+    await symlink(join(root, "nowhere"), join(root, "src", "dangling"));
+
+    const files = await Effect.runPromise(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        return yield* walkFiles(fs, path, root, (relative) => {
+          const name = relative.split("/").at(-1);
+          return name !== "node_modules" && name !== ".git";
+        });
+      }).pipe(Effect.provide(realFileSystem)),
+    );
+
+    // The link to a file is listed; the link to src/, the cycle, and the link to nothing are not.
+    expect(files).toEqual(["packages/api/alias.ts", "src/a.ts", "src/deep/b.ts"]);
+  });
+});
+
 describe("nested .adhere rules", () => {
   it("loads every .adhere directory with the containing directory as scope", async () => {
-    const tree: Record<string, string> = {
-      "/repo/.adhere/style/service.md": "---\ndescription: root\n---\nroot()\n",
-      "/repo/.adhere/cache/ignored.md": "---\ndescription: cache\n---\ncache()\n",
-      "/repo/packages/api/.adhere/style/service.md": "---\ndescription: api\n---\napi()\n",
-      "/repo/packages/api/.adhere/api/schema.md": "---\ndescription: schema\n---\nschema()\n",
-    };
-    const fs = FileSystem.layerNoop({
-      readDirectory: () =>
-        Effect.succeed([
-          ".adhere/style/service.md",
-          ".adhere/cache/ignored.md",
-          "packages/api/.adhere/style/service.md",
-          "packages/api/.adhere/api/schema.md",
-        ]),
-      readFileString: (file) => Effect.succeed(tree[file] ?? ""),
+    const root = await onDisk({
+      ".adhere/style/service.md": "---\ndescription: root\n---\nroot()\n",
+      ".adhere/cache/ignored.md": "not a rule, so reading it would refuse the load",
+      "packages/api/.adhere/style/service.md": "---\ndescription: api\n---\napi()\n",
+      "packages/api/.adhere/api/schema.md": "---\ndescription: schema\n---\nschema()\n",
     });
 
     const entries = await Effect.runPromise(
-      loadAdhereRuleSet("/repo").pipe(Effect.provide(Layer.merge(fs, Path.layer))),
+      loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem)),
     );
 
     expect(entries).toEqual([
       {
         id: "style/service",
-        file: "/repo/.adhere/style/service.md",
-        scope: "/repo",
+        file: `${root}/.adhere/style/service.md`,
+        scope: root,
         rule: { description: "root", must: "root()" },
       },
       {
         id: "api/schema",
-        file: "/repo/packages/api/.adhere/api/schema.md",
-        scope: "/repo/packages/api",
+        file: `${root}/packages/api/.adhere/api/schema.md`,
+        scope: `${root}/packages/api`,
         rule: { description: "schema", must: "schema()" },
       },
       {
         id: "style/service",
-        file: "/repo/packages/api/.adhere/style/service.md",
-        scope: "/repo/packages/api",
+        file: `${root}/packages/api/.adhere/style/service.md`,
+        scope: `${root}/packages/api`,
         rule: { description: "api", must: "api()" },
       },
     ]);
   });
 
-  it("skips .adhere directories inside dependency and generated trees", async () => {
-    const tree: Record<string, string> = {
-      "/repo/.adhere/e2e/isolated.md": "---\ndescription: isolated\n---\nisolated()\n",
-    };
-    // The skipped files read as empty, which would refuse the load if they were parsed.
-    const fs = FileSystem.layerNoop({
-      readDirectory: () =>
-        Effect.succeed([
-          ".adhere/e2e/isolated.md",
-          "node_modules/@drkmttr/adhere/.adhere/rules/refusals-name-the-file.md",
-          "dist/.adhere/style/service.md",
-        ]),
-      readFileString: (file) => Effect.succeed(tree[file] ?? ""),
+  it("skips .adhere directories inside dependency and generated trees, and through links", async () => {
+    // A skipped file is not a rule, so reading it would refuse the load.
+    const root = await onDisk({
+      ".adhere/e2e/isolated.md": "---\ndescription: isolated\n---\nisolated()\n",
+      "node_modules/@drkmttr/adhere/.adhere/rules/refusals-name-the-file.md": "not a rule",
+      "dist/.adhere/style/service.md": "not a rule",
+      ".git/.adhere/leftover.md": "not a rule",
     });
+    // A workspace package linked into node_modules and back, as pnpm links them.
+    await mkdir(join(root, "packages"), { recursive: true });
+    await symlink(join(root, ".adhere"), join(root, "packages", "linked"));
+    await symlink("..", join(root, "packages", "loop"));
 
     const entries = await Effect.runPromise(
-      loadAdhereRuleSet("/repo").pipe(Effect.provide(Layer.merge(fs, Path.layer))),
+      loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem)),
     );
 
     expect(entries.map((entry) => entry.id)).toEqual(["e2e/isolated"]);

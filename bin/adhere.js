@@ -8,6 +8,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
+import { constants } from "node:os";
 import { fileURLToPath } from "node:url";
 
 const platform = `${process.platform}-${process.arch}`;
@@ -26,6 +27,14 @@ const resolveExecutable = () => {
 const run = (command, commandArgs) => {
   const result = spawnSync(command, commandArgs, { stdio: "inherit" });
   if (result.error) throw result.error;
+  if (result.signal) {
+    // A killed process says nothing itself, so say what killed it.
+    const memory =
+      result.signal === "SIGKILL" ? ", usually the system ending it for running out of memory" : "";
+    console.error(`adhere: the executable was killed by ${result.signal}${memory}.`);
+    process.exitCode = 128 + (constants.signals[result.signal] ?? 0);
+    return;
+  }
   process.exitCode = result.status ?? 1;
 };
 
