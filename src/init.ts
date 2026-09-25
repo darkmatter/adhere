@@ -140,11 +140,14 @@ const packageManagerAt = async (root: string): Promise<PackageManager> => {
 
 /**
  * pnpm refuses to add to a workspace root without a flag. `-w` fails outside a
- * workspace, so this one, which works in both, stands in for it.
+ * workspace, so the first one, which works in both, stands in for it. pnpm 11
+ * also fails on msgpackr-extract's unapproved build script. It comes with
+ * effect, and adhere never calls msgpackr, so the second flag lets pnpm skip
+ * the build with a warning.
  */
 const addFlags: Record<PackageManager, ReadonlyArray<string>> = {
   bun: [],
-  pnpm: ["--ignore-workspace-root-check"],
+  pnpm: ["--ignore-workspace-root-check", "--config.strict-dep-builds=false"],
   yarn: [],
   npm: [],
 };

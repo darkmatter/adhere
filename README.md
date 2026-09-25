@@ -260,7 +260,10 @@ When there is a `package.json`, init also adds `@drkmttr/adhere` to its
 `<manager> add -D @drkmttr/adhere` with the package manager whose lockfile
 (`bun.lock`, `bun.lockb`, `pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`)
 sits beside the `package.json`, or npm when there is none. With pnpm it adds
-`--ignore-workspace-root-check`, so the install also works at a workspace root.
+`--ignore-workspace-root-check`, so the install also works at a workspace root,
+and `--config.strict-dep-builds=false`, so pnpm 11 skips the build script of
+msgpackr-extract, an optional native add-on that comes with `effect` and that
+adhere never uses, with a warning instead of failing.
 It skips the install when `package.json` already lists adhere.
 
 ### Validate
