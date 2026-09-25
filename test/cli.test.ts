@@ -29,6 +29,14 @@ describe("cli", () => {
     }
   });
 
+  it("prints the skill for writing rules, or with fix, the one for verifying and fixing findings", async () => {
+    const print = async (...args: ReadonlyArray<string>) =>
+      (await execFileAsync("bun", [main, "skill", ...args], { cwd: process.cwd() })).stdout;
+    expect(await print()).toMatch(/^---\nname: adhere\n/);
+    expect(await print("rules")).toBe(await print());
+    expect(await print("fix")).toMatch(/^---\nname: adhere-fix\n/);
+  });
+
   it("validates a single rule without asking Jev, and says how its wording differs from the tips", async () => {
     const root = join(tmpdir(), `adhere-validate-${Date.now()}`);
     await mkdir(join(root, ".adhere"), { recursive: true });

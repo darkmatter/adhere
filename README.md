@@ -624,12 +624,21 @@ every file is cached needs no key and no network.
 
 ## Agent skill
 
-[`skills/adhere/SKILL.md`](./skills/adhere/SKILL.md) teaches an agent to
-gather a repo's conventions into rule files, configure adhere, and calibrate
-thresholds. Install it with the [skills](https://github.com/vercel-labs/skills)
-CLI: `skills add darkmatter/adhere`. The binary carries the same file:
-`adhere skill` prints it, so `adhere skill > .agents/skills/adhere/SKILL.md`
-works without a checkout.
+Two skills teach an agent to work with adhere:
+
+- [`skills/adhere/SKILL.md`](./skills/adhere/SKILL.md) gathers a repo's
+  conventions into rule files, configures adhere, and calibrates thresholds.
+- [`skills/adhere-fix/SKILL.md`](./skills/adhere-fix/SKILL.md) verifies and
+  fixes the findings `lint` reports: it checks each against its rule and the
+  code, fixes the real ones, suppresses the false ones with an `adhere-ignore`
+  comment that gives the evidence, and says when a rule is wrong more often
+  than right.
+
+Install them with the [skills](https://github.com/vercel-labs/skills) CLI:
+`skills add darkmatter/adhere`. The binary carries both: `adhere skill` prints
+the first and `adhere skill fix` the second, so
+`adhere skill fix > .agents/skills/adhere-fix/SKILL.md` works without a
+checkout.
 
 ## Development
 

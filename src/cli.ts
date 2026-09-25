@@ -42,13 +42,14 @@ import {
   Stdio,
   Stream,
 } from "effect";
-import { Command, Flag, Prompt } from "effect/unstable/cli";
+import { Argument, Command, Flag, Prompt } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
 // A Bun text import (https://bun.sh/docs/bundler/loaders#text): the file's
 // contents become a string at bundle time, so the compiled binary carries the
 // skill without an --asset flag. `skills/` sits beside `src/`, outside the `#`
 // import map, hence the relative path.
 import skill from "../skills/adhere/SKILL.md" with { type: "text" };
+import fixSkill from "../skills/adhere-fix/SKILL.md" with { type: "text" };
 
 class FindingsReported extends Schema.TaggedError<FindingsReported>()("FindingsReported", {
   count: Schema.Finite,
@@ -384,10 +385,22 @@ export const logoutCommand = Command.make("logout", {}, () =>
   Command.provide(CredentialsLive),
 );
 
-/** `adhere skill`: the agent skill for writing rules, as shipped in the binary. */
-export const skillCommand = Command.make("skill", {}, () => Console.log(skill.trimEnd())).pipe(
+/** The agent skills the binary carries, by the name `adhere skill` takes. */
+const skills = { rules: skill, fix: fixSkill } as const;
+
+const skillName = Argument.choice("skill", ["rules", "fix"] as const).pipe(
+  Argument.withDefault("rules" as const),
+  Argument.withDescription(
+    "rules, the default, to gather a repo's conventions into rules and configure adhere; fix, to verify and fix the findings lint reports.",
+  ),
+);
+
+/** `adhere skill [rules|fix]`: an agent skill, as shipped in the binary. */
+export const skillCommand = Command.make("skill", { name: skillName }, ({ name }) =>
+  Console.log(skills[name].trimEnd()),
+).pipe(
   Command.withDescription(
-    "Print the agent skill that gathers a repo's conventions into rules and configures adhere. Pipe it into .agents/skills/adhere/SKILL.md or hand it to an agent.",
+    "Print an agent skill: by default the one that gathers a repo's conventions into rules and configures adhere, or with fix, the one that verifies and fixes lint's findings. Pipe it into .agents/skills/<name>/SKILL.md or hand it to an agent.",
   ),
 );
 

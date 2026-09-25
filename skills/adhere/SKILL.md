@@ -147,6 +147,9 @@ Then, per rule, read the findings and decide:
   rule fires, remove the file. A rule that cannot fire is not a rule.
 - Hits at 0.9 and above: read them first. They are usually real.
 
+To verify and fix the findings themselves, one at a time, use the adhere-fix
+skill, which `adhere skill fix` prints.
+
 Threshold changes never re-judge; only edited rules do (per rule) and edited
 files do (per file). Iterate on wording freely, it costs one request per file
 per changed rule.
