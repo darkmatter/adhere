@@ -107,11 +107,9 @@ Bare `adhere` prints the help, which lists the commands, and
 `adhere <command> --help` lists a command's flags. `adhere --completions <shell>`
 prints a completion script.
 
-
 ### Demo
 
 <a href="https://asciinema.org/a/1266511" target="_blank"><img width="400" src="https://asciinema.org/a/1266511.svg" /></a>
-
 
 ### Before and during a run
 
@@ -153,8 +151,8 @@ next run with the same limit picks up where this one stopped. `--limit 0` shows
 the plan and judges nothing. `--rpm <requests>` sends at most that many requests
 to Jev a minute, evenly spaced, retries included, and the plan says about how
 long they take. `--filter <glob>` reads only the files whose path from the
-working directory matches, such as `src/**` or `**/*.service.ts` (if using globs, 
-wrap with single quotes to avoid expansion); repeat it for more, and start a 
+working directory matches, such as `src/**` or `**/*.service.ts` (if using globs,
+wrap with single quotes to avoid expansion); repeat it for more, and start a
 pattern with `!` to leave out what it matches. Together:
 
 ```sh
