@@ -18,6 +18,7 @@ import {
 import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
 import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import { describe, expect, it } from "vite-plus/test";
+import { withoutComments } from "../src/comments.ts";
 import { findContradictions, formatContradictions } from "../src/contradictions.ts";
 import {
   AdhereConfig as AdhereConfigSchema,
@@ -861,6 +862,42 @@ describe("nested .adhere rules", () => {
       "style/root-only": rootOnly,
       "style/service": rootShadowed,
     });
+  });
+});
+
+describe("comments", () => {
+  it("takes comments out, keeping every line and its number", () => {
+    const lines = [
+      "/**",
+      " * Deleting a missing policy returns success.",
+      " */",
+      "const retries = 3; // enough",
+      "const every = /* seconds */ 5;",
+      "  // gone",
+      "export const x = 1;",
+    ];
+    expect(withoutComments(lines)).toEqual([
+      "",
+      "",
+      "",
+      "const retries = 3;",
+      "const every =  5;",
+      "",
+      "export const x = 1;",
+    ]);
+  });
+
+  it("keeps a string, template literal, or regular expression that holds a comment's marks", () => {
+    const lines = [
+      'const url = "https://example.com"; // the site',
+      "const path = `a//b/*c*/`;",
+      "const slashes = /\\/\\//g;",
+    ];
+    expect(withoutComments(lines)).toEqual([
+      'const url = "https://example.com";',
+      "const path = `a//b/*c*/`;",
+      "const slashes = /\\/\\//g;",
+    ]);
   });
 });
 

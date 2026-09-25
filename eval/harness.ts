@@ -39,7 +39,7 @@ export const numbered = (lines: Lines): string =>
 
 type Side = "breaks" | "follows";
 
-interface Sample {
+export interface Sample {
   readonly name: string;
   readonly lines: Lines;
   /** The rule a planted file was written for, and which side of it the file is on. */
@@ -69,7 +69,7 @@ const Labels = Schema.fromJsonString(
 );
 
 /** Every probability of a run, and each request's size and token usage. */
-const Run = Schema.Struct({
+export const Run = Schema.Struct({
   models: Schema.String,
   judgments: Schema.Array(
     Schema.Struct({
@@ -92,7 +92,7 @@ const Run = Schema.Struct({
     }),
   ),
 });
-type Run = typeof Run.Type;
+export type Run = typeof Run.Type;
 
 const Answered = Schema.Struct({
   model: Schema.String,
@@ -119,7 +119,7 @@ const kindOf = (sample: Sample, rule: string): Kind =>
       : "off-target";
 
 /** The chance a random positive outscores a random negative; ties count half. */
-const auc = (positives: ReadonlyArray<number>, negatives: ReadonlyArray<number>): number => {
+export const auc = (positives: ReadonlyArray<number>, negatives: ReadonlyArray<number>): number => {
   let wins = 0;
   for (const positive of positives) {
     for (const negative of negatives) {
@@ -134,7 +134,7 @@ const above = (probabilities: ReadonlyArray<number>, threshold: number) =>
 
 const row = (cells: ReadonlyArray<string>) => `| ${cells.join(" | ")} |`;
 
-const table = (header: ReadonlyArray<string>, rows: ReadonlyArray<ReadonlyArray<string>>) =>
+export const table = (header: ReadonlyArray<string>, rows: ReadonlyArray<ReadonlyArray<string>>) =>
   [row(header), row(header.map(() => "---")), ...rows.map(row)].join("\n");
 
 const readTree = Effect.fn("eval.readTree")(function* (
@@ -149,11 +149,17 @@ const readTree = Effect.fn("eval.readTree")(function* (
   );
 });
 
-/** Asks Jev each arm's request for each file: every probability, and each request's usage. */
-const askJev = Effect.fn("eval.askJev")(function* (
+/**
+ * Asks Jev each arm's request for each file: every probability, and each
+ * request's usage. A request Jev refuses stops the run, unless `skipRefused`,
+ * for a run long enough that losing what it paid for costs more: then the
+ * refusal is printed and the request left out.
+ */
+export const askJev = Effect.fn("eval.askJev")(function* (
   arms: ReadonlyArray<Arm>,
   samples: ReadonlyArray<Sample>,
   rules: Rules,
+  skipRefused = false,
 ) {
   const jobs = arms.flatMap(([arm, build]) =>
     samples.flatMap((sample) =>
@@ -179,11 +185,23 @@ const askJev = Effect.fn("eval.askJev")(function* (
     return yield* HttpClientResponse.schemaBodyJson(Answered)(response);
   });
 
-  const answered = yield* Effect.forEach(
+  const answered = (yield* Effect.forEach(
     jobs,
-    (job) => Effect.map(ask(job.body), (response) => ({ ...job, response })),
+    (job) => {
+      const asked = Effect.map(ask(job.body), (response) => ({ ...job, response }));
+      return skipRefused
+        ? asked.pipe(
+            Effect.catch((problem) =>
+              Effect.as(
+                Console.error(`left out ${job.arm}, ${job.sample.name}: ${String(problem)}`),
+                undefined,
+              ),
+            ),
+          )
+        : asked;
+    },
     { concurrency: 8 },
-  );
+  )).filter((job) => job !== undefined);
 
   const judgments: ReadonlyArray<Judgment> = answered.flatMap(({ arm, sample, response }) =>
     Object.entries(response.answers).map(([rule, answer]) => ({
