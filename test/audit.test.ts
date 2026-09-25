@@ -77,7 +77,12 @@ import {
   type Rules,
   tokensOf,
 } from "../src/services/Jev.ts";
-import { isInSkippedTree, passesFilter, SourceWalker } from "../src/services/SourceWalker.ts";
+import {
+  isInSkippedTree,
+  isTestFile,
+  passesFilter,
+  SourceWalker,
+} from "../src/services/SourceWalker.ts";
 import { formatStrays, straysAmong, strayingOf, TIPS_URL } from "../src/wording.ts";
 import { walkFiles } from "../src/walk.ts";
 import { Status } from "../src/services/Status.ts";
@@ -415,9 +420,15 @@ describe("config", () => {
     expect(decoded.rules).toBe("./team-rules");
   });
 
-  it("keeps the config's exclude globs", async () => {
+  it("keeps the config's exclude globs, and refuses a rule's tests other than only or include", async () => {
     const configured = await Effect.runPromise(loaded({ exclude: ["gen/**"] }));
     expect(resolveConfig(configured).exclude).toEqual(["gen/**"]);
+    const refused = await Effect.runPromise(
+      Effect.flip(
+        decodeConfig({ rules: { a: { description: "d", must: "a()", tests: "sometimes" } } }),
+      ),
+    );
+    expect(refused._tag).toBe("ConfigUnavailable");
   });
 
   it("threshold precedence: command line, then config, then preset, then 0.8", async () => {
@@ -618,6 +629,23 @@ describe("markdown rules", () => {
       description: "d",
       never: "# Must\nb",
     });
+  });
+
+  it("front matter's tests says a rule judges test files, only them or as well", async () => {
+    expect(await parse("---\ndescription: d\ntests: only\n---\na()\n")).toEqual({
+      description: "d",
+      tests: "only",
+      must: "a()",
+    });
+    expect(await parse("---\ndescription: d\ntests: include\n---\na()\n")).toMatchObject({
+      tests: "include",
+    });
+    const refused = await Effect.runPromise(
+      Effect.flip(
+        parseRuleMarkdown("---\ndescription: d\ntests: always\n---\na()\n", "rules/a.md"),
+      ),
+    );
+    expect(refused.message).toContain("rules/a.md");
   });
 
   it("refuses a body with no code, naming the file", async () => {
@@ -855,6 +883,17 @@ describe("source walker", () => {
     expect(isInSkippedTree("dist/main.ts")).toBe(true);
     expect(isInSkippedTree(".adhere/config.ts")).toBe(true);
   });
+
+  it("counts .test.ts and .spec.ts files, and files under a test directory, as tests", () => {
+    expect(isTestFile("src/a.test.ts")).toBe(true);
+    expect(isTestFile("src/a.spec.ts")).toBe(true);
+    expect(isTestFile("packages/api/test/helpers/layer.ts")).toBe(true);
+    expect(isTestFile("src/__tests__/a.ts")).toBe(true);
+    expect(isTestFile("fixtures/worker.ts")).toBe(true);
+    expect(isTestFile("src/test.ts")).toBe(false);
+    expect(isTestFile("src/testing/clock.ts")).toBe(false);
+    expect(isTestFile("src/AWS/B2BI/TestConversionHttp.ts")).toBe(false);
+  });
 });
 
 describe("contradictions", () => {
@@ -895,6 +934,22 @@ describe("contradictions", () => {
     });
     return { calls, layer };
   };
+
+  it("offers no pair of a rule on tests only and a rule that skips tests, which share no file", async () => {
+    const jev = comparingJev([], {});
+    const onTests: RuleEntry = {
+      ...entry("testing/clock", "/repo", "A test must use the test clock."),
+      rule: { description: "A test must use the test clock.", must: "clock()", tests: "only" },
+    };
+    const contradictions = await Effect.runPromise(
+      findContradictions(
+        [entry("style/use-services", "/repo", "Use service classes for IO."), onTests],
+        0.7,
+      ).pipe(Effect.provide(jev.layer)),
+    );
+    expect(contradictions).toEqual([]);
+    expect(jev.calls.conflicts).toEqual([]);
+  });
 
   it("offers each rule the rules sharing its files, then reports the pairs Jev confirms", async () => {
     const jev = comparingJev(
@@ -1230,6 +1285,37 @@ const planOf = (options: {
 describe("plan", () => {
   const other: ScannedFile = { path: "/repo/src/other.ts", lines: ["const x = 1;"] };
 
+  it("judges a test file only by the rules that say tests, and leaves out a file no rule judges", async () => {
+    const plain = { description: "Plain.", must: "plain()" };
+    const onTests = { description: "On tests.", must: "tests()", tests: "only" as const };
+    const alsoTests = { description: "Also tests.", must: "also()", tests: "include" as const };
+    const helper: ScannedFile = {
+      path: "/repo/test/helper.ts",
+      lines: ["const y = 2;"],
+      test: true,
+    };
+    const judgedBy = (planned: AuditPlan) =>
+      Object.fromEntries(
+        planned.files.map((plan) => [plan.file.path, Object.keys(plan.prepared).sort()]),
+      );
+
+    const all = await planOf({
+      rules: { plain, onTests, alsoTests },
+      files: [other, helper],
+      cache: memoryCache(),
+    });
+    expect(judgedBy(all)).toEqual({
+      [other.path]: ["alsoTests", "plain"],
+      [helper.path]: ["alsoTests", "onTests"],
+    });
+    const plainOnly = await planOf({
+      rules: { plain },
+      files: [other, helper],
+      cache: memoryCache(),
+    });
+    expect(judgedBy(plainOnly)).toEqual({ [other.path]: ["plain"] });
+  });
+
   it("counts the checks, what the cache answers, and the requests the rest take", async () => {
     const cache = memoryCache();
     await audit({
@@ -1242,6 +1328,7 @@ describe("plan", () => {
     expect(planned.files.map((plan) => plan.file.path)).toEqual([other.path, source.path]);
     expect({ ...planned, files: planned.files.length }).toEqual({
       files: 2,
+      unjudged: [],
       rules: 2,
       checks: 4,
       cached: 2,
@@ -1346,10 +1433,11 @@ describe("plan", () => {
     sampled: {},
   });
   const summary = (
-    fields: Omit<AuditPlan, "files" | "tokens"> & { readonly tokens?: number },
+    fields: Omit<AuditPlan, "files" | "tokens" | "unjudged"> & { readonly tokens?: number },
     files = 200,
   ): AuditPlan => ({
     files: Array.from({ length: files }, (_, index) => filePlan(`/repo/${index}.ts`)),
+    unjudged: [],
     tokens: 0,
     ...fields,
   });
@@ -1786,6 +1874,33 @@ describe("pipeline", () => {
     expect(pruned).toEqual([
       { hashes: new Set(plan.files.map((file) => file.hash)), tallies: new Set(tallies) },
     ]);
+  });
+
+  it("prunes nothing another run knows of a file this run's rules do not judge, such as a test", async () => {
+    const pruned: Array<Live> = [];
+    const helper: ScannedFile = {
+      path: "/repo/test/helper.ts",
+      lines: ["const y = 2;"],
+      test: true,
+    };
+    const plan = await Effect.runPromise(
+      planAudit().pipe(
+        Effect.tap(pruneCache),
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules }),
+            Layer.succeed(SourceWalker, { files: Effect.succeed([source, helper]) }),
+            memoryCache({}, new Map(), pruned),
+            testCrypto,
+          ),
+        ),
+      ),
+    );
+    expect(plan.files.map((file) => file.file.path)).toEqual([source.path]);
+    expect(plan.unjudged).toHaveLength(1);
+    expect(pruned[0]?.hashes).toEqual(
+      new Set([...plan.files.map((file) => file.hash), ...plan.unjudged]),
+    );
   });
 
   it("re-judges what an earlier question judged, and a rule that gains code never to write", async () => {

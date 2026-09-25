@@ -3,6 +3,8 @@ import { Schema } from "effect";
 export interface ScannedFile {
   readonly path: string;
   readonly lines: ReadonlyArray<string>;
+  /** A test file, which only the rules that say `tests` judge. */
+  readonly test?: boolean;
 }
 
 /** A source walker's refusal: the tree it was asked to read is not readable. */

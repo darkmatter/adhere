@@ -28,11 +28,14 @@ import { Effect, Schema } from "effect";
  * fence's own word wins over its heading's. The first fence under each word is
  * that example, and a rule has either or both. An untagged fence outside those
  * sections is the code to write, and without a fence the whole body is.
- * `avoid`, the word before 0.7, means `never`. `threshold` is optional.
+ * `avoid`, the word before 0.7, means `never`. `threshold` is optional, and
+ * so is `tests`: `only` for a rule about test files, which rules otherwise
+ * skip, and `include` for a rule that judges them too.
  */
 const FrontMatter = Schema.Struct({
   description: Schema.String,
   threshold: Schema.optionalKey(Schema.FiniteFromString),
+  tests: Schema.optionalKey(Schema.Literals(["only", "include"])),
 });
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;

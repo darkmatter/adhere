@@ -1,4 +1,5 @@
-import { type RuleEntry, shownId } from "#rules.ts";
+import type { Rule } from "#config.ts";
+import { judgesFile, type RuleEntry, shownId } from "#rules.ts";
 import { Jev, type Pair } from "#services/Jev.ts";
 import { Effect } from "effect";
 
@@ -17,6 +18,10 @@ const scopesOverlap = (a: string, b: string): boolean => {
   return first === second || first.startsWith(`${second}/`) || second.startsWith(`${first}/`);
 };
 
+/** Whether two rules judge any of the same kind of file: a rule on tests only shares none with one that skips them. */
+const judgeSameKind = (a: Rule, b: Rule): boolean =>
+  (judgesFile(a, true) && judgesFile(b, true)) || (judgesFile(a, false) && judgesFile(b, false));
+
 /**
  * Per rule, the rules that apply to some of the same files. A rule with the
  * same id is left out: a nested rule that shares an id shadows the other on
@@ -25,7 +30,10 @@ const scopesOverlap = (a: string, b: string): boolean => {
 const partnersOf = (entries: ReadonlyArray<RuleEntry>): ReadonlyArray<ReadonlyArray<number>> =>
   entries.map((first, index) =>
     entries.flatMap((second, other) =>
-      other !== index && first.id !== second.id && scopesOverlap(first.scope, second.scope)
+      other !== index &&
+      first.id !== second.id &&
+      scopesOverlap(first.scope, second.scope) &&
+      judgeSameKind(first.rule, second.rule)
         ? [other]
         : [],
     ),

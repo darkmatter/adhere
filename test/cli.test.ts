@@ -170,6 +170,39 @@ describe("cli", () => {
     expect(stderr.split("\n")[0]).toBe("1 file and 1 rule: 1 check.");
   });
 
+  it("judges tests only by a rule about tests", async () => {
+    const root = join(tmpdir(), `adhere-tests-${Date.now()}`);
+    for (const directory of [".adhere", "src", "test"]) {
+      await mkdir(join(root, directory), { recursive: true });
+    }
+    const files: Readonly<Record<string, string>> = {
+      "src/a.ts": "export const a = 1;\n",
+      "src/a.test.ts": "export const t = 1;\n",
+      "test/helper.ts": "export const h = 1;\n",
+      ".adhere/named.md":
+        "---\ndescription: A constant must be named.\n---\n\nexport const named = 1;\n",
+    };
+    for (const [file, text] of Object.entries(files)) {
+      await writeFile(join(root, file), text, "utf8");
+    }
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    const plan = () =>
+      execFileAsync("bun", [main, "lint", "--limit", "0"], { cwd: root }).then(
+        ({ stderr }) => stderr.split("\n")[0],
+        ({ stderr }: { readonly stderr: string }) => stderr.split("\n")[0],
+      );
+
+    // src/a.ts alone: no rule judges tests.
+    expect(await plan()).toBe("1 file and 1 rule: 1 check.");
+    await writeFile(
+      join(root, ".adhere", "tests.md"),
+      "---\ndescription: A test must be named.\ntests: only\n---\n\nexport const named = 1;\n",
+      "utf8",
+    );
+    // Now the two tests as well, each judged only by the rule on tests.
+    expect(await plan()).toBe("3 files and 2 rules: 3 checks.");
+  });
+
   it("prunes the cache after a run that read every file, keeping other rules' answers, and not after a filtered one", async () => {
     const root = join(tmpdir(), `adhere-prune-${Date.now()}`);
     const cache = join(root, ".adhere", "cache");

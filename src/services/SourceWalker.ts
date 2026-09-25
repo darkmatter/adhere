@@ -1,6 +1,6 @@
 import { matchesGlob } from "node:path";
 import { Context, Effect, FileSystem, Layer, Path } from "effect";
-import { ADHERE_DIRECTORY, SKIPPED_DIRECTORIES } from "#config.ts";
+import { ADHERE_DIRECTORY, SKIPPED_DIRECTORIES, TEST_DIRECTORIES } from "#config.ts";
 import type { ScannedFile } from "#models/Audit.ts";
 import { WalkUnavailable } from "#models/Audit.ts";
 import { walkFiles } from "#walk.ts";
@@ -12,9 +12,9 @@ export class SourceWalker extends Context.Service<
   SourceWalker,
   {
     /**
-     * Every TypeScript file under the audit's roots, in directory order. A
-     * file that cannot be read refuses the walk: a silent gap would report
-     * a clean audit that was never complete.
+     * Every TypeScript file under the audit's roots, in directory order, test
+     * files marked. A file that cannot be read refuses the walk: a silent gap
+     * would report a clean audit that was never complete.
      */
     readonly files: Effect.Effect<ReadonlyArray<ScannedFile>, WalkUnavailable>;
   }
@@ -51,13 +51,26 @@ export const passesFilter = (relative: string, patterns: ReadonlyArray<string>):
   return (include.length === 0 || include.some(matches)) && !exclude.some(matches);
 };
 
+/**
+ * Whether a path, relative to the working directory, is a test: a `.test.ts`
+ * or `.spec.ts` file, or any file under a test directory such as `test/`.
+ */
+export const isTestFile = (relative: string): boolean => {
+  const segments = relative.split(/[\\/]/);
+  const name = segments.at(-1) ?? "";
+  return (
+    name.endsWith(".test.ts") ||
+    name.endsWith(".spec.ts") ||
+    segments.slice(0, -1).some((segment) => TEST_DIRECTORIES.has(segment))
+  );
+};
+
 const isInside = (file: string, root: string): boolean =>
   file === root || file.startsWith(`${root}/`);
 
 const isScannable = (file: string, self: string): boolean =>
   file.endsWith(".ts") &&
   !file.endsWith(".d.ts") &&
-  !file.endsWith(".test.ts") &&
   !file.endsWith("/adhere.config.ts") &&
   !file.endsWith("/.adhere.config.ts") &&
   // The audit's own detector patterns are data, not violations of themselves.
@@ -171,8 +184,9 @@ const scanDirs = Effect.fn("SourceWalker.scanDirs")(function* (
 /**
  * The real walker: the roots walked a directory at a time, skipped trees
  * left unread, each file read and split into lines. The run's filter and the
- * config's `exclude` leave out what they match. Tests substitute their own
- * tree.
+ * config's `exclude` leave out what they match. Test files are read, and
+ * marked, even when no rule judges them, so a prune keeps what other runs
+ * know of them. Tests substitute their own tree.
  * The scan root is the current working directory, so the audit reads the
  * repository it is run in.
  */
@@ -202,7 +216,11 @@ export const SourceWalkerLive = (filter: ReadonlyArray<string> = []) =>
             ).pipe(Effect.mapError(refused)),
           ),
         );
-        return trees.flat();
+        return trees
+          .flat()
+          .map((file) =>
+            isTestFile(path.relative(root, file.path)) ? { ...file, test: true } : file,
+          );
       });
       return SourceWalker.of({ files: walk() });
     }),

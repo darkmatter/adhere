@@ -20,7 +20,7 @@ import { SourceWalker } from "#services/SourceWalker.ts";
 import { clearingStatus, counted, countOf, Status } from "#services/Status.ts";
 import { SAMPLE, tallyKeyOf } from "#mechanical.ts";
 import { priceOf } from "#pricing.ts";
-import { applicableRules } from "#rules.ts";
+import { applicableRules, judgesFile } from "#rules.ts";
 import { type Crypto, Duration, Effect, Record, Result, Semaphore } from "effect";
 
 export interface Finding {
@@ -102,6 +102,11 @@ export interface FilePlan {
 /** A run worked out from the files, the rules, and the cache, before any request. */
 export interface AuditPlan {
   readonly files: ReadonlyArray<FilePlan>;
+  /**
+   * The content hashes of files read that no rule in the run judges, such as
+   * tests when no rule says `tests`: a prune keeps what other runs know of them.
+   */
+  readonly unjudged: ReadonlyArray<string>;
   /** Rules that apply to at least one file that is judged. */
   readonly rules: number;
   /** Every pair of a judged file and a rule that applies to it. */
@@ -180,11 +185,17 @@ export const planAudit = (
     const cache = yield* AuditCache;
     const files = yield* (yield* SourceWalker).files;
 
-    const configuredRules = (file: string) =>
-      config.scopedRules === undefined ? config.rules : applicableRules(file, config.scopedRules);
+    // The rules that judge a file: those scoped to it, of which only the rules that say `tests` judge a test.
+    const configuredRules = (file: ScannedFile) =>
+      Record.filter(
+        config.scopedRules === undefined
+          ? config.rules
+          : applicableRules(file.path, config.scopedRules),
+        (rule) => judgesFile(rule, file.test === true),
+      );
 
     const planFile = Effect.fn("audit.plan")(function* (file: ScannedFile) {
-      const rules = configuredRules(file.path);
+      const rules = configuredRules(file);
       // Hashed even when skipped, so a prune keeps what other runs know of its content.
       const hash = yield* sha256(file.lines.join("\n"));
       // Too long for Jev's context: skipped and counted, rather than refused mid-run.
@@ -305,7 +316,16 @@ export const planAudit = (
       });
     });
 
-    const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
+    // A file no rule judges, such as a test when no rule says `tests`, is not part of the run,
+    // but its content is: another run's rules may judge it.
+    const sorted = files
+      .filter((file) => !isEmpty(configuredRules(file)))
+      .sort((a, b) => a.path.localeCompare(b.path));
+    const unjudged = yield* Effect.forEach(
+      files.filter((file) => isEmpty(configuredRules(file))),
+      (file) => sha256(file.lines.join("\n")),
+      { concurrency: 8 },
+    );
     const status = yield* Status;
     let done = 0;
     const everything: ReadonlyArray<FilePlan> = yield* clearingStatus(
@@ -337,6 +357,7 @@ export const planAudit = (
       judged.reduce((sum, plan) => sum + count(plan), 0);
     return {
       files: planned,
+      unjudged,
       rules: new Set(judged.flatMap((plan) => Object.keys(plan.prepared))).size,
       checks: total((plan) => sizeOf(plan.prepared)),
       cached: total((plan) => sizeOf(plan.kept)),
@@ -532,7 +553,8 @@ export const executeAudit = (
 /**
  * Deletes from the cache the answers about content no file has anymore.
  * Answers to rules the run left out stay, since a run with other presets or
- * rules asks them. Only after a run that read every file; a run narrowed by
+ * rules asks them, and so do answers about files the run read but judged
+ * against no rule. Only after a run that read every file; a run narrowed by
  * `--filter` cannot tell what content the files it left out have.
  */
 export const pruneCache = Effect.fn("audit.prune")(function* (plan: AuditPlan) {
@@ -544,7 +566,7 @@ export const pruneCache = Effect.fn("audit.prune")(function* (plan: AuditPlan) {
   );
   const deleted = yield* cache.prune({
     // A file too long to judge counts: a run with shorter questions judges it.
-    hashes: new Set(plan.files.map((file) => file.hash)),
+    hashes: new Set([...plan.files.map((file) => file.hash), ...plan.unjudged]),
     tallies: new Set(tallies),
   });
   yield* Effect.logDebug(`cache pruned: ${deleted} ${deleted === 1 ? "file" : "files"} deleted`);

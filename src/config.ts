@@ -17,6 +17,11 @@ const RuleFields = Schema.Struct({
   should: Schema.optionalKey(Schema.String),
   shouldNot: Schema.optionalKey(Schema.String),
   threshold: Schema.optionalKey(Schema.Finite),
+  /**
+   * Test files, which a rule skips by default: `only` for a rule about tests,
+   * which judges nothing else, and `include` for one that holds in tests too.
+   */
+  tests: Schema.optionalKey(Schema.Literals(["only", "include"])),
 });
 
 /** Before 0.7, a rule's examples were `reference` and `avoid`: read as `must` and `never`. */
@@ -124,6 +129,17 @@ export const SKIPPED_DIRECTORIES: ReadonlySet<string> = new Set([
   "references",
   "vendor",
   "e2e",
+]);
+/**
+ * Directories whose files are tests, matched as whole path segments below the
+ * working directory, as skipped directories are. Only a rule that says `tests`
+ * judges them, or a `.test.ts` or `.spec.ts` file anywhere.
+ */
+export const TEST_DIRECTORIES: ReadonlySet<string> = new Set([
+  "test",
+  "tests",
+  "__tests__",
+  "fixtures",
 ]);
 export interface AdhereConfig extends Schema.Schema.Type<typeof AdhereConfig> {}
 

@@ -171,6 +171,13 @@ export const globalRuleSet = (rules: Readonly<Record<RuleId, Rule>>, root: strin
   Object.entries(rules).map(([id, rule]): RuleEntry => ({ id, rule, scope: root }));
 
 /**
+ * Whether a rule judges a file: a test file only when the rule says `tests`,
+ * and any other file unless it says `tests: only`.
+ */
+export const judgesFile = (rule: Rule, test: boolean): boolean =>
+  test ? rule.tests !== undefined : rule.tests !== "only";
+
+/**
  * The flat rule map for one source file. Root rules apply everywhere. When a
  * nested `.adhere/` defines the same id, the deepest matching scope wins.
  */

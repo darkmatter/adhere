@@ -1,5 +1,6 @@
 ---
 description: Each it.effect must provide its own layer. it.layer must be used only to share an expensive resource across a suite, never a cheap one.
+tests: only
 ---
 
 ## Must

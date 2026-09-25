@@ -1,5 +1,6 @@
 ---
 description: A test implementation of a service should be built with Layer.sync or Layer.succeed over in-memory state, and should not reach a real database, network, or file. Integration tests that exercise the real service are not in scope.
+tests: only
 ---
 
 ## Should

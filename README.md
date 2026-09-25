@@ -177,13 +177,19 @@ adhere lint --log-level debug 2> adhere.log
 
 ### What gets read
 
-`adhere lint` reads the `.ts` files under the working directory, except `.d.ts`,
-`.test.ts`, and config files. When the working directory contains `agents/`,
-`apps/`, or `packages/`, only those trees are read. Below the working
-directory, anything under `node_modules/`, `dist/`, `coverage/`, `vendor/`,
-`e2e/`, `references/`, `.adhere/`, `.agents/`, `.claude/`, `.direnv/`,
-`.alchemy/`, or `.vite/` is skipped; the directories above it do not count.
-`.tsx` files are not read, and `.gitignore` is not consulted.
+`adhere lint` reads the `.ts` files under the working directory, except `.d.ts`
+and config files. When the working directory contains `agents/`, `apps/`, or
+`packages/`, only those trees are read. Below the working directory, anything
+under `node_modules/`, `dist/`, `coverage/`, `vendor/`, `e2e/`, `references/`,
+`.adhere/`, `.agents/`, `.claude/`, `.direnv/`, `.alchemy/`, or `.vite/` is
+skipped; the directories above it do not count. `.tsx` files are not read, and
+`.gitignore` is not consulted.
+
+Tests are judged only by rules about tests. A test is a `.test.ts` or
+`.spec.ts` file, or any file under a `test/`, `tests/`, `__tests__/`, or
+`fixtures/` directory, and only a rule whose front matter says `tests` judges
+one (see [Rules as Markdown files](#rules-as-markdown-files)). On alchemy, 38%
+of the findings from rules not about tests were in test helpers and fixtures.
 
 A config's `exclude` lists globs, relative to the working directory, of files
 no rule judges, such as generated code. It leaves them out of every run, as
@@ -344,9 +350,12 @@ const port: number = Number(process.env.PORT);
 ````
 
 `description` is required, with code under `must`, `never`, or both.
-`threshold` is optional. A file that fails validation refuses the run with its
-path in the message. `loadRules(directory)` from the package root does the same
-load for your own tooling.
+`threshold` is optional, and so is `tests`, for a rule that judges tests, which
+rules otherwise skip: `tests: only` for a rule about tests, which judges
+nothing else, and `tests: include` for one that holds in tests as well. A rule
+inline in a config takes the same `tests`. A file that fails validation refuses
+the run with its path in the message. `loadRules(directory)` from the package
+root does the same load for your own tooling.
 
 Jev reads the code under the same words, and is asked whether the file
 diverges from the pattern `must` shows, with `never` as an example of
@@ -431,6 +440,11 @@ of its own: `--preset effect/basics` applies only the rules under
 `presets/effect/basics/`, and `alchemy/secrets` only alchemy's secrets rules.
 A topic's rules keep the ids they have in the whole preset, so a topic and its
 preset share cached judgments, and naming both applies each rule once.
+
+`effect`'s four rules about tests, `testing/test-clock-for-time`,
+`services/fresh-layer-per-test`, `services/test-layers-are-in-memory`, and
+`config/tests-provide-values-directly`, say `tests: only`: they judge tests and
+nothing else, and every other preset rule skips tests.
 
 A preset rule says "must" only where its source makes a requirement, and
 "should" where the source gives advice. In `effect`, three rules are
@@ -535,8 +549,10 @@ every file, adhere prunes the cache: it deletes answers about content no file
 has, and folds what is left into one file per content. Answers to rules the
 run left out stay, so a run with other presets or rules, or with one topic,
 loses nothing another run still asks; answers to a rule's old texts stay too,
-until the content they are about is gone. A file the config excludes is not
-read, so answers about it go. A run narrowed by `--filter` does not prune.
+until the content they are about is gone. Answers about a file the run read
+but judged against no rule, such as a test when no rule judges tests, stay as
+well, while a file the config excludes is not read, so answers about it go. A
+run narrowed by `--filter` does not prune.
 
 To keep the cache out of diffs, mark it as generated in `.gitattributes`:
 
