@@ -78,9 +78,8 @@ arms' exact wording, the results, and what was decided.
 
 ## Other repos
 
-`repos/` holds `adhere lint`'s findings on other codebases, one directory per
-repo and one file per rule, as pairs to label. The harness does not score them
-yet.
+`repos/` shows what `adhere lint` reports when run on other codebases, one
+directory per repo and one file per rule.
 
 - [alchemy](repos/alchemy/README.md): 3,083 findings from 45 rules of adhere
   0.9.5's `effect` and `alchemy` presets, on alchemy-run/alchemy at `8a284d0`.

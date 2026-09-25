@@ -1,18 +1,20 @@
 # alchemy
 
-`adhere lint`'s report on
+What adhere 0.9.5 reports when run on
 [alchemy-run/alchemy](https://github.com/alchemy-run/alchemy/tree/8a284d039387f63690225b9c86c738696af52358)
-at `8a284d0`, split into one file per rule. None of it is labeled or scored
-yet: each finding is a pair of a rule and a file to judge, the way
-`labels.json` judges pairs on adhere's own code.
+at `8a284d0`, split into one file per rule. From alchemy's root:
+
+```sh
+pnpm dlx @drkmttr/adhere@0.9.5 lint --preset effect,alchemy --threshold 0.7
+```
 
 ## The run
 
 - **Code:** alchemy at `8a284d0`, from 2026-09-23: 10,333 files read, 15 of
   them too long to judge.
-- **Rules:** adhere 0.9.5's two presets, `effect` with 19 rules and `alchemy`
-  with 43, at a threshold of 0.7 given with `--threshold`. The checkout has no
-  config or rules of its own.
+- **Rules:** adhere's two presets, `effect` with 19 rules and `alchemy` with
+  43, at a threshold of 0.7; the default, 0.8, would report fewer. The
+  checkout has no config or rules of its own.
 
 ## A rule's file
 
@@ -74,9 +76,3 @@ was left out, except spaces at the ends of lines.
 | [alchemy/security/least-privilege-bindings](alchemy/security/least-privilege-bindings.md)                                     |        1 |    0.89 |   0.89 |
 | [effect/errors/catch-defects-at-boundaries-only](effect/errors/catch-defects-at-boundaries-only.md)                           |        1 |    0.77 |   0.77 |
 | [effect/testing/test-clock-for-time](effect/testing/test-clock-for-time.md)                                                   |        1 |    0.82 |   0.82 |
-
-## Judging them
-
-Label a finding as `labels.json` does: `real`, `false`, or `debatable`, with a
-note saying why. The harness does not read these yet; scoring them needs
-alchemy's files at `8a284d0`, which it would have to fetch.
