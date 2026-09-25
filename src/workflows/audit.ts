@@ -1,4 +1,4 @@
-import { type Examples, examplesOf, type Rule, type RuleId } from "#config.ts";
+import { type Examples, examplesOf, type Level, type Rule, type RuleId } from "#config.ts";
 import { type Excerpt, excerptOf } from "#excerpt.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
@@ -34,7 +34,16 @@ export interface Finding {
   /** The code around `line` the report shows. */
   readonly excerpt: Excerpt;
   readonly probability: number;
+  /** An error fails the run; a warning does not, unless `--deny-warnings`. */
+  readonly level: Level;
 }
+
+/** The findings that fail a run: its errors, and its warnings too when `denyWarnings`. */
+export const failing = (
+  findings: ReadonlyArray<Finding>,
+  denyWarnings = false,
+): ReadonlyArray<Finding> =>
+  denyWarnings ? findings : findings.filter((finding) => finding.level === "error");
 
 export interface AuditResult {
   readonly files: number;
@@ -472,6 +481,7 @@ export const executeAudit = (
                   line: judgment.line,
                   excerpt: excerptOf(file.lines, judgment.line),
                   probability: judgment.probability,
+                  level: k.rule.level ?? "error",
                 },
               ]
             : [];

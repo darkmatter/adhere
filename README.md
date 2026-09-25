@@ -79,11 +79,13 @@ Under it is the line Jev points at, underlined, with the code around it: the
 largest statement around the line that is 30 lines or fewer, usually the whole
 function, and up to 3 lines of whole statements on either side. The
 hint is the rule's code that must be written; a rule with only code that must
-never be written shows that code, labeled `never:`, instead. On a terminal, the report is in color and the code
-in it is highlighted. The exit code is 0 when nothing is reported and 1 when
-something is. It is also 1 when the run refuses, for example on an invalid
-config or rule file, a missing API key, or an unknown command or flag; a
-refusal prints its reason.
+never be written shows that code, labeled `never:`, instead. A rule whose
+level is `warning` reports its findings with `⚠` in place of `×`, in amber. On
+a terminal, the report is in color and the code in it is highlighted. The exit
+code is 1 when an error is reported, and 0 when nothing is, or only warnings;
+`--deny-warnings` fails the run on warnings too. It is also 1 when the run
+refuses, for example on an invalid config or rule file, a missing API key, or
+an unknown command or flag; a refusal prints its reason.
 
 ## Usage
 
@@ -95,6 +97,7 @@ adhere lint --yes              # send the requests without asking first
 adhere lint --limit 500        # judge at most 500 checks; the rest wait for the next run
 adhere lint --rpm 30           # send at most 30 requests a minute
 adhere lint --filter 'src/**'  # read only the files a glob matches
+adhere lint --deny-warnings    # fail on warnings as well as errors
 adhere lint --log-level debug  # log each request to Jev on stderr
 adhere validate                # check the rules' wording; ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
@@ -352,8 +355,10 @@ const port: number = Number(process.env.PORT);
 `description` is required, with code under `must`, `never`, or both.
 `threshold` is optional, and so is `tests`, for a rule that judges tests, which
 rules otherwise skip: `tests: only` for a rule about tests, which judges
-nothing else, and `tests: include` for one that holds in tests as well. A rule
-inline in a config takes the same `tests`. A file that fails validation refuses
+nothing else, and `tests: include` for one that holds in tests as well. So is
+`level`: `level: warning` for a nit, or for a rule that tends to flag code
+wrongly, reports its findings as warnings, which do not fail the run. A rule
+inline in a config takes the same `tests` and `level`. A file that fails validation refuses
 the run with its path in the message. `loadRules(directory)` from the package
 root does the same load for your own tooling.
 

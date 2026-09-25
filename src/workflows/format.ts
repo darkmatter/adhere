@@ -9,6 +9,7 @@ import type { AuditPlan, AuditResult, FileDone, Finding } from "#workflows/audit
  */
 type Role =
   | "error"
+  | "warning"
   | "probability"
   | "description"
   | "path"
@@ -27,15 +28,16 @@ type Line = ReadonlyArray<Span>;
 /**
  * SGR parameters per role. The frame's are set colors, from the 256-color
  * palette (`38;5;N`) or truecolor (`38;2;R;G;B`), bold with a trailing `;1`,
- * and a dim line number. Of the header, only the `×` and the rule are red,
- * since a whole line of red is hard to read: the probability is an accent, and
- * the description a cool near-white, set here since a theme's own white can
- * be gray. The code's are the terminal's own colors (`3N`), so the user's
- * theme picks shades that read on its background; none is magenta, which
- * would run into the underline.
+ * and a dim line number. Of the header, only the `×` and the rule are red, or
+ * a warning's `⚠` and rule amber, since a whole line of red is hard to read:
+ * the probability is an accent, and the description a cool near-white, set
+ * here since a theme's own white can be gray. The code's are the terminal's
+ * own colors (`3N`), so the user's theme picks shades that read on its
+ * background; none is magenta, which would run into the underline.
  */
 const THEME: Readonly<Record<Role, string>> = {
   error: "38;2;164;20;71;1",
+  warning: "38;2;214;154;0;1",
   probability: "38;5;156",
   description: "38;2;230;230;255",
   path: "38;2;5;125;160;1",
@@ -90,9 +92,9 @@ const counted = (count: number, one: string, many: string): string =>
 
 const header = (finding: Finding): Line => [
   span("  "),
-  span("×", "error"),
+  span(finding.level === "warning" ? "⚠" : "×", finding.level),
   span(" "),
-  span(shownId({ id: finding.rule, preset: finding.preset }), "error"),
+  span(shownId({ id: finding.rule, preset: finding.preset }), finding.level),
   span(" ("),
   span(finding.probability.toFixed(2), "probability"),
   span("): "),
@@ -152,6 +154,13 @@ const frame = (finding: Finding, root: string | undefined): ReadonlyArray<Line> 
   ...hint(finding),
 ];
 
+/** The findings counted by level: `1 error`, or `2 errors and 1 warning` once there are warnings. */
+const found = (findings: ReadonlyArray<Finding>): string => {
+  const warnings = findings.filter((finding) => finding.level === "warning").length;
+  const errors = counted(findings.length - warnings, "error", "errors");
+  return warnings === 0 ? errors : `${errors} and ${counted(warnings, "warning", "warnings")}`;
+};
+
 const summary = (result: AuditResult): ReadonlyArray<Line> => {
   const counts = [
     counted(result.files, "file", "files"),
@@ -161,10 +170,7 @@ const summary = (result: AuditResult): ReadonlyArray<Line> => {
     ...(result.waiting > 0 ? [`${result.waiting} waiting`] : []),
     ...(result.blocked.length > 0 ? [`${result.blocked.length} blocked`] : []),
   ];
-  return [
-    [span(`Found ${counted(result.findings.length, "error", "errors")}.`)],
-    [span(`${counts.join(", ")}.`)],
-  ];
+  return [[span(`Found ${found(result.findings)}.`)], [span(`${counts.join(", ")}.`)]];
 };
 
 /**

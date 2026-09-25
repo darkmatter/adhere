@@ -7,6 +7,7 @@ import { Status } from "#services/Status.ts";
 import {
   type AuditPlan,
   executeAudit,
+  failing,
   type FileDone,
   planAudit,
   pruneCache,
@@ -124,6 +125,11 @@ const filter = Flag.string("filter").pipe(
   ),
 );
 
+const denyWarnings = Flag.boolean("deny-warnings").pipe(
+  Flag.withDefault(false),
+  Flag.withDescription("Fail the run on warnings as well as errors."),
+);
+
 const yes = Flag.boolean("yes").pipe(
   Flag.withAlias("y"),
   Flag.withDefault(false),
@@ -212,7 +218,7 @@ export const auditLayer = (flags: Flags, filter: ReadonlyArray<string> = []) =>
 /** `adhere lint`: the audit. */
 export const lintCommand = Command.make(
   "lint",
-  { preset, threshold, yes, limit, rpm, filter },
+  { preset, threshold, yes, limit, rpm, filter, denyWarnings },
   (input) =>
     Effect.gen(function* () {
       const stdio = yield* Stdio.Stdio;
@@ -242,8 +248,10 @@ export const lintCommand = Command.make(
       const path = yield* Path.Path;
       // One write: separate Console.log calls have interleaved out of order here.
       yield* Console.log(render(result, { color, root: path.resolve() }).join("\n"));
-      if (result.findings.length > 0) {
-        yield* FindingsReported.make({ count: result.findings.length });
+      // Only errors fail the run, unless --deny-warnings: a warning is for a nit or a noisy rule.
+      const failed = failing(result.findings, input.denyWarnings);
+      if (failed.length > 0) {
+        yield* FindingsReported.make({ count: failed.length });
       }
     }),
 ).pipe(

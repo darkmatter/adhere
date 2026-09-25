@@ -22,6 +22,12 @@ const RuleFields = Schema.Struct({
    * which judges nothing else, and `include` for one that holds in tests too.
    */
   tests: Schema.optionalKey(Schema.Literals(["only", "include"])),
+  /**
+   * How a finding under the rule is reported: an `error`, the default, which
+   * fails the run, or a `warning`, for a nit or a rule that errs toward false
+   * findings, which does not.
+   */
+  level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
 });
 
 /** Before 0.7, a rule's examples were `reference` and `avoid`: read as `must` and `never`. */
@@ -55,6 +61,9 @@ export const Rule = Schema.Struct({
     }),
   );
 export interface Rule extends Schema.Schema.Type<typeof Rule> {}
+
+/** How a finding is reported: an error fails the run, a warning does not. */
+export type Level = NonNullable<Rule["level"]>;
 
 /** One of a rule's examples, under the word it is written with. */
 export interface Example {

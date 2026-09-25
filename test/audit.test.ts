@@ -98,6 +98,7 @@ import {
 import {
   type AuditPlan,
   executeAudit,
+  failing,
   type FileDone,
   type FilePlan,
   planAudit,
@@ -219,6 +220,7 @@ const findingA = {
   line: 2,
   excerpt: { start: 1, lines: source.lines },
   probability: 0.9,
+  level: "error" as const,
 };
 
 describe("request bodies", () => {
@@ -645,6 +647,18 @@ describe("markdown rules", () => {
       Effect.flip(
         parseRuleMarkdown("---\ndescription: d\ntests: always\n---\na()\n", "rules/a.md"),
       ),
+    );
+    expect(refused.message).toContain("rules/a.md");
+  });
+
+  it("front matter's level makes a rule's findings warnings", async () => {
+    expect(await parse("---\ndescription: d\nlevel: warning\n---\na()\n")).toEqual({
+      description: "d",
+      level: "warning",
+      must: "a()",
+    });
+    const refused = await Effect.runPromise(
+      Effect.flip(parseRuleMarkdown("---\ndescription: d\nlevel: nit\n---\na()\n", "rules/a.md")),
     );
     expect(refused.message).toContain("rules/a.md");
   });
@@ -2092,6 +2106,24 @@ describe("pipeline", () => {
     expect(lenient.calls).toEqual({ judge: [], locate: [{ a }] });
     expect(result.findings).toEqual([findingA]);
   });
+
+  it("reports a warning rule's findings as warnings, from the same cached judgment", async () => {
+    const cache = memoryCache();
+    await audit({
+      rules,
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
+      cache,
+    });
+    // The level is not part of the question, so the judgment stays cached.
+    const again = recordingJev({ judge: {}, locate: {} });
+    const result = await audit({
+      rules: { a: { ...a, level: "warning" }, b },
+      jev: again.layer,
+      cache,
+    });
+    expect(again.calls).toEqual({ judge: [], locate: [] });
+    expect(result.findings).toEqual([{ ...findingA, level: "warning" }]);
+  });
 });
 
 describe("highlight", () => {
@@ -2345,6 +2377,30 @@ describe("render", () => {
       "  × effect/basics/ports (0.90): Ports are branded.",
       "  × a (0.90): Ports are branded.",
     ]);
+  });
+
+  it("marks a warning's header and counts warnings apart from errors", () => {
+    const warning = { ...findingA, rule: "b", level: "warning" as const };
+    const lines = render({ ...result, findings: [findingA, warning] }, { root: "/repo" });
+    expect(lines.filter((line) => /^  [×⚠] /.test(line))).toEqual([
+      "  × a (0.90): Ports are branded.",
+      "  ⚠ b (0.90): Ports are branded.",
+    ]);
+    expect(lines).toContain("Found 1 error and 1 warning.");
+    expect(render({ ...result, findings: [warning] }, { root: "/repo" })).toContain(
+      "Found 0 errors and 1 warning.",
+    );
+    const amber = "38;2;214;154;0;1";
+    expect(render({ ...result, findings: [warning] }, { color: true }).join("\n")).toContain(
+      `  ${sgr(amber, "⚠")} ${sgr(amber, "b")} (`,
+    );
+  });
+
+  it("fails a run on its errors, and on its warnings only when asked to", () => {
+    const warning = { ...findingA, level: "warning" as const };
+    expect(failing([findingA, warning])).toEqual([findingA]);
+    expect(failing([warning])).toEqual([]);
+    expect(failing([findingA, warning], true)).toEqual([findingA, warning]);
   });
 
   it("colors only the rule red in the header on a terminal and counts skipped files", () => {

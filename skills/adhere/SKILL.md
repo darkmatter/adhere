@@ -94,6 +94,8 @@ Rules for the rule:
 - Rules skip tests: `.test.ts` and `.spec.ts` files, and files under `test/`,
   `tests/`, `__tests__/`, or `fixtures/`. A rule about tests says `tests: only`
   in its front matter, and one that holds in tests as well `tests: include`.
+- A nit, or a rule that tends to flag code wrongly, says `level: warning` in
+  its front matter: its findings show in amber and do not fail CI.
 - `threshold` is optional. Start without it; set it in step 5 if needed.
 
 ## 4. Configure

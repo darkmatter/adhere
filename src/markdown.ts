@@ -30,12 +30,14 @@ import { Effect, Schema } from "effect";
  * sections is the code to write, and without a fence the whole body is.
  * `avoid`, the word before 0.7, means `never`. `threshold` is optional, and
  * so is `tests`: `only` for a rule about test files, which rules otherwise
- * skip, and `include` for a rule that judges them too.
+ * skip, and `include` for a rule that judges them too. So is `level`:
+ * `warning` reports the rule's findings as warnings, which do not fail a run.
  */
 const FrontMatter = Schema.Struct({
   description: Schema.String,
   threshold: Schema.optionalKey(Schema.FiniteFromString),
   tests: Schema.optionalKey(Schema.Literals(["only", "include"])),
+  level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
 });
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
