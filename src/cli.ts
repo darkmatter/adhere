@@ -62,10 +62,31 @@ class ContradictionsReported extends Schema.TaggedError<ContradictionsReported>(
   readonly [Runtime.errorReported] = false;
 }
 
-const preset = Flag.choice("preset", presetNames).pipe(
-  Flag.optional,
+/** The names each `--preset` gives, split at commas: `--preset effect,alchemy` gives two. */
+const presetsIn = (values: ReadonlyArray<string>): ReadonlyArray<string> =>
+  values
+    .flatMap((value) => value.split(","))
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
+
+const isPresetName = (name: string): name is PresetName =>
+  (presetNames as ReadonlyArray<string>).includes(name);
+
+const preset = Flag.string("preset").pipe(
+  Flag.atLeast(0),
+  Flag.filterMap(
+    (values): Option.Option<ReadonlyArray<PresetName>> => {
+      const names = presetsIn(values);
+      return names.every(isPresetName) ? Option.some([...new Set(names)]) : Option.none();
+    },
+    // The CLI puts this after "Expected:".
+    (values) => {
+      const unknown = presetsIn(values).filter((name) => !isPresetName(name));
+      return `one of ${presetNames.join(", ")}, or several separated by commas (not ${unknown.join(", ")})`;
+    },
+  ),
   Flag.withDescription(
-    "Add a built-in rule set, or one of its topics, such as effect/basics. With a preset, .adhere/config.ts is optional.",
+    `Add built-in rule sets, or their topics, such as effect/basics. Repeat the flag or separate names with commas, as in --preset effect,alchemy. With a preset, .adhere/config.ts is optional. (choices: ${presetNames.join(", ")})`,
   ),
 );
 
@@ -181,9 +202,6 @@ const force = Flag.boolean("force").pipe(
   Flag.withDescription("Overwrite existing scaffold files."),
 );
 
-const chosenPresets = (flag: Option.Option<PresetName>): ReadonlyArray<PresetName> =>
-  Option.isSome(flag) ? [flag.value] : [];
-
 export const auditLayer = (overrides: Overrides, filter: ReadonlyArray<string> = []) =>
   Layer.mergeAll(
     SourceWalkerLive(filter),
@@ -235,7 +253,7 @@ export const lintCommand = Command.make(
   Command.provide((input) =>
     auditLayer(
       {
-        presets: chosenPresets(input.preset),
+        presets: input.preset,
         threshold: Option.getOrUndefined(input.threshold),
         rpm: Option.getOrUndefined(input.rpm),
       },
@@ -285,7 +303,7 @@ export const validateCommand = Command.make("validate", { preset }, () =>
   Command.withDescription(
     "Load the config, rule files, and presets the way lint does, check each rule's wording against the README's rule writing tips, report the rules lint's linter check flags, then ask Jev whether any two rules that apply to the same files contradict each other.",
   ),
-  Command.provide((input) => validateLayer({ presets: chosenPresets(input.preset) })),
+  Command.provide((input) => validateLayer({ presets: input.preset })),
 );
 
 /** `adhere init`: the scaffold. */

@@ -374,8 +374,10 @@ each rule worded otherwise.
 ### Presets
 
 A preset has the shape of a config without `presets`: `rules`, and optionally
-`model` and `threshold`. Name one in the config, or on the command line with
-`--preset`, in which case the config file is optional. There are two:
+`model` and `threshold`. Name presets in the config's `presets`, or on the
+command line with `--preset`, repeated or separated by commas, as in
+`--preset effect,alchemy`, in which case the config file is optional. Presets
+named in both places apply together. There are two:
 
 - `effect`: Markdown rules in [`presets/effect/`](./presets/effect/), lifted
   from the [effect-solutions](https://github.com/kitlangton/effect-solutions)

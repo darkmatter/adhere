@@ -121,7 +121,36 @@ describe("cli", () => {
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("TYPESAFE_API_KEY");
   });
 
-  it("prunes the cache after a run that read every file, and not after a filtered one", async () => {
+  it("takes several presets, repeated or separated by commas, and refuses an unknown one", async () => {
+    const root = join(tmpdir(), `adhere-presets-${Date.now()}`);
+    await mkdir(root, { recursive: true });
+    await writeFile(join(root, "index.ts"), "export const x = 1;\n", "utf8");
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    const plan = (...presets: ReadonlyArray<string>) =>
+      execFileAsync("bun", [main, "lint", ...presets, "--limit", "0"], { cwd: root }).then(
+        ({ stderr }) => stderr.split("\n")[0],
+        ({ stderr }: { readonly stderr: string }) => stderr.split("\n")[0],
+      );
+
+    const effect = await plan("--preset", "effect");
+    const alchemy = await plan("--preset", "alchemy");
+    const both = await plan("--preset", "effect,alchemy");
+    const count = (line: string | undefined) => Number(/(\d+) rules/.exec(line ?? "")?.[1]);
+    expect(count(both)).toBe(count(effect) + count(alchemy));
+    expect(await plan("--preset", "effect", "--preset", "alchemy")).toBe(both);
+    expect(await plan("--preset", "alchemy, effect")).toBe(both);
+
+    const refused = await execFileAsync("bun", [main, "lint", "--preset", "effect,react"], {
+      cwd: root,
+    }).then(
+      () => undefined,
+      (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) => error,
+    );
+    expect(refused?.code).toBe(1);
+    expect(`${refused?.stdout}${refused?.stderr}`).toContain("(not react)");
+  });
+
+  it("prunes the cache after a run that read every file, keeping other rules' answers, and not after a filtered one", async () => {
     const root = join(tmpdir(), `adhere-prune-${Date.now()}`);
     const cache = join(root, ".adhere", "cache");
     await mkdir(join(cache, "files"), { recursive: true });
