@@ -1,4 +1,6 @@
-# adhere
+<div align="center">
+<h1>adhere</h1>
+</div>
 
 A linter for rules a normal linter cannot check. A rule is a one-sentence
 description in RFC 2119's words, like "business logic must live in services",
@@ -27,7 +29,7 @@ To pin the version in a repo, for CI or scripts, add it as a dev dependency
 and run `npx adhere`.
 
 `adhere` is a prebuilt executable for macOS and Linux on arm64 and x64 and for
-Windows on x64. .
+Windows on x64.
 
 adhere sends each file it judges to Jev at `api.typesafe.ai`, authenticated
 with a TypeSafe AI API key: the one `adhere login` saved, or
@@ -102,6 +104,12 @@ Bare `adhere` prints the help, which lists the commands, and
 `adhere <command> --help` lists a command's flags. `adhere --completions <shell>`
 prints a completion script.
 
+
+### Demo
+
+<a href="https://asciinema.org/a/1266511" target="_blank"><img width="400" src="https://asciinema.org/a/1266511.svg" /></a>
+
+
 ### Before and during a run
 
 Until it knows what judging takes, a status line on stderr says what `lint` is
@@ -121,15 +129,10 @@ Those carry about 1.9 million input tokens: about $0.08 at $0.042 per million, a
 The cost is adhere's estimate of the input tokens times the model's price.
 Jev charges only for input tokens: $0.042 a million for `jev-latest`, per
 [TypeSafe AI's models page](https://docs.typesafe.ai/models) in September 2026.
-The estimate runs about a tenth high, and locating findings, which depends on
-what judging finds, comes on top. For a model adhere has no price for, the plan
-gives the tokens alone.
+For a model adhere has no price for, the plan gives the tokens alone.
 
 It asks only with a terminal on stdin and stdout, and never when the cache
-answers every check; `--yes` sends without asking. While it runs, a counter on
-stderr shows the files done, the requests sent, and the findings so far, and
-the report goes to stdout. A request Jev refuses stops the run with the file,
-the HTTP status, and Jev's reason. Files finished before it are cached, so
+answers every check; `--yes` sends without asking. Files finished before it are cached, so
 running again continues from there.
 
 The firewall in front of Jev's API can refuse a request whose code reads to
@@ -147,8 +150,9 @@ next run with the same limit picks up where this one stopped. `--limit 0` shows
 the plan and judges nothing. `--rpm <requests>` sends at most that many requests
 to Jev a minute, evenly spaced, retries included, and the plan says about how
 long they take. `--filter <glob>` reads only the files whose path from the
-working directory matches, such as `src/**` or `**/*.service.ts`; repeat it for
-more, and start a pattern with `!` to leave out what it matches. Together:
+working directory matches, such as `src/**` or `**/*.service.ts` (if using globs, 
+wrap with single quotes to avoid expansion); repeat it for more, and start a 
+pattern with `!` to leave out what it matches. Together:
 
 ```sh
 adhere lint --filter 'packages/api/**' --filter '!**/generated/**' --limit 200 --rpm 30
