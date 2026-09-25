@@ -37,5 +37,5 @@ bun eval/studies/comments.ts results.json
 - **Where a comment answers the rule's question, it matters more.** On
   alchemy's idempotent-delete rule, eight of nine real violations carried a
   comment wrongly saying they were fine, and Jev believed it. Without comments
-  it flagged all nine, at the same share of flags real; see
+  it flagged all nine, at about the same share of flags real; see
   [idempotent deletes on alchemy](idempotent-delete.md).

@@ -31,10 +31,9 @@ const SCOPED =
 /**
  * Whether each labeled file's delete fails when its resource is already gone:
  * the files `adhere lint` 0.9.5 reported under this rule outside tests, two
- * provider deletes it missed, and the provider deletes the scoped rule
- * flagged above 0.8 without comments. Seven of those are left out: IoT
- * FleetWise's, which the account that checked the rest could not call,
- * Application Signals' account-wide one, and Cloudflare's.
+ * provider deletes it missed, and the provider deletes either rule flagged
+ * above 0.8 without comments. IoT FleetWise's three are left out: the
+ * account that checked the rest could not call them.
  */
 const VERDICTS: Readonly<Record<string, "real" | "false">> = {
   "packages/alchemy/src/AWS/AutoScaling/ScalingPolicy.ts": "real",
@@ -68,6 +67,11 @@ const VERDICTS: Readonly<Record<string, "real" | "false">> = {
   "packages/alchemy/src/AWS/SimpleDB/Domain.ts": "false",
   "packages/alchemy/src/AWS/StepFunctions/StateMachine.ts": "false",
   "packages/alchemy/src/AWS/VerifiedPermissions/PolicyStore.ts": "false",
+  "packages/alchemy/src/AWS/MediaPackageV2/OriginEndpoint.ts": "false",
+  "packages/alchemy/src/AWS/ApplicationSignals/GroupingConfiguration.ts": "false",
+  "packages/alchemy/src/Cloudflare/SecurityTxt/SecurityTxt.ts": "false",
+  "packages/alchemy/src/Cloudflare/Tags/AccountResourceTags.ts": "false",
+  "packages/alchemy/src/Cloudflare/Tags/ZoneResourceTags.ts": "false",
   "packages/alchemy/src/AWS/CloudWatch/AlarmMuteRule.ts": "false",
   "packages/alchemy/src/AWS/CloudWatch/CompositeAlarm.ts": "false",
   "packages/alchemy/src/AWS/CloudWatch/Alarm.ts": "false",
