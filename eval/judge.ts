@@ -6,6 +6,7 @@
  *
  *   bun eval/judge.ts [results.json]
  */
+import { isNote, withoutComments } from "#comments.ts";
 import { examplesOf, type Rule } from "#config.ts";
 import { judgeBody } from "#services/Jev.ts";
 import { Record } from "effect";
@@ -55,5 +56,6 @@ const withoutCriteria: Ask = (model, lines, rules) => {
 runStudy([
   ["0.4", inState],
   ["no criteria", withoutCriteria],
-  ["current", judgeBody],
+  // As adhere sends it: without the file's comments, but its @adhere notes.
+  ["current", (model, lines, rules) => judgeBody(model, withoutComments(lines, isNote), rules)],
 ]);

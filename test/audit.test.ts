@@ -18,7 +18,7 @@ import {
 import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
 import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import { describe, expect, it } from "vite-plus/test";
-import { withoutComments } from "../src/comments.ts";
+import { isNote, withoutComments } from "../src/comments.ts";
 import { NO_SUPPRESSIONS, suppresses, suppressionsOf } from "../src/suppress.ts";
 import { findContradictions, formatContradictions } from "../src/contradictions.ts";
 import {
@@ -156,6 +156,31 @@ const memoryCache = (
   });
 };
 
+/** Jev that answers from tables, as `recordingJev` does, and keeps the code of every request. */
+const sendingJev = (answers: {
+  readonly judge: Record<string, number>;
+  readonly locate: Record<string, number>;
+}) => {
+  const sent: Array<string> = [];
+  const answer = (table: Readonly<Record<string, number>>, asked: Rules) =>
+    Record.filter(table, (_, id) => asked[id] !== undefined);
+  const layer = Layer.succeed(Jev, {
+    judge: (code, asked) =>
+      Effect.sync(() => {
+        sent.push(code.join("\n"));
+        return { probabilities: answer(answers.judge, asked), linter: {} };
+      }),
+    locate: (code, asked) =>
+      Effect.sync(() => {
+        sent.push(code.join("\n"));
+        return answer(answers.locate, asked);
+      }),
+    conflicts: () => Effect.die("an audit compares no rules"),
+    contradicts: () => Effect.die("an audit compares no rules"),
+  });
+  return { sent, layer };
+};
+
 const recordingJev = (answers: {
   readonly judge: Record<string, number>;
   readonly locate: Record<string, number>;
@@ -195,6 +220,7 @@ const audit = (options: {
   readonly jev: Layer.Layer<Jev>;
   readonly cache: Layer.Layer<AuditCache>;
   readonly files?: ReadonlyArray<ScannedFile>;
+  readonly comments?: "strip" | "keep";
 }) =>
   Effect.runPromise(
     runAudit.pipe(
@@ -204,6 +230,7 @@ const audit = (options: {
             model: "jev-latest",
             threshold: options.threshold ?? 0.7,
             rules: options.rules,
+            ...(options.comments === undefined ? {} : { comments: options.comments }),
           }),
           Layer.succeed(SourceWalker, { files: Effect.succeed(options.files ?? [source]) }),
           options.jev,
@@ -973,6 +1000,17 @@ describe("adhere-ignore", () => {
 });
 
 describe("comments", () => {
+  it("keeps a comment that says @adhere anywhere in it, and returns a file without comments as it is", () => {
+    const lines = [
+      "// plain",
+      "/** Deletes the activity. @adhere DeleteActivity succeeds on a missing activity. */",
+      "const x = 1; // trailing",
+    ];
+    expect(withoutComments(lines, isNote)).toEqual(["", lines[1], "const x = 1;"]);
+    const bare = ["const x = 1;", "const y = x / 2;"];
+    expect(withoutComments(bare, isNote)).toBe(bare);
+  });
+
   it("takes comments out, keeping every line and its number", () => {
     const lines = [
       "/**",
@@ -1576,6 +1614,7 @@ describe("plan", () => {
     deferred: 0,
     sampled: {},
     suppressions: NO_SUPPRESSIONS,
+    original: [],
   });
   const summary = (
     fields: Omit<AuditPlan, "files" | "tokens" | "unjudged"> & { readonly tokens?: number },
@@ -2212,26 +2251,10 @@ describe("pipeline", () => {
       "  const port: number = Number(process.env.PORT);",
       "const after = 2;",
     ];
-    const sent: Array<string> = [];
-    const answer = <A>(table: Readonly<Record<string, A>>, asked: Rules) =>
-      Record.filter(table, (_, id) => asked[id] !== undefined);
-    const jev = Layer.succeed(Jev, {
-      judge: (code, asked) =>
-        Effect.sync(() => {
-          sent.push(code.join("\n"));
-          return { probabilities: answer({ a: 0.9, b: 0.2 }, asked), linter: {} };
-        }),
-      locate: (code, asked) =>
-        Effect.sync(() => {
-          sent.push(code.join("\n"));
-          return answer({ a: 3 }, asked);
-        }),
-      conflicts: () => Effect.die("an audit compares no rules"),
-      contradicts: () => Effect.die("an audit compares no rules"),
-    });
+    const { sent, layer } = sendingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 3 } });
     const result = await audit({
       rules,
-      jev,
+      jev: layer,
       cache: memoryCache(),
       files: [{ path: "/repo/src/server.ts", lines }],
     });
@@ -2239,6 +2262,53 @@ describe("pipeline", () => {
     expect(result.suppressed).toBe(1);
     expect(sent.length).toBeGreaterThan(0);
     expect(sent.some((code) => code.includes("adhere-ignore"))).toBe(false);
+  });
+
+  it("sends Jev the file without its comments but its @adhere notes, and shows the report the file as written", async () => {
+    const lines = [
+      "const before = 1; // the port comes next",
+      "  const port: number = Number(process.env.PORT); // @adhere read once, at startup",
+      "const after = 2;",
+    ];
+    const { sent, layer } = sendingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    const result = await audit({
+      rules,
+      jev: layer,
+      cache: memoryCache(),
+      files: [{ path: "/repo/src/server.ts", lines }],
+    });
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.some((code) => code.includes("the port comes next"))).toBe(false);
+    expect(sent.every((code) => code.includes("@adhere read once, at startup"))).toBe(true);
+    expect(result.findings.map((finding) => finding.excerpt.lines)).toEqual([lines]);
+  });
+
+  it("re-judges nothing when only a file's comments change, and sends them all when the config keeps comments", async () => {
+    const cache = memoryCache();
+    const written = (comment: string): ScannedFile => ({
+      path: "/repo/src/server.ts",
+      lines: [`const before = 1; // ${comment}`, ...source.lines.slice(1)],
+    });
+    await audit({
+      rules,
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
+      cache,
+      files: [written("first")],
+    });
+    const again = recordingJev({ judge: {}, locate: {} });
+    const result = await audit({ rules, jev: again.layer, cache, files: [written("second")] });
+    expect(again.calls).toEqual({ judge: [], locate: [] });
+    expect(result.findings).toHaveLength(1);
+
+    const { sent, layer } = sendingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    await audit({
+      rules,
+      jev: layer,
+      cache: memoryCache(),
+      files: [written("kept")],
+      comments: "keep",
+    });
+    expect(sent.every((code) => code.includes("// kept"))).toBe(true);
   });
 
   it("judges no rule that an adhere-ignore-file comment names in that file", async () => {

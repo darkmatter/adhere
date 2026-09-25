@@ -162,6 +162,31 @@ pattern with `!` to leave out what it matches. Together:
 adhere lint --filter 'packages/api/**' --filter '!**/generated/**' --limit 200 --rpm 30
 ```
 
+### Comments
+
+Jev reads a file's code, not its comments. A comment changes nothing the code
+does, so it should not change the report, yet Jev takes what comments claim at
+their word: in a study of one alchemy rule, comments saying a delete succeeds
+on a missing resource hid 8 of its 9 real violations, and taking comments out
+found all nine. adhere takes every comment out before it hashes or sends a
+file, blanking it so every line keeps its number; the report's excerpts still
+show them.
+
+A comment that says `@adhere` anywhere in it is a note for Jev, and stays.
+Write one for a fact the code relies on that the file cannot show, once you
+have checked it, with how you know:
+
+```ts
+/**
+ * Deletes the activity. @adhere DeleteActivity succeeds on a missing
+ * activity, so no not-found error needs catching; probed 2026-09-25.
+ */
+```
+
+A note informs Jev; it suppresses nothing, and Jev still judges the code
+around it. `comments: "keep"` in the config sends every comment, for a
+project whose rules are about comments, such as doc comments on exports.
+
 ### Suppressing a finding
 
 A finding Jev got wrong is suppressed in the code, with a comment saying why:
@@ -180,9 +205,8 @@ covers the statement that starts on that line. `adhere-ignore-file`, anywhere
 in a file, covers the whole file, and the rules it names are not judged there
 at all. A comment names rules as a report does, a preset's with its preset
 first, separated by commas; what follows `--` is the reason, for whoever
-reads the code next. adhere blanks these comments before it hashes or sends a
-file, so Jev never reads them, and the summary counts the findings they
-suppress.
+reads the code next. Jev never reads these comments, even with
+`comments: "keep"`, and the summary counts the findings they suppress.
 
 ### Logging a run
 
@@ -548,8 +572,8 @@ rule's own `threshold` and `level`.
 
 ## How a file is judged
 
-1. One Jev request per file. The state is the file's numbered lines and
-   nothing else. Each rule is one `noul` (yes/no probability) question that
+1. One Jev request per file. The state is the file's numbered lines, without
+   their comments (see [Comments](#comments)), and nothing else. Each rule is one `noul` (yes/no probability) question that
    carries the rule's description and its code under its words, `must` and
    `never` (or a guideline's `should` and `should_not`): whether the file
    diverges from the pattern `must` shows, with `never` as an example of
@@ -582,8 +606,9 @@ gives everyone and CI the same findings without paying for them again, and a
 pull request changes the judgments of only the files it changes.
 
 `files/` holds Jev's answers by the content they are about: each cache file is
-named for the hash of a source file's content, so a moved or copied file keeps
-its judgments, and identical files share them. Each answer sits under a
+named for the hash of a source file's content as Jev reads it, without its
+comments, so a moved or copied file keeps its judgments, identical files share
+them, and a change to comments alone re-judges nothing. Each answer sits under a
 fingerprint of the model and the question asked for the rule, which carries
 the rule's text. A changed file re-judges every rule for that file. An edited
 rule re-judges only that rule, and an adhere that asks its questions

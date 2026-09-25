@@ -91,6 +91,9 @@ Rules for the rule:
   its description and puts its code under `## Should` and `## Should not`. A
   rule is one or the other; it cannot mix the two.
 - One pattern per file. Two patterns in one `must` block blur the probability.
+- Jev reads code without its comments, except comments that say `@adhere`. A
+  rule about comments, such as doc comments on exports, needs
+  `comments: "keep"` in the config.
 - Rules skip tests: `.test.ts` and `.spec.ts` files, and files under `test/`,
   `tests/`, `__tests__/`, or `fixtures/`. A rule about tests says `tests: only`
   in its front matter, and one that holds in tests as well `tests: include`.

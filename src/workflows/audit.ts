@@ -1,3 +1,4 @@
+import { isNote, withoutComments } from "#comments.ts";
 import { type Examples, examplesOf, type Level, type Rule, type RuleId } from "#config.ts";
 import { type Excerpt, excerptOf } from "#excerpt.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
@@ -99,7 +100,10 @@ const fingerprintOf = (model: string, rule: Rule) =>
 
 /** One file before anything is sent: its rules, and which of them the cache answers. */
 export interface FilePlan {
+  /** The file as Jev reads it: its comments taken out, unless the config keeps them. */
   readonly file: ScannedFile;
+  /** The file's lines as written, which the report's excerpts show. */
+  readonly original: ReadonlyArray<string>;
   /** Too long for Jev: counted, not judged. */
   readonly skipped: boolean;
   readonly hash: string;
@@ -200,14 +204,21 @@ export const planAudit = (
     const config = yield* AdhereConfig;
     const cache = yield* AuditCache;
     const walked = yield* (yield* SourceWalker).files;
-    // Each file as Jev reads it, with its adhere-ignore comments blanked, and what they suppress.
+    // Each file as Jev reads it, each line keeping its number: its adhere-ignore comments blanked,
+    // and every other comment too but the @adhere notes, unless the config keeps comments. A
+    // comment changes nothing a file does, so it should not change the report.
     const suppressed = new Map<string, Suppressions>();
+    const originals = new Map<string, ReadonlyArray<string>>();
     const files = walked.map((file) => {
-      const { lines, suppressions } = suppressionsOf(file.lines);
+      const { lines: directed, suppressions } = suppressionsOf(file.lines);
       if (suppressions !== NO_SUPPRESSIONS) suppressed.set(file.path, suppressions);
-      return lines === file.lines ? file : { ...file, lines };
+      const lines = config.comments === "keep" ? directed : withoutComments(directed, isNote);
+      if (lines === file.lines) return file;
+      originals.set(file.path, file.lines);
+      return { ...file, lines };
     });
     const suppressionsIn = (file: ScannedFile) => suppressed.get(file.path) ?? NO_SUPPRESSIONS;
+    const originalOf = (file: ScannedFile) => originals.get(file.path) ?? file.lines;
 
     // The rules that judge a file: those scoped to it, of which only the rules that say `tests`
     // judge a test, and none that an adhere-ignore-file comment names.
@@ -238,6 +249,7 @@ export const planAudit = (
           deferred: 0,
           sampled: {},
           suppressions: suppressionsIn(file),
+          original: originalOf(file),
         } satisfies FilePlan;
       }
       const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
@@ -275,6 +287,7 @@ export const planAudit = (
         deferred: 0,
         sampled: {},
         suppressions: suppressionsIn(file),
+        original: originalOf(file),
       } satisfies FilePlan;
     });
 
@@ -436,6 +449,7 @@ export const executeAudit = (
     /** Judges and locates one file the plan left pending, with the requests that took. */
     const judgeFile = Effect.fn("audit.judgeFile")(function* ({
       file,
+      original,
       hash,
       prepared,
       kept,
@@ -499,7 +513,7 @@ export const executeAudit = (
                   examples: examplesOf(k.rule),
                   file: file.path,
                   line: judgment.line,
-                  excerpt: excerptOf(file.lines, judgment.line),
+                  excerpt: excerptOf(original, judgment.line),
                   probability: judgment.probability,
                   level: k.rule.level ?? "error",
                 },

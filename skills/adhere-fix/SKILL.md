@@ -63,7 +63,9 @@ Read the code as a reviewer would, not only the excerpt:
   under a rule about providers' delete handlers, is a false finding.
 - **Comments are claims.** A comment saying the code is fine is not evidence.
   In adhere's study of one rule, 8 of 35 comments saying a delete succeeds on a
-  missing resource were wrong. Check the claim before you rely on it.
+  missing resource were wrong. Check the claim before you rely on it. Jev does
+  not see comments, except those that say `@adhere`, so it judged the code
+  without them.
 - **Behavior outside the file.** When the rule turns on how an API or a library
   behaves, find out: its source, its tests, its documentation. Typings help but
   can be wrong. A live check can settle it, such as a call with an identifier
@@ -107,6 +109,22 @@ delete: Effect.fn(function* ({ output }) {
   check it again. "False positive" is not a reason.
 - Never suppress a finding you believe is real, or one you are unsure of.
 - Jev never reads these comments: adhere removes them before it sends a file.
+
+When the finding was false because of a fact the file does not show, such as
+how an API behaves, also write the fact where Jev will see it the next time it
+judges this code: in a comment that says `@adhere`, on the code the fact is
+about, with how you know.
+
+```ts
+/**
+ * Deletes the activity. @adhere DeleteActivity succeeds on a missing
+ * activity, so no not-found error needs catching; probed 2026-09-25.
+ */
+```
+
+A note informs Jev and suppresses nothing: Jev still judges the code, so a
+real violation added later is still found. Write one only for a fact you
+checked. A wrong note hides real violations the way wrong comments did.
 
 ## 6. When a rule is wrong more often than right
 
