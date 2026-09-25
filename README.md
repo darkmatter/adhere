@@ -162,6 +162,28 @@ pattern with `!` to leave out what it matches. Together:
 adhere lint --filter 'packages/api/**' --filter '!**/generated/**' --limit 200 --rpm 30
 ```
 
+### Suppressing a finding
+
+A finding Jev got wrong is suppressed in the code, with a comment saying why:
+
+```ts
+// adhere-ignore alchemy/providers/idempotent-delete -- DeleteActivity succeeds on a missing activity; probed 2026-09-25
+delete: Effect.fn(function* ({ output }) {
+  yield* sfn.deleteActivity({ activityArn: output.activityArn });
+}),
+```
+
+On a line of its own, `adhere-ignore` covers the statement that starts on the
+next line of code: here the whole handler, wherever in it Jev points, since the
+line it points at can move between runs. At the end of a line of code, it
+covers the statement that starts on that line. `adhere-ignore-file`, anywhere
+in a file, covers the whole file, and the rules it names are not judged there
+at all. A comment names rules as a report does, a preset's with its preset
+first, separated by commas; what follows `--` is the reason, for whoever
+reads the code next. adhere blanks these comments before it hashes or sends a
+file, so Jev never reads them, and the summary counts the findings they
+suppress.
+
 ### Logging a run
 
 `--log-level debug` logs a run's work on stderr: the config it loaded, how many

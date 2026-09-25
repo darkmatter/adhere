@@ -20,7 +20,8 @@ import { SourceWalker } from "#services/SourceWalker.ts";
 import { clearingStatus, counted, countOf, Status } from "#services/Status.ts";
 import { SAMPLE, tallyKeyOf } from "#mechanical.ts";
 import { priceOf } from "#pricing.ts";
-import { applicableRules, judgesFile } from "#rules.ts";
+import { applicableRules, judgesFile, shownId } from "#rules.ts";
+import { NO_SUPPRESSIONS, suppresses, type Suppressions, suppressionsOf } from "#suppress.ts";
 import { type Crypto, Duration, Effect, Record, Result, Semaphore } from "effect";
 
 export interface Finding {
@@ -55,6 +56,8 @@ export interface AuditResult {
   /** Files the firewall in front of Jev's API refused, with the ID to report each by. */
   readonly blocked: ReadonlyArray<Blocked>;
   readonly findings: ReadonlyArray<Finding>;
+  /** Findings an `adhere-ignore` comment covers, left out of `findings`. */
+  readonly suppressed: number;
 }
 
 /** A file whose request the firewall refused, and Cloudflare's Ray ID for the refusal. */
@@ -67,6 +70,8 @@ interface FileResult {
   readonly status: "judged" | "cached" | "skipped" | "waiting" | "blocked";
   readonly findings: ReadonlyArray<Finding>;
   readonly blocked?: Blocked;
+  /** Findings an `adhere-ignore` comment covers, left out of `findings`. */
+  readonly suppressed?: number;
 }
 
 interface PreparedRule {
@@ -106,6 +111,8 @@ export interface FilePlan {
   readonly deferred: number;
   /** Pending rules whose linter check question rides along on this file, each with its tally's key. */
   readonly sampled: Readonly<Record<RuleId, string>>;
+  /** What the file's `adhere-ignore` comments suppress. */
+  readonly suppressions: Suppressions;
 }
 
 /** A run worked out from the files, the rules, and the cache, before any request. */
@@ -192,15 +199,26 @@ export const planAudit = (
   Effect.gen(function* () {
     const config = yield* AdhereConfig;
     const cache = yield* AuditCache;
-    const files = yield* (yield* SourceWalker).files;
+    const walked = yield* (yield* SourceWalker).files;
+    // Each file as Jev reads it, with its adhere-ignore comments blanked, and what they suppress.
+    const suppressed = new Map<string, Suppressions>();
+    const files = walked.map((file) => {
+      const { lines, suppressions } = suppressionsOf(file.lines);
+      if (suppressions !== NO_SUPPRESSIONS) suppressed.set(file.path, suppressions);
+      return lines === file.lines ? file : { ...file, lines };
+    });
+    const suppressionsIn = (file: ScannedFile) => suppressed.get(file.path) ?? NO_SUPPRESSIONS;
 
-    // The rules that judge a file: those scoped to it, of which only the rules that say `tests` judge a test.
+    // The rules that judge a file: those scoped to it, of which only the rules that say `tests`
+    // judge a test, and none that an adhere-ignore-file comment names.
     const configuredRules = (file: ScannedFile) =>
       Record.filter(
         config.scopedRules === undefined
           ? config.rules
           : applicableRules(file.path, config.scopedRules),
-        (rule) => judgesFile(rule, file.test === true),
+        (rule, id) =>
+          judgesFile(rule, file.test === true) &&
+          !suppressionsIn(file).file.has(shownId({ id, preset: presetOfRule.get(rule) })),
       );
 
     const planFile = Effect.fn("audit.plan")(function* (file: ScannedFile) {
@@ -219,6 +237,7 @@ export const planAudit = (
           pending: {},
           deferred: 0,
           sampled: {},
+          suppressions: suppressionsIn(file),
         } satisfies FilePlan;
       }
       const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
@@ -255,6 +274,7 @@ export const planAudit = (
         pending,
         deferred: 0,
         sampled: {},
+        suppressions: suppressionsIn(file),
       } satisfies FilePlan;
     });
 
@@ -542,8 +562,22 @@ export const executeAudit = (
         ),
         Effect.annotateLogs("file", plan.file.path),
       );
-      yield* progress({ requests, findings: result.findings.length });
-      return result;
+      // A finding an adhere-ignore comment covers is left out of the report, and counted.
+      const shown = result.findings.filter(
+        (finding) =>
+          !suppresses(
+            plan.suppressions,
+            shownId({ id: finding.rule, preset: finding.preset }),
+            finding.line,
+          ),
+      );
+      if (shown.length < result.findings.length) {
+        yield* Effect.logDebug(
+          `${result.findings.length - shown.length} suppressed by adhere-ignore`,
+        ).pipe(Effect.annotateLogs("file", plan.file.path));
+      }
+      yield* progress({ requests, findings: shown.length });
+      return { ...result, findings: shown, suppressed: result.findings.length - shown.length };
     });
 
     const results = yield* Effect.forEach(plan.files, auditFile, { concurrency: 8 });
@@ -557,6 +591,7 @@ export const executeAudit = (
       waiting: count("waiting"),
       blocked: results.flatMap((result) => (result.blocked === undefined ? [] : [result.blocked])),
       findings: results.flatMap((result) => result.findings),
+      suppressed: results.reduce((sum, result) => sum + (result.suppressed ?? 0), 0),
     };
   });
 

@@ -16,7 +16,7 @@ const AROUND = 3;
 const WHOLE = 30;
 
 /** Lines of the code, first to last, counting from 1. */
-interface Range {
+export interface Range {
   readonly first: number;
   readonly last: number;
 }
@@ -207,6 +207,16 @@ const statementsAround = (
     { first: outer.first, last: inner.last },
     ...(group === undefined ? [] : statementsAround(pieces, closes, line, group[0] + 1, group[1])),
   ];
+};
+
+/**
+ * The statement that starts on `line`, such as a property, a function, or a
+ * call that opens there: the outermost statement around `line` whose first
+ * line it is. None when no statement starts on `line`.
+ */
+export const statementFrom = (lines: ReadonlyArray<string>, line: number): Range | undefined => {
+  const { pieces } = piecesOf(lines.join("\n"));
+  return statementsAround(pieces, closesOf(pieces), line).find((range) => range.first === line);
 };
 
 /**

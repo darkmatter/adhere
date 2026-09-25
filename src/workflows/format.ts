@@ -169,6 +169,7 @@ const summary = (result: AuditResult): ReadonlyArray<Line> => {
     ...(result.skipped > 0 ? [`${result.skipped} skipped`] : []),
     ...(result.waiting > 0 ? [`${result.waiting} waiting`] : []),
     ...(result.blocked.length > 0 ? [`${result.blocked.length} blocked`] : []),
+    ...(result.suppressed > 0 ? [`${result.suppressed} suppressed`] : []),
   ];
   return [[span(`Found ${found(result.findings)}.`)], [span(`${counts.join(", ")}.`)]];
 };

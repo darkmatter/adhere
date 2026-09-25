@@ -19,6 +19,7 @@ import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
 import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import { describe, expect, it } from "vite-plus/test";
 import { withoutComments } from "../src/comments.ts";
+import { NO_SUPPRESSIONS, suppresses, suppressionsOf } from "../src/suppress.ts";
 import { findContradictions, formatContradictions } from "../src/contradictions.ts";
 import {
   AdhereConfig as AdhereConfigSchema,
@@ -917,6 +918,60 @@ describe("nested .adhere rules", () => {
   });
 });
 
+describe("adhere-ignore", () => {
+  const provider = [
+    "export const Policy = Provider.effect({",
+    "  // adhere-ignore alchemy/providers/idempotent-delete -- AWS returns success for a missing policy",
+    "  delete: Effect.fn(function* ({ output }) {",
+    "    yield* autoscaling.deletePolicy({ PolicyName: output.policyName });",
+    "  }),",
+    "  read: Effect.fn(function* ({ output }) {",
+    "    return yield* autoscaling.describePolicy({ PolicyName: output.policyName });",
+    "  }),",
+    "});",
+  ];
+
+  it("covers the statement below the comment, wherever in it Jev points, and blanks the comment", () => {
+    const { lines, suppressions } = suppressionsOf(provider);
+    expect(lines).toHaveLength(provider.length);
+    expect(lines[1]).toBe("");
+    expect(lines.filter((line, index) => line !== provider[index])).toEqual([""]);
+    const rule = "alchemy/providers/idempotent-delete";
+    expect([3, 4, 5].map((line) => suppresses(suppressions, rule, line))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(suppresses(suppressions, rule, 7)).toBe(false);
+    expect(suppresses(suppressions, "effect/data/brand-meaningful-primitives", 4)).toBe(false);
+  });
+
+  it("covers a trailing comment's own line, a whole file, and several rules at once", () => {
+    const { lines, suppressions } = suppressionsOf([
+      "// adhere-ignore-file effect/basics/gen-for-sequencing -- generated",
+      "const a = 1; // adhere-ignore data/ports, data/names -- a fixed port",
+      "const b = 2;",
+    ]);
+    expect(lines).toEqual(["", "const a = 1;", "const b = 2;"]);
+    expect(suppresses(suppressions, "effect/basics/gen-for-sequencing", 3)).toBe(true);
+    expect(suppresses(suppressions, "data/ports", 2)).toBe(true);
+    expect(suppresses(suppressions, "data/names", 2)).toBe(true);
+    expect(suppresses(suppressions, "data/ports", 3)).toBe(false);
+  });
+
+  it("reads a comment only: a string that mentions adhere-ignore, or a comment naming no rule, suppresses nothing", () => {
+    const code = [
+      'const hint = "// adhere-ignore data/ports -- in a string";',
+      "// adhere-ignore -- no rule named",
+      "const port = 1;",
+    ];
+    const { lines, suppressions } = suppressionsOf(code);
+    expect(lines).toEqual(code);
+    expect(suppressions.statements).toEqual([]);
+    expect(suppressions.file.size).toBe(0);
+  });
+});
+
 describe("comments", () => {
   it("takes comments out, keeping every line and its number", () => {
     const lines = [
@@ -1520,6 +1575,7 @@ describe("plan", () => {
     pending: {},
     deferred: 0,
     sampled: {},
+    suppressions: NO_SUPPRESSIONS,
   });
   const summary = (
     fields: Omit<AuditPlan, "files" | "tokens" | "unjudged"> & { readonly tokens?: number },
@@ -1896,6 +1952,7 @@ describe("pipeline", () => {
       waiting: 0,
       blocked: [],
       findings: [findingA],
+      suppressed: 0,
     });
   });
 
@@ -1915,6 +1972,7 @@ describe("pipeline", () => {
       waiting: 0,
       blocked: [],
       findings: [findingA],
+      suppressed: 0,
     });
 
     const editedB = { ...b, must: 'const token = yield* Config.redacted("TOKEN")' };
@@ -2059,6 +2117,7 @@ describe("pipeline", () => {
       waiting: 0,
       blocked: [],
       findings: [findingA],
+      suppressed: 0,
     });
   });
 
@@ -2129,6 +2188,7 @@ describe("pipeline", () => {
       waiting: 0,
       blocked: [],
       findings: [findingA],
+      suppressed: 0,
     });
   });
 
@@ -2143,6 +2203,59 @@ describe("pipeline", () => {
     const result = await audit({ rules, threshold: 0.7, jev: lenient.layer, cache });
     expect(lenient.calls).toEqual({ judge: [], locate: [{ a }] });
     expect(result.findings).toEqual([findingA]);
+  });
+
+  it("leaves out a finding an adhere-ignore comment covers, counts it, and never sends Jev the comment", async () => {
+    const lines = [
+      "const before = 1;",
+      "// adhere-ignore a -- checked by hand",
+      "  const port: number = Number(process.env.PORT);",
+      "const after = 2;",
+    ];
+    const sent: Array<string> = [];
+    const answer = <A>(table: Readonly<Record<string, A>>, asked: Rules) =>
+      Record.filter(table, (_, id) => asked[id] !== undefined);
+    const jev = Layer.succeed(Jev, {
+      judge: (code, asked) =>
+        Effect.sync(() => {
+          sent.push(code.join("\n"));
+          return { probabilities: answer({ a: 0.9, b: 0.2 }, asked), linter: {} };
+        }),
+      locate: (code, asked) =>
+        Effect.sync(() => {
+          sent.push(code.join("\n"));
+          return answer({ a: 3 }, asked);
+        }),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const result = await audit({
+      rules,
+      jev,
+      cache: memoryCache(),
+      files: [{ path: "/repo/src/server.ts", lines }],
+    });
+    expect(result.findings).toEqual([]);
+    expect(result.suppressed).toBe(1);
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.some((code) => code.includes("adhere-ignore"))).toBe(false);
+  });
+
+  it("judges no rule that an adhere-ignore-file comment names in that file", async () => {
+    const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 3 } });
+    const result = await audit({
+      rules,
+      jev: jev.layer,
+      cache: memoryCache(),
+      files: [
+        {
+          path: "/repo/src/server.ts",
+          lines: ["// adhere-ignore-file a -- generated", ...source.lines],
+        },
+      ],
+    });
+    expect(jev.calls.judge).toEqual([{ b }]);
+    expect(result.findings).toEqual([]);
   });
 
   it("reports a warning rule's findings as warnings, from the same cached judgment", async () => {
@@ -2363,6 +2476,7 @@ describe("render", () => {
     waiting: 0,
     blocked: [],
     findings: [findingA],
+    suppressed: 0,
   };
 
   it("prints the vp-lint frame with the code to write as the hint", () => {
