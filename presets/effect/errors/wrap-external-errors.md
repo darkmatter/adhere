@@ -2,7 +2,9 @@
 description: An error from an external library must be wrapped in a tagged error with a Schema.Defect field, never passed through raw.
 ---
 
-```ts must
+## Must
+
+```ts
 class ApiError extends Schema.TaggedError<ApiError>()("ApiError", {
   endpoint: Schema.String,
   statusCode: Schema.Number,
@@ -23,7 +25,9 @@ const fetchUser = (id: string) =>
   );
 ```
 
-```ts never
+## Never
+
+```ts
 const charge = (amount: number) =>
   Effect.tryPromise(() => stripe.charges.create({ amount, currency: "usd" }));
 ```

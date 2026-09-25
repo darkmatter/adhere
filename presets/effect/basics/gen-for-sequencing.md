@@ -2,7 +2,9 @@
 description: Sequential effectful steps must be written with Effect.gen and yield*, never as nested flatMap or callback chains.
 ---
 
-```ts must
+## Must
+
+```ts
 const program = Effect.gen(function* () {
   const data = yield* fetchData;
   yield* Effect.logInfo(`Processing data: ${data}`);
@@ -10,7 +12,9 @@ const program = Effect.gen(function* () {
 });
 ```
 
-```ts never
+## Never
+
+```ts
 const page = fetchUser(id).pipe(
   Effect.flatMap((user) =>
     fetchOrders(user.id).pipe(Effect.flatMap((orders) => render(user, orders))),

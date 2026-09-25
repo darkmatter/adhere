@@ -2,7 +2,9 @@
 description: Connections, pools, sockets, and anything else with a finalizer must be acquired inside a handler or method, where the event's scope releases them, never at module scope or in a runtime's construction Effect, whose finalizers may never run.
 ---
 
-```ts must
+## Must
+
+```ts
 Effect.gen(function* () {
   const url = yield* Config.Redacted("DATABASE_URL");
   return {
@@ -18,7 +20,9 @@ Effect.gen(function* () {
 });
 ```
 
-```ts never
+## Never
+
+```ts
 Effect.gen(function* () {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL }); // one pool for the isolate
   yield* Effect.addFinalizer(() => Effect.promise(() => pool.end())); // workerd never runs this

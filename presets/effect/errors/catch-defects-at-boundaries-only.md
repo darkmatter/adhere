@@ -2,7 +2,9 @@
 description: Defects must be caught only at a system boundary for logging or shutdown, never in business logic.
 ---
 
-```ts must
+## Must
+
+```ts
 // At app entry: if config fails, nothing can proceed
 const main = Effect.gen(function* () {
   const config = yield* loadConfig.pipe(Effect.orDie);
@@ -10,6 +12,8 @@ const main = Effect.gen(function* () {
 });
 ```
 
-```ts never
+## Never
+
+```ts
 const price = computePrice(cart).pipe(Effect.catchDefect(() => Effect.succeed(0)));
 ```

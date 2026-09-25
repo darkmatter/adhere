@@ -2,7 +2,9 @@
 description: Business logic must depend on a config service. Config primitives must be read only inside that service's layer, never in business logic.
 ---
 
-```ts must
+## Must
+
+```ts
 class ApiConfig extends Context.Service<
   ApiConfig,
   {
@@ -21,7 +23,9 @@ class ApiConfig extends Context.Service<
 }
 ```
 
-```ts never
+## Never
+
+```ts
 const sendInvoice = Effect.fn("sendInvoice")(function* (invoice: Invoice) {
   const apiUrl = yield* Config.string("BILLING_API_URL");
   return yield* post(apiUrl, invoice);

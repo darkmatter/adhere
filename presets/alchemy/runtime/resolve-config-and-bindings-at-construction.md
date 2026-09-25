@@ -2,7 +2,9 @@
 description: In a Worker, Function, or Service, Config values and binding factories must be yielded in the outer construction Effect and captured for the handlers, never yielded for the first time inside fetch or another request handler, which does not run at deploy time, so nothing gets bound.
 ---
 
-```ts must
+## Must
+
+```ts
 export default Cloudflare.Worker("Api", { main: import.meta.url },
   Effect.gen(function* () {
     const apiKey = yield* Config.Redacted("API_KEY");
@@ -17,7 +19,9 @@ export default Cloudflare.Worker("Api", { main: import.meta.url },
 );
 ```
 
-```ts never
+## Never
+
+```ts
 export default Cloudflare.Worker("Api", { main: import.meta.url },
   Effect.gen(function* () {
     return {

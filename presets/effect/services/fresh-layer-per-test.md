@@ -2,7 +2,9 @@
 description: Each it.effect must provide its own layer. it.layer must be used only to share an expensive resource across a suite, never a cheap one.
 ---
 
-```ts must
+## Must
+
+```ts
 it.effect("starts at zero", () =>
   Effect.gen(function* () {
     const counter = yield* Counter;
@@ -19,7 +21,9 @@ it.effect("increments without leaking", () =>
 );
 ```
 
-```ts never
+## Never
+
+```ts
 it.layer(Counter.layer)("Counter", (it) => {
   it.effect("starts at zero", () => Effect.gen(function* () { /* ... */ }));
   it.effect("increments", () => Effect.gen(function* () { /* ... */ }));

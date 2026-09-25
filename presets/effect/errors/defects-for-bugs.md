@@ -2,7 +2,9 @@
 description: A typed error must be for a failure the caller can handle. A bug or invariant violation must be a defect, never a typed error.
 ---
 
-```ts must
+## Must
+
+```ts
 const recovered: Effect.Effect<string, ValidationError> = program.pipe(
   Effect.catchTag("HttpError", (error) =>
     Effect.gen(function* () {
@@ -18,7 +20,9 @@ const main = Effect.gen(function* () {
 });
 ```
 
-```ts never
+## Never
+
+```ts
 class CacheCorrupted extends Schema.TaggedError<CacheCorrupted>()("CacheCorrupted", {
   key: Schema.String,
 }) {}

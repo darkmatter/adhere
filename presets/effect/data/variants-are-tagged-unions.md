@@ -2,7 +2,9 @@
 description: Structured variants, alternatives that carry fields, must be Schema.TaggedClass members of a Schema.Union, never hand-written object types joined by a tag field. Simple alternatives without fields may be Schema.Literals.
 ---
 
-```ts must
+## Must
+
+```ts
 export class Success extends Schema.TaggedClass<Success>("Success")("Success", {
   value: Schema.Number,
 }) {}
@@ -22,7 +24,9 @@ const renderResult = (result: Result) =>
   );
 ```
 
-```ts never
+## Never
+
+```ts
 type Shape = { kind: "circle"; radius: number } | { kind: "square"; side: number };
 
 const area = (shape: Shape) =>

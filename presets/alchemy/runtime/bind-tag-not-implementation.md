@@ -2,7 +2,9 @@
 description: When a runtime is split into a Tag class and a make Layer, other runtimes must import and bind only the Tag, and only the Stack provides the Layer; another Worker or Function must never import or provide that implementation Layer.
 ---
 
-```ts must
+## Must
+
+```ts
 // src/Admin.ts
 import { Api } from "./Api.ts";
 
@@ -14,7 +16,9 @@ export default Cloudflare.Worker("Admin", { main: import.meta.url },
 );
 ```
 
-```ts never
+## Never
+
+```ts
 // src/Admin.ts
 import ApiLive, { Api } from "./Api.ts";
 

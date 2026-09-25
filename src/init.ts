@@ -24,16 +24,20 @@ description: A file should be small and focused, with one primary responsibility
 threshold: 0.8
 ---
 
-A guideline, so its description and its code say should and should not. A
+A guideline, so its description and its headings say should and should not. A
 rule that must hold says must and never instead, as name-domain-actions does.
 Use this rule as a template for repository-specific conventions.
 
-\`\`\`ts should
+## Should
+
+\`\`\`ts
 export const parsePort = (value: string) =>
   Port.make(Number.parseInt(value, 10));
 \`\`\`
 
-\`\`\`ts should not
+## Should not
+
+\`\`\`ts
 export const parsePort = (value: string) => Port.make(Number.parseInt(value, 10));
 export const sendWelcomeEmail = (to: Email) => Mailer.send(to, welcomeTemplate);
 export const renderInvoice = (invoice: Invoice) => Html.table(invoice.lines);
@@ -45,17 +49,21 @@ description: A function must be named after the domain action it performs, never
 threshold: 0.8
 ---
 
-\`\`\`ts must
+## Must
+
+\`\`\`ts
 export const loadCustomerProfile = (customerId: CustomerId) =>
   Effect.gen(function* () {
     return yield* CustomerStore.find(customerId);
   });
 \`\`\`
 
-A fence tagged \`never\` shows what a violation looks like. It is optional, and
-a rule can have one without the block above.
+## Never
 
-\`\`\`ts never
+The code under Never shows what a violation looks like. It is optional, and a
+rule can have it without the code under Must.
+
+\`\`\`ts
 export const handle = (id: string) =>
   Effect.gen(function* () {
     return yield* CustomerStore.find(id);

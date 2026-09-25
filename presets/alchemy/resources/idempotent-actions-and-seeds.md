@@ -2,7 +2,9 @@
 description: An Action body and a SQL file listed in importFiles must be safe to run again, using IF NOT EXISTS, ON CONFLICT, or upserts, never one-shot inserts or calls that duplicate data or fail when an interrupted deploy retries them.
 ---
 
-```ts must
+## Must
+
+```ts
 export const Migrate = Alchemy.Action("Migrate", Effect.fn(function* () {
   const db = yield* D1Client;
   yield* db.exec("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT)");
@@ -10,7 +12,9 @@ export const Migrate = Alchemy.Action("Migrate", Effect.fn(function* () {
 }));
 ```
 
-```ts never
+## Never
+
+```ts
 export const Seed = Alchemy.Action("Seed", Effect.fn(function* () {
   const db = yield* D1Client;
   yield* db.exec("CREATE TABLE users (id TEXT, name TEXT)");

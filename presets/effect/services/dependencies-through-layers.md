@@ -2,7 +2,9 @@
 description: A service that depends on other services must be a Context.Service built by a Layer that yields those services as it is constructed, never a factory function or class that takes services, clients, or their implementations as arguments.
 ---
 
-```ts must
+## Must
+
+```ts
 class Users extends Context.Service<
   Users,
   {
@@ -26,7 +28,9 @@ export const UsersLive = Layer.effect(
 );
 ```
 
-```ts never
+## Never
+
+```ts
 export const makeUsers = (database: Database["Service"], logger: Logger["Service"]) => ({
   find: (id: UserId) =>
     Effect.gen(function* () {

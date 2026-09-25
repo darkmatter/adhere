@@ -2,7 +2,9 @@
 description: The result of a parameterized layer constructor must be stored in a module constant before it is used in more than one place, never constructed again for each use.
 ---
 
-```ts must
+## Must
+
+```ts
 const postgresLayer = Postgres.layer({ url: "postgres://localhost/mydb", poolSize: 10 });
 
 const goodAppLayer = Layer.merge(
@@ -11,7 +13,9 @@ const goodAppLayer = Layer.merge(
 );
 ```
 
-```ts never
+## Never
+
+```ts
 const Live = Layer.merge(
   Sessions.layer.pipe(Layer.provide(Redis.layer({ host: "localhost" }))),
   RateLimits.layer.pipe(Layer.provide(Redis.layer({ host: "localhost" }))),

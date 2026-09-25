@@ -2,7 +2,9 @@
 description: A service must expose only readonly members, never mutable state.
 ---
 
-```ts must
+## Must
+
+```ts
 class Logger extends Context.Service<
   Logger,
   {
@@ -11,7 +13,9 @@ class Logger extends Context.Service<
 >()("@app/Logger") {}
 ```
 
-```ts never
+## Never
+
+```ts
 class Counter extends Context.Service<
   Counter,
   { count: number; readonly increment: () => Effect.Effect<void> }

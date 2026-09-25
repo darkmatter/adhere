@@ -2,7 +2,9 @@
 description: A test should supply config with Layer.succeed on the config service, and should not set environment variables or a ConfigProvider to do it.
 ---
 
-```ts should
+## Should
+
+```ts
 Effect.runPromise(
   program.pipe(
     Effect.provide(
@@ -15,7 +17,9 @@ Effect.runPromise(
 );
 ```
 
-```ts should not
+## Should not
+
+```ts
 beforeAll(() => {
   process.env.DATABASE_URL = "postgres://localhost/test";
 });

@@ -2,7 +2,9 @@
 description: A service's operations must have no requirements, typed Effect<A, E, never>, with their dependencies acquired when the service's Layer is built, never left in an operation's requirements type, as in Effect<A, E, Database>.
 ---
 
-```ts must
+## Must
+
+```ts
 class Users extends Context.Service<
   Users,
   {
@@ -26,7 +28,9 @@ export const UsersLive = Layer.effect(
 );
 ```
 
-```ts never
+## Never
+
+```ts
 class Users extends Context.Service<
   Users,
   {

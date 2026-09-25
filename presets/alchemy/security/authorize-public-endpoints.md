@@ -2,7 +2,9 @@
 description: A handler behind a public URL, such as a Function URL, workers.dev route, or a Durable Object chosen by a client-supplied name, must authenticate the caller and check its access before doing protected work, never treating CORS, an obscure URL, or a trusted origin as authorization.
 ---
 
-```ts must
+## Must
+
+```ts
 fetch: Effect.gen(function* () {
   const request = yield* HttpServerRequest.HttpServerRequest;
   const user = yield* verifySession(request.headers.authorization);
@@ -11,7 +13,9 @@ fetch: Effect.gen(function* () {
 }),
 ```
 
-```ts never
+## Never
+
+```ts
 fetch: Effect.gen(function* () {
   const request = yield* HttpServerRequest.HttpServerRequest;
   const name = /^\/counters\/([^/]+)$/.exec(new URL(request.url).pathname)?.[1] ?? "default";
