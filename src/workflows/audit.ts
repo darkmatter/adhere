@@ -9,6 +9,7 @@ import {
   JevUnavailable,
   type Judged,
   judgeQuestion,
+  judgeLoad,
   judgeRequests,
   linterQuestion,
   locateRequests,
@@ -18,6 +19,7 @@ import {
 import { SourceWalker } from "#services/SourceWalker.ts";
 import { clearingStatus, counted, countOf, Status } from "#services/Status.ts";
 import { SAMPLE, tallyKeyOf } from "#mechanical.ts";
+import { priceOf } from "#pricing.ts";
 import { applicableRules } from "#rules.ts";
 import { type Crypto, Duration, Effect, Record, Result, Semaphore } from "effect";
 
@@ -108,6 +110,10 @@ export interface AuditPlan {
   readonly deferred: number;
   /** Requests to Jev that judging the other checks takes. Locating findings adds 1 or more per file. */
   readonly requests: number;
+  /** About how many input tokens those requests carry, which Jev charges for. */
+  readonly tokens: number;
+  /** The model's price per million input tokens, in dollars, when adhere knows it. */
+  readonly price?: number;
 }
 
 /** A file finished, for a progress counter: the requests it took and the findings it has. */
@@ -304,6 +310,12 @@ export const planAudit = (
       options.limit === undefined ? everything : withinLimit(everything, options.limit);
     const planned = yield* withSamples(limited);
     const judged = planned.filter((plan) => !plan.skipped);
+    const loads = judged.map((plan) =>
+      isEmpty(plan.pending)
+        ? { requests: 0, tokens: 0 }
+        : judgeLoad(plan.file.lines, rulesOf(plan.pending), Object.keys(plan.sampled)),
+    );
+    const price = priceOf(config.model);
     const total = (count: (plan: FilePlan) => number) =>
       judged.reduce((sum, plan) => sum + count(plan), 0);
     return {
@@ -313,11 +325,9 @@ export const planAudit = (
       cached: total((plan) => sizeOf(plan.kept)),
       skipped: planned.length - judged.length,
       deferred: total((plan) => plan.deferred),
-      requests: total((plan) =>
-        isEmpty(plan.pending)
-          ? 0
-          : judgeRequests(plan.file.lines, rulesOf(plan.pending), Object.keys(plan.sampled)),
-      ),
+      requests: loads.reduce((sum, load) => sum + load.requests, 0),
+      tokens: loads.reduce((sum, load) => sum + load.tokens, 0),
+      ...(price === undefined ? {} : { price }),
     };
   });
 

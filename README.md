@@ -111,8 +111,16 @@ what judging takes:
 ```text
 200 files and 14 rules: 2800 checks, 1400 cached.
 Judging the other 1400 takes 200 requests to Jev, plus 1 or more for each file with a finding.
-? Send 200 requests to Jev? › (Y/n)
+Those carry about 1.9 million input tokens: about $0.08 at $0.042 per million, and more for locating findings.
+? Send 200 requests to Jev, about $0.08? › (Y/n)
 ```
+
+The cost is adhere's estimate of the input tokens times the model's price.
+Jev charges only for input tokens: $0.042 a million for `jev-latest`, per
+[TypeSafe AI's models page](https://docs.typesafe.ai/models) in September 2026.
+The estimate runs about a tenth high, and locating findings, which depends on
+what judging finds, comes on top. For a model adhere has no price for, the plan
+gives the tokens alone.
 
 It asks only with a terminal on stdin and stdout, and never when the cache
 answers every check; `--yes` sends without asking. While it runs, a counter on

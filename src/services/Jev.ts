@@ -344,6 +344,23 @@ export const requestsOf = (body: Body): ReadonlyArray<Body> => {
   return requests.map(({ questions }) => ({ ...body, questions }));
 };
 
+/**
+ * The requests judging `rules` over a file takes, and about how many input
+ * tokens they carry, by `tokensOf`: the judge body, split to fit, as `judge`
+ * sends it, each request with the file again.
+ */
+export const judgeLoad = (
+  lines: Lines,
+  rules: Rules,
+  sampled: ReadonlyArray<RuleId> = [],
+): { readonly requests: number; readonly tokens: number } => {
+  const requests = requestsOf(judgeBody("", lines, rules, sampled));
+  return {
+    requests: requests.length,
+    tokens: requests.reduce((sum, request) => sum + tokensOf(request), 0),
+  };
+};
+
 /** The requests judging `rules` over a file takes: the judge body, split to fit, as `judge` sends it. */
 export const judgeRequests = (
   lines: Lines,

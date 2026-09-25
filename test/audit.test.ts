@@ -65,6 +65,7 @@ import {
   JevOverflow,
   JevUnavailable,
   judgeBody,
+  judgeLoad,
   linterKey,
   linterQuestion,
   locateBody,
@@ -1155,6 +1156,8 @@ describe("plan", () => {
       skipped: 0,
       deferred: 0,
       requests: 1,
+      tokens: expect.any(Number),
+      price: 0.042,
     });
   });
 
@@ -1250,8 +1253,12 @@ describe("plan", () => {
     deferred: 0,
     sampled: {},
   });
-  const summary = (fields: Omit<AuditPlan, "files">, files = 200): AuditPlan => ({
+  const summary = (
+    fields: Omit<AuditPlan, "files" | "tokens"> & { readonly tokens?: number },
+    files = 200,
+  ): AuditPlan => ({
     files: Array.from({ length: files }, (_, index) => filePlan(`/repo/${index}.ts`)),
+    tokens: 0,
     ...fields,
   });
 
@@ -1340,6 +1347,49 @@ describe("plan", () => {
     expect(progressLine({ files: 37, requests: 41, findings: 1 }, partly)).toBe(
       "37/200 files, 41 requests sent, 1 finding",
     );
+  });
+
+  it("says what judging costs at the model's price, and only the tokens when the price is unknown", () => {
+    const fields = {
+      rules: 14,
+      checks: 2800,
+      cached: 1400,
+      skipped: 0,
+      deferred: 0,
+      requests: 197,
+    };
+    const priced = summary({ ...fields, tokens: 3_217_450, price: 0.042 });
+    expect(describePlan(priced)[2]).toBe(
+      "Those carry about 3.2 million input tokens: about $0.14 at $0.042 per million, and more for locating findings.",
+    );
+    expect(sendQuestion(priced)).toBe("Send 197 requests to Jev, about $0.14?");
+    const unpriced = summary({ ...fields, tokens: 41_234 });
+    expect(describePlan(unpriced)[2]).toBe(
+      "Those carry about 41,000 input tokens, and more for locating findings.",
+    );
+    expect(sendQuestion(unpriced)).toBe("Send 197 requests to Jev?");
+    expect(describePlan(summary({ ...fields, tokens: 43_012_345, price: 0.042 }))[2]).toBe(
+      "Those carry about 43 million input tokens: about $1.81 at $0.042 per million, and more for locating findings.",
+    );
+    expect(describePlan(summary({ ...fields, tokens: 612, price: 0.042 }))[2]).toBe(
+      "Those carry about 612 input tokens: under $0.01 at $0.042 per million, and more for locating findings.",
+    );
+  });
+
+  it("counts the input tokens its judge requests carry, and the model's price", async () => {
+    const planned = await planOf({ rules, files: [source, other], cache: memoryCache() });
+    // Each file's pending rules, and the linter check's questions sampled beside them.
+    const load = (sampled: boolean) =>
+      planned.files.reduce((sum, plan) => {
+        const pending = Record.map(plan.pending, ({ rule }) => rule);
+        const ids = sampled ? Object.keys(plan.sampled) : [];
+        return sum + judgeLoad(plan.file.lines, pending, ids).tokens;
+      }, 0);
+    expect({ tokens: planned.tokens, price: planned.price }).toEqual({
+      tokens: load(true),
+      price: 0.042,
+    });
+    expect(planned.tokens).toBeGreaterThan(load(false));
   });
 });
 

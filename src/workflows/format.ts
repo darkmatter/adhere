@@ -224,6 +224,41 @@ const durationAt = (requests: number, rpm: number): string => {
     : counted(Math.round(seconds / 60), "minute", "minutes");
 };
 
+/** A number to one decimal place, without a trailing .0: 3.2, 43. */
+const tenths = (n: number): string => Number(n.toFixed(1)).toLocaleString("en-US");
+
+/** A token count as the plan says it: 612, 41,000, 3.2 million, 43 million, 1.1 billion. */
+const tokensSaid = (tokens: number): string =>
+  tokens >= 1e9
+    ? `${tenths(tokens / 1e9)} billion`
+    : tokens >= 1e6
+      ? `${tenths(tokens / 1e6)} million`
+      : tokens >= 1e3
+        ? (Math.round(tokens / 1e3) * 1e3).toLocaleString("en-US")
+        : tokens.toLocaleString("en-US");
+
+/** An estimated cost as the plan says it: under $0.01, about $0.14, about $1,234. */
+const dollars = (amount: number): string =>
+  amount < 0.01
+    ? "under $0.01"
+    : amount < 100
+      ? `about $${amount.toFixed(2)}`
+      : `about $${Math.round(amount).toLocaleString("en-US")}`;
+
+/** What judging the plan costs at the model's price, when adhere knows it. */
+const costOf = (plan: AuditPlan): number | undefined =>
+  plan.price === undefined ? undefined : (plan.tokens / 1e6) * plan.price;
+
+/** The plan's input tokens and their cost; locating findings comes on top, since it depends on the findings. */
+const costLine = (plan: AuditPlan): string => {
+  const cost = costOf(plan);
+  const priced =
+    cost === undefined || plan.price === undefined
+      ? ""
+      : `: ${dollars(cost)} at $${plan.price} per million`;
+  return `Those carry about ${tokensSaid(plan.tokens)} input tokens${priced}, and more for locating findings.`;
+};
+
 export const describePlan = (plan: AuditPlan, limits: RunLimits = {}): ReadonlyArray<string> => {
   const cached = plan.cached > 0 ? `, ${plan.cached} cached` : "";
   const skipped =
@@ -260,12 +295,16 @@ export const describePlan = (plan: AuditPlan, limits: RunLimits = {}): ReadonlyA
   return [
     found,
     `Judging ${rest} takes ${counted(plan.requests, "request", "requests")} to Jev, plus 1 or more for each file with a finding.${pace}${waiting}`,
+    ...(plan.tokens > 0 ? [costLine(plan)] : []),
   ];
 };
 
 /** The question before a run sends anything. */
-export const sendQuestion = (plan: AuditPlan): string =>
-  `Send ${counted(plan.requests, "request", "requests")} to Jev?`;
+export const sendQuestion = (plan: AuditPlan): string => {
+  const cost = costOf(plan);
+  const priced = cost === undefined || plan.tokens === 0 ? "" : `, ${dollars(cost)}`;
+  return `Send ${counted(plan.requests, "request", "requests")} to Jev${priced}?`;
+};
 
 /** A run's progress so far: every file it finished, with the requests and findings they added up to. */
 export interface Progress {
