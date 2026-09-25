@@ -13,26 +13,6 @@ yet: each finding is a pair of a rule and a file to judge, the way
 - **Rules:** adhere 0.9.5's two presets, `effect` with 19 rules and `alchemy`
   with 43, at a threshold of 0.7 given with `--threshold`. The checkout has no
   config or rules of its own.
-- **Judgments:** every one made on 2026-09-25 with the default model,
-  jev-latest, from an empty cache. The plan put judging at about 260 million
-  input tokens, about $10.93, before locating findings. The first run stopped
-  after 706 files at Jev's rate limit, and a second, at `--rpm 400`, judged the
-  other 9,612.
-- **Findings:** 3,083 in 2,047 files, from 45 rules. Seventeen found nothing:
-  `effect/errors/defects-for-bugs`, `effect/services/fresh-layer-per-test`, and
-  fifteen of alchemy's, `alchemy/data/hyperdrive-direct-origin`,
-  `alchemy/data/single-migration-owner`, `alchemy/durable/io-inside-steps`,
-  `alchemy/durable/no-self-triggering-bucket-writes`,
-  `alchemy/durable/stable-step-names`, `alchemy/durable/webhook-state-is-truth`,
-  `alchemy/providers/lazy-layer-construction`,
-  `alchemy/resources/remote-state-for-ci`,
-  `alchemy/resources/stable-logical-ids`,
-  `alchemy/runtime/deterministic-config-defaults`,
-  `alchemy/secrets/none-in-browser-env`,
-  `alchemy/secrets/unwrap-before-compare-or-send`,
-  `alchemy/security/github-secret-not-variable`,
-  `alchemy/security/keep-auth-protections-on`,
-  `alchemy/security/least-privilege-ci-credentials`.
 
 ## A rule's file
 
