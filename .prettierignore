@@ -7,4 +7,4 @@ eval/cases/**/*.md
 eval/studies/more-examples.md
 # Findings on other repos quote each rule's code and each source line as the
 # report printed them.
-eval/repos/*/*/*.md
+eval/repos/*/*/**/*.md
