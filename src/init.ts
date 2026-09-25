@@ -1,4 +1,5 @@
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { CONFIG_FILES } from "#config.ts";
 import { Effect } from "effect";
@@ -6,7 +7,14 @@ import { Effect } from "effect";
 export interface InitResult {
   readonly created: ReadonlyArray<string>;
   readonly skipped: ReadonlyArray<string>;
+  /** The package manager that added adhere, or why none did. */
+  readonly install: Install;
 }
+
+export type Install =
+  | { readonly status: "installed"; readonly packageManager: PackageManager }
+  | { readonly status: "listed" }
+  | { readonly status: "no-package-json" };
 
 export interface InitOptions {
   readonly force?: boolean;
@@ -110,6 +118,52 @@ const writeScaffoldFile = (root: string, path: string, contents: string, options
       ),
   });
 
+const PACKAGE = "@drkmttr/adhere";
+
+type PackageManager = "bun" | "pnpm" | "yarn" | "npm";
+
+/** The first lockfile at the root names the package manager; npm when there is none. */
+const lockfiles: ReadonlyArray<readonly [string, PackageManager]> = [
+  ["bun.lock", "bun"],
+  ["bun.lockb", "bun"],
+  ["pnpm-lock.yaml", "pnpm"],
+  ["yarn.lock", "yarn"],
+  ["package-lock.json", "npm"],
+];
+
+const packageManagerAt = async (root: string): Promise<PackageManager> => {
+  for (const [file, manager] of lockfiles) {
+    if (await exists(join(root, file))) return manager;
+  }
+  return "npm";
+};
+
+/** Adds adhere to devDependencies, so the config's `import type` resolves. */
+const installAdhere = (root: string) =>
+  Effect.tryPromise({
+    try: async (): Promise<Install> => {
+      const manifest = await readFile(join(root, "package.json"), "utf8").catch(() => undefined);
+      if (manifest === undefined) return { status: "no-package-json" };
+      const { dependencies, devDependencies } = JSON.parse(manifest);
+      if (dependencies?.[PACKAGE] !== undefined || devDependencies?.[PACKAGE] !== undefined) {
+        return { status: "listed" };
+      }
+      const packageManager = await packageManagerAt(root);
+      await new Promise<void>((resolve, reject) => {
+        spawn(packageManager, ["add", "-D", PACKAGE], { cwd: root, stdio: "inherit" })
+          .on("error", reject)
+          .on("exit", (code) =>
+            code === 0 ? resolve() : reject(new Error(`${packageManager} exited with ${code}`)),
+          );
+      });
+      return { status: "installed", packageManager };
+    },
+    catch: (cause) =>
+      new Error(
+        `Could not add ${PACKAGE} to package.json: ${cause instanceof Error ? cause.message : String(cause)}`,
+      ),
+  });
+
 export const initProject = (
   root: string,
   options: InitOptions = {},
@@ -130,5 +184,6 @@ export const initProject = (
         skipped.push(relative(root, join(root, path)));
       }
     }
-    return { created, skipped };
+    const install = yield* installAdhere(root);
+    return { created, skipped, install };
   });

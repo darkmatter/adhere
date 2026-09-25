@@ -22,7 +22,7 @@ import {
 } from "#workflows/format.ts";
 import type { Flags } from "#config.ts";
 import { findContradictions, formatContradictions } from "#contradictions.ts";
-import { initProject } from "#init.ts";
+import { type Install, initProject } from "#init.ts";
 import { formatLinterCheck, tallyProjectRules } from "#mechanical.ts";
 import { type PresetName, presetNames } from "#presets.ts";
 import { globalRuleSet } from "#rules.ts";
@@ -315,6 +315,17 @@ export const validateCommand = Command.make("validate", { preset }, () =>
   Command.provide((input) => validateLayer({ presets: input.preset })),
 );
 
+const installLine = (install: Install): string => {
+  switch (install.status) {
+    case "installed":
+      return `installed: @drkmttr/adhere with ${install.packageManager}`;
+    case "listed":
+      return "installed: none, @drkmttr/adhere is already in package.json";
+    case "no-package-json":
+      return "installed: none, there is no package.json";
+  }
+};
+
 /** `adhere init`: the scaffold. */
 export const initCommand = Command.make("init", { force }, (input) =>
   Effect.gen(function* () {
@@ -323,10 +334,11 @@ export const initCommand = Command.make("init", { force }, (input) =>
     const lines = [
       result.created.length > 0 ? `created: ${result.created.join(", ")}` : "created: none",
       result.skipped.length > 0 ? `skipped: ${result.skipped.join(", ")}` : "skipped: none",
+      installLine(result.install),
     ];
     yield* Console.log(lines.join("\n"));
   }),
-).pipe(Command.withDescription("Scaffold .adhere/config.ts and example Markdown rules."));
+).pipe(Command.withDescription("Scaffold .adhere/config.ts and example Markdown rules, and add @drkmttr/adhere to devDependencies with the project's package manager."));
 
 /**
  * The key typed at a masked prompt, or piped in: `adhere login < key.txt`.

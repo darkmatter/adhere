@@ -41,7 +41,7 @@ with a TypeSafe AI API key: the one `adhere login` saved, or
 ## Quick start
 
 ```sh
-adhere init                          # .adhere/config.ts and two example rules
+adhere init                          # .adhere/config.ts, two example rules, and the dependency
 adhere login                         # save your TypeSafe AI API key, once
 adhere validate                      # Checks your rules' wording, and contradictions using Jev
 adhere lint                          # audit the working directory
@@ -254,6 +254,13 @@ export default { exclude: ["**/generated/**"] } satisfies Config;
 rerun: by default it reports existing files as skipped and does not clobber
 them. `--force` overwrites them. A config already at another accepted path is
 kept, and no second one is added, even with `--force`.
+
+When there is a `package.json`, init also adds `@drkmttr/adhere` to its
+`devDependencies`, so the config's `import type` resolves. It runs
+`<manager> add -D @drkmttr/adhere` with the package manager whose lockfile
+(`bun.lock`, `bun.lockb`, `pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`)
+sits beside the `package.json`, or npm when there is none. It skips the install
+when `package.json` already lists adhere.
 
 ### Validate
 

@@ -1428,6 +1428,22 @@ describe("init", () => {
     }
   });
 
+  it("adds adhere to package.json only where there is one without it", async () => {
+    const bare = join(tmpdir(), `adhere-init-bare-${Date.now()}`);
+    expect((await Effect.runPromise(initProject(bare))).install).toEqual({
+      status: "no-package-json",
+    });
+
+    const listed = join(tmpdir(), `adhere-init-listed-${Date.now()}`);
+    await mkdir(listed, { recursive: true });
+    await writeFile(
+      join(listed, "package.json"),
+      JSON.stringify({ devDependencies: { "@drkmttr/adhere": "^0.9.0" } }),
+      "utf8",
+    );
+    expect((await Effect.runPromise(initProject(listed))).install).toEqual({ status: "listed" });
+  });
+
   it("keeps a config at another accepted path instead of adding a second one", async () => {
     const root = join(tmpdir(), `adhere-init-existing-${Date.now()}`);
     await mkdir(root, { recursive: true });
