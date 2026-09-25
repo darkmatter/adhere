@@ -212,7 +212,7 @@ export const planAudit = (
     const files = walked.map((file) => {
       const { lines: directed, suppressions } = suppressionsOf(file.lines);
       if (suppressions !== NO_SUPPRESSIONS) suppressed.set(file.path, suppressions);
-      const lines = config.comments === "keep" ? directed : withoutComments(directed, isNote);
+      const lines = config.includeComments === true ? directed : withoutComments(directed, isNote);
       if (lines === file.lines) return file;
       originals.set(file.path, file.lines);
       return { ...file, lines };

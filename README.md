@@ -184,7 +184,7 @@ have checked it, with how you know:
 ```
 
 A note informs Jev; it suppresses nothing, and Jev still judges the code
-around it. `comments: "keep"` in the config sends every comment, for a
+around it. `includeComments: true` in the config sends every comment, for a
 project whose rules are about comments, such as doc comments on exports.
 
 ### Suppressing a finding
@@ -206,7 +206,7 @@ in a file, covers the whole file, and the rules it names are not judged there
 at all. A comment names rules as a report does, a preset's with its preset
 first, separated by commas; what follows `--` is the reason, for whoever
 reads the code next. Jev never reads these comments, even with
-`comments: "keep"`, and the summary counts the findings they suppress.
+`includeComments: true`, and the summary counts the findings they suppress.
 
 ### Logging a run
 

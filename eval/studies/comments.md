@@ -43,7 +43,7 @@ bun eval/studies/comments.ts results.json
 ## Decided
 
 adhere takes comments out by default, keeping those that say `@adhere`, and
-`comments: "keep"` in a config sends them all. A comment changes nothing a
+`includeComments: true` in a config sends them all. A comment changes nothing a
 file does, so it should not change the report; on the Effect preset taking
 comments out changed nothing beyond noise, and on alchemy's idempotent-delete
 rule it found every real violation that wrong comments had hidden.

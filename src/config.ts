@@ -127,11 +127,11 @@ export const AdhereConfig = Schema.Struct({
    */
   overrides: Schema.optionalKey(Schema.Record(Schema.String, Override)),
   /**
-   * Whether Jev reads the files' comments: `strip`, the default, takes them
-   * out, since a comment changes nothing a file does, but for the notes that
-   * say `@adhere`; `keep` sends them all, for rules about comments.
+   * Whether Jev reads every comment, for rules about comments. By default
+   * comments are taken out, since a comment changes nothing a file does, but
+   * for the notes that say `@adhere`.
    */
-  comments: Schema.optionalKey(Schema.Literals(["strip", "keep"])),
+  includeComments: Schema.optionalKey(Schema.Boolean),
 });
 
 /** Where a repo keeps its rule files by default. The cache lives under it. */
@@ -205,8 +205,8 @@ export interface ResolvedConfig {
   readonly rpm?: number;
   /** The config's globs of files no rule judges. */
   readonly exclude?: ReadonlyArray<string>;
-  /** Whether Jev reads the files' comments; unset, they are taken out. */
-  readonly comments?: "strip" | "keep";
+  /** Whether Jev reads every comment; unset, only the `@adhere` notes. */
+  readonly includeComments?: boolean;
 }
 
 /** Command-line values that apply on top of the config file. */
@@ -256,7 +256,7 @@ export const resolveConfig = (
     rules: Object.assign({}, ...applied.map((preset) => preset.rules), config.rules),
     ...(flags.rpm === undefined ? {} : { rpm: flags.rpm }),
     ...(config.exclude === undefined ? {} : { exclude: config.exclude }),
-    ...(config.comments === undefined ? {} : { comments: config.comments }),
+    ...(config.includeComments === undefined ? {} : { includeComments: config.includeComments }),
   };
 };
 

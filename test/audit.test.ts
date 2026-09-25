@@ -220,7 +220,7 @@ const audit = (options: {
   readonly jev: Layer.Layer<Jev>;
   readonly cache: Layer.Layer<AuditCache>;
   readonly files?: ReadonlyArray<ScannedFile>;
-  readonly comments?: "strip" | "keep";
+  readonly includeComments?: boolean;
 }) =>
   Effect.runPromise(
     runAudit.pipe(
@@ -230,7 +230,9 @@ const audit = (options: {
             model: "jev-latest",
             threshold: options.threshold ?? 0.7,
             rules: options.rules,
-            ...(options.comments === undefined ? {} : { comments: options.comments }),
+            ...(options.includeComments === undefined
+              ? {}
+              : { includeComments: options.includeComments }),
           }),
           Layer.succeed(SourceWalker, { files: Effect.succeed(options.files ?? [source]) }),
           options.jev,
@@ -2299,7 +2301,7 @@ describe("pipeline", () => {
     expect(result.findings.map((finding) => finding.excerpt.lines)).toEqual([lines]);
   });
 
-  it("re-judges nothing when only a file's comments change, and sends them all when the config keeps comments", async () => {
+  it("re-judges nothing when only a file's comments change, and sends them all when the config includes comments", async () => {
     const cache = memoryCache();
     const written = (comment: string): ScannedFile => ({
       path: "/repo/src/server.ts",
@@ -2322,7 +2324,7 @@ describe("pipeline", () => {
       jev: layer,
       cache: memoryCache(),
       files: [written("kept")],
-      comments: "keep",
+      includeComments: true,
     });
     expect(sent.every((code) => code.includes("// kept"))).toBe(true);
   });
