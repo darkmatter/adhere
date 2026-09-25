@@ -86,3 +86,9 @@ file, and those without flagged only FleetWise's three.
   resource is a fact about the API. A comment is the only place a file states
   it, and Jev cannot check the claim, so it trusts it or, without it, flags
   every delete that catches nothing.
+
+## Decided
+
+The alchemy preset's rule takes the scoped wording. Its description through
+0.9.5 is kept in the study script, so the unscoped arms still ask what they
+asked here.

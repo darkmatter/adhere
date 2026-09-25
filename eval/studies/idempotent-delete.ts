@@ -1,9 +1,10 @@
 /**
  * Whether taking a file's comments out, or scoping the rule to a provider's
  * delete handler, helps alchemy's idempotent-delete rule tell the deletes
- * that fail on a resource already gone from the rest. Four arms, the preset's
- * rule and the rule reworded, each with the file's comments kept and taken
- * out, over an alchemy checkout's files outside tests that mention delete,
+ * that fail on a resource already gone from the rest. Four arms, the rule as
+ * the preset had it through 0.9.5 and scoped as the preset has it now, each
+ * with the file's comments kept and taken out, over an alchemy checkout's
+ * files outside tests that mention delete,
  * scored against deletes whose behavior was checked against AWS and read in
  * the code. `idempotent-delete.md` has the verdicts and the results.
  *
@@ -24,9 +25,12 @@ import { type Arm, askJev, auc, Run, table } from "../harness.ts";
 
 const ID = "providers/idempotent-delete";
 
-/** The rule scoped to its subject: a provider's delete handler, not any code that deletes. */
-const SCOPED =
-  "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.";
+/**
+ * The rule's description through adhere 0.9.5, before the preset scoped it to
+ * a provider's delete handler, as it is now: the unscoped arms ask this.
+ */
+const UNSCOPED =
+  "A custom provider's delete must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again.";
 
 /**
  * Whether each labeled file's delete fails when its resource is already gone:
@@ -132,8 +136,8 @@ const program = Effect.gen(function* () {
     import.meta.dirname,
     "../../presets/alchemy/providers/idempotent-delete.md",
   );
-  const preset = yield* parseRuleMarkdown(yield* fs.readFileString(presetFile), presetFile);
-  const scoped: Rule = { ...preset, description: SCOPED };
+  const scoped = yield* parseRuleMarkdown(yield* fs.readFileString(presetFile), presetFile);
+  const preset: Rule = { ...scoped, description: UNSCOPED };
   const ask =
     (rule: Rule, prepare: (lines: Lines) => Lines): Arm[1] =>
     (model, lines) =>
