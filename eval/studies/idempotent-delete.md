@@ -89,6 +89,8 @@ file, and those without flagged only FleetWise's three.
 
 ## Decided
 
-The alchemy preset's rule takes the scoped wording. Its description through
+The alchemy preset's rule takes the scoped wording, and reports warnings, since
+the deletes it flags wrongly are of APIs that succeed on a missing resource,
+which no wording can tell from the code. Its description through
 0.9.5 is kept in the study script, so the unscoped arms still ask what they
 asked here.

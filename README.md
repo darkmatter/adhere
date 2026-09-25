@@ -468,6 +468,11 @@ export default {
 `config/tests-provide-values-directly`, say `tests: only`: they judge tests and
 nothing else, and every other preset rule skips tests.
 
+`alchemy`'s `providers/idempotent-delete` reports warnings. Whether a delete
+fails on a resource that is already gone is a fact about the API, which the
+file does not show, so the rule also flags deletes of APIs that succeed
+anyway; see [the study](eval/studies/idempotent-delete.md).
+
 A preset rule says "must" only where its source makes a requirement, and
 "should" where the source gives advice. In `effect`, three rules are
 guidelines: network calls carry a timeout and a retry schedule, unless their
