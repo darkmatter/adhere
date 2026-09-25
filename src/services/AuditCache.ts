@@ -45,13 +45,11 @@ export const Tally = Schema.Struct({
 export interface Tally extends Schema.Schema.Type<typeof Tally> {}
 const decodeTally = Schema.decodeUnknownOption(Schema.fromJsonString(Tally));
 
-/** What a run that read every file still needs from the cache. */
+/** What a run that read every file tells the cache. */
 export interface Live {
-  /** The hash of each file's content. */
+  /** The hash of each file's content, too long to judge or not. */
   readonly hashes: ReadonlySet<string>;
-  /** The fingerprint of each rule text asked about a file. */
-  readonly fingerprints: ReadonlySet<string>;
-  /** The key of each rule's tally. */
+  /** The key of each of the run's rules' tallies, to carry over from the layout before content keys. */
   readonly tallies: ReadonlySet<string>;
 }
 
@@ -84,9 +82,11 @@ export class AuditCache extends Context.Service<
     readonly tally: (key: string) => Effect.Effect<Tally | undefined>;
     readonly putTally: (key: string, tally: Tally) => Effect.Effect<void>;
     /**
-     * Deletes what `live` does not need, and folds the rest into one file per
-     * content and per tally. Only after a run that read every file: it cannot
-     * tell what the files it did not read need. Succeeds with the files deleted.
+     * Deletes the answers about content no file has, and folds the rest into
+     * one file per content and per tally. Answers to rules the run left out
+     * stay, as do their tallies: a run with other presets or rules asks them.
+     * Only after a run that read every file: it cannot tell what content the
+     * files it did not read have. Succeeds with the files deleted.
      */
     readonly prune: (live: Live) => Effect.Effect<number>;
   }
@@ -275,10 +275,7 @@ export const AuditCacheLive = Layer.effect(AuditCache)(
       // Folding replaces or removes the group being visited, which a Map's iteration allows.
       for (const group of (yield* indexes.files).keys()) {
         const entries = live.hashes.has(group) ? yield* readGroup("files", group, decodeEntry) : [];
-        const answers = Record.filter(
-          unionOf(entries.map((entry) => entry.answers)),
-          (_, fingerprint) => live.fingerprints.has(fingerprint),
-        );
+        const answers = unionOf(entries.map((entry) => entry.answers));
         deleted += yield* fold(
           "files",
           group,
@@ -286,7 +283,7 @@ export const AuditCacheLive = Layer.effect(AuditCache)(
         );
       }
       for (const key of (yield* indexes.tallies).keys()) {
-        const tallies = live.tallies.has(key) ? yield* readGroup("tallies", key, decodeTally) : [];
+        const tallies = yield* readGroup("tallies", key, decodeTally);
         deleted += yield* fold(
           "tallies",
           key,

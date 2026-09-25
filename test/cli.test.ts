@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -129,7 +130,15 @@ describe("cli", () => {
       '---\ndescription: A port must be a branded integer.\n---\n\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\n',
       "utf8",
     );
-    await writeFile(join(root, "server.ts"), "export const port = 3000;\n", "utf8");
+    const source = "export const port = 3000;\n";
+    await writeFile(join(root, "server.ts"), source, "utf8");
+    // An answer about server.ts as it is, to a rule this run does not have, as another preset leaves.
+    const hash = createHash("sha256").update(source).digest("hex");
+    await writeFile(
+      join(cache, "files", `${hash}.fedcba9876543210.json`),
+      '{\n  "answers": {\n    "another-rule": {\n      "probability": 0.9\n    }\n  }\n}\n',
+      "utf8",
+    );
     // Answers about content no file has, and a file from the layout before content keys.
     const stale = join(cache, "files", `${"0".repeat(64)}.0123456789abcdef.json`);
     const old = join(cache, "f".repeat(64));
@@ -147,5 +156,12 @@ describe("cli", () => {
 
     await execFileAsync("bun", [main, "lint", "--limit", "0"], { cwd: root });
     expect([await exists(stale), await exists(old)]).toEqual([false, false]);
+    const kept = (await readdir(join(cache, "files"))).filter((name) =>
+      name.startsWith(`${hash}.`),
+    );
+    const texts = await Promise.all(
+      kept.map((name) => readFile(join(cache, "files", name), "utf8")),
+    );
+    expect(texts).toEqual([expect.stringContaining('"another-rule"')]);
   });
 });

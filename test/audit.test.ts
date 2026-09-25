@@ -1591,7 +1591,7 @@ describe("pipeline", () => {
     expect(result.findings).toEqual([{ ...findingA, file: moved.path }]);
   });
 
-  it("prunes to what a run that read every file needs: its contents, rule texts, and tallies", async () => {
+  it("prunes by what a run that read every file tells: its contents, and its rules' tallies", async () => {
     const pruned: Array<Live> = [];
     const plan = await Effect.runPromise(
       planAudit().pipe(
@@ -1606,18 +1606,13 @@ describe("pipeline", () => {
         ),
       ),
     );
-    const prepared = plan.files.flatMap((file) => Object.values(file.prepared));
     const tallies = await Effect.runPromise(
       Effect.forEach([a, b], (rule) => tallyKeyOf("jev-latest", rule)).pipe(
         Effect.provide(testCrypto),
       ),
     );
     expect(pruned).toEqual([
-      {
-        hashes: new Set(plan.files.map((file) => file.hash)),
-        fingerprints: new Set(prepared.map(({ fingerprint }) => fingerprint)),
-        tallies: new Set(tallies),
-      },
+      { hashes: new Set(plan.files.map((file) => file.hash)), tallies: new Set(tallies) },
     ]);
   });
 
@@ -2442,7 +2437,7 @@ describe("cache files", () => {
     );
   });
 
-  it("prunes what no file or rule needs, folds each group into one file, and deletes the old layout", async () => {
+  it("prunes answers about content no file has, keeps every rule's answers and tallies, and folds each group", async () => {
     const memory = memoryFiles({ [`${directory}/${"0".repeat(64)}`]: "{}" });
     const [deleted, kept] = await run(
       memory.layer,
@@ -2451,31 +2446,30 @@ describe("cache files", () => {
         yield* cache.put("live", { f1: { probability: 0.1 } });
         yield* cache.put("live", {
           f1: { probability: 0.1, line: 4 },
-          stale: { probability: 0.5 },
+          other: { probability: 0.5 },
         });
         yield* cache.put("gone", { f1: { probability: 0.2 } });
         yield* cache.putTally("k1", { files: { [join(process.cwd(), "src/a.ts")]: 0.3 } });
         yield* cache.putTally("k1", { files: { [join(process.cwd(), "src/b.ts")]: 0.6 } });
         yield* cache.putTally("k2", { files: {} });
-        const deleted = yield* cache.prune({
-          hashes: new Set(["live"]),
-          fingerprints: new Set(["f1"]),
-          tallies: new Set(["k1"]),
-        });
+        const deleted = yield* cache.prune({ hashes: new Set(["live"]), tallies: new Set(["k1"]) });
         return [deleted, yield* cache.get("live", join(process.cwd(), "src/a.ts"))] as const;
       }),
     );
-    expect(kept).toEqual({ f1: { probability: 0.1, line: 4 } });
+    // "other" answers a rule the run left out, such as another preset's: it stays.
+    expect(kept).toEqual({ f1: { probability: 0.1, line: 4 }, other: { probability: 0.5 } });
     const folded =
-      '{\n  "answers": {\n    "f1": {\n      "probability": 0.1,\n      "line": 4\n    }\n  }\n}\n';
+      '{\n  "answers": {\n    "f1": {\n      "probability": 0.1,\n      "line": 4\n    },\n    "other": {\n      "probability": 0.5\n    }\n  }\n}\n';
     expect(listed(memory.files, "files")).toEqual([`live.${sha(folded).slice(0, 16)}.json`]);
     const tallies = listed(memory.files, "tallies");
-    expect(tallies).toHaveLength(1);
-    expect(memory.files.get(`${directory}/tallies/${tallies[0]}`)).toBe(
+    // k2 is the tally of a rule the run left out: it stays too.
+    expect(tallies.map((name) => name.split(".")[0]).sort()).toEqual(["k1", "k2"]);
+    const k1 = tallies.find((name) => name.startsWith("k1."));
+    expect(memory.files.get(`${directory}/tallies/${k1}`)).toBe(
       '{\n  "files": {\n    "src/a.ts": 0.3,\n    "src/b.ts": 0.6\n  }\n}\n',
     );
     expect(memory.files.has(`${directory}/${"0".repeat(64)}`)).toBe(false);
-    // Two files for live content and one for gone, two for k1 and one for k2, and the old file.
-    expect(deleted).toBe(7);
+    // Live's first file, which its second holds all of; gone's file; both of k1's; and the old file.
+    expect(deleted).toBe(5);
   });
 });

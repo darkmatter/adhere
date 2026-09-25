@@ -175,13 +175,15 @@ export const planAudit = (
 
     const planFile = Effect.fn("audit.plan")(function* (file: ScannedFile) {
       const rules = configuredRules(file.path);
+      // Hashed even when skipped, so a prune keeps what other runs know of its content.
+      const hash = yield* sha256(file.lines.join("\n"));
       // Too long for Jev's context: skipped and counted, rather than refused mid-run.
       if (!fits(file.lines, rules)) {
         yield* Effect.logTrace(`plan ${file.path}: too long for Jev's context, skipped`);
         return {
           file,
           skipped: true,
-          hash: "",
+          hash,
           prepared: {},
           kept: {},
           pending: {},
@@ -198,7 +200,6 @@ export const planAudit = (
               [id, { rule, fingerprint, threshold: rule.threshold ?? config.threshold }] as const,
           ),
       ).pipe(Effect.map(Record.fromEntries));
-      const hash = yield* sha256(file.lines.join("\n"));
       const answers = yield* cache.get(hash, file.path);
       const kept: Record<RuleId, Judgment> = Record.filterMap(prepared, ({ fingerprint }) => {
         const answer = answers[fingerprint];
@@ -501,22 +502,21 @@ export const executeAudit = (
   });
 
 /**
- * Deletes from the cache what the files and rules of a run no longer need:
- * answers about content no file has, answers to rule texts no rule asks, and
- * tallies of rules gone. Only after a run that read every file; a run narrowed
- * by `--filter` cannot tell what the files it left out need.
+ * Deletes from the cache the answers about content no file has anymore.
+ * Answers to rules the run left out stay, since a run with other presets or
+ * rules asks them. Only after a run that read every file; a run narrowed by
+ * `--filter` cannot tell what content the files it left out have.
  */
 export const pruneCache = Effect.fn("audit.prune")(function* (plan: AuditPlan) {
   const config = yield* AdhereConfig;
   const cache = yield* AuditCache;
-  const read = plan.files.filter((file) => !file.skipped);
-  const prepared = read.flatMap((file) => Object.values(file.prepared));
+  const prepared = plan.files.flatMap((file) => Object.values(file.prepared));
   const tallies = yield* Effect.forEach(new Set(prepared.map(({ rule }) => rule)), (rule) =>
     tallyKeyOf(config.model, rule),
   );
   const deleted = yield* cache.prune({
-    hashes: new Set(read.map((file) => file.hash)),
-    fingerprints: new Set(prepared.map(({ fingerprint }) => fingerprint)),
+    // A file too long to judge counts: a run with shorter questions judges it.
+    hashes: new Set(plan.files.map((file) => file.hash)),
     tallies: new Set(tallies),
   });
   yield* Effect.logDebug(`cache pruned: ${deleted} ${deleted === 1 ? "file" : "files"} deleted`);

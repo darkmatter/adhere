@@ -493,8 +493,11 @@ A cache file is written once and never changed: it is also named for the hash
 of its own text. Two branches that judge the same code add files rather than
 edit them, so git merges the cache without a conflict. After a run that reads
 every file, adhere prunes the cache: it deletes answers about content no file
-has and answers to rule texts no rule asks, and folds what is left into one
-file per content. A run narrowed by `--filter` does not prune. To keep the
+has, and folds what is left into one file per content. Answers to rules the
+run left out stay, so a run with other presets or rules, or with one topic,
+loses nothing another run still asks; answers to a rule's old texts stay too,
+until the content they are about is gone. A run narrowed by `--filter` does not
+prune. To keep the
 cache out of diffs, mark it as generated in `.gitattributes`:
 
 ```text
