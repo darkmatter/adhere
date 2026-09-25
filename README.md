@@ -10,8 +10,11 @@ model) whether the file breaks each rule, gets a calibrated probability per
 rule, and reports the ones above a threshold with the line Jev points at. The
 report uses the same frame as `vp lint`.
 
-Deterministic rules (substring matches, type checks) belong in a normal linter;
-`adhere validate` points out a rule that looks like one.
+Rules a normal linter can check exactly, such as a banned import or a type
+error, belong in that linter. While it lints, adhere asks Jev whether a normal
+linter could check each of your rules, and [`adhere validate`](#validate) lists
+rules that it thinks belong in a regular linter, and also detects any
+contradictions in your rules.
 
 A preset for effect is included which can be run without setup:
 
