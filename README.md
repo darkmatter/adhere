@@ -185,6 +185,14 @@ directory, anything under `node_modules/`, `dist/`, `coverage/`, `vendor/`,
 `.alchemy/`, or `.vite/` is skipped; the directories above it do not count.
 `.tsx` files are not read, and `.gitignore` is not consulted.
 
+A config's `exclude` lists globs, relative to the working directory, of files
+no rule judges, such as generated code. It leaves them out of every run, as
+`--filter '!<glob>'` leaves them out of one:
+
+```ts
+export default { exclude: ["**/generated/**"] } satisfies Config;
+```
+
 ### Init
 
 `adhere init` writes `.adhere/config.ts` and two example rules. It is safe to
@@ -263,6 +271,7 @@ export default {
   model: "jev-latest", // optional, default "jev-latest"
   threshold: 0.8, // optional, default 0.8
   presets: ["effect"], // optional, built-in rule sets
+  exclude: ["**/generated/**"], // optional, files no rule judges
   rules: {
     "data/brand-meaningful-primitives": {
       description:
@@ -526,9 +535,10 @@ every file, adhere prunes the cache: it deletes answers about content no file
 has, and folds what is left into one file per content. Answers to rules the
 run left out stay, so a run with other presets or rules, or with one topic,
 loses nothing another run still asks; answers to a rule's old texts stay too,
-until the content they are about is gone. A run narrowed by `--filter` does not
-prune. To keep the
-cache out of diffs, mark it as generated in `.gitattributes`:
+until the content they are about is gone. A file the config excludes is not
+read, so answers about it go. A run narrowed by `--filter` does not prune.
+
+To keep the cache out of diffs, mark it as generated in `.gitattributes`:
 
 ```text
 .adhere/cache/** linguist-generated -diff

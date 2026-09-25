@@ -415,6 +415,11 @@ describe("config", () => {
     expect(decoded.rules).toBe("./team-rules");
   });
 
+  it("keeps the config's exclude globs", async () => {
+    const configured = await Effect.runPromise(loaded({ exclude: ["gen/**"] }));
+    expect(resolveConfig(configured).exclude).toEqual(["gen/**"]);
+  });
+
   it("threshold precedence: command line, then config, then preset, then 0.8", async () => {
     const registry = { effect: { threshold: 0.9, rules: {} } };
     const bare = await Effect.runPromise(loaded({}));

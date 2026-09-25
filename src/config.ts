@@ -90,6 +90,11 @@ export const AdhereConfig = Schema.Struct({
    * Unset: `.adhere/` when that directory exists, otherwise no rules.
    */
   rules: Schema.optionalKey(Schema.Union([Schema.Record(Schema.String, Rule), Schema.String])),
+  /**
+   * Globs, relative to the working directory, of files no rule judges: what
+   * `--filter '!<glob>'` leaves out of one run, left out of every run.
+   */
+  exclude: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
 /** Where a repo keeps its rule files by default. The cache lives under it. */
@@ -150,6 +155,8 @@ export interface ResolvedConfig {
   readonly scopedRules?: RuleSet;
   /** Requests to Jev a minute, at most. Unset, requests go out as fast as they are made. */
   readonly rpm?: number;
+  /** The config's globs of files no rule judges. */
+  readonly exclude?: ReadonlyArray<string>;
 }
 
 /** Command-line values that apply on top of the config file. */
@@ -198,6 +205,7 @@ export const resolveConfig = (
     threshold: overrides.threshold ?? config.threshold ?? last("threshold") ?? DEFAULT_THRESHOLD,
     rules: Object.assign({}, ...applied.map((preset) => preset.rules), config.rules),
     ...(overrides.rpm === undefined ? {} : { rpm: overrides.rpm }),
+    ...(config.exclude === undefined ? {} : { exclude: config.exclude }),
   };
 };
 

@@ -4,6 +4,7 @@ import { ADHERE_DIRECTORY, SKIPPED_DIRECTORIES } from "#config.ts";
 import type { ScannedFile } from "#models/Audit.ts";
 import { WalkUnavailable } from "#models/Audit.ts";
 import { walkFiles } from "#walk.ts";
+import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { clearingStatus, counted, countOf, Status } from "#services/Status.ts";
 
 /** Walks the repository's TypeScript source, skipping what is not ours to read. */
@@ -169,8 +170,9 @@ const scanDirs = Effect.fn("SourceWalker.scanDirs")(function* (
 
 /**
  * The real walker: the roots walked a directory at a time, skipped trees
- * left unread, each file read and split into lines. Tests substitute their
- * own tree.
+ * left unread, each file read and split into lines. The run's filter and the
+ * config's `exclude` leave out what they match. Tests substitute their own
+ * tree.
  * The scan root is the current working directory, so the audit reads the
  * repository it is run in.
  */
@@ -179,9 +181,11 @@ export const SourceWalkerLive = (filter: ReadonlyArray<string> = []) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
+      const config = yield* AdhereConfig;
       // No segments: Path resolves against the working directory.
       const root = path.resolve();
       const self = yield* path.fromFileUrl(new URL("../../", import.meta.url)).pipe(Effect.orDie);
+      const patterns = [...filter, ...(config.exclude ?? []).map((glob) => `!${glob}`)];
       const walk = Effect.fn("SourceWalker.files")(function* () {
         const dirs = yield* scanDirs(fs, root).pipe(Effect.mapError(refused));
         const trees = yield* clearingStatus(
@@ -193,8 +197,8 @@ export const SourceWalkerLive = (filter: ReadonlyArray<string> = []) =>
               dir === "." ? "the working directory" : `${dir}/`,
               self,
               (relative) =>
-                // Filter patterns are relative to the working directory, not the tree read.
-                passesFilter(dir === "." ? relative : `${dir}/${relative}`, filter),
+                // Patterns are relative to the working directory, not the tree read.
+                passesFilter(dir === "." ? relative : `${dir}/${relative}`, patterns),
             ).pipe(Effect.mapError(refused)),
           ),
         );

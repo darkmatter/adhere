@@ -150,6 +150,26 @@ describe("cli", () => {
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("(not react)");
   });
 
+  it("never reads a file the config excludes", async () => {
+    const root = join(tmpdir(), `adhere-exclude-${Date.now()}`);
+    for (const directory of [".adhere", "src", "gen"]) {
+      await mkdir(join(root, directory), { recursive: true });
+    }
+    const files: Readonly<Record<string, string>> = {
+      "src/a.ts": "export const a = 1;\n",
+      "gen/b.ts": "export const b = 1;\n",
+      "adhere.config.ts": 'export default { exclude: ["gen/**"] };\n',
+      ".adhere/named.md":
+        "---\ndescription: A constant must be named.\n---\n\nexport const named = 1;\n",
+    };
+    for (const [file, text] of Object.entries(files)) {
+      await writeFile(join(root, file), text, "utf8");
+    }
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    const { stderr } = await execFileAsync("bun", [main, "lint", "--limit", "0"], { cwd: root });
+    expect(stderr.split("\n")[0]).toBe("1 file and 1 rule: 1 check.");
+  });
+
   it("prunes the cache after a run that read every file, keeping other rules' answers, and not after a filtered one", async () => {
     const root = join(tmpdir(), `adhere-prune-${Date.now()}`);
     const cache = join(root, ".adhere", "cache");

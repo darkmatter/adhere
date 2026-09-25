@@ -106,8 +106,13 @@ import type { Config } from "@drkmttr/adhere";
 export default {
   presets: ["effect"],
   threshold: 0.75,
+  exclude: ["**/generated/**"],
 } satisfies Config;
 ```
+
+`exclude` lists globs, from the working directory, of files no rule judges.
+Exclude generated and vendored code the skipped directories do not already
+cover, since findings there are noise no one will fix.
 
 Commit `.adhere/cache/` with the code, so the team and CI reuse its judgments
 instead of paying for them again. Uncached files need a TypeSafe AI API
