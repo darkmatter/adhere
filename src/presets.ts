@@ -57,4 +57,7 @@ export const presets: Readonly<Record<WholePreset, BuiltInPreset>> = {
 };
 
 /** The directory each whole preset reads, for checking `topics` against it. */
+/** The whole preset a name belongs to: effect, for effect and for effect/basics alike. */
+export const wholePresetOf = (name: PresetName): string => name.split("/")[0] ?? name;
+
 export const topicsOf = (preset: WholePreset): ReadonlyArray<string> => topics[preset];

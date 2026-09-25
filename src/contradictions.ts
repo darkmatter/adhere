@@ -1,4 +1,4 @@
-import type { RuleEntry } from "#rules.ts";
+import { type RuleEntry, shownId } from "#rules.ts";
 import { Jev, type Pair } from "#services/Jev.ts";
 import { Effect } from "effect";
 
@@ -69,7 +69,9 @@ export const findContradictions = Effect.fn("findContradictions")(function* (
   });
 });
 
-const locationOf = (entry: RuleEntry): string => `${entry.id} (${entry.file ?? entry.scope})`;
+/** Where a rule lives: a preset's names the preset in its id; the project's own rule names its file. */
+const locationOf = (entry: RuleEntry): string =>
+  entry.preset === undefined ? `${entry.id} (${entry.file ?? entry.scope})` : shownId(entry);
 
 export const formatContradictions = (contradictions: ReadonlyArray<Contradiction>): string => {
   if (contradictions.length === 0) {

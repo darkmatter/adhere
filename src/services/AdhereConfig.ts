@@ -11,7 +11,7 @@ import {
   type ResolvedConfig,
   resolveConfig,
 } from "#config.ts";
-import { type PresetName, presetOf } from "#presets.ts";
+import { type PresetName, presetOf, wholePresetOf } from "#presets.ts";
 import {
   applicableRules,
   globalRuleSet,
@@ -95,7 +95,10 @@ export const AdhereConfigLive = (overrides: Overrides) =>
       ).pipe(Effect.map(Record.fromEntries));
       const resolved = resolveConfig({ ...config, rules }, overrides, registry);
       const presetEntries = Object.entries(registry).flatMap(([name, preset]) =>
-        globalRuleSet(preset.rules, cwd).map((entry) => ({ ...entry, preset: name })),
+        globalRuleSet(preset.rules, cwd).map((entry) => ({
+          ...entry,
+          preset: wholePresetOf(name as PresetName),
+        })),
       );
       yield* Effect.logDebug(
         `config: ${configFile ?? "no config file"}; presets ${Object.keys(registry).join(", ") || "none"}; ${presetEntries.length} preset and ${projectEntries.length} project rules; model ${resolved.model}, threshold ${resolved.threshold}${resolved.rpm === undefined ? "" : `, at most ${resolved.rpm} requests a minute`}`,

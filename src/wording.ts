@@ -1,5 +1,5 @@
 import { type Example, examplesOf, type Rule } from "#config.ts";
-import type { RuleEntry } from "#rules.ts";
+import { type RuleEntry, shownId } from "#rules.ts";
 
 type Word = Example["word"];
 
@@ -83,7 +83,7 @@ export const formatStrays = (strays: ReadonlyArray<Stray>, root: string): Readon
     : [
         `${strays.length} ${strays.length === 1 ? "rule is" : "rules are"} not worded as the rule writing tips recommend:`,
         ...strays.flatMap(({ entry, straying }) => [
-          `  ${entry.id}${entry.file === undefined ? "" : ` (${displayPath(entry.file, root)})`}`,
+          `  ${shownId(entry)}${entry.file === undefined ? "" : ` (${displayPath(entry.file, root)})`}`,
           ...straying.map((one) => `    ${sentenceOf(one)}`),
         ]),
         `Rule writing tips: ${TIPS_URL}`,

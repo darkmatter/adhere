@@ -66,7 +66,10 @@ Found 1 error.
 42 files, 3 judged, 39 cached.
 ```
 
-The header is the rule id, Jev's probability, and the rule's description.
+The header is the rule id, Jev's probability, and the rule's description. A
+preset's rule has the preset's name first, as in
+`effect/basics/external-calls-are-resilient`, so a report that mixes presets
+with a repo's own rules says where each came from.
 Under it is the line Jev points at, underlined, with the code around it: the
 largest statement around the line that is 30 lines or fewer, usually the whole
 function, and up to 3 lines of whole statements on either side. The
@@ -385,7 +388,8 @@ A preset has the shape of a config without `presets`: `rules`, and optionally
 `model` and `threshold`. Name presets in the config's `presets`, or on the
 command line with `--preset`, repeated or separated by commas, as in
 `--preset effect,alchemy`, in which case the config file is optional. Presets
-named in both places apply together. There are two:
+named in both places apply together. Reports name a preset's rule with the
+preset first, as in `alchemy/secrets/…`. There are two:
 
 - `effect`: Markdown rules in [`presets/effect/`](./presets/effect/), lifted
   from the [effect-solutions](https://github.com/kitlangton/effect-solutions)

@@ -31,7 +31,7 @@ import { excerptOf } from "../src/excerpt.ts";
 import { tokenize } from "../src/highlight.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
-import { presetOf, presets, topicsOf } from "../src/presets.ts";
+import { presetOf, presets, topicsOf, wholePresetOf } from "../src/presets.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
 import {
   applicableRules,
@@ -39,6 +39,7 @@ import {
   loadRules,
   type RuleEntry,
   type RuleSet,
+  shownId,
 } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
 import {
@@ -617,6 +618,17 @@ const onDisk = async (tree: Readonly<Record<string, string>>): Promise<string> =
   return root;
 };
 
+describe("rule ids in output", () => {
+  it("puts a preset rule's whole preset first, and leaves the project's own ids alone", () => {
+    expect(shownId({ id: "basics/external-calls-are-resilient", preset: "effect" })).toBe(
+      "effect/basics/external-calls-are-resilient",
+    );
+    expect(shownId({ id: "data/brand-ports" })).toBe("data/brand-ports");
+    expect(wholePresetOf("effect/basics")).toBe("effect");
+    expect(wholePresetOf("alchemy")).toBe("alchemy");
+  });
+});
+
 describe("walk", () => {
   it("lists files a directory at a time, never into a skipped one or through a link to one", async () => {
     const root = await onDisk({
@@ -842,6 +854,18 @@ describe("contradictions", () => {
     expect(report).toContain("1. No code can follow both (0.90):");
     expect(report).toContain("/repo/.adhere/style/use-services.md");
     expect(report).toContain("/repo/packages/api/.adhere/style/plain-functions.md");
+    // A preset's rule names its preset, where the project's own names its file.
+    const fromPreset: RuleEntry = {
+      id: "services/provide-at-entry",
+      scope: "/repo",
+      preset: "effect",
+      rule: { description: "Layers must be provided once, at the entry.", must: "run()" },
+    };
+    const mixed = formatContradictions([
+      { first: entries[0]!, second: fromPreset, probability: 0.8 },
+    ]);
+    expect(mixed).toContain("   - effect/services/provide-at-entry\n");
+    expect(mixed).toContain("   - style/use-services (/repo/.adhere/style/use-services.md)\n");
   });
 
   it("asks nothing when no two rules share files", async () => {
@@ -1374,6 +1398,36 @@ describe("plan", () => {
     expect(describePlan(summary({ ...fields, tokens: 612, price: 0.042 }))[2]).toBe(
       "Those carry about 612 input tokens: under $0.01 at $0.042 per million, and more for locating findings.",
     );
+  });
+
+  it("tells each finding the preset its rule came from, and nothing for the project's own", async () => {
+    const scopedRules: RuleSet = [
+      { id: "a", rule: a, scope: "/repo" },
+      { id: "b", rule: b, scope: "/repo", preset: "effect" },
+    ];
+    const jev = recordingJev({ judge: { a: 0.9, b: 0.9 }, locate: { a: 2, b: 2 } });
+    const result = await Effect.runPromise(
+      runAudit.pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(AdhereConfig, {
+              model: "jev-latest",
+              threshold: 0.7,
+              rules,
+              scopedRules,
+            }),
+            Layer.succeed(SourceWalker, { files: Effect.succeed([source]) }),
+            jev.layer,
+            memoryCache(),
+            testCrypto,
+          ),
+        ),
+      ),
+    );
+    expect(result.findings.map((finding) => [finding.rule, finding.preset])).toEqual([
+      ["a", undefined],
+      ["b", "effect"],
+    ]);
   });
 
   it("counts the input tokens its judge requests carry, and the model's price", async () => {
@@ -2063,6 +2117,15 @@ describe("render", () => {
   });
 
   const sgr = (code: string, text: string) => `\u001b[${code}m${text}\u001b[0m`;
+
+  it("names a preset rule's preset first in its header, and a project rule plainly", () => {
+    const fromPreset = { ...findingA, rule: "basics/ports", preset: "effect" };
+    const lines = render({ ...result, findings: [fromPreset, findingA] }, { root: "/repo" });
+    expect(lines.filter((line) => line.startsWith("  × "))).toEqual([
+      "  × effect/basics/ports (0.90): Ports are branded.",
+      "  × a (0.90): Ports are branded.",
+    ]);
+  });
 
   it("colors only the rule red in the header on a terminal and counts skipped files", () => {
     const red = "38;2;164;20;71;1";

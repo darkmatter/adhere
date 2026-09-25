@@ -20,9 +20,18 @@ export interface RuleEntry {
   readonly rule: Rule;
   readonly scope: string;
   readonly file?: string;
-  /** The built-in rule set the rule came from, when it is not the project's own. */
+  /** The built-in preset the rule came from, by its whole name (effect for effect/basics), when it is not the project's own. */
   readonly preset?: string;
 }
+
+/**
+ * A rule's id as output shows it: a preset's rule with the preset's name
+ * first, as in effect/basics/external-calls-are-resilient, so a report that
+ * mixes presets with the project's own rules says where each came from. The
+ * project's own rules show their `.adhere/` ids as they are.
+ */
+export const shownId = (entry: { readonly id: RuleId; readonly preset?: string }): string =>
+  entry.preset === undefined ? entry.id : `${entry.preset}/${entry.id}`;
 
 export type RuleSet = ReadonlyArray<RuleEntry>;
 

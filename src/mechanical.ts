@@ -1,5 +1,5 @@
 import type { Rule } from "#config.ts";
-import type { RuleEntry } from "#rules.ts";
+import { type RuleEntry, shownId } from "#rules.ts";
 import { AuditCache, sha256, type Tally } from "#services/AuditCache.ts";
 import { linterQuestion } from "#services/Jev.ts";
 import { Effect } from "effect";
@@ -76,7 +76,7 @@ export const formatLinterCheck = (
       : [
           `${flagged.length} ${flagged.length === 1 ? "rule" : "rules"} flagged by the linter check:`,
           ...flagged.flatMap((one) => [
-            `  ${one.entry.id}${one.entry.file === undefined ? "" : ` (${displayPath(one.entry.file, root)})`}`,
+            `  ${shownId(one.entry)}${one.entry.file === undefined ? "" : ` (${displayPath(one.entry.file, root)})`}`,
             `    ${adviceOf(one)}`,
           ]),
         ]),

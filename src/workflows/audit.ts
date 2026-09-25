@@ -25,6 +25,8 @@ import { type Crypto, Duration, Effect, Record, Result, Semaphore } from "effect
 
 export interface Finding {
   readonly rule: RuleId;
+  /** The preset the rule came from, when it is not the project's own. */
+  readonly preset?: string;
   readonly description: string;
   readonly examples: Examples;
   readonly file: string;
@@ -62,6 +64,8 @@ interface PreparedRule {
   readonly rule: Rule;
   readonly fingerprint: string;
   readonly threshold: number;
+  /** The preset the rule came from, when it is not the project's own. */
+  readonly preset?: string;
 }
 
 const fileResult = (
@@ -200,11 +204,18 @@ export const planAudit = (
       const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
         Object.entries(rules),
         ([id, rule]) =>
-          Effect.map(
-            fingerprintOf(config.model, rule),
-            (fingerprint) =>
-              [id, { rule, fingerprint, threshold: rule.threshold ?? config.threshold }] as const,
-          ),
+          Effect.map(fingerprintOf(config.model, rule), (fingerprint) => {
+            const preset = presetOfRule.get(rule);
+            return [
+              id,
+              {
+                rule,
+                fingerprint,
+                threshold: rule.threshold ?? config.threshold,
+                ...(preset === undefined ? {} : { preset }),
+              },
+            ] as const;
+          }),
       ).pipe(Effect.map(Record.fromEntries));
       const answers = yield* cache.get(hash, file.path);
       const kept: Record<RuleId, Judgment> = Record.filterMap(prepared, ({ fingerprint }) => {
@@ -227,6 +238,12 @@ export const planAudit = (
       } satisfies FilePlan;
     });
 
+    // Each preset's rule, with the preset it came from, for its findings to name.
+    const presetOfRule = new Map(
+      (config.scopedRules ?? []).flatMap((entry) =>
+        entry.preset === undefined ? [] : [[entry.rule, entry.preset] as const],
+      ),
+    );
     // Preset rules are not the project's to change, so the linter check leaves them out.
     const presetRules = new Set(
       (config.scopedRules ?? []).flatMap((entry) =>
@@ -427,6 +444,7 @@ export const executeAudit = (
             ? [
                 {
                   rule: id,
+                  ...(k.preset === undefined ? {} : { preset: k.preset }),
                   description: k.rule.description,
                   examples: examplesOf(k.rule),
                   file: file.path,

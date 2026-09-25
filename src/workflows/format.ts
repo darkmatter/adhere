@@ -1,4 +1,5 @@
 import { type Kind, tokenize } from "#highlight.ts";
+import { shownId } from "#rules.ts";
 import type { AuditPlan, AuditResult, FileDone, Finding } from "#workflows/audit.ts";
 
 /**
@@ -91,7 +92,7 @@ const header = (finding: Finding): Line => [
   span("  "),
   span("×", "error"),
   span(" "),
-  span(finding.rule, "error"),
+  span(shownId({ id: finding.rule, preset: finding.preset }), "error"),
   span(" ("),
   span(finding.probability.toFixed(2), "probability"),
   span("): "),
