@@ -5,7 +5,7 @@ import {
   ConfigUnavailable,
   decodeConfig,
   type Loaded,
-  type Overrides,
+  type Flags,
   type Preset,
   presetsOf,
   type ResolvedConfig,
@@ -52,11 +52,11 @@ const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (name: PresetN
 
 /**
  * The config file in the working directory (one of `CONFIG_FILES`) with the
- * command-line overrides applied. The file is optional when `.adhere/` holds
+ * command-line flags applied. The file is optional when `.adhere/` holds
  * rules or a preset is named. Rule directories resolve against the working
  * directory.
  */
-export const AdhereConfigLive = (overrides: Overrides) =>
+export const AdhereConfigLive = (flags: Flags) =>
   Layer.effect(AdhereConfig)(
     Effect.gen(function* () {
       const path = yield* Path.Path;
@@ -73,7 +73,7 @@ export const AdhereConfigLive = (overrides: Overrides) =>
         });
       }
       const configFile = found[0];
-      const hasPreset = overrides.presets !== undefined && overrides.presets.length > 0;
+      const hasPreset = flags.presets !== undefined && flags.presets.length > 0;
       const config: Decoded =
         configFile === undefined
           ? yield* decodeConfig({})
@@ -90,10 +90,10 @@ export const AdhereConfigLive = (overrides: Overrides) =>
           ? discoveredEntries
           : globalRuleSet(yield* materializeRules(config.rules ?? {}, cwd), cwd);
       const rules = applicableRules(cwd, projectEntries);
-      const registry = yield* Effect.forEach(presetsOf(config, overrides), (name) =>
+      const registry = yield* Effect.forEach(presetsOf(config, flags), (name) =>
         loadPreset(name, cwd),
       ).pipe(Effect.map(Record.fromEntries));
-      const resolved = resolveConfig({ ...config, rules }, overrides, registry);
+      const resolved = resolveConfig({ ...config, rules }, flags, registry);
       const presetEntries = Object.entries(registry).flatMap(([name, preset]) =>
         globalRuleSet(preset.rules, cwd).map((entry) => ({
           ...entry,

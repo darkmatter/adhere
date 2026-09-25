@@ -176,7 +176,7 @@ export interface ResolvedConfig {
 }
 
 /** Command-line values that apply on top of the config file. */
-export interface Overrides {
+export interface Flags {
   readonly presets?: ReadonlyArray<PresetName>;
   /** Replaces the config's global threshold. Per-rule thresholds still win. */
   readonly threshold?: number;
@@ -191,9 +191,9 @@ export interface Overrides {
  */
 export const presetsOf = (
   config: Pick<AdhereConfig, "presets">,
-  overrides: Overrides,
+  flags: Flags,
 ): ReadonlyArray<PresetName> => {
-  const named = [...new Set([...(overrides.presets ?? []), ...config.presets])];
+  const named = [...new Set([...(flags.presets ?? []), ...config.presets])];
   return named.filter((name) => {
     const [whole] = name.split("/");
     return whole === name || !named.some((other) => other === whole);
@@ -207,10 +207,10 @@ export const presetsOf = (
  */
 export const resolveConfig = (
   config: Loaded<AdhereConfig>,
-  overrides: Overrides = {},
+  flags: Flags = {},
   registry: Readonly<Partial<Record<PresetName, Loaded<Preset>>>> = {},
 ): ResolvedConfig => {
-  const applied = presetsOf(config, overrides).flatMap((name) => {
+  const applied = presetsOf(config, flags).flatMap((name) => {
     const preset = registry[name];
     return preset === undefined ? [] : [preset];
   });
@@ -218,9 +218,9 @@ export const resolveConfig = (
     applied.map((preset) => preset[key]).findLast((value) => value !== undefined);
   return {
     model: config.model ?? last("model") ?? DEFAULT_MODEL,
-    threshold: overrides.threshold ?? config.threshold ?? last("threshold") ?? DEFAULT_THRESHOLD,
+    threshold: flags.threshold ?? config.threshold ?? last("threshold") ?? DEFAULT_THRESHOLD,
     rules: Object.assign({}, ...applied.map((preset) => preset.rules), config.rules),
-    ...(overrides.rpm === undefined ? {} : { rpm: overrides.rpm }),
+    ...(flags.rpm === undefined ? {} : { rpm: flags.rpm }),
     ...(config.exclude === undefined ? {} : { exclude: config.exclude }),
   };
 };

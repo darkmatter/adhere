@@ -19,7 +19,7 @@ import {
   progressLine,
   sendQuestion,
 } from "#workflows/format.ts";
-import type { Overrides } from "#config.ts";
+import type { Flags } from "#config.ts";
 import { findContradictions, formatContradictions } from "#contradictions.ts";
 import { initProject } from "#init.ts";
 import { formatLinterCheck, tallyProjectRules } from "#mechanical.ts";
@@ -202,12 +202,12 @@ const force = Flag.boolean("force").pipe(
   Flag.withDescription("Overwrite existing scaffold files."),
 );
 
-export const auditLayer = (overrides: Overrides, filter: ReadonlyArray<string> = []) =>
+export const auditLayer = (flags: Flags, filter: ReadonlyArray<string> = []) =>
   Layer.mergeAll(
     SourceWalkerLive(filter),
     AuditCacheLive,
     JevLive.pipe(Layer.provide([FetchHttpClient.layer, CredentialsLive])),
-  ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)), Layer.provideMerge(statusLayer));
+  ).pipe(Layer.provideMerge(AdhereConfigLive(flags)), Layer.provideMerge(statusLayer));
 
 /** `adhere lint`: the audit. */
 export const lintCommand = Command.make(
@@ -263,11 +263,11 @@ export const lintCommand = Command.make(
 );
 
 /** Jev, with the key `lint` uses, and the config it reads the model and threshold from. */
-export const validateLayer = (overrides: Overrides) =>
+export const validateLayer = (flags: Flags) =>
   Layer.merge(
     JevLive.pipe(Layer.provide([FetchHttpClient.layer, CredentialsLive])),
     AuditCacheLive,
-  ).pipe(Layer.provideMerge(AdhereConfigLive(overrides)), Layer.provideMerge(statusLayer));
+  ).pipe(Layer.provideMerge(AdhereConfigLive(flags)), Layer.provideMerge(statusLayer));
 
 /**
  * `adhere validate`: everything `lint` loads, then how each rule's wording
