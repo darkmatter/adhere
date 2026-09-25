@@ -115,6 +115,10 @@ export default {
 } satisfies Config;
 ```
 
+To quiet a preset rule that does not suit the repo, override it rather than
+copy it: `overrides: { "alchemy/providers/idempotent-delete": "warning" }`, or
+`"off"`, or `{ threshold: 0.9 }`. The id is the one the report shows.
+
 `exclude` lists globs, from the working directory, of files no rule judges.
 Exclude generated and vendored code the skipped directories do not already
 cover, since findings there are noise no one will fix.

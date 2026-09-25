@@ -41,6 +41,7 @@ import {
   type RuleEntry,
   type RuleSet,
   shownId,
+  withOverrides,
 } from "../src/rules.ts";
 import { AdhereConfig } from "../src/services/AdhereConfig.ts";
 import {
@@ -421,6 +422,43 @@ describe("config", () => {
   it("accepts a directory path as the rules of a config", async () => {
     const decoded = await Effect.runPromise(decodeConfig({ rules: "./team-rules" }));
     expect(decoded.rules).toBe("./team-rules");
+  });
+
+  it("decodes overrides by rule id: off, a level, or a level and a threshold", async () => {
+    const overrides = {
+      "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
+      "effect/basics/gen-for-sequencing": "off",
+    } as const;
+    expect((await Effect.runPromise(decodeConfig({ overrides }))).overrides).toEqual(overrides);
+    const refused = await Effect.runPromise(
+      Effect.flip(decodeConfig({ overrides: { "effect/basics/gen-for-sequencing": "nit" } })),
+    );
+    expect(refused._tag).toBe("ConfigUnavailable");
+  });
+
+  it("applies overrides by the id a report shows: off drops a rule, a level or threshold replaces its own", () => {
+    const entry = (id: string, preset?: string): RuleEntry => ({
+      id,
+      ...(preset === undefined ? {} : { preset }),
+      scope: "/repo",
+      rule: { description: id, must: "a()", threshold: 0.7 },
+    });
+    const entries = [
+      entry("providers/idempotent-delete", "alchemy"),
+      entry("basics/gen-for-sequencing", "effect"),
+      entry("style/names"),
+      entry("style/kept"),
+    ];
+    const overridden = withOverrides(entries, {
+      "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
+      "effect/basics/gen-for-sequencing": "off",
+      "style/names": "warning",
+    });
+    expect(overridden.map((one) => [shownId(one), one.rule.level, one.rule.threshold])).toEqual([
+      ["alchemy/providers/idempotent-delete", "warning", 0.9],
+      ["style/names", "warning", 0.7],
+      ["style/kept", undefined, 0.7],
+    ]);
   });
 
   it("keeps the config's exclude globs, and refuses a rule's tests other than only or include", async () => {

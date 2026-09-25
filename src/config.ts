@@ -93,6 +93,16 @@ export type Rules = Readonly<Record<RuleId, Rule>>;
 /** Rules inline, or a directory of Markdown rule files (see `markdown.ts`). */
 export type RuleSource = Rules | string | URL;
 
+/** A rule's setting in a config's `overrides`: `off`, a level, or a level and a threshold. */
+const Override = Schema.Union([
+  Schema.Literals(["off", "error", "warning"]),
+  Schema.Struct({
+    level: Schema.optionalKey(Schema.Literals(["off", "error", "warning"])),
+    threshold: Schema.optionalKey(Schema.Finite),
+  }),
+]);
+export type Override = typeof Override.Type;
+
 export const AdhereConfig = Schema.Struct({
   model: Schema.optionalKey(Schema.String),
   threshold: Schema.optionalKey(Schema.Finite),
@@ -109,6 +119,13 @@ export const AdhereConfig = Schema.Struct({
    * `--filter '!<glob>'` leaves out of one run, left out of every run.
    */
   exclude: Schema.optionalKey(Schema.Array(Schema.String)),
+  /**
+   * Settings for rules by the id a report names them with, a preset's with
+   * its preset first, as in `alchemy/providers/idempotent-delete`: `off`, a
+   * level, or `{ level, threshold }`. A preset's rule changes without its text
+   * being copied into `rules`.
+   */
+  overrides: Schema.optionalKey(Schema.Record(Schema.String, Override)),
 });
 
 /** Where a repo keeps its rule files by default. The cache lives under it. */

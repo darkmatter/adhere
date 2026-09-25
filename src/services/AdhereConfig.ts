@@ -11,13 +11,15 @@ import {
   type ResolvedConfig,
   resolveConfig,
 } from "#config.ts";
-import { type PresetName, presetOf, wholePresetOf } from "#presets.ts";
+import { type PresetName, presetOf, presets, wholePresetOf } from "#presets.ts";
 import {
   applicableRules,
   globalRuleSet,
   loadAdhereRuleSet,
   materializeRules,
   type RuleSet,
+  shownId,
+  withOverrides,
 } from "#rules.ts";
 import { Context, Effect, FileSystem, Layer, Path, Record } from "effect";
 
@@ -48,6 +50,16 @@ const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (name: PresetN
   const rules =
     topic === undefined ? all : Record.filter(all, (_, id) => id.startsWith(`${topic}/`));
   return [name, { ...preset, rules } satisfies Loaded<Preset>] as const;
+});
+
+/** Every rule of every built-in preset, by the id a report names it with. */
+const everyPresetRule = Effect.fn("AdhereConfig.everyPresetRule")(function* (base: string) {
+  const loaded = yield* Effect.forEach(Object.entries(presets), ([name, preset]) =>
+    Effect.map(materializeRules(preset.rules, base), (rules) =>
+      Object.keys(rules).map((id) => `${name}/${id}`),
+    ),
+  );
+  return new Set(loaded.flat());
 });
 
 /**
@@ -103,9 +115,20 @@ export const AdhereConfigLive = (flags: Flags) =>
       yield* Effect.logDebug(
         `config: ${configFile ?? "no config file"}; presets ${Object.keys(registry).join(", ") || "none"}; ${presetEntries.length} preset and ${projectEntries.length} project rules; model ${resolved.model}, threshold ${resolved.threshold}${resolved.rpm === undefined ? "" : `, at most ${resolved.rpm} requests a minute`}`,
       );
-      return AdhereConfig.of({
-        ...resolved,
-        scopedRules: [...presetEntries, ...projectEntries],
-      });
+      const entries = [...presetEntries, ...projectEntries];
+      const overrides = config.overrides ?? {};
+      const loaded = new Set(entries.map(shownId));
+      const elsewhere = Object.keys(overrides).filter((id) => !loaded.has(id));
+      if (elsewhere.length > 0) {
+        // A rule of a preset this run leaves out may be overridden; one no rule has is a typo.
+        const every = yield* everyPresetRule(cwd);
+        const unknown = elsewhere.filter((id) => !every.has(id));
+        if (unknown.length > 0) {
+          return yield* ConfigUnavailable.make({
+            message: `overrides names ${unknown.join(", ")}, which is no preset or project rule. A preset's rule is named with its preset first, as in alchemy/providers/idempotent-delete.`,
+          });
+        }
+      }
+      return AdhereConfig.of({ ...resolved, scopedRules: withOverrides(entries, overrides) });
     }),
   );

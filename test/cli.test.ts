@@ -150,6 +150,39 @@ describe("cli", () => {
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("(not react)");
   });
 
+  it("turns a preset rule off by its id, takes a rule of a preset the run leaves out, and refuses one no rule has", async () => {
+    const root = join(tmpdir(), `adhere-overrides-${Date.now()}`);
+    await mkdir(root, { recursive: true });
+    await writeFile(join(root, "index.ts"), "export const x = 1;\n", "utf8");
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    const lint = () =>
+      execFileAsync("bun", [main, "lint", "--preset", "effect", "--limit", "0"], { cwd: root });
+    const rules = async () =>
+      Number(/(\d+) rules?/.exec((await lint()).stderr.split("\n")[0] ?? "")?.[1]);
+    const config = (overrides: string) =>
+      writeFile(
+        join(root, "adhere.config.ts"),
+        `export default { overrides: ${overrides} };\n`,
+        "utf8",
+      );
+
+    const all = await rules();
+    await config(
+      '{ "effect/basics/gen-for-sequencing": "off", "alchemy/providers/idempotent-delete": "warning" }',
+    );
+    expect(await rules()).toBe(all - 1);
+
+    await config('{ "effect/basics/no-such-rule": "off" }');
+    const refused = await lint().then(
+      () => undefined,
+      (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) => error,
+    );
+    expect(refused?.code).toBe(1);
+    expect(`${refused?.stdout}${refused?.stderr}`).toContain(
+      "overrides names effect/basics/no-such-rule, which is no preset or project rule.",
+    );
+  });
+
   it("never reads a file the config excludes", async () => {
     const root = join(tmpdir(), `adhere-exclude-${Date.now()}`);
     for (const directory of [".adhere", "src", "gen"]) {

@@ -1,5 +1,6 @@
 import {
   ConfigUnavailable,
+  type Override,
   type Rule,
   type RuleId,
   type RuleSource,
@@ -169,6 +170,29 @@ export const materializeRules = Effect.fn("materializeRules")(function* (
 
 export const globalRuleSet = (rules: Readonly<Record<RuleId, Rule>>, root: string) =>
   Object.entries(rules).map(([id, rule]): RuleEntry => ({ id, rule, scope: root }));
+
+/**
+ * The rules as a config's overrides leave them, each found by the id a report
+ * names it with: a rule set `off` gone, and any other with the level and
+ * threshold its override gives, over its own.
+ */
+export const withOverrides = (
+  entries: RuleSet,
+  overrides: Readonly<Record<string, Override>>,
+): RuleSet =>
+  entries.flatMap((entry) => {
+    const override = overrides[shownId(entry)];
+    if (override === undefined) return [entry];
+    const { level, threshold }: Exclude<Override, string> =
+      typeof override === "string" ? { level: override } : override;
+    if (level === "off") return [];
+    const rule: Rule = {
+      ...entry.rule,
+      ...(level === undefined ? {} : { level }),
+      ...(threshold === undefined ? {} : { threshold }),
+    };
+    return [{ ...entry, rule }];
+  });
 
 /**
  * Whether a rule judges a file: a test file only when the rule says `tests`,

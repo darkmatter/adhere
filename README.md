@@ -281,6 +281,7 @@ export default {
   threshold: 0.8, // optional, default 0.8
   presets: ["effect"], // optional, built-in rule sets
   exclude: ["**/generated/**"], // optional, files no rule judges
+  overrides: { "effect/basics/instrument-with-pipe": "off" }, // optional, see Presets
   rules: {
     "data/brand-meaningful-primitives": {
       description:
@@ -446,6 +447,22 @@ of its own: `--preset effect/basics` applies only the rules under
 A topic's rules keep the ids they have in the whole preset, so a topic and its
 preset share cached judgments, and naming both applies each rule once.
 
+A config's `overrides` changes a rule by the id a report names it with, a
+preset's with the preset first, without copying its text into `rules`: `off`
+drops it, `warning` or `error` sets its level, and `{ level, threshold }` sets
+either. An id that no preset or project rule has refuses the run, so a typo
+does not go unnoticed; a rule of a preset the run does not name is accepted.
+
+```ts
+export default {
+  presets: ["effect", "alchemy"],
+  overrides: {
+    "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
+    "effect/basics/instrument-with-pipe": "off",
+  },
+} satisfies Config;
+```
+
 `effect`'s four rules about tests, `testing/test-clock-for-time`,
 `services/fresh-layer-per-test`, `services/test-layers-are-in-memory`, and
 `config/tests-provide-values-directly`, say `tests: only`: they judge tests and
@@ -499,7 +516,8 @@ whose types have no requirements to find. The preset's
 Highest first: `--threshold` on the command line, the config file, presets in
 order (a later preset wins), then the defaults `jev-latest` and `0.8`. A rule
 in `rules` replaces a preset rule with the same id. A rule's own `threshold`
-beats all of the above for that rule.
+beats all of the above for that rule, and an entry in `overrides` beats the
+rule's own `threshold` and `level`.
 
 ## How a file is judged
 
