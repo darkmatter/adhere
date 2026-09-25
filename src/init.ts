@@ -20,11 +20,31 @@ export interface InitOptions {
   readonly force?: boolean;
 }
 
-const CONFIG = `import type { Config } from "@drkmttr/adhere";
+const CONFIG = `import { defineConfig } from "@drkmttr/adhere";
 
-export default {
+export default defineConfig({
   threshold: 0.8,
-} satisfies Config;
+});
+`;
+
+/**
+ * A project for the config alone. A tsconfig's globs skip dot directories, so
+ * without it the editor opens `.adhere/config.ts` outside any project, where
+ * it cannot resolve `@drkmttr/adhere`, whose types only `bundler`, `node16`,
+ * and `nodenext` resolution reach.
+ */
+const TSCONFIG = `{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["config.ts"]
+}
 `;
 
 const SMALL_FILES = `---
@@ -81,8 +101,12 @@ export const handle = (id: string) =>
 
 const CONFIG_PATH = CONFIG_FILES[0];
 
+/** The config's own project, which only a config at `.adhere/config.ts` needs. */
+const CONFIG_PROJECT = ".adhere/tsconfig.json";
+
 const files = [
   [CONFIG_PATH, CONFIG],
+  [CONFIG_PROJECT, TSCONFIG],
   [".adhere/style/prefer-small-files.md", SMALL_FILES],
   [".adhere/style/name-domain-actions.md", NAME_EFFECTS],
 ] as const;
@@ -194,6 +218,8 @@ export const initProject = (
         skipped.push(existing);
         continue;
       }
+      // A config at another path is in the project's own tsconfig, or not ours to place.
+      if (path === CONFIG_PROJECT && existing !== undefined) continue;
       const status = yield* writeScaffoldFile(root, path, contents, options);
       if (status === "created") {
         created.push(relative(root, join(root, path)));

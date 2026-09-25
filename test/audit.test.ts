@@ -1408,14 +1408,22 @@ describe("init", () => {
     const root = join(tmpdir(), `adhere-init-${Date.now()}`);
     await Effect.runPromise(initProject(root));
     const config = await readFile(join(root, ".adhere", "config.ts"), "utf8");
+    const project = JSON.parse(await readFile(join(root, ".adhere", "tsconfig.json"), "utf8"));
     const rule = await readFile(join(root, ".adhere", "style", "prefer-small-files.md"), "utf8");
 
-    expect(config).toContain("satisfies Config");
+    expect(config).toContain('import { defineConfig } from "@drkmttr/adhere";');
+    expect(config).toContain("export default defineConfig({");
+    // A tsconfig's globs skip .adhere/, so the config gets a project of its own that resolves the package.
+    expect(project).toMatchObject({
+      compilerOptions: { moduleResolution: "bundler" },
+      include: ["config.ts"],
+    });
     expect(rule).toContain("description:");
 
     const second = await Effect.runPromise(initProject(root));
     expect(second.created).toEqual([]);
     expect(second.skipped).toContain(".adhere/config.ts");
+    expect(second.skipped).toContain(".adhere/tsconfig.json");
     expect(second.skipped).toContain(".adhere/style/prefer-small-files.md");
   });
 
@@ -1455,7 +1463,9 @@ describe("init", () => {
 
     expect(result.skipped).toContain("adhere.config.ts");
     expect(result.created).not.toContain(".adhere/config.ts");
+    expect(result.created).not.toContain(".adhere/tsconfig.json");
     await expect(access(join(root, ".adhere", "config.ts"))).rejects.toThrow();
+    await expect(access(join(root, ".adhere", "tsconfig.json"))).rejects.toThrow();
   });
 });
 

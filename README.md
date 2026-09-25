@@ -245,18 +245,19 @@ no rule judges, such as generated code. It leaves them out of every run, as
 `--filter '!<glob>'` leaves them out of one:
 
 ```ts
-export default { exclude: ["**/generated/**"] } satisfies Config;
+export default defineConfig({ exclude: ["**/generated/**"] });
 ```
 
 ### Init
 
-`adhere init` writes `.adhere/config.ts` and two example rules. It is safe to
-rerun: by default it reports existing files as skipped and does not clobber
+`adhere init` writes `.adhere/config.ts`, the `.adhere/tsconfig.json` that gives
+the editor its types (see [Config](#config)), and two example rules. It is safe
+to rerun: by default it reports existing files as skipped and does not clobber
 them. `--force` overwrites them. A config already at another accepted path is
 kept, and no second one is added, even with `--force`.
 
 When there is a `package.json`, init also adds `@drkmttr/adhere` to its
-`devDependencies`, so the config's `import type` resolves. It runs
+`devDependencies`, so the config's `defineConfig` has its types in the editor. It runs
 `<manager> add -D @drkmttr/adhere` with the package manager whose lockfile
 (`bun.lock`, `bun.lockb`, `pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`)
 sits beside the `package.json`, or npm when there is none. With pnpm it adds
@@ -331,9 +332,9 @@ repo being audited, at one of these paths (keep one):
 - `.adhere.config.ts`
 
 ```ts
-import type { Config } from "@drkmttr/adhere";
+import { defineConfig } from "@drkmttr/adhere";
 
-export default {
+export default defineConfig({
   model: "jev-latest", // optional, default "jev-latest"
   threshold: 0.8, // optional, default 0.8
   presets: ["effect"], // optional, built-in rule sets
@@ -351,16 +352,24 @@ type UserId = typeof UserId.Type
       threshold: 0.8, // optional per-rule override
     },
   },
-} satisfies Config;
+});
 ```
 
 The default export is decoded with Effect `Schema`. An invalid shape refuses
-the run. The `import type` is erased at runtime. `defineConfig({...})` from
-`@drkmttr/adhere` does the same thing as `satisfies Config`, and the executable
-supplies it whether or not the repo has the package installed; the editor's
-types come from the package as a dev dependency. A config can import other
-files by relative path, but no packages besides `@drkmttr/adhere`: the
-executable does not resolve `node_modules`.
+the run. `defineConfig` types the config for the editor and returns it as it
+is; `satisfies Config`, with `import type { Config }`, does the same. The
+executable supplies `@drkmttr/adhere` to the config whether or not the repo has
+the package installed, and the editor's types come from the package, which
+`adhere init` adds as a dev dependency. A config can import other files by
+relative path, but no packages besides `@drkmttr/adhere`: the executable does
+not resolve `node_modules`.
+
+A tsconfig's globs skip dot directories, so the editor opens
+`.adhere/config.ts` outside any project, where it cannot resolve the package's
+types: they are reached only by `bundler`, `node16`, or `nodenext` resolution.
+`adhere init` writes `.adhere/tsconfig.json`, a project for the config alone
+with `bundler` resolution. For a config written by hand, add that file, or
+include `.adhere/config.ts` in a tsconfig that resolves the same way.
 
 `rules` in the config, inline as above or as a directory (below), replaces the
 `.adhere/` rule files: none of them, root or nested, is read then.
@@ -457,7 +466,7 @@ cost is visibility: a dot directory is hidden from `ls`, and from `rg` without
 documentation can point `rules` at `docs/adhere/`:
 
 ```ts
-export default { presets: ["effect"], rules: "./docs/adhere" } satisfies Config;
+export default defineConfig({ presets: ["effect"], rules: "./docs/adhere" });
 ```
 
 Rules read through `rules` apply project-wide.
@@ -511,13 +520,13 @@ either. An id that no preset or project rule has refuses the run, so a typo
 does not go unnoticed; a rule of a preset the run does not name is accepted.
 
 ```ts
-export default {
+export default defineConfig({
   presets: ["effect", "alchemy"],
   overrides: {
     "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
     "effect/basics/instrument-with-pipe": "off",
   },
-} satisfies Config;
+});
 ```
 
 `effect`'s four rules about tests, `testing/test-clock-for-time`,

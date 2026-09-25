@@ -105,17 +105,19 @@ Rules for the rule:
 
 Put the config at `.adhere/config.ts`. `adhere.config.ts` and
 `.adhere.config.ts` also load; keep one. A config is optional when `.adhere/`
-exists or a preset is passed on the command line. Use a type-only import so
-the file also loads under the native binary:
+exists or a preset is passed on the command line. `adhere init` scaffolds it
+with `defineConfig`, adds `@drkmttr/adhere` as a dev dependency, and writes
+`.adhere/tsconfig.json` so the editor resolves its types; the native binary
+supplies the import either way:
 
 ```ts
-import type { Config } from "@drkmttr/adhere";
+import { defineConfig } from "@drkmttr/adhere";
 
-export default {
+export default defineConfig({
   presets: ["effect"],
   threshold: 0.75,
   exclude: ["**/generated/**"],
-} satisfies Config;
+});
 ```
 
 To quiet a preset rule that does not suit the repo, override it rather than
