@@ -4,10 +4,13 @@ import type { Preset } from "#config.ts";
  * `presets/` sits next to `src/` in a checkout. In a compiled executable
  * (`bun build --compile --asset ./presets`) Bun embeds it under the bundle's
  * own directory instead, hence the fork on `Bun.isStandaloneExecutable`, which
- * is the check Bun's docs give for this. Measured on Bun 1.4. The `typeof`
- * guard is for Vitest, which imports this module on Node.
+ * is the check Bun's docs give for this. Measured on Bun 1.4. It is read off
+ * `globalThis` for Vitest, which imports this module on Node, and for a
+ * project that type-checks this package's source without Bun's types.
  */
-const isStandaloneExecutable = typeof Bun !== "undefined" && Bun.isStandaloneExecutable;
+const isStandaloneExecutable =
+  (globalThis as { readonly Bun?: { readonly isStandaloneExecutable?: boolean } }).Bun
+    ?.isStandaloneExecutable === true;
 
 const presetsRoot = isStandaloneExecutable
   ? new URL("./presets/", import.meta.url)
