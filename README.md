@@ -259,8 +259,9 @@ When there is a `package.json`, init also adds `@drkmttr/adhere` to its
 `devDependencies`, so the config's `import type` resolves. It runs
 `<manager> add -D @drkmttr/adhere` with the package manager whose lockfile
 (`bun.lock`, `bun.lockb`, `pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`)
-sits beside the `package.json`, or npm when there is none. It skips the install
-when `package.json` already lists adhere.
+sits beside the `package.json`, or npm when there is none. With pnpm it adds
+`--ignore-workspace-root-check`, so the install also works at a workspace root.
+It skips the install when `package.json` already lists adhere.
 
 ### Validate
 

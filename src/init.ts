@@ -138,6 +138,17 @@ const packageManagerAt = async (root: string): Promise<PackageManager> => {
   return "npm";
 };
 
+/**
+ * pnpm refuses to add to a workspace root without a flag. `-w` fails outside a
+ * workspace, so this one, which works in both, stands in for it.
+ */
+const addFlags: Record<PackageManager, ReadonlyArray<string>> = {
+  bun: [],
+  pnpm: ["--ignore-workspace-root-check"],
+  yarn: [],
+  npm: [],
+};
+
 /** Adds adhere to devDependencies, so the config's `import type` resolves. */
 const installAdhere = (root: string) =>
   Effect.tryPromise({
@@ -150,7 +161,10 @@ const installAdhere = (root: string) =>
       }
       const packageManager = await packageManagerAt(root);
       await new Promise<void>((resolve, reject) => {
-        spawn(packageManager, ["add", "-D", PACKAGE], { cwd: root, stdio: "inherit" })
+        spawn(packageManager, ["add", "-D", PACKAGE, ...addFlags[packageManager]], {
+          cwd: root,
+          stdio: "inherit",
+        })
           .on("error", reject)
           .on("exit", (code) =>
             code === 0 ? resolve() : reject(new Error(`${packageManager} exited with ${code}`)),
