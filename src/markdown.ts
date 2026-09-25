@@ -10,19 +10,25 @@ import { Effect, Schema } from "effect";
  *     ---
  *     Any prose, rendered on GitHub and ignored by adhere.
  *
- *     ```ts must
+ *     ## Must
+ *
+ *     ```ts
  *     const written = "code that must be written this way"
  *     ```
  *
- *     ```ts never
+ *     ## Never
+ *
+ *     ```ts
  *     const avoided = "code that must never be written this way"
  *     ```
  *
- * A fence's info string names its code with RFC 2119's words: `must` and
- * `never` for a requirement, `should` and `should not` for a guideline. The
- * first fence under each word is that example, and a rule has either or both.
- * An untagged fence is the code to write, and without a fence the whole body
- * is. `avoid`, the word before 0.7, means `never`. `threshold` is optional.
+ * A heading names the code in its section with RFC 2119's words: `must` and
+ * `never` for a requirement, `should` and `should not` for a guideline. So
+ * does a fence's info string, as in `ts never`, which GitHub does not show; a
+ * fence's own word wins over its heading's. The first fence under each word is
+ * that example, and a rule has either or both. An untagged fence outside those
+ * sections is the code to write, and without a fence the whole body is.
+ * `avoid`, the word before 0.7, means `never`. `threshold` is optional.
  */
 const FrontMatter = Schema.Struct({
   description: Schema.String,
@@ -31,6 +37,8 @@ const FrontMatter = Schema.Struct({
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 const FENCE = /^ {0,3}(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n {0,3}\1[ \t]*$/gm;
+/** An ATX heading: its level as `#`s, then its text, without a closing run of `#`s. */
+const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/gm;
 
 const unquote = (value: string): string => {
   const trimmed = value.trim();
@@ -54,9 +62,15 @@ const parseFrontMatter = (block: string): Record<string, string> => {
 type Word = Example["word"];
 
 interface Fence {
-  /** The word the info string names the code with; none for an untagged fence. */
+  /** The word its info string, or else its heading, names the code with; none for untagged code. */
   readonly word: Word | undefined;
   readonly code: string;
+}
+
+interface Heading {
+  readonly level: number;
+  /** The word the heading names its section's code with; none for any other heading. */
+  readonly word: Word | undefined;
 }
 
 /** `must not`, like `never` and the older `avoid`, names code never to write. */
@@ -69,11 +83,55 @@ const wordOf = (info: string): Word | undefined => {
   return undefined;
 };
 
-const fencesOf = (body: string): ReadonlyArray<Fence> =>
-  Array.from(body.matchAll(FENCE), (match) => ({
-    word: wordOf(match[2] ?? ""),
-    code: (match[3] ?? "").trim(),
-  }));
+const HEADING_WORDS: ReadonlySet<string> = new Set([
+  "must",
+  "must not",
+  "never",
+  "avoid",
+  "should",
+  "should not",
+]);
+
+/**
+ * A heading names a word only when it is the word alone, in any case and with
+ * or without a colon: `## Never` does, `## Why never` does not.
+ */
+const headingWordOf = (text: string): Word | undefined => {
+  const phrase = text.trim().replace(/:$/, "").trim().toLowerCase().split(/\s+/).join(" ");
+  return HEADING_WORDS.has(phrase) ? wordOf(phrase) : undefined;
+};
+
+/**
+ * The headings open after `text`, outermost first, given those open before
+ * it. A heading closes the sections at its level and deeper, so a deeper
+ * heading stays inside the section above it.
+ */
+const openAfter = (open: ReadonlyArray<Heading>, text: string): ReadonlyArray<Heading> =>
+  Array.from(text.matchAll(HEADING)).reduce<ReadonlyArray<Heading>>((headings, match) => {
+    const level = (match[1] ?? "#").length;
+    return [
+      ...headings.filter((heading) => heading.level < level),
+      { level, word: headingWordOf(match[2] ?? "") },
+    ];
+  }, open);
+
+/**
+ * Each fence, under the word its info string names or, without one, the word
+ * of the innermost heading over it that names one.
+ */
+const fencesOf = (body: string): ReadonlyArray<Fence> => {
+  const fences: Array<Fence> = [];
+  let open: ReadonlyArray<Heading> = [];
+  let read = 0;
+  for (const match of body.matchAll(FENCE)) {
+    // Only headings between fences count: a `#` line inside one is code.
+    open = openAfter(open, body.slice(read, match.index));
+    read = match.index + match[0].length;
+    const section = open.findLast((heading) => heading.word !== undefined)?.word;
+    fences.push({ word: wordOf(match[2] ?? "") ?? section, code: (match[3] ?? "").trim() });
+  }
+  return fences;
+};
 
 /** An empty block counts as no block. */
 const nonEmpty = (code: string | undefined): string | undefined =>
@@ -134,7 +192,7 @@ export const parseRuleMarkdown = (
     }
     if (!requirement && !guideline) {
       return yield* ConfigUnavailable.make({
-        message: `${file}: the body needs code, in a fence tagged must, never, should, or should not, or untagged`,
+        message: `${file}: the body needs code, in a fence under a Must, Never, Should, or Should not heading, or untagged`,
       });
     }
     return { ...front, ...code };

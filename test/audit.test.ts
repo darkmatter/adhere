@@ -552,6 +552,69 @@ describe("markdown rules", () => {
     });
   });
 
+  const body = (...lines: ReadonlyArray<string>) =>
+    parse(["---", "description: d", "---", "", ...lines, ""].join("\n"));
+
+  it("a heading of must and never, or should and should not, names the code in its section", async () => {
+    expect(
+      await body("## Must", "", "```ts", "a()", "```", "", "## Never", "", "```ts", "b()", "```"),
+    ).toEqual({
+      description: "d",
+      must: "a()",
+      never: "b()",
+    });
+    // In any case, with or without a colon or a closing run of #s.
+    expect(
+      await body("# should", "```ts", "a()", "```", "### Should not: ###", "```ts", "b()", "```"),
+    ).toEqual({
+      description: "d",
+      should: "a()",
+      shouldNot: "b()",
+    });
+    expect(await body("## Must not", "```ts", "b()", "```")).toEqual({
+      description: "d",
+      never: "b()",
+    });
+  });
+
+  it("a deeper heading stays in the section above it, and the next heading at its level ends it", async () => {
+    const rule = await body(
+      "## Never",
+      "",
+      "### A bare number",
+      "",
+      "```ts",
+      "b()",
+      "```",
+      "",
+      "## Notes",
+      "",
+      "```ts",
+      "a()",
+      "```",
+    );
+    expect(rule).toEqual({ description: "d", must: "a()", never: "b()" });
+  });
+
+  it("a fence's own word wins over its heading's", async () => {
+    const rule = await body("## Must", "", "```ts never", "b()", "```", "", "```ts", "a()", "```");
+    expect(rule).toEqual({ description: "d", must: "a()", never: "b()" });
+  });
+
+  it("names a word only in a heading that is the word alone, outside any fence", async () => {
+    expect(await body("## Why never", "", "```ts", "a()", "```")).toEqual({
+      description: "d",
+      must: "a()",
+    });
+    // A `#` line in a fence is code, so the fence after it is still under Never.
+    expect(
+      await body("## Never", "", "```sh", "# Must", "b", "```", "", "```sh", "c", "```"),
+    ).toEqual({
+      description: "d",
+      never: "# Must\nb",
+    });
+  });
+
   it("refuses a body with no code, naming the file", async () => {
     const refused = await Effect.runPromise(
       Effect.flip(parseRuleMarkdown("---\ndescription: d\n---\n\n", "rules/a.md")),

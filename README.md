@@ -291,12 +291,19 @@ config and the cache (neither is read as a rule). The path without `.md` is the
 rule id, so `.adhere/data/brand-ports.md` is `data/brand-ports`. When that
 directory exists, it is read without any config.
 
-A file is front matter, then a body. The body's code goes in fences tagged,
-after the language, with RFC 2119's words: `must` for code that must be
-written, and `never` for code that must never be, which is what a violation
-looks like. Prose around them renders on GitHub and is ignored. An untagged
-fence is code that must be written, and without a fence the whole body is.
-`avoid`, the tag before 0.7, reads as `never`.
+A file is front matter, then a body. The body's code goes in fences under
+headings of RFC 2119's words: `## Must` for code that must be written, and
+`## Never` for code that must never be, which is what a violation looks like.
+A heading names the code in its section, which runs to the next heading at its
+level or higher, so a deeper heading such as `### A bare number` stays inside
+it. Only a heading that is the word alone names code, in any case and with or
+without a colon: `## Never:` does, `## Never do this` does not. Prose around
+the code renders on GitHub and is ignored.
+
+A fence can instead name its code after its language, as in `ts never`, which
+GitHub does not show; a fence's own word wins over its heading's. An untagged
+fence outside those sections is code that must be written, and without a fence
+the whole body is. `avoid`, the tag before 0.7, reads as `never`.
 
 ````md
 ---
@@ -306,14 +313,18 @@ threshold: 0.8
 
 Why: a bare `number` accepts 70000 and -1.
 
-```ts must
+## Must
+
+```ts
 const Port = Schema.Int.pipe(
   Schema.check(Schema.isBetween({ minimum: 1, maximum: 65535 })),
   Schema.brand("Port"),
 );
 ```
 
-```ts never
+## Never
+
+```ts
 const port: number = Number(process.env.PORT);
 ```
 ````
@@ -334,7 +345,7 @@ dropped. Neither goes in the other's place: code that must never be written,
 under `must`, reads to Jev as the pattern to follow.
 
 A rule that is a guideline rather than a requirement says "should" instead:
-in its description, and in fences tagged `should` and `should not` (`should`
+in its description, and in `## Should` and `## Should not` headings (`should`
 and `shouldNot` inline in a config). Jev then reads the code under `should`
 and `should_not`. A rule is one or the other, so it cannot mix `must` or
 `never` with `should` or `should not`. In a config, `reference` and `avoid`,
@@ -371,7 +382,7 @@ We've evaluated different ways of giving Jev a rule, to catch the most
 violations with the fewest false positives. In general:
 
 - Say "must" for what code must do and "never" for what it must not, in the
-  description and as the fence tags.
+  description and in the headings over the code.
 - Give one example of each: one `must` block and one `never` block. Three of
   each did no better, and several of one kind alone did worse.
 - For a guideline rather than a requirement, say "should" and "should not"

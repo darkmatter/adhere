@@ -58,32 +58,38 @@ threshold: 0.8
 
 Optional prose for readers on GitHub. adhere ignores it.
 
-```ts must
+## Must
+
+```ts
 // Correct code lifted from this repo, trimmed to the pattern.
 ```
 
-```ts never
+## Never
+
+```ts
 // Optional: the incorrect form this rule catches, as it appeared in the repo.
 ```
 ````
 
 Rules for the rule:
 
-- `description` is one sentence, specific, in the same words as the fences:
+- `description` is one sentence, specific, in the same words as the headings:
   what code must be, and what it must never be. Jev reads the description
   with the code, and "must" in both is one demand; vague words ("properly",
   "correctly") give it nothing to judge.
+- A heading names the code under it only when it is the word alone: `## Never`,
+  not `## Never do this`. The next heading at its level or higher ends it.
 - The `must` block is real code from the repo, not invented, and only correct
   code: Jev compares files to it, so incorrect code there teaches the wrong
-  thing. Incorrect code goes in a fence tagged `never`, which Jev reads as what
-  a violation looks like. Add one whenever violations have a recognizable
+  thing. Incorrect code goes under `## Never`, which Jev reads as what a
+  violation looks like. Add one whenever violations have a recognizable
   shape, ideally one found in the repo's history: over the effect preset, a
   `never` block raised how well Jev told violations from compliant code under
   every wording tried. A rule with no single correct form can be only a
   `never` block.
 - A convention that is a guideline rather than a requirement says "should" in
-  its description and tags its fences `should` and `should not`. A rule is one
-  or the other; it cannot mix the two.
+  its description and puts its code under `## Should` and `## Should not`. A
+  rule is one or the other; it cannot mix the two.
 - One pattern per file. Two patterns in one `must` block blur the probability.
 - `threshold` is optional. Start without it; set it in step 5 if needed.
 
