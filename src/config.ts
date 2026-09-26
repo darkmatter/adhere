@@ -104,8 +104,18 @@ const Override = Schema.Union([
 export type Override = typeof Override.Type;
 
 export const AdhereConfig = Schema.Struct({
+  /**
+   * The model id sent to typesafe. Defaults to "jev-latest"
+   */
   model: Schema.optionalKey(Schema.String),
+  /**
+   * The minimum confidence threshold for a positive match. Defaults to 0.8
+   */
   threshold: Schema.optionalKey(Schema.Finite),
+  /**
+   * The presets to use for rule matching. Defaults to an empty array. Current presets
+   * include "effect" and "alchemy". Subcategories can be expanded by appending `/<subcategory>`.
+   */
   presets: Schema.Array(Schema.Literals(presetNames)).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed([])),
   ),
@@ -173,17 +183,25 @@ export const TEST_DIRECTORIES: ReadonlySet<string> = new Set([
   "__tests__",
   "fixtures",
 ]);
-export interface AdhereConfig extends Schema.Schema.Type<typeof AdhereConfig> {}
 
-/** The shape a config file default-exports. */
+/** The shape a config file default-exports: the schema's input, where `presets` is optional. */
 export type Config = typeof AdhereConfig.Encoded;
 
 export const defineConfig = (config: Config) => config;
 
 /** A built-in rule set. Same shape as a config, minus `presets`. */
 export interface Preset {
+  /**
+   * Override the model id used. Defaults to "jev-latest"
+   */
   readonly model?: string;
+  /**
+   * Override the threshold that determines a positive match. Defaults to 0.8
+   */
   readonly threshold?: number;
+  /**
+   * Per-rule overrides.
+   */
   readonly rules: RuleSource;
 }
 
@@ -224,7 +242,7 @@ export interface Flags {
  * the whole preset already holds its rules.
  */
 export const presetsOf = (
-  config: Pick<AdhereConfig, "presets">,
+  config: Pick<typeof AdhereConfig.Type, "presets">,
   flags: Flags,
 ): ReadonlyArray<PresetName> => {
   const named = [...new Set([...(flags.presets ?? []), ...config.presets])];
@@ -240,7 +258,7 @@ export const presetsOf = (
  * rule with the same id.
  */
 export const resolveConfig = (
-  config: Loaded<AdhereConfig>,
+  config: Loaded<typeof AdhereConfig.Type>,
   flags: Flags = {},
   registry: Readonly<Partial<Record<PresetName, Loaded<Preset>>>> = {},
 ): ResolvedConfig => {
@@ -265,7 +283,9 @@ export class ConfigUnavailable extends Schema.TaggedError<ConfigUnavailable>()(
   { message: Schema.String },
 ) {}
 
-export const decodeConfig = (value: unknown): Effect.Effect<AdhereConfig, ConfigUnavailable> =>
+export const decodeConfig = (
+  value: unknown,
+): Effect.Effect<typeof AdhereConfig.Type, ConfigUnavailable> =>
   Schema.decodeUnknownEffect(AdhereConfig)(value).pipe(
     Effect.mapError((problem) =>
       ConfigUnavailable.make({

@@ -1,6 +1,6 @@
 import {
   ADHERE_DIRECTORY,
-  type AdhereConfig as Decoded,
+  AdhereConfig as AdhereConfigSchema,
   CONFIG_FILES,
   ConfigUnavailable,
   decodeConfig,
@@ -86,7 +86,7 @@ export const AdhereConfigLive = (flags: Flags) =>
       }
       const configFile = found[0];
       const hasPreset = flags.presets !== undefined && flags.presets.length > 0;
-      const config: Decoded =
+      const config: typeof AdhereConfigSchema.Type =
         configFile === undefined
           ? yield* decodeConfig({})
           : yield* loadConfigFile(path.join(cwd, configFile));
