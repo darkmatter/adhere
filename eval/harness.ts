@@ -375,9 +375,7 @@ const study = Effect.fn("eval.study")(function* (arms: ReadonlyArray<Arm>) {
 /** Runs a study's arms and prints its report: the entry point of `judge.ts` and each study. */
 export const runStudy = (arms: ReadonlyArray<Arm>): void =>
   study(arms).pipe(
-    // oxlint-disable-next-line effecttsgo/strict-effect-provide -- each study script is an entry point.
     Effect.provide(Layer.mergeAll(FetchHttpClient.layer, CredentialsLive)),
-    // oxlint-disable-next-line effecttsgo/strict-effect-provide -- each study script is an entry point.
     Effect.provide(BunServices.layer),
     BunRuntime.runMain,
   );

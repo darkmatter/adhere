@@ -49,7 +49,6 @@ const report = (cause: Cause.Cause<unknown>): Effect.Effect<void> => {
 
 Command.run(cli, { version }).pipe(
   Effect.tapCause(report),
-  // oxlint-disable-next-line effecttsgo/strict-effect-provide -- this executable entrypoint supplies Bun's process services and the logger.
   Effect.provide(Layer.merge(BunServices.layer, logger)),
   (program) => BunRuntime.runMain(program, { disableErrorReporting: true }),
 );

@@ -225,9 +225,7 @@ const program = Effect.gen(function* () {
 });
 
 program.pipe(
-  // oxlint-disable-next-line effecttsgo/strict-effect-provide -- a study script is an entry point.
   Effect.provide(Layer.mergeAll(FetchHttpClient.layer, CredentialsLive)),
-  // oxlint-disable-next-line effecttsgo/strict-effect-provide -- a study script is an entry point.
   Effect.provide(BunServices.layer),
   BunRuntime.runMain,
 );
