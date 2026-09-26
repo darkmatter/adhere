@@ -338,7 +338,11 @@ export const initCommand = Command.make("init", { force }, (input) =>
     ];
     yield* Console.log(lines.join("\n"));
   }),
-).pipe(Command.withDescription("Scaffold .adhere/config.ts and example Markdown rules, and add @drkmttr/adhere to devDependencies with the project's package manager."));
+).pipe(
+  Command.withDescription(
+    "Scaffold .adhere/config.ts and example Markdown rules, and add @drkmttr/adhere to devDependencies with the project's package manager.",
+  ),
+);
 
 /**
  * The key typed at a masked prompt, or piped in: `adhere login < key.txt`.
