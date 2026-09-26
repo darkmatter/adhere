@@ -1074,8 +1074,25 @@ describe("source walker", () => {
     expect(isTestFile("packages/api/test/helpers/layer.ts")).toBe(true);
     expect(isTestFile("src/__tests__/a.ts")).toBe(true);
     expect(isTestFile("fixtures/worker.ts")).toBe(true);
+    expect(isTestFile("src/testing/clock.ts")).toBe(true);
+    expect(isTestFile("src/coder/fixture/case-env.ts")).toBe(true);
+    expect(isTestFile("src/__mocks__/fs.ts")).toBe(true);
+    for (const name of [
+      "fixtures.ts",
+      "GitHubHttpFixtures.ts",
+      "ledger-copy.fixture.ts",
+      "fetch-errors.fixtures.ts",
+      "attribution-test-fixtures.ts",
+      "linear-test-helpers.ts",
+      "GitHubHttpTestUtils.ts",
+      "test-utils.ts",
+    ]) {
+      expect(isTestFile(`src/${name}`)).toBe(true);
+    }
     expect(isTestFile("src/test.ts")).toBe(false);
-    expect(isTestFile("src/testing/clock.ts")).toBe(false);
+    expect(isTestFile("src/latest-utils.ts")).toBe(false);
+    expect(isTestFile("src/tester/TestRun.ts")).toBe(false);
+    expect(isTestFile("src/test-runs/test-draft.ts")).toBe(false);
     expect(isTestFile("src/AWS/B2BI/TestConversionHttp.ts")).toBe(false);
   });
 });

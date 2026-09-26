@@ -52,8 +52,17 @@ export const passesFilter = (relative: string, patterns: ReadonlyArray<string>):
 };
 
 /**
+ * A fixture or test helper named as one: `fixtures.ts`, `GitHubHttpFixtures.ts`,
+ * `ledger-copy.fixture.ts`, `linear-test-helpers.ts`, `GitHubHttpTestUtils.ts`.
+ * "test" starts a word, so `latest-utils.ts` is not one.
+ */
+const TEST_SUPPORT_NAME =
+  /(?:[fF]ixtures?|(?:(?:^|[-_.])[tT]est[-_]?|[a-z]Test)(?:[hH]elpers?|[uU]tils?))\.ts$/;
+
+/**
  * Whether a path, relative to the working directory, is a test: a `.test.ts`
- * or `.spec.ts` file, or any file under a test directory such as `test/`.
+ * or `.spec.ts` file, a fixture or test helper named as one, or any file under
+ * a test directory such as `test/`.
  */
 export const isTestFile = (relative: string): boolean => {
   const segments = relative.split(/[\\/]/);
@@ -61,6 +70,7 @@ export const isTestFile = (relative: string): boolean => {
   return (
     name.endsWith(".test.ts") ||
     name.endsWith(".spec.ts") ||
+    TEST_SUPPORT_NAME.test(name) ||
     segments.slice(0, -1).some((segment) => TEST_DIRECTORIES.has(segment))
   );
 };

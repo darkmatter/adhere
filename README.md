@@ -239,8 +239,11 @@ skipped; the directories above it do not count. `.tsx` files are not read, and
 `.gitignore` is not consulted.
 
 Tests are judged only by rules about tests. A test is a `.test.ts` or
-`.spec.ts` file, or any file under a `test/`, `tests/`, `__tests__/`, or
-`fixtures/` directory, and only a rule whose front matter says `tests` judges
+`.spec.ts` file; a fixture or test helper named as one, such as `fixtures.ts`,
+`GitHubHttpFixtures.ts`, `ledger-copy.fixture.ts`, `linear-test-helpers.ts`,
+or `test-utils.ts`; or any file under a `test/`, `tests/`, `__tests__/`,
+`testing/`, `fixtures/`, `fixture/`, `__fixtures__/`, or `__mocks__/`
+directory, and only a rule whose front matter says `tests` judges
 one (see [Rules as Markdown files](#rules-as-markdown-files)). On alchemy, 38%
 of the findings from rules not about tests were in test helpers and fixtures.
 

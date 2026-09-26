@@ -181,7 +181,11 @@ export const TEST_DIRECTORIES: ReadonlySet<string> = new Set([
   "test",
   "tests",
   "__tests__",
+  "testing",
   "fixtures",
+  "fixture",
+  "__fixtures__",
+  "__mocks__",
 ]);
 
 /** The shape a config file default-exports: the schema's input, where `presets` is optional. */
