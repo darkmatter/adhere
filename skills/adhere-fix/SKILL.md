@@ -1,6 +1,6 @@
 ---
 name: adhere-fix
-description: Verify and fix the findings `adhere lint` reports. Decide whether each finding is a real violation of its rule, fix the real ones, and suppress the false ones with an `adhere-ignore` comment that gives the evidence. Use when adhere, or CI running it, reports errors or warnings, or when asked to fix adhere findings.
+description: Verify and fix the findings `adhere lint` reports. Decide whether each finding is a real violation of its rule, fix the real ones, and report the false ones with the evidence, suppressing a finding with an `adhere-ignore` comment only when the user allows it. Use when adhere, or CI running it, reports errors or warnings, or when asked to fix adhere findings.
 ---
 
 # Verify and fix adhere findings
@@ -11,7 +11,7 @@ the file breaks it; adhere reports each rule above a threshold, at the line Jev
 points to. A finding is a judgment, not a proof. On one rule adhere's authors
 checked against the live API, only 1 of its 20 findings was a real violation.
 Verify every finding before you change code for it: fix the real ones, and
-suppress the false ones with the reason.
+report the false ones with the evidence.
 
 ## 1. Get the findings
 
@@ -90,8 +90,23 @@ Then decide:
 - Confirm with `adhere lint --yes --filter '<file>'`, which judges only the
   changed file again. If the finding stays, reread the rule: the fix may not
   be what it asks for.
+- Try at most three fixes for one finding. If it stays after the third, undo
+  your changes for it, so no half-done fix is left, and leave it for the user.
 
-## 5. Suppress a false finding
+## 5. Suppress a finding, only when allowed
+
+By default, never add an `adhere-ignore` comment or an `@adhere` note, and
+never change the ones already there. Leave the finding, and say why in the
+report. Suppressing is allowed only when the user allows it: their request
+says so, or `ADHERE_ALLOW_SUPPRESSIONS=1` is set in your environment, which
+`printenv ADHERE_ALLOW_SUPPRESSIONS` shows.
+
+When it is allowed, suppress:
+
+- a false finding;
+- a real finding that three fixes did not clear, or whose fix would break
+  something, such as behavior, a public API, or loading the code on a
+  platform. The reason names what the fix would break.
 
 Above the statement the finding is in, add a comment naming the rule as the
 report does, then `--` and the evidence:
@@ -111,13 +126,14 @@ delete: Effect.fn(function* ({ output }) {
 - Name several rules with commas: `// adhere-ignore <rule>, <rule> -- <reason>`.
 - The reason says what you checked and what you found, so whoever reads it can
   check it again. "False positive" is not a reason.
-- Never suppress a finding you believe is real, or one you are unsure of.
+- Never suppress a finding you are unsure of, or a real one you have not
+  tried to fix.
 - Jev never reads these comments: adhere removes them before it sends a file.
 
-When the finding was false because of a fact the file does not show, such as
-how an API behaves, also write the fact where Jev will see it the next time it
-judges this code: in a comment that says `@adhere`, on the code the fact is
-about, with how you know.
+When suppressing is allowed and the finding was false because of a fact the
+file does not show, such as how an API behaves, also write the fact where Jev
+will see it the next time it judges this code: in a comment that says
+`@adhere`, on the code the fact is about, with how you know.
 
 ```ts
 /**
@@ -148,3 +164,11 @@ Tell the user, for each finding: the rule, the file and line, the verdict, and
 what you did: fixed it, suppressed it with the reason, or left it for them.
 Give the evidence for each false one. Name the rules that were mostly wrong,
 and every finding you were unsure of.
+
+If you left findings because suppressing was not allowed, end the report with
+this message, filled in:
+
+> Left N findings that suppressing would settle: `<rule>` at `<file>:<line>`,
+> … To let the agent suppress findings it shows are false, or that three fixes
+> did not clear, with the evidence in each comment, set
+> `ADHERE_ALLOW_SUPPRESSIONS=1` in the agent's environment and run it again.

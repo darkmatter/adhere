@@ -675,9 +675,8 @@ Two skills teach an agent to work with adhere:
   conventions into rule files, configures adhere, and calibrates thresholds.
 - [`skills/adhere-fix/SKILL.md`](./skills/adhere-fix/SKILL.md) verifies and
   fixes the findings `lint` reports: it checks each against its rule and the
-  code, fixes the real ones, suppresses the false ones with an `adhere-ignore`
-  comment that gives the evidence, and says when a rule is wrong more often
-  than right.
+  code, fixes the real ones, reports the false ones with the evidence, and says
+  when a rule is wrong more often than right.
 
 Install them with the [skills](https://github.com/vercel-labs/skills) CLI:
 `skills add darkmatter/adhere`. The binary carries both: `adhere skill` prints
@@ -707,6 +706,12 @@ adhere skill fix | codex exec --sandbox workspace-write \
 ```
 
 - Set `TYPESAFE_API_KEY` from a secret.
+- The agent adds no `adhere-ignore` comments or `@adhere` notes unless
+  `ADHERE_ALLOW_SUPPRESSIONS=1` is set in its environment, as in
+  `adhere skill fix | ADHERE_ALLOW_SUPPRESSIONS=1 codex exec --yolo`. It then
+  suppresses a finding it shows is false, or that three fixes did not clear,
+  with the evidence in the comment. Without it, the agent leaves those
+  findings, and its report ends by naming them and the variable.
 - End the job with `adhere lint --yes`. The agent exits 0 whatever it left,
   so this step passes or fails the job; it judges only the files the agent
   changed, and reads the rest from the cache.
