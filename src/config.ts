@@ -283,6 +283,11 @@ export class ConfigUnavailable extends Schema.TaggedError<ConfigUnavailable>()(
   { message: Schema.String },
 ) {}
 
+/**
+ * Decodes an in-memory value. @adhere The file-reading caller loadConfigFile
+ * in services/AdhereConfig.ts prefixes these errors with the config path;
+ * verified in its source and by CLI probes at all three config paths, 2026-09-26.
+ */
 export const decodeConfig = (
   value: unknown,
 ): Effect.Effect<typeof AdhereConfig.Type, ConfigUnavailable> =>
