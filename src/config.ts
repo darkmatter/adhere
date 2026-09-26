@@ -231,9 +231,9 @@ export interface ResolvedConfig {
 export interface Flags {
   readonly presets?: ReadonlyArray<PresetName>;
   /** Replaces the config's global threshold. Per-rule thresholds still win. */
-  readonly threshold?: number;
+  readonly threshold?: number | undefined;
   /** Throttles requests to Jev to at most this many a minute. */
-  readonly rpm?: number;
+  readonly rpm?: number | undefined;
 }
 
 /**

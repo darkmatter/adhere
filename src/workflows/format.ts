@@ -221,7 +221,7 @@ export const render = (result: AuditResult, options: RenderOptions = {}): Readon
 /** What a run was asked to keep to, for the plan to say. */
 export interface RunLimits {
   readonly filter?: ReadonlyArray<string>;
-  readonly rpm?: number;
+  readonly rpm?: number | undefined;
 }
 
 /** About how long `requests` take at `rpm`: seconds under a minute, minutes past it. */

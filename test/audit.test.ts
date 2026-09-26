@@ -2692,7 +2692,7 @@ describe("credentials", () => {
 
   /** Files in a map, each with the mode it was created with, and each made directory's mode. */
   const memoryFiles = (seed: Readonly<Record<string, string>> = {}) => {
-    const files = new Map<string, { readonly text: string; readonly mode?: number }>(
+    const files = new Map<string, { readonly text: string; readonly mode?: number | undefined }>(
       Object.entries(seed).map(([path, text]) => [path, { text }]),
     );
     const directories = new Map<string, number | undefined>();

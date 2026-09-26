@@ -190,7 +190,7 @@ const withinLimit = (planned: ReadonlyArray<FilePlan>, limit: number): ReadonlyA
 
 export interface PlanOptions {
   /** Judge at most this many checks; the rest wait for a later run. */
-  readonly limit?: number;
+  readonly limit?: number | undefined;
 }
 
 export const planAudit = (
@@ -480,9 +480,10 @@ export const executeAudit = (
       const {
         lines,
         blocked,
-      }: { readonly lines: Readonly<Record<RuleId, number>>; readonly blocked?: Blocked } = isEmpty(
-        flagged,
-      )
+      }: {
+        readonly lines: Readonly<Record<RuleId, number>>;
+        readonly blocked: Blocked | undefined;
+      } = isEmpty(flagged)
         ? { lines: {}, blocked: undefined }
         : yield* jev.locate(file.lines, rulesOf(flagged)).pipe(
             Effect.map((lines) => ({ lines, blocked: undefined })),

@@ -31,8 +31,10 @@ export interface RuleEntry {
  * mixes presets with the project's own rules says where each came from. The
  * project's own rules show their `.adhere/` ids as they are.
  */
-export const shownId = (entry: { readonly id: RuleId; readonly preset?: string }): string =>
-  entry.preset === undefined ? entry.id : `${entry.preset}/${entry.id}`;
+export const shownId = (entry: {
+  readonly id: RuleId;
+  readonly preset?: string | undefined;
+}): string => (entry.preset === undefined ? entry.id : `${entry.preset}/${entry.id}`);
 
 export type RuleSet = ReadonlyArray<RuleEntry>;
 

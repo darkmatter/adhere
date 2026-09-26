@@ -10,6 +10,7 @@
     "lib": ["ESNext"],
     "types": ["bun", "node", "vitest/globals"],
     "strict": true,
+    "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
     "noUncheckedIndexedAccess": true,
     "isolatedModules": true,
