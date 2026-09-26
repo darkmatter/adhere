@@ -1,7 +1,10 @@
-import type { Config } from "../src/index.ts";
+// The executable supplies @drkmttr/adhere to a config (src/main.ts), and here
+// TypeScript resolves the name to this package's own src/index.ts. A relative
+// import instead makes the executable load src/, whose # imports it cannot
+// resolve.
+import { defineConfig } from "@drkmttr/adhere";
 
-// Type-only import: erased at runtime, so the compiled binary loads this file
-// without resolving the package (see README, "Configuration").
-export default {
+export default defineConfig({
   presets: ["effect"],
-} satisfies Config;
+  threshold: 0.9,
+});
