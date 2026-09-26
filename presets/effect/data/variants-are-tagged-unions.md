@@ -1,5 +1,5 @@
 ---
-description: Structured variants, alternatives that carry fields, must be Schema.TaggedClass members of a Schema.Union, never hand-written object types joined by a tag field. Simple alternatives without fields may be Schema.Literals.
+description: Structured variants, alternatives that carry fields, must be Schema.TaggedClass members of a Schema.Union, never hand-written object types joined by a tag field. Simple alternatives without fields may be Schema.Literals. The rule judges declared union types and schemas; an object literal with a tag field is out of scope, and so is a type that mirrors a third-party format whose tag key that format fixes, such as the type of a Slack Block Kit block.
 ---
 
 ## Must

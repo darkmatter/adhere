@@ -1,5 +1,5 @@
 ---
-description: A service that depends on other services must be a Context.Service built by a Layer that yields those services as it is constructed, never a factory function or class that takes services, clients, or their implementations as arguments.
+description: A service that depends on other services must be a Context.Service built by a Layer that yields those services as it is constructed, never a factory function or class that takes services, clients, or their implementations as arguments and returns the service's operations with them built in. A helper that takes a client and one call's arguments and returns a single Effect is not a factory and is out of scope; the code that assembles the service from such helpers is in scope.
 ---
 
 ## Must

@@ -1,5 +1,5 @@
 ---
-description: A primitive with semantic meaning, such as an id, email, URL, port, or count, must be a branded schema, never a bare string or number.
+description: A primitive with semantic meaning, such as an id, email, URL, port, or count, must be declared as a branded schema, never as a bare string or number. The rule judges where a type is declared, such as a schema field, an interface, or a type alias; a literal value, local variable, or parameter whose type is declared elsewhere is out of scope.
 ---
 
 ## Must
