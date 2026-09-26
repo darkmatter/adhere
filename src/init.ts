@@ -20,6 +20,7 @@ export interface InitOptions {
   readonly force?: boolean;
 }
 
+// adhere-ignore-file rules/import-written-files -- src/index.ts exports initProject, so a Bun text import here breaks loading the package on Node and in Vitest (checked 2026-09-26), and the compiled executable has no files beside it to read.
 const CONFIG = `import { defineConfig } from "@drkmttr/adhere";
 
 export default defineConfig({
