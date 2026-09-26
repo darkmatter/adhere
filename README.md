@@ -685,6 +685,35 @@ the first and `adhere skill fix` the second, so
 `adhere skill fix > .agents/skills/adhere-fix/SKILL.md` works without a
 checkout.
 
+### In CI
+
+Pipe the fix skill into an agent that runs without asking. The skill tells it
+that invoking the skill permits every `adhere lint` run and its cost, and
+`adhere skill fix` prints the skill of the adhere that runs, so its flags
+match:
+
+```sh
+adhere skill fix | codex exec --yolo
+adhere skill fix | claude -p --dangerously-skip-permissions
+```
+
+Both turn off the agent's own permission checks, which suits a runner thrown
+away after the job. To keep Codex in its sandbox, let the sandbox reach
+`api.typesafe.ai`:
+
+```sh
+adhere skill fix | codex exec --sandbox workspace-write \
+  -c sandbox_workspace_write.network_access=true -c approval_policy=never
+```
+
+- Set `TYPESAFE_API_KEY` from a secret.
+- End the job with `adhere lint --yes`. The agent exits 0 whatever it left,
+  so this step passes or fails the job; it judges only the files the agent
+  changed, and reads the rest from the cache.
+- Do not run it on pull requests from forks. The agent reads their code with
+  your secrets in reach and the network open, so code written to steer it can
+  send them out.
+
 ## Development
 
 From a checkout, with Bun:
