@@ -230,18 +230,20 @@ adhere lint --log-level debug 2> adhere.log
 
 ### What gets read
 
-`adhere lint` reads the `.ts` files under the working directory, except `.d.ts`
-and config files. When the working directory contains `agents/`, `apps/`, or
+`adhere lint` reads the TypeScript files under the working directory, `.ts`,
+`.tsx`, `.mts`, and `.cts`, except declaration files such as `.d.ts` and
+config files. When the working directory contains `agents/`, `apps/`, or
 `packages/`, only those trees are read. Below the working directory, anything
 under `node_modules/`, `dist/`, `coverage/`, `vendor/`, `e2e/`, `references/`,
 `.adhere/`, `.agents/`, `.claude/`, `.direnv/`, `.alchemy/`, or `.vite/` is
-skipped; the directories above it do not count. `.tsx` files are not read, and
-`.gitignore` is not consulted.
+skipped; the directories above it do not count. JavaScript files are not read,
+and `.gitignore` is not consulted.
 
-Tests are judged only by rules about tests. A test is a `.test.ts` or
-`.spec.ts` file; a fixture or test helper named as one, such as `fixtures.ts`,
-`GitHubHttpFixtures.ts`, `ledger-copy.fixture.ts`, `linear-test-helpers.ts`,
-or `test-utils.ts`; or any file under a `test/`, `tests/`, `__tests__/`,
+Tests are judged only by rules about tests. A test is a `.test` or `.spec`
+file, such as `a.test.ts` or `Button.spec.tsx`; a fixture or test helper named
+as one, such as `fixtures.ts`, `GitHubHttpFixtures.ts`,
+`ledger-copy.fixture.ts`, `linear-test-helpers.ts`, or `test-utils.ts`; or any
+file under a `test/`, `tests/`, `__tests__/`,
 `testing/`, `fixtures/`, `fixture/`, `__fixtures__/`, or `__mocks__/`
 directory, and only a rule whose front matter says `tests` judges
 one (see [Rules as Markdown files](#rules-as-markdown-files)). On alchemy, 38%

@@ -57,19 +57,25 @@ export const passesFilter = (relative: string, patterns: ReadonlyArray<string>):
  * "test" starts a word, so `latest-utils.ts` is not one.
  */
 const TEST_SUPPORT_NAME =
-  /(?:[fF]ixtures?|(?:(?:^|[-_.])[tT]est[-_]?|[a-z]Test)(?:[hH]elpers?|[uU]tils?))\.ts$/;
+  /(?:[fF]ixtures?|(?:(?:^|[-_.])[tT]est[-_]?|[a-z]Test)(?:[hH]elpers?|[uU]tils?))\.[cm]?tsx?$/;
+
+/** A TypeScript source file: `.ts`, `.tsx`, `.mts`, or `.cts`. */
+const SOURCE = /\.(?:tsx?|mts|cts)$/;
+/** A declaration file: `.d.ts`, `.d.mts`, or `.d.cts`. */
+const DECLARATION = /\.d\.[cm]?ts$/;
+/** A test by its name: `a.test.ts`, `Button.spec.tsx`. */
+const TEST_NAME = /\.(?:test|spec)\.[cm]?tsx?$/;
 
 /**
- * Whether a path, relative to the working directory, is a test: a `.test.ts`
- * or `.spec.ts` file, a fixture or test helper named as one, or any file under
- * a test directory such as `test/`.
+ * Whether a path, relative to the working directory, is a test: a `.test` or
+ * `.spec` file, such as `a.test.ts` or `Button.spec.tsx`, a fixture or test
+ * helper named as one, or any file under a test directory such as `test/`.
  */
 export const isTestFile = (relative: string): boolean => {
   const segments = relative.split(/[\\/]/);
   const name = segments.at(-1) ?? "";
   return (
-    name.endsWith(".test.ts") ||
-    name.endsWith(".spec.ts") ||
+    TEST_NAME.test(name) ||
     TEST_SUPPORT_NAME.test(name) ||
     segments.slice(0, -1).some((segment) => TEST_DIRECTORIES.has(segment))
   );
@@ -78,9 +84,9 @@ export const isTestFile = (relative: string): boolean => {
 const isInside = (file: string, root: string): boolean =>
   file === root || file.startsWith(`${root}/`);
 
-const isScannable = (file: string, self: string): boolean =>
-  file.endsWith(".ts") &&
-  !file.endsWith(".d.ts") &&
+export const isScannable = (file: string, self: string): boolean =>
+  SOURCE.test(file) &&
+  !DECLARATION.test(file) &&
   !file.endsWith("/adhere.config.ts") &&
   !file.endsWith("/.adhere.config.ts") &&
   // The audit's own detector patterns are data, not violations of themselves.

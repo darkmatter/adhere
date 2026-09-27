@@ -82,6 +82,7 @@ import {
 } from "../src/services/Jev.ts";
 import {
   isInSkippedTree,
+  isScannable,
   isTestFile,
   passesFilter,
   SourceWalker,
@@ -1090,6 +1091,25 @@ describe("comments", () => {
       "const slashes = /\\/\\//g;",
     ]);
   });
+
+  it("takes JSX comments out, and keeps a URL in JSX text", () => {
+    const lines = [
+      "return (",
+      "  <div>",
+      "    {/* the docs */}",
+      '    <a href="https://example.com">https://example.com/docs</a>',
+      "  </div>",
+      ");",
+    ];
+    expect(withoutComments(lines)).toEqual([
+      "return (",
+      "  <div>",
+      "    {}",
+      '    <a href="https://example.com">https://example.com/docs</a>',
+      "  </div>",
+      ");",
+    ]);
+  });
 });
 
 describe("source walker", () => {
@@ -1112,9 +1132,21 @@ describe("source walker", () => {
     expect(isInSkippedTree(".adhere/config.ts")).toBe(true);
   });
 
+  it("reads .ts, .tsx, .mts, and .cts files, but not declaration files or JavaScript", () => {
+    for (const name of ["a.ts", "Button.tsx", "a.mts", "a.cts"]) {
+      expect(isScannable(`/repo/src/${name}`, "/adhere")).toBe(true);
+    }
+    for (const name of ["a.d.ts", "a.d.mts", "a.d.cts", "a.js", "a.jsx", "a.mjs"]) {
+      expect(isScannable(`/repo/src/${name}`, "/adhere")).toBe(false);
+    }
+  });
+
   it("counts .test.ts and .spec.ts files, and files under a test directory, as tests", () => {
     expect(isTestFile("src/a.test.ts")).toBe(true);
     expect(isTestFile("src/a.spec.ts")).toBe(true);
+    expect(isTestFile("src/Button.test.tsx")).toBe(true);
+    expect(isTestFile("src/a.spec.mts")).toBe(true);
+    expect(isTestFile("src/test-utils.tsx")).toBe(true);
     expect(isTestFile("packages/api/test/helpers/layer.ts")).toBe(true);
     expect(isTestFile("src/__tests__/a.ts")).toBe(true);
     expect(isTestFile("fixtures/worker.ts")).toBe(true);

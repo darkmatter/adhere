@@ -94,9 +94,10 @@ Rules for the rule:
 - Jev reads code without its comments, except comments that say `@adhere`. A
   rule about comments, such as doc comments on exports, needs
   `includeComments: true` in the config.
-- Rules skip tests: `.test.ts` and `.spec.ts` files, and files under `test/`,
-  `tests/`, `__tests__/`, or `fixtures/`. A rule about tests says `tests: only`
-  in its front matter, and one that holds in tests as well `tests: include`.
+- Rules skip tests: `.test` and `.spec` files, such as `a.test.ts` and
+  `Button.spec.tsx`, and files under `test/`, `tests/`, `__tests__/`, or
+  `fixtures/`. A rule about tests says `tests: only` in its front matter, and
+  one that holds in tests as well `tests: include`.
 - A nit, or a rule that tends to flag code wrongly, says `level: warning` in
   its front matter: its findings show in amber and do not fail CI.
 - `threshold` is optional. Start without it; set it in step 5 if needed.

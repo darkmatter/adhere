@@ -186,7 +186,7 @@ export const SKIPPED_DIRECTORIES: ReadonlySet<string> = new Set([
 /**
  * Directories whose files are tests, matched as whole path segments below the
  * working directory, as skipped directories are. Only a rule that says `tests`
- * judges them, or a `.test.ts` or `.spec.ts` file anywhere.
+ * judges them, or a `.test` or `.spec` file, such as `a.test.tsx`, anywhere.
  */
 export const TEST_DIRECTORIES: ReadonlySet<string> = new Set([
   "test",

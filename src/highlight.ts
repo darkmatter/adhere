@@ -30,6 +30,8 @@ const CLASSES = ["comment", "string", "constant"] as const;
 /** One group per token class, tried in order at each position. A template literal is read apart. */
 const TOKEN = new RegExp(
   [
+    // A URL outside a string is JSX text, as in `<a>https://example.com</a>`, and its `//` no comment.
+    /(?<url>[a-z][\w+.-]*:\/\/[^\s<>{}"'`]*)/,
     /(?<comment>\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$))/,
     /(?<string>"(?:[^"\\\n]|\\.)*"?|'(?:[^'\\\n]|\\.)*'?)/,
     /(?<constant>0[box][\da-f_]+n?|\d[\d_]*(?:\.\d[\d_]*)?(?:e[+-]?\d+)?n?)/,
