@@ -148,14 +148,14 @@ describe("cli", () => {
     expect(await plan("--preset", "effect", "--preset", "alchemy")).toBe(both);
     expect(await plan("--preset", "alchemy, effect")).toBe(both);
 
-    const refused = await execFileAsync("bun", [main, "lint", "--preset", "effect,react"], {
+    const refused = await execFileAsync("bun", [main, "lint", "--preset", "effect,vue"], {
       cwd: root,
     }).then(
       () => undefined,
       (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) => error,
     );
     expect(refused?.code).toBe(1);
-    expect(`${refused?.stdout}${refused?.stderr}`).toContain("(not react)");
+    expect(`${refused?.stdout}${refused?.stderr}`).toContain("(not vue)");
   });
 
   it("turns a preset rule off by its id, takes a rule of a preset the run leaves out, and refuses one no rule has", async () => {

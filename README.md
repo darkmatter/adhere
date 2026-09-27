@@ -24,7 +24,7 @@ linter could check each of your rules, and [`adhere validate`](#validate) lists
 rules that it thinks belong in a regular linter, and also detects any
 contradictions in your rules.
 
-Presets for TypeScript, Effect, and alchemy are included, and run without setup:
+Presets for TypeScript, React, Effect, and alchemy are included, and run without setup:
 
 ```sh
 TYPESAFE_API_KEY=xxx npx @drkmttr/adhere lint --preset typescript
@@ -531,7 +531,7 @@ A preset has the shape of a config without `presets`: `rules`, and optionally
 command line with `--preset`, repeated or separated by commas, as in
 `--preset effect,alchemy`, in which case the config file is optional. Presets
 named in both places apply together. Reports name a preset's rule with the
-preset first, as in `alchemy/secrets/…`. There are three:
+preset first, as in `alchemy/secrets/…`. There are four:
 
 - `typescript`: 17 rules in [`presets/typescript/`](./presets/typescript/) for
   any TypeScript project, drawn from the TypeScript Handbook, the Google
@@ -540,6 +540,14 @@ preset first, as in `alchemy/secrets/…`. There are three:
   resources released on every path, no work at import, arguments not mutated,
   secrets kept out of logs and responses, injection, and tests that assert
   outcomes and stand alone.
+- `react`: 10 rules in [`presets/react/`](./presets/react/) for components
+  and hooks, lifted from react.dev, mostly
+  [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)
+  and [Choosing the State Structure](https://react.dev/learn/choosing-the-state-structure):
+  logic for an event in its handler rather than an effect, effects that clean
+  up and ignore stale fetches, `useSyncExternalStore` for outside stores, state
+  that neither copies props nor contradicts itself, and Server Functions and
+  Server Components that guard what crosses to the client.
 
 - `effect`: Markdown rules in [`presets/effect/`](./presets/effect/), lifted
   from the [effect-solutions](https://github.com/kitlangton/effect-solutions)
@@ -639,6 +647,18 @@ alchemy: `async/network-calls-have-timeouts` repeats
 repeats `alchemy/data/parameterized-sql`, and `security/no-secrets-in-output`
 repeats `alchemy/secrets/never-logged-returned-or-output`. With both presets,
 turn one of each off in `overrides`.
+
+`react` leaves out what the React Compiler's lint rules check, in
+[eslint-plugin-react-hooks](https://react.dev/reference/eslint-plugin-react-hooks)'s
+recommended set and in Oxlint: pure render (`purity`), props and state never
+mutated (`immutability`), refs not read during render (`refs`), no `setState`
+in render or synchronously in an effect (`set-state-in-render`,
+`set-state-in-effect`), which covers state derived in an effect, and no
+component defined inside another (`static-components`). Its rules judge `.ts`
+files as well as `.tsx`, and apply only to components, hooks, effects, and
+Server Functions, so other files cost their checks and find nothing.
+`server/no-private-data-to-client` reports warnings: a file does not show
+whether the component it passes a record to is a Client Component.
 
 ### Precedence
 

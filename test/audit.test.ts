@@ -536,7 +536,7 @@ describe("config", () => {
   });
 
   it("refuses an unknown preset", async () => {
-    const refused = await Effect.runPromise(Effect.flip(decodeConfig({ presets: ["react"] })));
+    const refused = await Effect.runPromise(Effect.flip(decodeConfig({ presets: ["vue"] })));
     expect(refused._tag).toBe("ConfigUnavailable");
     expect(refused.message).toContain("effect");
   });
