@@ -1,14 +1,22 @@
 <div align="center">
 <h1>adhere</h1>
+  <sup>A linter for non-deterministic rules. Powered by Typesafe</sup>
 </div>
 
-A linter for rules a normal linter cannot check. A rule is a one-sentence
-description in RFC 2119's words, like "business logic must live in services",
-with code that must be written that way, code that must never be, or both. For
-each source file, adhere asks [Jev](https://typesafe.ai) (TypeSafe AI's System One
+A linter for rules a normal linter cannot check. Describe rules using RFC2119
+language, like "business logic MUST live in services", or "A 3rd-party API going down
+SHOULD NOT also take us down". A rule also includes good example, a bad example, or 
+both (which is highly recommended according to [our studies](eval/studies/example-count.md). 
+
+For each source file, adhere asks [Jev](https://typesafe.ai) (TypeSafe AI's System One
 model) whether the file breaks each rule, gets a calibrated probability per
 rule, and reports the ones above a threshold with the line Jev points at. The
 report uses the same frame as `vp lint`.
+
+Here's a demo of what the output looks like:
+
+<a href="https://asciinema.org/a/1266511" target="_blank"><img width="400" src="https://asciinema.org/a/1266511.svg" /></a>
+
 
 Rules a normal linter can check exactly, such as a banned import or a type
 error, belong in that linter. While it lints, adhere asks Jev whether a normal
@@ -109,10 +117,6 @@ adhere skill                   # print the agent skill (below)
 Bare `adhere` prints the help, which lists the commands, and
 `adhere <command> --help` lists a command's flags. `adhere --completions <shell>`
 prints a completion script.
-
-### Demo
-
-<a href="https://asciinema.org/a/1266511" target="_blank"><img width="400" src="https://asciinema.org/a/1266511.svg" /></a>
 
 ### Before and during a run
 
