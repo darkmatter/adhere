@@ -5,8 +5,8 @@
 
 A linter for rules a normal linter cannot check. Describe rules using RFC2119
 language, like "business logic MUST live in services", or "A 3rd-party API going down
-SHOULD NOT also take us down". A rule also includes good example, a bad example, or 
-both (which is highly recommended according to [our studies](eval/studies/example-count.md). 
+SHOULD NOT also take us down". A rule also includes a good example, a bad example, or 
+both (which is highly recommended according to [our studies](eval/studies/example-count.md).) 
 
 For each source file, adhere asks [Jev](https://typesafe.ai) (TypeSafe AI's System One
 model) whether the file breaks each rule, gets a calibrated probability per
