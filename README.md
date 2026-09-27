@@ -24,7 +24,7 @@ linter could check each of your rules, and [`adhere validate`](#validate) lists
 rules that it thinks belong in a regular linter, and also detects any
 contradictions in your rules.
 
-Presets for TypeScript, React, Effect, and alchemy are included, and run without setup:
+Presets for TypeScript, React, security, Effect, and alchemy are included, and run without setup:
 
 ```sh
 TYPESAFE_API_KEY=xxx npx @drkmttr/adhere lint --preset typescript
@@ -531,15 +531,14 @@ A preset has the shape of a config without `presets`: `rules`, and optionally
 command line with `--preset`, repeated or separated by commas, as in
 `--preset effect,alchemy`, in which case the config file is optional. Presets
 named in both places apply together. Reports name a preset's rule with the
-preset first, as in `alchemy/secrets/…`. There are four:
+preset first, as in `alchemy/secrets/…`. There are five:
 
-- `typescript`: 17 rules in [`presets/typescript/`](./presets/typescript/) for
-  any TypeScript project, drawn from the TypeScript Handbook, the Google
-  TypeScript Style Guide, and OWASP's cheat sheets: data from outside checked
-  at runtime, invalid states unrepresentable, errors never swallowed,
-  resources released on every path, no work at import, arguments not mutated,
-  secrets kept out of logs and responses, injection, and tests that assert
-  outcomes and stand alone.
+- `typescript`: 13 rules in [`presets/typescript/`](./presets/typescript/) for
+  any TypeScript project, drawn from the TypeScript Handbook and the Google
+  TypeScript Style Guide: data from outside checked at runtime, invalid states
+  unrepresentable, errors never swallowed, resources released on every path,
+  no work at import, arguments not mutated, and tests that assert outcomes and
+  stand alone.
 - `react`: 10 rules in [`presets/react/`](./presets/react/) for components
   and hooks, lifted from react.dev, mostly
   [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)
@@ -548,7 +547,10 @@ preset first, as in `alchemy/secrets/…`. There are four:
   up and ignore stale fetches, `useSyncExternalStore` for outside stores, state
   that neither copies props nor contradicts itself, and Server Functions and
   Server Components that guard what crosses to the client.
-
+- `security`: 4 rules in [`presets/security/`](./presets/security/), drawn
+  from OWASP's cheat sheets: secrets kept out of logs, error messages, and
+  responses; parameterized SQL; no untrusted input in shell commands, `eval`,
+  or file paths; and secrets compared in constant time. It has no topics.
 - `effect`: Markdown rules in [`presets/effect/`](./presets/effect/), lifted
   from the [effect-solutions](https://github.com/kitlangton/effect-solutions)
   docs and the
@@ -642,13 +644,13 @@ they are advice that code often has reason to set aside: assertions that
 claim only what the code established, types derived rather than restated,
 and independent awaits run concurrently.
 
-Where another preset had a rule `typescript` has, `typescript`'s is kept and
-the other is gone: `async/network-calls-have-timeouts` replaced effect's
-`basics/external-calls-are-resilient`, `security/parameterized-queries`
-replaced alchemy's `data/parameterized-sql`, and
-`security/no-secrets-in-output` replaced alchemy's
-`secrets/never-logged-returned-or-output`. A project on Effect or alchemy
-names `typescript` too, for those rules.
+Where effect or alchemy had a rule that `typescript` or `security` has, that
+one is kept and the other is gone: typescript's
+`async/network-calls-have-timeouts` replaced effect's
+`basics/external-calls-are-resilient`, and `security/parameterized-queries`
+and `security/no-secrets-in-output` replaced alchemy's
+`data/parameterized-sql` and `secrets/never-logged-returned-or-output`. A
+project on Effect or alchemy names those presets too, for those rules.
 
 `react` leaves out what the React Compiler's lint rules check, in
 [eslint-plugin-react-hooks](https://react.dev/reference/eslint-plugin-react-hooks)'s

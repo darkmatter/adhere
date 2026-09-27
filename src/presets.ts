@@ -23,8 +23,9 @@ const presetsRoot = isStandaloneExecutable
 const topics = {
   effect: ["basics", "config", "data", "errors", "services", "testing"],
   alchemy: ["apis", "data", "durable", "providers", "resources", "runtime", "secrets", "security"],
-  typescript: ["async", "design", "errors", "security", "testing", "types"],
+  typescript: ["async", "design", "errors", "testing", "types"],
   react: ["effects", "server", "state"],
+  security: [],
 } as const;
 
 type Topics = typeof topics;
@@ -61,6 +62,7 @@ export const presets: Readonly<Record<WholePreset, BuiltInPreset>> = {
   alchemy: presetOf("alchemy"),
   typescript: presetOf("typescript"),
   react: presetOf("react"),
+  security: presetOf("security"),
 };
 
 /** The directory each whole preset reads, for checking `topics` against it. */
