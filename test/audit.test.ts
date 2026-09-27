@@ -283,6 +283,28 @@ describe("request bodies", () => {
     });
   });
 
+  it("judge: each matcher rides in its own noul beside its rule, about the code that breaks it", () => {
+    const scoped = { ...a, appliesTo: ["a port"], excludeIf: ["a port a third party fixes"] };
+    const { questions } = judgeBody("jev-latest", code, { a: scoped });
+
+    expect(Object.keys(questions)).toEqual(["a", "appliesTo:a:0", "excludeIf:a:0"]);
+    expect(questions["appliesTo:a:0"]).toMatchObject({
+      type: "noul",
+      instructions: {
+        question: expect.stringContaining("Is any of the code in `code` that breaks `rule`"),
+        rule: a.description,
+        must: a.must,
+        matcher: "a port",
+      },
+    });
+    expect(questions["excludeIf:a:0"]).toMatchObject({
+      instructions: {
+        question: expect.stringContaining("Is all of the code in `code` that breaks `rule`"),
+        matcher: "a port a third party fixes",
+      },
+    });
+  });
+
   it("locate: one choice per rule, carrying the rule, with a criterion per non-blank line", () => {
     expect(locateBody("jev-latest", code, { a })).toEqual({
       model: "jev-latest",
@@ -714,6 +736,28 @@ describe("markdown rules", () => {
     const refused = await Effect.runPromise(
       Effect.flip(
         parseRuleMarkdown("---\ndescription: d\ntests: always\n---\na()\n", "rules/a.md"),
+      ),
+    );
+    expect(refused.message).toContain("rules/a.md");
+  });
+
+  it("front matter's appliesTo and excludeIf are JSON arrays of strings", async () => {
+    expect(
+      await parse(
+        '---\ndescription: d\nappliesTo: ["a declared union"]\nexcludeIf: ["a Slack block", "a row"]\n---\na()\n',
+      ),
+    ).toEqual({
+      description: "d",
+      appliesTo: ["a declared union"],
+      excludeIf: ["a Slack block", "a row"],
+      must: "a()",
+    });
+    const refused = await Effect.runPromise(
+      Effect.flip(
+        parseRuleMarkdown(
+          "---\ndescription: d\nexcludeIf: a Slack block\n---\na()\n",
+          "rules/a.md",
+        ),
       ),
     );
     expect(refused.message).toContain("rules/a.md");
@@ -1620,6 +1664,48 @@ describe("plan", () => {
       { requests: 2, findings: 1 },
     ]);
     expect(result.findings).toEqual([findingA]);
+  });
+
+  it("drops a finding its matchers put out of scope, and keeps their scores in the cache", async () => {
+    const cache = memoryCache();
+    const scoped: Rules = {
+      a: { ...a, excludeIf: ["a port a third party fixes"] },
+      b: { ...b, appliesTo: ["a secret read from config"] },
+    };
+    const located: Array<ReadonlyArray<string>> = [];
+    const judging = Layer.succeed(Jev, {
+      judge: () =>
+        Effect.succeed({
+          probabilities: { a: 0.9, b: 0.9 },
+          linter: {},
+          matchers: {
+            a: { appliesTo: [], excludeIf: [0.8] },
+            b: { appliesTo: [0.7], excludeIf: [] },
+          },
+        }),
+      locate: (_lines, asked) =>
+        Effect.sync(() => {
+          located.push(Object.keys(asked));
+          return Record.map(asked, () => 2);
+        }),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+
+    const first = await audit({ rules: scoped, jev: judging, cache });
+    // a breaks its rule, but only in code its excludeIf describes, so it is not even located.
+    expect(first.findings.map((finding) => finding.rule)).toEqual(["b"]);
+    expect(located).toEqual([["b"]]);
+
+    // A rerun reads the matchers' scores from the cache, and asks Jev nothing.
+    const cachedOnly = Layer.succeed(Jev, {
+      judge: () => Effect.die("every check is cached"),
+      locate: () => Effect.die("every finding is located"),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const second = await audit({ rules: scoped, jev: cachedOnly, cache });
+    expect(second.findings).toEqual(first.findings);
   });
 
   it("names the file a refusal stopped at, and that a rerun continues", async () => {
@@ -2904,6 +2990,22 @@ describe("jev over http", () => {
       success: { probabilities: { a: 0.25 }, linter: {} },
     });
     expect(authorizations).toEqual(["Bearer tsk_saved"]);
+  });
+
+  it("asks each matcher beside its rule, in one request, and reads its score back", async () => {
+    const scoped = { ...a, appliesTo: ["a port"], excludeIf: ["a test port", "a fixed port"] };
+    const { asked, judged } = judge(Effect.succeed(Redacted.make("tsk_saved")), {
+      a: scoped,
+      b,
+    });
+    expect(await judged).toMatchObject({
+      _tag: "Success",
+      success: {
+        probabilities: { a: 0.25, b: 0.25 },
+        matchers: { a: { appliesTo: [0.25], excludeIf: [0.25, 0.25] } },
+      },
+    });
+    expect(asked).toEqual([["a", "b", "appliesTo:a:0", "excludeIf:a:0", "excludeIf:a:1"]]);
   });
 
   it("refuses an answer outside 2xx with its status and what Jev said about it", async () => {

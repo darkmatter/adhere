@@ -32,12 +32,18 @@ import { Effect, Schema } from "effect";
  * so is `tests`: `only` for a rule about test files, which rules otherwise
  * skip, and `include` for a rule that judges them too. So is `level`:
  * `warning` reports the rule's findings as warnings, which do not fail a run.
+ * `appliesTo` and `excludeIf`, the rule's scope, are JSON arrays of strings on
+ * one line, as in `excludeIf: ["a type that mirrors a third-party format"]`.
  */
+const Matchers = Schema.fromJsonString(Schema.Array(Schema.String));
+
 const FrontMatter = Schema.Struct({
   description: Schema.String,
   threshold: Schema.optionalKey(Schema.FiniteFromString),
   tests: Schema.optionalKey(Schema.Literals(["only", "include"])),
   level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
+  appliesTo: Schema.optionalKey(Matchers),
+  excludeIf: Schema.optionalKey(Matchers),
 });
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;

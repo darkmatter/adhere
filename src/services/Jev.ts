@@ -24,12 +24,20 @@ export class JevBlocked extends Schema.TaggedError<JevBlocked>()("JevBlocked", {
   ray: Schema.String,
 }) {}
 
+/** Jev's probability for each of a rule's matchers, in the order the rule lists them. */
+export interface MatcherScores {
+  readonly appliesTo: ReadonlyArray<number>;
+  readonly excludeIf: ReadonlyArray<number>;
+}
+
 /** What judging a file answers: per rule, whether it breaks it, and the linter check's answers. */
 export interface Judged {
   /** Per rule, Jev's probability that the file breaks it. */
   readonly probabilities: Readonly<Record<RuleId, number>>;
   /** Per sampled rule, Jev's probability that a regular linter could have decided the file against it. */
   readonly linter: Readonly<Record<RuleId, number>>;
+  /** Per rule with `appliesTo` or `excludeIf`, the scores of its matchers. */
+  readonly matchers?: Readonly<Record<RuleId, MatcherScores>>;
 }
 
 export class Jev extends Context.Service<
@@ -232,11 +240,56 @@ export const linterQuestion = (rule: Rule) => {
 /** The key a rule's linter question rides under, beside its judge question. */
 export const linterKey = (id: RuleId): string => `linter:${id}`;
 
+type MatcherKind = keyof MatcherScores;
+
+/**
+ * A matcher's question: whether the code that breaks the rule is as the
+ * matcher describes. It asks about that code rather than the file, so a file
+ * with a real violation beside code a matcher excludes keeps its finding: for
+ * `appliesTo`, whether any of that code is as described, and for `excludeIf`,
+ * whether all of it is. It carries the rule as the judge question does.
+ */
+export const matcherQuestion = (rule: Rule, kind: MatcherKind, matcher: string) => {
+  const { instructions } = judgeQuestion(rule);
+  const [quantity, yes, no] =
+    kind === "appliesTo" ? ["any", "Some", "None"] : ["all", "All", "Not all"];
+  return {
+    type: "noul" as const,
+    instructions: {
+      ...instructions,
+      question: `Is ${quantity} of the code in \`code\` that breaks \`rule\` as \`matcher\` describes? Answer no if no code in \`code\` breaks \`rule\`.`,
+      matcher,
+    },
+    criteria: {
+      true: `${yes} of the code in \`code\` that breaks \`rule\` is as \`matcher\` describes`,
+      false: `${no} of the code in \`code\` that breaks \`rule\` is as \`matcher\` describes, or no code in \`code\` breaks \`rule\``,
+    },
+  };
+};
+
+/** The key a rule's matcher question rides under, beside its judge question. */
+export const matcherKey = (kind: MatcherKind, id: RuleId, index: number): string =>
+  `${kind}:${id}:${index}`;
+
+const MATCHER_KINDS: ReadonlyArray<MatcherKind> = ["appliesTo", "excludeIf"];
+
+/** A rule's matcher questions under their keys, `appliesTo` first, each in the rule's order. */
+export const matcherQuestions = (id: RuleId, rule: Rule) =>
+  MATCHER_KINDS.flatMap((kind) =>
+    (rule[kind] ?? []).map(
+      (matcher, index) =>
+        [matcherKey(kind, id, index), matcherQuestion(rule, kind, matcher)] as const,
+    ),
+  );
+
 /** The tokens a file's code leaves in Jev's context for any one question beside it, as `fits` counts them. */
 export const questionRoom = (lines: Lines): number =>
   QUESTION_CONTEXT - WRAPPER - tokensOf(stateOf(lines));
 
-/** One question per rule, and the linter question beside each rule in `sampled`. */
+/**
+ * One question per rule, one per matcher of each rule, and the linter
+ * question beside each rule in `sampled`.
+ */
 export const judgeBody = (
   model: string,
   lines: Lines,
@@ -247,6 +300,9 @@ export const judgeBody = (
   state: stateOf(lines),
   questions: {
     ...Record.map(rules, (rule): ReturnType<typeof judgeQuestion> => judgeQuestion(rule)),
+    ...Object.fromEntries(
+      Object.entries(rules).flatMap(([id, rule]) => matcherQuestions(id, rule)),
+    ),
     ...Object.fromEntries(
       sampled.flatMap((id) => {
         const rule = rules[id];

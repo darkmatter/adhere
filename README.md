@@ -478,6 +478,33 @@ export default defineConfig({ presets: ["effect"], rules: "./docs/adhere" });
 
 Rules read through `rules` apply project-wide.
 
+### Scoping a rule
+
+A rule can say where it applies, apart from what it asks for, with
+`appliesTo` and `excludeIf`: each a list of descriptions of code, written in
+front matter as a JSON array on one line, or as an array inline in a config.
+
+```md
+---
+description: Structured variants must be Schema.TaggedClass members of a Schema.Union, never hand-written object types joined by a tag field.
+appliesTo: ["a declared union type or schema"]
+excludeIf: ["a type that mirrors a third-party format whose tag key that format fixes, such as a Slack Block Kit block"]
+---
+```
+
+Each goes to Jev as a question of its own, in the same request as the rule,
+about the code that breaks the rule rather than the whole file: for
+`appliesTo`, whether any of that code is as described, and for `excludeIf`,
+whether all of it is. A finding stands only when Jev says yes, above 0.5, to
+every `appliesTo` and to no `excludeIf`, so a file with a real violation
+beside code an `excludeIf` describes keeps its finding. The scores are cached
+with the rule's judgment, and editing a matcher judges the rule again, as
+editing its description does. At `--log-level debug`, lint logs each finding
+its matchers dropped, with their scores.
+
+Keeping the scope out of the description keeps the description to what the
+rule asks for, which the report shows, and gives each part a score of its own.
+
 ### Rule writing tips
 
 We've evaluated different ways of giving Jev a rule, to catch the most

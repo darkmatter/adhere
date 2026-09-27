@@ -16,6 +16,8 @@ import {
   type Lines,
   linterKey,
   locateBody,
+  matcherKey,
+  type MatcherScores,
   namedPairs,
   needsBlocks,
   type Pair,
@@ -219,9 +221,31 @@ export const JevLive = Layer.effect(Jev)(
             return answer === undefined ? [] : [[id, answer.noul] as const];
           }),
         );
+      // A matcher Jev left unanswered counts as a no.
+      const scored = (
+        kind: keyof MatcherScores,
+        id: RuleId,
+        matchers: ReadonlyArray<string> = [],
+      ) => matchers.map((_, index) => answers[matcherKey(kind, id, index)]?.noul ?? 0);
+      const matchers: Record<RuleId, MatcherScores> = Record.fromEntries(
+        Object.entries(rules).flatMap(([id, rule]) =>
+          rule.appliesTo === undefined && rule.excludeIf === undefined
+            ? []
+            : [
+                [
+                  id,
+                  {
+                    appliesTo: scored("appliesTo", id, rule.appliesTo),
+                    excludeIf: scored("excludeIf", id, rule.excludeIf),
+                  },
+                ] as const,
+              ],
+        ),
+      );
       return {
         probabilities: answered(Object.keys(rules), (id) => id),
         linter: answered(sampled, linterKey),
+        ...(Record.isEmptyRecord(matchers) ? {} : { matchers }),
       } satisfies Judged;
     });
 

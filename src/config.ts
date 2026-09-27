@@ -28,6 +28,17 @@ const RuleFields = Schema.Struct({
    * findings, which does not.
    */
   level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
+  /**
+   * Where the rule applies, each a description of code that breaks it: Jev is
+   * asked of each whether any code that breaks the rule is as it describes,
+   * and a finding stands only when it says yes to every one.
+   */
+  appliesTo: Schema.optionalKey(Schema.Array(Schema.String)),
+  /**
+   * Where the rule does not apply: Jev is asked of each whether all the code
+   * that breaks the rule is as it describes, and a yes to any drops the finding.
+   */
+  excludeIf: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
 /** Before 0.7, a rule's examples were `reference` and `avoid`: read as `must` and `never`. */

@@ -1,11 +1,18 @@
 import { CACHE_DIRECTORY } from "#config.ts";
 import { Context, Crypto, Effect, FileSystem, Layer, Option, Path, Record, Schema } from "effect";
 
+/** Jev's probability for each of a rule's `appliesTo` and `excludeIf` matchers, when it has them. */
+const MatcherFields = {
+  appliesTo: Schema.optionalKey(Schema.Array(Schema.Finite)),
+  excludeIf: Schema.optionalKey(Schema.Array(Schema.Finite)),
+};
+
 /** A rule's judgment as a run holds it: Jev's answer, with the fingerprint of the rule's text. */
 export const Judgment = Schema.Struct({
   fingerprint: Schema.String,
   probability: Schema.Finite,
   line: Schema.optionalKey(Schema.Finite),
+  ...MatcherFields,
 });
 export interface Judgment extends Schema.Schema.Type<typeof Judgment> {}
 
@@ -21,10 +28,14 @@ export const CacheEntry = Schema.Struct({
 });
 export interface CacheEntry extends Schema.Schema.Type<typeof CacheEntry> {}
 
-/** Jev's answer about some code for one rule text: the probability, and the line once located. */
+/**
+ * Jev's answer about some code for one rule text: the probability, the line
+ * once located, and its matchers' scores.
+ */
 export const Answer = Schema.Struct({
   probability: Schema.Finite,
   line: Schema.optionalKey(Schema.Finite),
+  ...MatcherFields,
 });
 export interface Answer extends Schema.Schema.Type<typeof Answer> {}
 

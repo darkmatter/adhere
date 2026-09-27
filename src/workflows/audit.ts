@@ -14,6 +14,7 @@ import {
   judgeRequests,
   linterQuestion,
   locateRequests,
+  matcherQuestions,
   questionRoom,
   tokensOf,
 } from "#services/Jev.ts";
@@ -91,12 +92,37 @@ const fileResult = (
 const isEmpty = Record.isEmptyReadonlyRecord;
 
 /**
- * What a judgment depends on besides the file: the model, and the question
- * asked for the rule, which carries the rule. An edited rule re-judges
- * itself, and a question asked differently re-judges every rule.
+ * What a judgment depends on besides the file: the model, and the questions
+ * asked for the rule, which carry the rule: its judge question, and its
+ * matchers' when it has any. An edited rule or matcher re-judges the rule,
+ * and a question asked differently re-judges every rule.
  */
-const fingerprintOf = (model: string, rule: Rule) =>
-  sha256(`${model}\u0000${JSON.stringify(judgeQuestion(rule))}`);
+const fingerprintOf = (model: string, rule: Rule) => {
+  const matchers = matcherQuestions("", rule).map(([, question]) => question);
+  const scope = matchers.length === 0 ? "" : `\u0000${JSON.stringify(matchers)}`;
+  return sha256(`${model}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}`);
+};
+
+/** A matcher's score counts as a yes above this. */
+const MATCHER_THRESHOLD = 0.5;
+
+/** Whether a judgment's matchers let it stand: a yes to every `appliesTo`, and to no `excludeIf`. */
+const inScope = (judgment: Judgment): boolean =>
+  (judgment.appliesTo ?? []).every((score) => score > MATCHER_THRESHOLD) &&
+  !(judgment.excludeIf ?? []).some((score) => score > MATCHER_THRESHOLD);
+
+/** The matchers that dropped a judgment, with their scores, as the debug log names them. */
+const scopeMisses = (rule: Rule, judgment: Judgment): string =>
+  [
+    ...(rule.appliesTo ?? []).flatMap((matcher, index) => {
+      const score = judgment.appliesTo?.[index] ?? 0;
+      return score > MATCHER_THRESHOLD ? [] : [`appliesTo "${matcher}" (${score.toFixed(2)})`];
+    }),
+    ...(rule.excludeIf ?? []).flatMap((matcher, index) => {
+      const score = judgment.excludeIf?.[index] ?? 0;
+      return score > MATCHER_THRESHOLD ? [`excludeIf "${matcher}" (${score.toFixed(2)})`] : [];
+    }),
+  ].join(", ");
 
 /** One file before anything is sent: its rules, and which of them the cache answers. */
 export interface FilePlan {
@@ -457,14 +483,25 @@ export const executeAudit = (
       deferred,
       sampled,
     }: FilePlan) {
-      const { probabilities, linter }: Judged = isEmpty(pending)
+      const { probabilities, linter, matchers }: Judged = isEmpty(pending)
         ? { probabilities: {}, linter: {} }
         : yield* jev.judge(file.lines, rulesOf(pending), Object.keys(sampled)).pipe(inFile(file));
       if (!isEmpty(linter)) yield* record(file.path, sampled, linter);
       const judged: Record<RuleId, Judgment> = { ...kept };
       for (const [id, probability] of Object.entries(probabilities)) {
         const k = pending[id];
-        if (k !== undefined) judged[id] = { fingerprint: k.fingerprint, probability };
+        if (k !== undefined) {
+          judged[id] = { fingerprint: k.fingerprint, probability, ...matchers?.[id] };
+        }
+      }
+      // Above its threshold, but its matchers put the code out of the rule's scope.
+      for (const [id, judgment] of Object.entries(judged)) {
+        const k = prepared[id];
+        if (k !== undefined && judgment.probability > k.threshold && !inScope(judgment)) {
+          yield* Effect.logDebug(
+            `${file.path}: ${id} (${judgment.probability.toFixed(2)}) dropped by ${scopeMisses(k.rule, judgment)}`,
+          );
+        }
       }
 
       const flagged = Record.filter(prepared, (k, id) => {
@@ -472,6 +509,7 @@ export const executeAudit = (
         return (
           judgment !== undefined &&
           judgment.probability > k.threshold &&
+          inScope(judgment) &&
           judgment.line === undefined
         );
       });
@@ -505,7 +543,8 @@ export const executeAudit = (
           const k = prepared[id];
           return k !== undefined &&
             judgment.line !== undefined &&
-            judgment.probability > k.threshold
+            judgment.probability > k.threshold &&
+            inScope(judgment)
             ? [
                 {
                   rule: id,
