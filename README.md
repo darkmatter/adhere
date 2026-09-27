@@ -81,7 +81,7 @@ Found 1 error.
 
 The header is the rule id, Jev's probability, and the rule's description. A
 preset's rule has the preset's name first, as in
-`effect/basics/external-calls-are-resilient`, so a report that mixes presets
+`effect/basics/gen-for-sequencing`, so a report that mixes presets
 with a repo's own rules says where each came from.
 Under it is the line Jev points at, underlined, with the code around it: the
 largest statement around the line that is 30 lines or fewer, usually the whole
@@ -553,7 +553,7 @@ preset first, as in `alchemy/secrets/…`. There are four:
   from the [effect-solutions](https://github.com/kitlangton/effect-solutions)
   docs and the
   [effect/platform](https://effect.website/docs/platform/introduction/) docs.
-- `alchemy`: 43 rules in [`presets/alchemy/`](./presets/alchemy/) for code that
+- `alchemy`: 41 rules in [`presets/alchemy/`](./presets/alchemy/) for code that
   deploys with [alchemy](https://alchemy.run), lifted from its docs and blog:
   where Config and bindings are read, which resources keep their data, how
   secrets stay out of bundles and logs, authorization on public URLs,
@@ -592,10 +592,9 @@ file does not show, so the rule also flags deletes of APIs that succeed
 anyway; see [the study](eval/studies/idempotent-delete.md).
 
 A preset rule says "must" only where its source makes a requirement, and
-"should" where the source gives advice. In `effect`, three rules are
-guidelines: network calls carry a timeout and a retry schedule, unless their
-client already applies both; test layers are in memory, outside integration
-tests; and tests provide config through a layer. Config validation accepts
+"should" where the source gives advice. In `effect`, two rules are
+guidelines: test layers are in memory, outside integration tests, and tests
+provide config through a layer. Config validation accepts
 `Config.mapOrFail` as well as `Config.schema`, and the variants rule does not
 rule out a `switch`. The rule that a command handler only parses input is
 gone: the docs show that pattern but do not ask for it.
@@ -641,12 +640,15 @@ unhandled promises (`no-floating-promises`), throwing non-errors
 empty catch blocks (`no-empty`). Three of its rules report warnings, since
 they are advice that code often has reason to set aside: assertions that
 claim only what the code established, types derived rather than restated,
-and independent awaits run concurrently. Three of its rules repeat others' for a project on Effect or
-alchemy: `async/network-calls-have-timeouts` repeats
-`effect/basics/external-calls-are-resilient`, `security/parameterized-queries`
-repeats `alchemy/data/parameterized-sql`, and `security/no-secrets-in-output`
-repeats `alchemy/secrets/never-logged-returned-or-output`. With both presets,
-turn one of each off in `overrides`.
+and independent awaits run concurrently.
+
+Where another preset had a rule `typescript` has, `typescript`'s is kept and
+the other is gone: `async/network-calls-have-timeouts` replaced effect's
+`basics/external-calls-are-resilient`, `security/parameterized-queries`
+replaced alchemy's `data/parameterized-sql`, and
+`security/no-secrets-in-output` replaced alchemy's
+`secrets/never-logged-returned-or-output`. A project on Effect or alchemy
+names `typescript` too, for those rules.
 
 `react` leaves out what the React Compiler's lint rules check, in
 [eslint-plugin-react-hooks](https://react.dev/reference/eslint-plugin-react-hooks)'s

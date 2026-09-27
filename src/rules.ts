@@ -27,7 +27,7 @@ export interface RuleEntry {
 
 /**
  * A rule's id as output shows it: a preset's rule with the preset's name
- * first, as in effect/basics/external-calls-are-resilient, so a report that
+ * first, as in effect/basics/gen-for-sequencing, so a report that
  * mixes presets with the project's own rules says where each came from. The
  * project's own rules show their `.adhere/` ids as they are.
  */

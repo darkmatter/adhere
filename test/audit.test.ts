@@ -844,8 +844,8 @@ const onDisk = async (tree: Readonly<Record<string, string>>): Promise<string> =
 
 describe("rule ids in output", () => {
   it("puts a preset rule's whole preset first, and leaves the project's own ids alone", () => {
-    expect(shownId({ id: "basics/external-calls-are-resilient", preset: "effect" })).toBe(
-      "effect/basics/external-calls-are-resilient",
+    expect(shownId({ id: "basics/gen-for-sequencing", preset: "effect" })).toBe(
+      "effect/basics/gen-for-sequencing",
     );
     expect(shownId({ id: "data/brand-ports" })).toBe("data/brand-ports");
     expect(wholePresetOf("effect/basics")).toBe("effect");

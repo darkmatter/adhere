@@ -1,101 +1,5 @@
 [
   {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "basics/gen-for-sequencing#1",
-    "label": "debatable",
-    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "basics/gen-for-sequencing#2",
-    "label": "debatable",
-    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "basics/instrument-with-pipe#1",
-    "label": "false",
-    "note": "The call already has a timeout and a retry."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "config/business-logic-depends-on-config-service#1",
-    "label": "debatable",
-    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "config/business-logic-depends-on-config-service#2",
-    "label": "debatable",
-    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "config/tests-provide-values-directly#1",
-    "label": "debatable",
-    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "config/tests-provide-values-directly#2",
-    "label": "debatable",
-    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "errors/wrap-external-errors#1",
-    "label": "false",
-    "note": "The call already has a timeout and a retry."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "errors/wrap-external-errors#2",
-    "label": "false",
-    "note": "The call already has a timeout and a retry."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "services/fresh-layer-per-test#3",
-    "label": "debatable",
-    "note": "It calls a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "services/memoize-parameterized-layers#1",
-    "label": "false",
-    "note": "It composes layers and makes no call."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "services/memoize-parameterized-layers#2",
-    "label": "false",
-    "note": "It composes layers and makes no call."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "services/test-layers-are-in-memory#1",
-    "label": "debatable",
-    "note": "A test layer's queries to a local SQLite file."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "src/services/Jev.http.ts",
-    "label": "false",
-    "note": "Its client times out after 30 seconds and retries transient failures."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "src/workflows/audit.ts",
-    "label": "debatable",
-    "note": "It calls Jev through a service that may reach the network; whether the timeout belongs at this call or inside the service is a judgment call."
-  },
-  {
-    "rule": "basics/external-calls-are-resilient",
-    "file": "testing/test-clock-for-time#3",
-    "label": "debatable",
-    "note": "An it.live test timing a real round trip, which a timeout or a retry would defeat."
-  },
-  {
     "rule": "basics/gen-for-sequencing",
     "file": "src/services/AuditCache.ts",
     "label": "debatable",
@@ -106,18 +10,6 @@
     "file": "src/services/Jev.ts",
     "label": "false",
     "note": "It builds requests and adds no timeouts, retries, logs, or spans. It does contain adhere's question text."
-  },
-  {
-    "rule": "config/business-logic-depends-on-config-service",
-    "file": "basics/external-calls-are-resilient#1",
-    "label": "debatable",
-    "note": "A base URL hard-coded in business logic; the rule is about reading Config, not about hard-coding."
-  },
-  {
-    "rule": "config/business-logic-depends-on-config-service",
-    "file": "basics/external-calls-are-resilient#2",
-    "label": "debatable",
-    "note": "A base URL hard-coded in business logic; the rule is about reading Config, not about hard-coding."
   },
   {
     "rule": "config/business-logic-depends-on-config-service",
@@ -364,18 +256,6 @@
     "file": "src/services/Jev.ts",
     "label": "false",
     "note": "JevUnavailable and JevOverflow are failures the caller handles."
-  },
-  {
-    "rule": "errors/wrap-external-errors",
-    "file": "basics/external-calls-are-resilient#1",
-    "label": "real",
-    "note": "HttpClient errors pass through unwrapped."
-  },
-  {
-    "rule": "errors/wrap-external-errors",
-    "file": "basics/external-calls-are-resilient#2",
-    "label": "real",
-    "note": "HttpClient errors pass through unwrapped."
   },
   {
     "rule": "errors/wrap-external-errors",

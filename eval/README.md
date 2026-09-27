@@ -11,7 +11,7 @@ adhere asks Jev since 0.6 was decided here; `studies/` has the write-ups.
 - **Planted files:** `cases/` has one Markdown file per preset rule. Each fence
   tagged `ts breaks` is a file written to break that rule, and each tagged
   `ts follows` is one written to follow it, including cases the rule itself
-  exempts. 21 break a rule and 25 follow one.
+  exempts. 21 break a rule and 23 follow one.
 - **Real code:** every `.ts` file of adhere's own `src/`.
 - **Arms:** each arm is a way of building adhere's request. Every arm asks
   every rule of every file, one request per file, as a cold `adhere lint`
