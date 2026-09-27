@@ -24,10 +24,10 @@ linter could check each of your rules, and [`adhere validate`](#validate) lists
 rules that it thinks belong in a regular linter, and also detects any
 contradictions in your rules.
 
-A preset for effect is included which can be run without setup:
+Presets for TypeScript, Effect, and alchemy are included, and run without setup:
 
 ```sh
-TYPESAFE_API_KEY=xxx npx @drkmttr/adhere lint --preset effect
+TYPESAFE_API_KEY=xxx npx @drkmttr/adhere lint --preset typescript
 ```
 
 ## Install
@@ -531,7 +531,15 @@ A preset has the shape of a config without `presets`: `rules`, and optionally
 command line with `--preset`, repeated or separated by commas, as in
 `--preset effect,alchemy`, in which case the config file is optional. Presets
 named in both places apply together. Reports name a preset's rule with the
-preset first, as in `alchemy/secrets/…`. There are two:
+preset first, as in `alchemy/secrets/…`. There are three:
+
+- `typescript`: 17 rules in [`presets/typescript/`](./presets/typescript/) for
+  any TypeScript project, drawn from the TypeScript Handbook, the Google
+  TypeScript Style Guide, and OWASP's cheat sheets: data from outside checked
+  at runtime, invalid states unrepresentable, errors never swallowed,
+  resources released on every path, no work at import, arguments not mutated,
+  secrets kept out of logs and responses, injection, and tests that assert
+  outcomes and stand alone.
 
 - `effect`: Markdown rules in [`presets/effect/`](./presets/effect/), lifted
   from the [effect-solutions](https://github.com/kitlangton/effect-solutions)
@@ -617,6 +625,20 @@ service built by a factory function that takes its dependencies as arguments,
 whose types have no requirements to find. The preset's
 `services/dependencies-through-layers` asks for that, and
 `services/operations-have-no-requirements` for the style it goes with.
+
+`typescript` leaves out what typescript-eslint and ESLint check exactly:
+unhandled promises (`no-floating-promises`), throwing non-errors
+(`only-throw-error`), `any` (`no-explicit-any`), exhaustive switches
+(`switch-exhaustiveness-check`), a lost `cause` (`preserve-caught-error`), and
+empty catch blocks (`no-empty`). Three of its rules report warnings, since
+they are advice that code often has reason to set aside: assertions that
+claim only what the code established, types derived rather than restated,
+and independent awaits run concurrently. Three of its rules repeat others' for a project on Effect or
+alchemy: `async/network-calls-have-timeouts` repeats
+`effect/basics/external-calls-are-resilient`, `security/parameterized-queries`
+repeats `alchemy/data/parameterized-sql`, and `security/no-secrets-in-output`
+repeats `alchemy/secrets/never-logged-returned-or-output`. With both presets,
+turn one of each off in `overrides`.
 
 ### Precedence
 

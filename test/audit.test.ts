@@ -1470,7 +1470,7 @@ describe("wording", () => {
 
 describe("presets", () => {
   it("names each preset's topics after its subdirectories", async () => {
-    for (const name of ["effect", "alchemy"] as const) {
+    for (const name of Object.keys(presets) as ReadonlyArray<keyof typeof presets>) {
       const entries = await readdir(fileURLToPath(presets[name].rules), { withFileTypes: true });
       const directories = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
       expect([...topicsOf(name)].sort()).toEqual(directories.sort());
