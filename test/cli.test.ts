@@ -11,13 +11,13 @@ const execFileAsync = promisify(execFile);
 const main = join(process.cwd(), "src", "main.ts");
 
 describe("cli", () => {
-  it("reports the package version", async () => {
+  it("reports the package version, marked as source when run from it", async () => {
     const { stderr, stdout } = await execFileAsync("bun", ["src/main.ts", "--version"], {
       cwd: process.cwd(),
     });
 
     expect(stderr).toBe("");
-    expect(stdout.trim()).toBe(`adhere v${packageJson.version}`);
+    expect(stdout.trim()).toBe(`adhere v${packageJson.version} (source)`);
   });
 
   it("prints help listing every command when run bare", async () => {

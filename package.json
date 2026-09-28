@@ -32,7 +32,7 @@
     "start": "bun src/main.ts",
     "test": "vp test",
     "typecheck": "tsc --noEmit && bun run lint",
-    "build": "bun build --compile --minify --sourcemap src/main.ts --asset ./presets --outfile dist/adhere",
+    "build": "bun build --compile --minify --sourcemap --define ADHERE_BUILD=\"\\\"$(git describe --tags --dirty --always)\\\"\" src/main.ts --asset ./presets --outfile dist/adhere",
     "build:npm": "bun scripts/npm-packages.ts build",
     "release": "release-it"
   },

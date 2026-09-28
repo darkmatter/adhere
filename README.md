@@ -854,13 +854,19 @@ and `bun run test` runs the tests.
 ### Native executable
 
 `bun run build` compiles `dist/adhere`, a single binary with Bun and the
-`effect` preset inside it, through Bun's
+presets inside it, through Bun's
 [`--compile`](https://bun.sh/docs/bundler/executables) with
 `--asset ./presets`. It runs without Bun or `node_modules` on the target
 machine and still loads the repo's `config.ts` and Markdown rules from disk.
 `bun run build:npm` compiles it for every published platform instead, each
 into its package under `dist/npm/`
 ([`scripts/npm-packages.ts`](./scripts/npm-packages.ts)).
+
+`adhere --version` tells the builds apart. A release prints its version, as
+`adhere v0.10.0`. `bun run build` prints `git describe --tags --dirty` where
+it was built, as `adhere v0.10.0-16-g9a41328`: 16 commits after v0.10.0, at
+`9a41328`, ending in `-dirty` when the tree had changes. Run from source, it
+prints the checkout's version marked `(source)`.
 
 Each platform's executable is its own npm package,
 `@drkmttr/adhere-<platform>-<arch>`, limited by `os` and `cpu`, and an
