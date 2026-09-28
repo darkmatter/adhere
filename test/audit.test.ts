@@ -1593,6 +1593,39 @@ describe("init", () => {
     expect((await Effect.runPromise(initProject(listed))).install).toEqual({ status: "listed" });
   });
 
+  it("scaffolds a shared repo with a README, a CI workflow that validates, and a stack, but no config", async () => {
+    const root = join(tmpdir(), `adhere-init-shared-${Date.now()}`);
+    await mkdir(root, { recursive: true });
+    // An existing package.json with nothing to install keeps npm off the network.
+    await writeFile(join(root, "package.json"), '{ "name": "standards" }\n', "utf8");
+    const result = await Effect.runPromise(initProject(root, { shared: "acme/standards" }));
+    const read = (path: string) => readFile(join(root, path), "utf8");
+
+    expect(result.created).toEqual([
+      "README.md",
+      ".github/workflows/adhere.yaml",
+      "alchemy.run.ts",
+      ".gitignore",
+      ".adhere/style/prefer-small-files.md",
+      ".adhere/style/name-domain-actions.md",
+    ]);
+    expect(result.skipped).toEqual(["package.json"]);
+    expect(result.install).toEqual({
+      status: "installed",
+      what: "package.json",
+      packageManager: "npm",
+    });
+    expect(await read("README.md")).toContain("adhere install acme/standards\n");
+    expect(await read(".github/workflows/adhere.yaml")).toContain(
+      "npx --yes @drkmttr/adhere validate\n        env:\n          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}",
+    );
+    const stack = await read("alchemy.run.ts");
+    expect(stack).toContain('const owner = "acme";');
+    expect(stack).toContain('name: "standards",');
+    expect(stack).toContain('name: "TYPESAFE_API_KEY",');
+    await expect(access(join(root, ".adhere", "config.ts"))).rejects.toThrow();
+  });
+
   it("keeps a config at another accepted path instead of adding a second one", async () => {
     const root = join(tmpdir(), `adhere-init-existing-${Date.now()}`);
     await mkdir(root, { recursive: true });

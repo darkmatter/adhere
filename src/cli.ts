@@ -327,7 +327,7 @@ export const validateCommand = Command.make("validate", { preset }, () =>
 const installLine = (install: Install): string => {
   switch (install.status) {
     case "installed":
-      return `installed: @drkmttr/adhere with ${install.packageManager}`;
+      return `installed: ${install.what} with ${install.packageManager}`;
     case "listed":
       return "installed: none, @drkmttr/adhere is already in package.json";
     case "no-package-json":
@@ -335,11 +335,25 @@ const installLine = (install: Install): string => {
   }
 };
 
+const shared = Flag.string("shared").pipe(
+  Flag.filter(
+    (repo) => /^[\w.-]+\/[\w.-]+$/.test(repo),
+    (repo) => `--shared names a GitHub repo as org/repo, not ${repo}.`,
+  ),
+  Flag.optional,
+  Flag.withDescription(
+    "Scaffold a repo of rules other repos copy with adhere install, named org/repo on GitHub: example rules, a README, a CI workflow that runs adhere validate, and an alchemy.run.ts that creates the repo and its TYPESAFE_API_KEY secret.",
+  ),
+);
+
 /** `adhere init`: the scaffold. */
-export const initCommand = Command.make("init", { force }, (input) =>
+export const initCommand = Command.make("init", { force, shared }, (input) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
-    const result = yield* initProject(path.resolve(), { force: input.force });
+    const result = yield* initProject(path.resolve(), {
+      force: input.force,
+      ...Option.match(input.shared, { onNone: () => ({}), onSome: (repo) => ({ shared: repo }) }),
+    });
     const lines = [
       result.created.length > 0 ? `created: ${result.created.join(", ")}` : "created: none",
       result.skipped.length > 0 ? `skipped: ${result.skipped.join(", ")}` : "skipped: none",

@@ -139,6 +139,7 @@ adhere lint --deny-warnings    # fail on warnings as well as errors
 adhere lint --log-level debug  # log each request to Jev on stderr
 adhere validate                # check the rules' wording; ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
+adhere init --shared org/repo  # scaffold a repo of rules other repos install
 adhere list org/repo           # list the rules in another repo's .adhere/
 adhere install org/repo        # copy them into this repo's .adhere/org/repo/
 adhere login                   # save a TypeSafe AI API key for later runs
@@ -308,6 +309,23 @@ and `--config.strict-dep-builds=false`, so pnpm 11 skips the build script of
 msgpackr-extract, an optional native add-on that comes with `effect` and that
 adhere never uses, with a warning instead of failing.
 It skips the install when `package.json` already lists adhere.
+
+`adhere init --shared org/repo` scaffolds a repo whose rules other repos copy
+in with `adhere install` (see [Sharing rules](#sharing-rules)) instead of one
+that lints itself. It writes the two example rules and no config, since
+install copies only rule files, and with them:
+
+- `README.md`, which says what the repo is for, how to install its rules, and
+  how to add one.
+- `.github/workflows/adhere.yaml`, which runs `adhere validate` on every push
+  to main and every pull request, with the `TYPESAFE_API_KEY` secret. A pull
+  request from a fork gets no secrets, so validate refuses there.
+- `alchemy.run.ts`, an [alchemy](https://alchemy.run) stack that creates the
+  private GitHub repo, or adopts it, and sets that secret from
+  `TYPESAFE_API_KEY` when deployed with `npx alchemy deploy`.
+- `package.json`, with alchemy and effect pinned to versions that work
+  together, which init installs, and a `.gitignore` for them and alchemy's
+  state.
 
 ### Sharing rules
 
