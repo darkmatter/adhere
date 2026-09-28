@@ -557,12 +557,11 @@ command line with `--preset`, repeated or separated by commas, as in
 named in both places apply together. Reports name a preset's rule with the
 preset first, as in `alchemy/secrets/…`. There are five:
 
-- `typescript`: 13 rules in [`presets/typescript/`](./presets/typescript/) for
+- `typescript`: 11 rules in [`presets/typescript/`](./presets/typescript/) for
   any TypeScript project, drawn from the TypeScript Handbook and the Google
   TypeScript Style Guide: data from outside checked at runtime, invalid states
   unrepresentable, errors never swallowed, resources released on every path,
-  no work at import, arguments not mutated, and tests that assert outcomes and
-  stand alone.
+  arguments not mutated, and tests that assert outcomes and stand alone.
 - `react`: 10 rules in [`presets/react/`](./presets/react/) for components
   and hooks, lifted from react.dev, mostly
   [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)
@@ -663,10 +662,15 @@ whose types have no requirements to find. The preset's
 unhandled promises (`no-floating-promises`), throwing non-errors
 (`only-throw-error`), `any` (`no-explicit-any`), exhaustive switches
 (`switch-exhaustiveness-check`), a lost `cause` (`preserve-caught-error`), and
-empty catch blocks (`no-empty`). Three of its rules report warnings, since
-they are advice that code often has reason to set aside: assertions that
-claim only what the code established, types derived rather than restated,
-and independent awaits run concurrently.
+empty catch blocks (`no-empty`). Four of its rules report warnings. Three are
+advice that code often has reason to set aside: assertions that claim only
+what the code established, types derived rather than restated, and
+independent awaits run concurrently. The fourth, that HTTP requests carry a
+timeout, was right on fewer than half its findings above 0.8 on the eval:
+many of the rest were calls through a client with a default timeout that the
+file does not show.
+Two rules the eval found mostly wrong are gone: that tests use fake time
+rather than real waits, and that importing a module does no work.
 
 Where effect or alchemy had a rule that `typescript` or `security` has, that
 one is kept and the other is gone: typescript's
@@ -686,7 +690,9 @@ component defined inside another (`static-components`). Its rules judge `.ts`
 files as well as `.tsx`, and apply only to components, hooks, effects, and
 Server Functions, so other files cost their checks and find nothing.
 `server/no-private-data-to-client` reports warnings: a file does not show
-whether the component it passes a record to is a Client Component.
+whether the component it passes a record to is a Client Component. So does
+`state/store-ids-not-copies`, which also flags state that copies a string or
+an option from a fixed list, where a copy cannot go stale.
 
 ### Precedence
 

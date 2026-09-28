@@ -1,5 +1,5 @@
 ---
-description: A SQL query that includes a value must pass it as a bound parameter, or through a query builder or tagged template that binds it, never concatenate or interpolate the value into the query string.
+description: A SQL query that includes a value that comes from outside the code, such as user input or a function's argument, must pass it as a bound parameter, or through a query builder or tagged template that binds it, never concatenate or interpolate the value into the query string.
 excludeIf: ["an identifier, such as a table or column name, the code chose from a fixed list"]
 ---
 
