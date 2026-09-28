@@ -25,7 +25,16 @@ violation, so it measures only finding the lines inside it.
 ```sh
 bun eval/studies/pinpoint.ts results.json
 bun eval/studies/pinpoint.ts results.json halving
+bun eval/studies/pinpoint.ts results.json inline
 ```
+
+A third run, `inline`, measures the lines end to end, in the one request
+lint sends to locate a finding, its state the file's keyed sections: the
+choice of a section, beside a choice of the start line and one of the end
+line, each option the line's text, either for every section, among its
+lines, keeping the pair of the section chosen, or once among the whole
+file's, where its lines fit Jev's context beside the file. Jev chooses the
+section too, so a wrong section counts against it.
 
 ## Results
 
@@ -41,6 +50,19 @@ bun eval/studies/pinpoint.ts results.json halving
 
 The choice named one line as both start and end for 100 of 180 findings.
 
+End to end, `inline`, on the 174 findings of rules the presets still have
+and files Jev could take:
+
+| arm                                                     | findings | holds a violation | lines shown, median | of them violating | of the violation shown |
+| ------------------------------------------------------- | -------- | ----------------- | ------------------- | ----------------- | ---------------------- |
+| section chosen                                          | 174      | 95%               | 27                  | 31%               | 84%                    |
+| start and end, per section                              | 174      | 94%               | 1                   | 92%               | 51%                    |
+| start and end, per section, where the section was right | 166      | 98%               | 1                   | 96%               | 53%                    |
+| start and end, whole file                               | 138      | 93%               | 2                   | 87%               | 63%                    |
+
+Every finding took one request. The per-section pair named one line in 113
+of 174.
+
 ## What we learned
 
 - **A position as a number does not work.** Tenths missed the violation a
@@ -52,8 +74,13 @@ The choice named one line as both start and end for 100 of 180 findings.
 - **Halving adds requests and nothing else.** Five choices of two, one after
   another, did as well as one choice among all the lines.
 
+- **Start and end fit in the locate request.** Asked for every section and
+  kept for the one chosen, they did as well as on their own, with no request
+  more; over the whole file, a long file's lines do not fit beside it.
+
 ## Decided
 
-Nothing: a finding stays its section, with no request beyond the one that
-locates it. The lines arm is the one to reach for if the report is to
-underline again, at one more request per file with a finding.
+The locate request asks, for every section, the line the violation starts on
+and the one it ends on, and the report underlines the chosen section's. The
+lines arm, which spans more of the violation, would take one more request per
+file with a finding.

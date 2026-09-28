@@ -18,9 +18,16 @@
  * and halving, a choice between the two halves of the lines left, asked
  * again of the chosen half until one line is left.
  *
+ * With `inline`, it measures the lines end to end, in the one request lint
+ * sends to locate a finding, its state the file's keyed sections: the choice
+ * of a section, beside a choice of the start line and one of the end line,
+ * either for every section, among its lines, keeping the pair of the section
+ * chosen, or once among all the file's lines, for a file of at most 255.
+ * Each line option is its text.
+ *
  * `pinpoint.md` has the results.
  *
- *   bun eval/studies/pinpoint.ts [results.json] [halving]
+ *   bun eval/studies/pinpoint.ts [results.json] [halving | inline]
  */
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
@@ -32,7 +39,7 @@ import { isNote, withoutComments } from "#comments.ts";
 import type { Rule } from "#config.ts";
 import { type Range, sectionsOf } from "#excerpt.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
-import { judgeQuestion } from "#services/Jev.ts";
+import { judgeBody, judgeQuestion, requestsOf, tokensOf } from "#services/Jev.ts";
 
 /** A real finding's violations, as marked by hand: the clearest first. */
 interface Marked {
@@ -116,7 +123,7 @@ const [output = "pinpoint-results.json", mode] = process.argv.slice(2);
 const key = process.env.TYPESAFE_API_KEY;
 if (key === undefined) {
   throw new Error(
-    "usage: TYPESAFE_API_KEY=… bun eval/studies/pinpoint.ts [results.json] [halving]",
+    "usage: TYPESAFE_API_KEY=… bun eval/studies/pinpoint.ts [results.json] [halving | inline]",
   );
 }
 const items = (
@@ -180,6 +187,104 @@ const halve = async (
   }
   const start = Number((await chosen).start?.choice ?? written[0]);
   return { halving: left[0] ?? written[0] ?? 0, choice: start, rounds };
+};
+
+/** A choice among `lines`, each option its text, of where the code that breaks the rule starts or ends. */
+const lineChoice = (
+  fields: ReturnType<typeof fieldsOf>,
+  where: string,
+  edge: "start" | "end",
+  numbers: ReadonlyArray<number>,
+  lines: ReadonlyArray<string>,
+) => ({
+  type: "choice" as const,
+  instructions: {
+    question: `Which line of ${where} does the code that breaks \`rule\` ${edge} on?`,
+    ...fields,
+  },
+  criteria: Object.fromEntries(
+    numbers.map((n) => [String(n), (lines[n - 1] ?? "").trim().slice(0, 120)]),
+  ),
+});
+
+/** How many requests each inline placement took. */
+const split: Array<number> = [];
+
+/**
+ * The finding's place end to end, in lint's one locate request: the section
+ * chosen, and the lines, from a start and end choice for every section or
+ * once for the whole file.
+ */
+const inline = async (item: Marked) => {
+  const lines = withoutComments(
+    (await readFile(join(repos, item.repo, item.file), "utf8")).split("\n"),
+    isNote,
+  );
+  const sections = sectionsOf(lines);
+  const fields = fieldsOf(rules.get(item.rule)!);
+  const written = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, index) => from + index).filter(
+      (n) => (lines[n - 1] ?? "").trim() !== "",
+    );
+  const everyLine = written(1, lines.length);
+  const state = judgeBody("jev-latest", lines, {}).state;
+  // Jev reads the state and one question within 32k tokens: a long file's lines, as options, do not fit.
+  const whole =
+    everyLine.length <= 255 &&
+    tokensOf(state) + tokensOf(lineChoice(fields, "`code`", "start", everyLine, lines)) <= 31_000;
+  const questions: Record<string, unknown> = {
+    section: {
+      type: "choice",
+      instructions: {
+        question: "Which entry of `code` contains the code that breaks `rule`?",
+        ...fields,
+      },
+      criteria: Object.fromEntries(sections.map((_, index) => [String(index + 1), null])),
+    },
+    ...Object.fromEntries(
+      sections.flatMap((section, index) => {
+        const numbers = written(section.first, section.last);
+        const where = `\`code["${index + 1}"]\``;
+        return numbers.length === 0
+          ? []
+          : [
+              [`start:${index + 1}`, lineChoice(fields, where, "start", numbers, lines)],
+              [`end:${index + 1}`, lineChoice(fields, where, "end", numbers, lines)],
+            ];
+      }),
+    ),
+    ...(whole
+      ? {
+          start: lineChoice(fields, "`code`", "start", everyLine, lines),
+          end: lineChoice(fields, "`code`", "end", everyLine, lines),
+        }
+      : {}),
+  };
+  // Split as lint splits a body over Jev's context, and asked together.
+  const requests = requestsOf({ model: "jev-latest", state, questions });
+  const answers: Answers = Object.assign(
+    {},
+    ...(await Promise.all(requests.map((request) => ask(key, request)))),
+  );
+  split.push(requests.length);
+  const chosen = Number(answers.section?.choice ?? 1);
+  const section = sections[chosen - 1] ?? sections[0]!;
+  const edge = (id: string, fallback: number) => Number(answers[id]?.choice ?? fallback);
+  const inSection = ordered(
+    edge(`start:${chosen}`, section.first),
+    edge(`end:${chosen}`, section.last),
+  );
+  return {
+    section,
+    truth: [...item.ranges],
+    places: {
+      "section chosen": section,
+      "lines, per section": inSection,
+      ...(whole
+        ? { "lines, whole file": ordered(edge("start", 1), edge("end", lines.length)) }
+        : {}),
+    } as Record<string, Range>,
+  };
 };
 
 const place = async (item: Marked) => {
@@ -317,7 +422,11 @@ await Promise.all(
   Array.from({ length: 4 }, async () => {
     while (queue.length > 0) {
       const item = queue.shift()!;
-      const placed = await place(item);
+      const placed = await (mode === "inline" ? inline(item) : place(item)).catch((problem) => {
+        // A file Jev counts as over its context, as lint skips one: counted, not placed.
+        console.error(`${item.repo}/${item.file}: ${String(problem).slice(0, 120)}`);
+        return undefined;
+      });
       if (placed !== undefined) {
         results.push({ repo: item.repo, file: item.file, rule: item.rule, ...placed });
       }
@@ -338,6 +447,11 @@ const median = (values: ReadonlyArray<number>) => {
 };
 
 console.log(`${results.length} findings placed`);
+if (split.length > 0) {
+  console.log(
+    `requests per finding: ${split.filter((n) => n === 1).length} took one, ${split.filter((n) => n > 1).length} more, at most ${Math.max(...split)}`,
+  );
+}
 for (const arm of Object.keys(results[0]?.places ?? {})) {
   const scored = results.map(({ section, places, truth }) => {
     const placed = places[arm] ?? section;
