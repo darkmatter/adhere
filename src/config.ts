@@ -126,7 +126,7 @@ export const AdhereConfig = Schema.Struct({
   /**
    * Below this, Jev's probability that a file shows enough to decide a
    * finding's rule adds a warning to the finding: check what the code relies
-   * on outside the file. Defaults to 0.7
+   * on outside the file. Defaults to 0.6
    */
   sufficiencyThreshold: Schema.optionalKey(Schema.Finite),
   /**
@@ -233,7 +233,7 @@ export type Loaded<T extends { readonly rules?: unknown }> = Omit<T, "rules"> & 
 
 export const DEFAULT_MODEL = "jev-latest";
 export const DEFAULT_THRESHOLD = 0.8;
-export const DEFAULT_SUFFICIENCY_THRESHOLD = 0.7;
+export const DEFAULT_SUFFICIENCY_THRESHOLD = 0.6;
 
 /** A config with its presets folded in and every default applied. */
 export interface ResolvedConfig {

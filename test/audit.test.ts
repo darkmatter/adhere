@@ -341,8 +341,7 @@ describe("request bodies", () => {
     expect(body.questions["sufficient:a"]).toMatchObject({
       type: "noul",
       instructions: {
-        question: "Does `code` contain sufficient information to make `judgment`?",
-        judgment: expect.stringContaining("Does `code` diverge from the pattern shown in `must`"),
+        question: expect.stringContaining("from `code` alone"),
         rule: a.description,
         must: a.must,
       },
@@ -463,7 +462,7 @@ describe("config", () => {
     expect(resolveConfig(config)).toEqual({
       model: "jev-latest",
       threshold: 0.8,
-      sufficiencyThreshold: 0.7,
+      sufficiencyThreshold: 0.6,
       rules: { "data/brand": { description: "d", must: "r" } },
     });
   });

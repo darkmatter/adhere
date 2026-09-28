@@ -320,25 +320,24 @@ export const judgeBody = (
 /**
  * Whether the file shows enough to decide the rule at all: a finding that
  * turns on another file, a library, or a service is a coin flip, and the
- * report says so. On the eval, findings it scored below 0.7 were real about
- * half the time, and the rest three times in four.
+ * report says so. It asks the condition itself, beside the rule: on the
+ * eval, asking whether `code` held enough to answer the judge question, put
+ * in a field, ranked real findings worse, and read no easier. Of findings
+ * it scored below 0.6, 62% were false, where 22% of all were.
  */
-export const sufficiencyQuestion = (rule: Rule) => {
-  const { instructions } = judgeQuestion(rule);
-  return {
-    type: "noul" as const,
-    instructions: {
-      ...instructions,
-      judgment: instructions.question,
-      question: "Does `code` contain sufficient information to make `judgment`?",
-    },
-    criteria: {
-      true: "Everything `judgment` turns on is in `code`",
-      false:
-        "`judgment` turns on something `code` does not show, such as what another file, a library, a service, or the program's configuration does",
-    },
-  };
-};
+export const sufficiencyQuestion = (rule: Rule) => ({
+  type: "noul" as const,
+  instructions: {
+    question:
+      "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+    ...ruleFields(rule),
+  },
+  criteria: {
+    true: "`code` shows everything needed to tell whether it breaks `rule`",
+    false:
+      "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration",
+  },
+});
 
 /** The key a rule's sufficiency question rides under, beside its locate question. */
 export const sufficiencyKey = (id: RuleId): string => `sufficient:${id}`;

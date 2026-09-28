@@ -102,7 +102,7 @@ const threshold = Flag.float("threshold").pipe(
 const sufficiencyThreshold = Flag.float("sufficiency-threshold").pipe(
   Flag.optional,
   Flag.withDescription(
-    "Warn on a finding when Jev's probability that the file shows enough to decide it is below this value, 0 to 1. Replaces the config's sufficiencyThreshold; the default is 0.7.",
+    "Warn on a finding when Jev's probability that the file shows enough to decide it is below this value, 0 to 1. Replaces the config's sufficiencyThreshold; the default is 0.6.",
   ),
 );
 
