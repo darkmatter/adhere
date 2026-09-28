@@ -138,7 +138,7 @@ describe("cli", () => {
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("TYPESAFE_API_KEY");
   });
 
-  it("lists another repo's rules, and copies one topic, then the rest, skipping what is there", async () => {
+  it("lists another repo's rules, and copies one topic, then the rest, under its org and repo, skipping what is there", async () => {
     const source = join(tmpdir(), `adhere-install-source-${Date.now()}`);
     const root = join(tmpdir(), `adhere-install-${Date.now()}`);
     await mkdir(join(source, ".adhere", "data"), { recursive: true });
@@ -171,13 +171,18 @@ describe("cli", () => {
       "data/ports   A port must be branded.\nstyle/small  A file should be small.\n",
     );
     expect(await adhere("install", "acme/rules/data")).toBe(
-      "created: .adhere/data/ports.md\nskipped: none\n",
+      "created: .adhere/acme/rules/data/ports.md\nskipped: none\n",
     );
     expect(await adhere("install", "acme/rules")).toBe(
-      "created: .adhere/style/small.md\nskipped: .adhere/data/ports.md\n",
+      "created: .adhere/acme/rules/style/small.md\nskipped: .adhere/acme/rules/data/ports.md\n",
     );
-    expect(await readFile(join(root, ".adhere", "data", "ports.md"), "utf8")).toBe(ports);
-    expect((await readdir(join(root, ".adhere"))).sort()).toEqual(["data", "style"]);
+    expect(await readFile(join(root, ".adhere", "acme", "rules", "data", "ports.md"), "utf8")).toBe(
+      ports,
+    );
+    expect((await readdir(join(root, ".adhere", "acme", "rules"))).sort()).toEqual([
+      "data",
+      "style",
+    ]);
   });
 
   it("takes several presets, repeated or separated by commas, and refuses an unknown one", async () => {

@@ -112,9 +112,11 @@ export interface InstallResult {
 }
 
 /**
- * Copies the rules a source names into `root`'s `.adhere/` at the paths they
- * have in the source, so they are the project's own rules from then on. As
- * with init, a file already there is skipped unless `force`.
+ * Copies the rules a source names into `root`'s `.adhere/` under the source's
+ * org and repo, so `data/ports` from acme/rules is the rule
+ * `acme/rules/data/ports`, and two sources' rules never collide. They are the
+ * project's own rules from then on. As with init, a file already there is
+ * skipped unless `force`.
  */
 export const installRules = (root: string, source: Source, options: { readonly force?: boolean }) =>
   Effect.scoped(
@@ -123,7 +125,7 @@ export const installRules = (root: string, source: Source, options: { readonly f
       const created: Array<string> = [];
       const skipped: Array<string> = [];
       for (const { id, file } of rules) {
-        const path = `${ADHERE_DIRECTORY}/${id}.md`;
+        const path = `${ADHERE_DIRECTORY}/${source.repo}/${id}.md`;
         const target = join(root, path);
         const copied = yield* Effect.tryPromise({
           try: async () => {

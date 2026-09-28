@@ -140,7 +140,7 @@ adhere lint --log-level debug  # log each request to Jev on stderr
 adhere validate                # check the rules' wording; ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
 adhere list org/repo           # list the rules in another repo's .adhere/
-adhere install org/repo        # copy them into this repo's .adhere/
+adhere install org/repo        # copy them into this repo's .adhere/org/repo/
 adhere login                   # save a TypeSafe AI API key for later runs
 adhere logout                  # delete the saved key
 adhere skill                   # print the agent skill (below)
@@ -314,9 +314,11 @@ It skips the install when `package.json` already lists adhere.
 An organization's rules can live in one repo's `.adhere/`, and other repos
 copy them in. `adhere list org/repo` prints each rule there with its
 description. `adhere install org/repo` copies every rule into this repo's
-`.adhere/` at the path it has in the source, so `.adhere/data/brand-ports.md`
-stays `data/brand-ports`. A topic or a rule after the repo copies only that
-part, and `#` picks a branch or tag:
+`.adhere/org/repo/`, so `data/brand-ports` from darkmatter/standards is
+`.adhere/darkmatter/standards/data/brand-ports.md`, the rule
+`darkmatter/standards/data/brand-ports`, and two repos' rules never collide.
+A topic or a rule after the repo copies only that part, and `#` picks a branch
+or tag:
 
 ```sh
 adhere install darkmatter/standards/data                # the data topic

@@ -401,7 +401,7 @@ export const installCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Copy the rules in a GitHub repo's .adhere/, or one topic or rule of them, into this repo's .adhere/ at the same paths. They are this repo's own rules from then on, to edit or keep in step by hand. Existing files are skipped unless --force.",
+    "Copy the rules in a GitHub repo's .adhere/, or one topic or rule of them, into this repo's .adhere/<org>/<repo>/. They are this repo's own rules from then on, to edit or keep in step by hand. Existing files are skipped unless --force.",
   ),
 );
 
