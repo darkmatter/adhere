@@ -24,7 +24,16 @@ describe("cli", () => {
     const { stdout } = await execFileAsync("bun", [main], { cwd: process.cwd() });
     const subcommands = stdout.slice(stdout.indexOf("SUBCOMMANDS"), stdout.indexOf("EXAMPLES"));
 
-    for (const name of ["lint", "validate", "init", "login", "logout", "skill"]) {
+    for (const name of [
+      "lint",
+      "validate",
+      "init",
+      "list",
+      "install",
+      "login",
+      "logout",
+      "skill",
+    ]) {
       expect(subcommands).toMatch(new RegExp(`^  ${name} `, "m"));
     }
   });
@@ -127,6 +136,48 @@ describe("cli", () => {
     );
     expect(refused?.code).toBe(1);
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("TYPESAFE_API_KEY");
+  });
+
+  it("lists another repo's rules, and copies one topic, then the rest, skipping what is there", async () => {
+    const source = join(tmpdir(), `adhere-install-source-${Date.now()}`);
+    const root = join(tmpdir(), `adhere-install-${Date.now()}`);
+    await mkdir(join(source, ".adhere", "data"), { recursive: true });
+    await mkdir(join(source, ".adhere", "style"), { recursive: true });
+    await mkdir(join(source, ".adhere", "cache"), { recursive: true });
+    await mkdir(root, { recursive: true });
+    const ports = "---\ndescription: A port must be branded.\n---\n\nconst Port = 1\n";
+    await writeFile(join(source, ".adhere", "data", "ports.md"), ports, "utf8");
+    await writeFile(
+      join(source, ".adhere", "style", "small.md"),
+      "---\ndescription: A file should be small.\n---\n\nx\n",
+      "utf8",
+    );
+    await writeFile(join(source, ".adhere", "cache", "stale.md"), "not a rule\n", "utf8");
+    const git = (...args: ReadonlyArray<string>) => execFileAsync("git", args, { cwd: source });
+    await git("init", "--quiet");
+    await git("add", "-A");
+    await git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "rules");
+    // git reads github.com as the local repo, so nothing is fetched.
+    const env = {
+      ...process.env,
+      GIT_CONFIG_COUNT: "1",
+      GIT_CONFIG_KEY_0: `url.file://${source}.insteadOf`,
+      GIT_CONFIG_VALUE_0: "https://github.com/acme/rules.git",
+    };
+    const adhere = async (...args: ReadonlyArray<string>) =>
+      (await execFileAsync("bun", [main, ...args], { cwd: root, env })).stdout;
+
+    expect(await adhere("list", "acme/rules")).toBe(
+      "data/ports   A port must be branded.\nstyle/small  A file should be small.\n",
+    );
+    expect(await adhere("install", "acme/rules/data")).toBe(
+      "created: .adhere/data/ports.md\nskipped: none\n",
+    );
+    expect(await adhere("install", "acme/rules")).toBe(
+      "created: .adhere/style/small.md\nskipped: .adhere/data/ports.md\n",
+    );
+    expect(await readFile(join(root, ".adhere", "data", "ports.md"), "utf8")).toBe(ports);
+    expect((await readdir(join(root, ".adhere"))).sort()).toEqual(["data", "style"]);
   });
 
   it("takes several presets, repeated or separated by commas, and refuses an unknown one", async () => {

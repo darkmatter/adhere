@@ -23,6 +23,7 @@ import {
 import type { Flags } from "#config.ts";
 import { findContradictions, formatContradictions } from "#contradictions.ts";
 import { type Install, initProject } from "#init.ts";
+import { installRules, listRules, parseSource } from "#install.ts";
 import { formatLinterCheck, tallyProjectRules } from "#mechanical.ts";
 import { type PresetName, presetNames } from "#presets.ts";
 import { globalRuleSet } from "#rules.ts";
@@ -352,6 +353,58 @@ export const initCommand = Command.make("init", { force }, (input) =>
   ),
 );
 
+const source = Argument.string("source").pipe(
+  Argument.filterMap(
+    (spec) => Option.fromNullishOr(parseSource(spec)),
+    (spec) => `org/repo, then optionally a topic or rule and #ref, not ${spec}`,
+  ),
+  Argument.withDescription(
+    "A GitHub repo with rules in .adhere/, as org/repo, optionally followed by a topic or a rule, as in org/repo/data/brand-ports, and by #branch or #tag.",
+  ),
+);
+
+/** `adhere list org/repo`: the rules another repo's `.adhere/` holds. */
+export const listCommand = Command.make("list", { source }, (input) =>
+  Effect.gen(function* () {
+    const rules = yield* listRules(input.source);
+    const width = Math.max(...rules.map(({ id }) => id.length));
+    yield* Console.log(
+      rules.map(({ id, description }) => `${id.padEnd(width)}  ${description}`).join("\n"),
+    );
+  }),
+).pipe(
+  Command.withDescription(
+    "List the rules in a GitHub repo's .adhere/, each with its description, for adhere install. Clones with git, so a private repo needs git's credentials for it.",
+  ),
+);
+
+/** `adhere install org/repo`: another repo's rules, copied into this one's `.adhere/`. */
+export const installCommand = Command.make(
+  "install",
+  {
+    source,
+    force: Flag.boolean("force").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription("Overwrite rule files already in .adhere/."),
+    ),
+  },
+  (input) =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path;
+      const result = yield* installRules(path.resolve(), input.source, { force: input.force });
+      yield* Console.log(
+        [
+          result.created.length > 0 ? `created: ${result.created.join(", ")}` : "created: none",
+          result.skipped.length > 0 ? `skipped: ${result.skipped.join(", ")}` : "skipped: none",
+        ].join("\n"),
+      );
+    }),
+).pipe(
+  Command.withDescription(
+    "Copy the rules in a GitHub repo's .adhere/, or one topic or rule of them, into this repo's .adhere/ at the same paths. They are this repo's own rules from then on, to edit or keep in step by hand. Existing files are skipped unless --force.",
+  ),
+);
+
 /**
  * The key typed at a masked prompt, or piped in: `adhere login < key.txt`.
  * Whitespace around it, like the newline a pipe ends with, is dropped.
@@ -440,6 +493,10 @@ export const cli = Command.make("adhere").pipe(
     { command: "adhere login", description: "Save your TypeSafe AI API key for later runs" },
     { command: "adhere lint", description: "Audit the working directory" },
     {
+      command: "adhere install org/repo",
+      description: "Copy another repo's .adhere/ rules into this one",
+    },
+    {
       command: "adhere lint --preset effect",
       description: "Audit against the built-in Effect rules",
     },
@@ -448,6 +505,8 @@ export const cli = Command.make("adhere").pipe(
     lintCommand,
     validateCommand,
     initCommand,
+    listCommand,
+    installCommand,
     loginCommand,
     logoutCommand,
     skillCommand,

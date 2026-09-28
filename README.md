@@ -139,6 +139,8 @@ adhere lint --deny-warnings    # fail on warnings as well as errors
 adhere lint --log-level debug  # log each request to Jev on stderr
 adhere validate                # check the rules' wording; ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
+adhere list org/repo           # list the rules in another repo's .adhere/
+adhere install org/repo        # copy them into this repo's .adhere/
 adhere login                   # save a TypeSafe AI API key for later runs
 adhere logout                  # delete the saved key
 adhere skill                   # print the agent skill (below)
@@ -306,6 +308,33 @@ and `--config.strict-dep-builds=false`, so pnpm 11 skips the build script of
 msgpackr-extract, an optional native add-on that comes with `effect` and that
 adhere never uses, with a warning instead of failing.
 It skips the install when `package.json` already lists adhere.
+
+### Sharing rules
+
+An organization's rules can live in one repo's `.adhere/`, and other repos
+copy them in. `adhere list org/repo` prints each rule there with its
+description. `adhere install org/repo` copies every rule into this repo's
+`.adhere/` at the path it has in the source, so `.adhere/data/brand-ports.md`
+stays `data/brand-ports`. A topic or a rule after the repo copies only that
+part, and `#` picks a branch or tag:
+
+```sh
+adhere install darkmatter/standards/data                # the data topic
+adhere install darkmatter/standards/data/brand-ports    # one rule
+adhere install darkmatter/standards#v3                  # every rule, as tagged v3
+```
+
+The copies are the repo's own rules from then on: commit them, edit them, or
+start new rules from them. Nothing tracks where they came from, so a later
+install skips a file already there, as init does, and `--force` overwrites it,
+edits and all. Only Markdown rule files are copied; the source's config, its
+inline rules, and its cache are not. A config with inline `rules` replaces
+the `.adhere/` rule files, so it replaces copied ones too.
+
+The source is cloned with `git` from `https://github.com/org/repo.git`, so a
+private repo needs git's credentials for GitHub, as `gh auth setup-git` sets
+up. To clone over SSH instead, let git rewrite the URL:
+`git config --global url.git@github.com:.insteadOf https://github.com/`.
 
 ### Validate
 
