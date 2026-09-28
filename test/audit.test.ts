@@ -2764,10 +2764,12 @@ describe("render", () => {
   it("warns under the section when the file may not show enough to decide", () => {
     const finding = { ...findingA, insufficiency: 0.45 };
     const lines = render({ ...result, findings: [finding] }, { root: "/repo" });
-    expect(lines[6]).toBe(
-      "  warning: Jev gave a 0.45 probability that the code in this file is insufficient to check this rule. You can include additional context by adding a comment, e.g. // @adhere this gets converted into a specific error downstream",
-    );
-    expect(lines[7]).toBe('  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))');
+    expect(lines.slice(6, 10)).toEqual([
+      "  warning: this file may not show enough to check this rule (Jev: 0.45 that it does not)",
+      "     help: add what the code relies on outside this file as a note Jev reads:",
+      "           // @adhere <the fact>, and how you know it",
+      '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
+    ]);
   });
 
   it("shows the code never to write, labeled with its word, for a rule without code to write", () => {

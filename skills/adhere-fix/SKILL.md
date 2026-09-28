@@ -36,11 +36,10 @@ Each finding shows:
   description;
 - the section of the file Jev points at, a run of whole statements of about 30
   lines; the violation is somewhere in it;
-- sometimes `warning: Jev gave a 0.xx probability that the code in this file
-is insufficient to check this rule`: the rule may turn on another file, a
-  library, or a service. Most of these are false; read what the code relies
-  on before fixing it. The warning suggests an `@adhere` note, which follows
-  the same rule as a suppression (see below);
+- sometimes `warning: this file may not show enough to check this rule`: the
+  rule may turn on another file, a library, or a service. Most of these are
+  false; read what the code relies on before fixing it. Its `help:` suggests
+  an `@adhere` note, which follows the same rule as a suppression (see below);
 - `hint:`, the code the rule wants, or `never:` for a rule that only shows code
   to avoid.
 

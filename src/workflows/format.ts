@@ -126,7 +126,8 @@ const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line
 
 /**
  * The warning on a finding whose file may not show enough to check its rule,
- * with Jev's probability that it does not, and how to add what is missing.
+ * with Jev's probability that it does not, and help: how to add what the
+ * code relies on as a note Jev reads, in the form the README asks for.
  */
 const insufficient = (finding: Finding): ReadonlyArray<Line> =>
   finding.insufficiency === undefined
@@ -135,9 +136,13 @@ const insufficient = (finding: Finding): ReadonlyArray<Line> =>
         [
           span("  warning: ", "warning"),
           span(
-            `Jev gave a ${finding.insufficiency.toFixed(2)} probability that the code in this file is insufficient to check this rule. You can include additional context by adding a comment, e.g. // @adhere this gets converted into a specific error downstream`,
+            `this file may not show enough to check this rule (Jev: ${finding.insufficiency.toFixed(2)} that it does not)`,
           ),
         ],
+        ...hanging(span("     help: ", "label"), [
+          [span("add what the code relies on outside this file as a note Jev reads:")],
+          highlighted("// @adhere <the fact>, and how you know it")[0] ?? [],
+        ]),
       ];
 
 /**

@@ -96,10 +96,12 @@ Jev is also asked whether the file shows enough to decide the rule at all:
 whether it turns on something the file does not show, such as what another
 file, a library, or a service does. When Jev's probability that it does is
 below 0.6, the finding gets a warning under its code, with the probability
-that it does not:
+that it does not, and help on adding what is missing:
 
 ```text
-  warning: Jev gave a 0.55 probability that the code in this file is insufficient to check this rule. You can include additional context by adding a comment, e.g. // @adhere this gets converted into a specific error downstream
+  warning: this file may not show enough to check this rule (Jev: 0.55 that it does not)
+     help: add what the code relies on outside this file as a note Jev reads:
+           // @adhere <the fact>, and how you know it
 ```
 
 On the eval, most findings with this warning were false, where about one in
