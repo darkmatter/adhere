@@ -61,13 +61,14 @@ built-in Effect rules. A finding looks like this:
 
 ```text
   × data/brand-ports (0.93): A port must be a branded, range-checked integer, never a bare number.
-   ╭─[src/server.ts:1:1]
+   ╭─[src/server.ts:6:3]
  1 │ import { Effect } from "effect";
  2 │ import { listen } from "./listen.ts";
  3 │
  4 │ export const serve = Effect.gen(function* () {
  5 │   const host = process.env.HOST ?? "localhost";
  6 │   const port: number = Number(process.env.PORT ?? 3000);
+   ·   ──────────────────────────────────────────────────────
  7 │   yield* listen({ host, port });
  8 │   yield* Effect.log(`Listening on ${host}:${port}`);
  9 │ });
@@ -85,12 +86,16 @@ The header is the rule id, Jev's probability, and the rule's description. A
 preset's rule has the preset's name first, as in
 `effect/basics/gen-for-sequencing`, so a report that mixes presets
 with a repo's own rules says where each came from.
-Under it is the section of the file Jev points at. adhere splits each file into sections of whole statements, such as its
-imports, constants, and functions, packed in order into runs of at most 30
+Under it is the section of the file Jev points at, with the line it names
+underlined, or the lines, when it names several, marked with a bar beside the
+code. adhere splits each file into sections of whole statements, such as
+its imports, constants, and functions, packed in order into runs of at most 30
 lines; a class or function longer than that splits into its methods or the
-statements of its body. Jev reads the file as these sections and points at one
-of them rather than at a line: on the eval it judged as well that way, and
-chose a section holding the violation as often as it chose the right line.
+statements of its body. Jev reads the file as these sections and chooses one,
+and in the same request the line in it where the violation starts and the one
+where it ends: on the eval it judged as well that way, and the lines it named
+held a violation for 94% of real findings, most often as one line. When it
+names no lines, the section is shown alone, at its first line.
 
 Jev is also asked whether the file shows enough to decide the rule at all:
 whether it turns on something the file does not show, such as what another
@@ -228,10 +233,10 @@ delete: Effect.fn(function* ({ output }) {
 ```
 
 On a line of its own, `adhere-ignore` covers the statement that starts on the
-next line of code: here the whole handler. It suppresses a finding in any
-section that holds that statement, so it also covers other code in the same
-section. At the end of a line of code, it covers the statement that starts on
-that line. `adhere-ignore-file`, anywhere
+next line of code: here the whole handler, wherever in it Jev points, since the
+lines it points at can move between runs. A finding without lines is covered
+when its section overlaps the statement. At the end of a line of code, it
+covers the statement that starts on that line. `adhere-ignore-file`, anywhere
 in a file, covers the whole file, and the rules it names are not judged there
 at all. A comment names rules as a report does, a preset's with its preset
 first, separated by commas; what follows `--` is the reason, for whoever
@@ -727,7 +732,10 @@ config's `sufficiencyThreshold`, which beats the default, `0.6`.
    `choice` question among the sections' numbers, which yields the section to
    report. The options carry no text of their own, since each is a key of the
    state: describing each section by its first line, or by what it declares,
-   located no better on the eval. Beside it, one `noul` carrying the rule:
+   located no better on the eval. For each section, two `choice` questions
+   among its lines, each option the line's text, of the line the violation
+   starts on and the one it ends on; the chosen section's are underlined.
+   Beside them, one `noul` carrying the rule:
    whether you can tell if `code` breaks it from `code` alone, without knowing
    what other files, libraries, services, or configuration do. It yields the
    warning (see the report, above).

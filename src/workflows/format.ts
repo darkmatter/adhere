@@ -14,6 +14,7 @@ type Role =
   | "description"
   | "path"
   | "lineNumber"
+  | "underline"
   | "label"
   | Kind;
 
@@ -41,6 +42,7 @@ const THEME: Readonly<Record<Role, string>> = {
   description: "38;2;230;230;255",
   path: "38;2;5;125;160;1",
   lineNumber: "2",
+  underline: "38;2;255;0;175",
   label: "38;2;242;205;205",
   comment: "2",
   string: "32",
@@ -100,25 +102,48 @@ const header = (finding: Finding): Line => [
 ];
 
 /**
- * The path at the section's first line, then the section with each line
- * numbered in the gutter.
+ * The path at the lines Jev points at, or the section's first line when it
+ * named none, then the section with each line numbered in the gutter. One
+ * line Jev points at is underlined under its code; several are marked by a
+ * bar in a column of their own beside the code, as `vp lint` marks a span,
+ * so each line of code keeps one line of the report.
  */
 const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => {
   const { start, lines } = finding.excerpt;
   const width = String(start + lines.length - 1).length;
   const gutter = span(" ".repeat(width + 2));
-  const first = lines[0] ?? "";
-  const location = `:${start}:${first.length - first.trimStart().length + 1}]`;
+  const indentOf = (line: string) => line.slice(0, line.length - line.trimStart().length);
+  const pointed = finding.lines;
+  const at = pointed?.first ?? start;
+  const location = `:${at}:${indentOf(lines[at - start] ?? "").length + 1}]`;
+  const spanning = pointed !== undefined && pointed.last > pointed.first;
+  const inside = (line: number) =>
+    pointed !== undefined && pointed.first <= line && line <= pointed.last;
   return [
     [gutter, span("╭─["), span(displayPath(finding.file, root), "path"), span(location)],
-    ...highlighted(lines.join("\n")).map((code, index): Line => {
+    ...highlighted(lines.join("\n")).flatMap((code, index): ReadonlyArray<Line> => {
       const number = String(start + index);
-      return [
+      const marker = spanning ? [inside(start + index) ? span("┃ ", "underline") : span("  ")] : [];
+      const numbered = [
         span(" ".repeat(width - number.length + 1)),
         span(number, "lineNumber"),
         span(" │ "),
+        ...marker,
         ...code,
       ];
+      const text = lines[index] ?? "";
+      // The line's own indentation, tabs and all, lines the underline up under its code.
+      return !spanning && inside(start + index) && text.trim() !== ""
+        ? [
+            numbered,
+            [
+              gutter,
+              span("· "),
+              span(indentOf(text)),
+              span("─".repeat(text.trim().length), "underline"),
+            ],
+          ]
+        : [numbered];
     }),
     [gutter, span("╰────")],
   ];
@@ -158,8 +183,9 @@ const hint = (finding: Finding): ReadonlyArray<Line> => {
 
 /**
  * One diagnostic, in the frame `vp lint` prints on a terminal: a header with
- * the rule in red, the section of the file Jev points at, a warning when the
- * file may not show enough to decide, and the code to write as the hint.
+ * the rule in red, the section of the file Jev points at with the lines it
+ * names in pink, a warning when the file may not show enough to decide, and
+ * the code to write as the hint.
  */
 const frame = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => [
   header(finding),

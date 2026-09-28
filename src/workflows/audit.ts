@@ -36,6 +36,8 @@ export interface Finding {
   readonly file: string;
   /** The section of the file Jev points at, which a finding is in. */
   readonly section: Range;
+  /** The lines in the section the code that breaks the rule starts and ends on, when Jev named them. */
+  readonly lines?: Range;
   /** The section's code as written, comments and all, without blank lines at either end. */
   readonly excerpt: Excerpt;
   /**
@@ -577,6 +579,7 @@ export const executeAudit = (
                   examples: examplesOf(k.rule),
                   file: file.path,
                   section: judgment.section,
+                  ...(judgment.lines === undefined ? {} : { lines: judgment.lines }),
                   excerpt: excerptOf(original, judgment.section),
                   ...(judgment.sufficiency !== undefined &&
                   judgment.sufficiency < plan.sufficiencyThreshold
@@ -588,7 +591,7 @@ export const executeAudit = (
               ]
             : [];
         })
-        .sort((a, b) => a.section.first - b.section.first);
+        .sort((a, b) => (a.lines ?? a.section).first - (b.lines ?? b.section).first);
       return {
         result:
           blocked === undefined
@@ -650,7 +653,7 @@ export const executeAudit = (
           !suppresses(
             plan.suppressions,
             shownId({ id: finding.rule, preset: finding.preset }),
-            finding.section,
+            finding.lines ?? finding.section,
           ),
       );
       if (shown.length < result.findings.length) {

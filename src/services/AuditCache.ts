@@ -7,8 +7,12 @@ const MatcherFields = {
   excludeIf: Schema.optionalKey(Schema.Array(Schema.Finite)),
 };
 
+/** Lines of a file, first to last. */
+const Lines = Schema.Struct({ first: Schema.Finite, last: Schema.Finite });
 /** The lines of the section a finding is in, once located. */
-const Section = Schema.optionalKey(Schema.Struct({ first: Schema.Finite, last: Schema.Finite }));
+const Section = Schema.optionalKey(Lines);
+/** The lines in its section the code that breaks the rule starts and ends on, when Jev named them. */
+const Located = Schema.optionalKey(Lines);
 
 /** Jev's probability, asked with the section, that the file shows enough to decide the rule. */
 const Sufficiency = Schema.optionalKey(Schema.Finite);
@@ -18,6 +22,7 @@ export const Judgment = Schema.Struct({
   fingerprint: Schema.String,
   probability: Schema.Finite,
   section: Section,
+  lines: Located,
   sufficiency: Sufficiency,
   ...MatcherFields,
 });
@@ -37,12 +42,13 @@ export interface CacheEntry extends Schema.Schema.Type<typeof CacheEntry> {}
 
 /**
  * Jev's answer about some code for one rule text: the probability, the
- * section and sufficiency once located, and its matchers' scores. An answer from before
+ * section, lines, and sufficiency once located, and its matchers' scores. An answer from before
  * sections held a line instead, under a fingerprint no rule has now.
  */
 export const Answer = Schema.Struct({
   probability: Schema.Finite,
   section: Section,
+  lines: Located,
   sufficiency: Sufficiency,
   ...MatcherFields,
 });

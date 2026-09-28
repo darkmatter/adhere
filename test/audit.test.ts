@@ -166,10 +166,11 @@ const sectionAt = (lines: ReadonlyArray<string>, line: number): Range =>
     last: line,
   };
 
-/** Jev's locate answer for a finding on `line`: its section, in a file that shows enough. */
+/** Jev's locate answer for a finding on `line`: its section, and the line, in a file that shows enough. */
 const placedAt = (lines: ReadonlyArray<string>, line: number) => ({
   section: sectionAt(lines, line),
   sufficiency: 0.9,
+  lines: { first: line, last: line },
 });
 
 /** Jev that answers from tables, as `recordingJev` does, and keeps the code of every request. */
@@ -266,6 +267,7 @@ const findingA = {
   examples: { good: { word: "must" as const, code: a.must } },
   file: "/repo/src/server.ts",
   section: { first: 1, last: 3 },
+  lines: { first: 2, last: 2 },
   excerpt: { start: 1, lines: source.lines },
   probability: 0.9,
   level: "error" as const,
@@ -327,7 +329,29 @@ describe("request bodies", () => {
     const body = locateBody("jev-latest", long, { a });
     expect(Object.keys(body.state.code)).toEqual(["1", "2", "3"]);
     expect(body.state.code["2"]?.split("\n")[0]).toBe("const v31 = 31;");
-    expect(Object.keys(body.questions)).toEqual(["a", "sufficient:a"]);
+    expect(Object.keys(body.questions)).toEqual([
+      "a",
+      "start:a:1",
+      "end:a:1",
+      "start:a:2",
+      "end:a:2",
+      "start:a:3",
+      "end:a:3",
+      "sufficient:a",
+    ]);
+    // Where in a section it starts or ends: a choice among its lines, each its text.
+    expect(body.questions["start:a:2"]).toMatchObject({
+      type: "choice",
+      instructions: {
+        question: 'Which line of `code["2"]` does the code that breaks `rule` start on?',
+        rule: a.description,
+        must: a.must,
+      },
+    });
+    expect(Object.entries(body.questions["start:a:2"]?.criteria ?? {})[0]).toEqual([
+      "31",
+      "const v31 = 31;",
+    ]);
     expect(body.questions.a).toEqual({
       type: "choice",
       instructions: {
@@ -345,8 +369,12 @@ describe("request bodies", () => {
         must: a.must,
       },
     });
-    // A file of one section has nothing to choose among: only the sufficiency question.
-    expect(Object.keys(locateBody("jev-latest", code, { a }).questions)).toEqual(["sufficient:a"]);
+    // A file of one section has no section to choose.
+    expect(Object.keys(locateBody("jev-latest", code, { a }).questions)).toEqual([
+      "start:a:1",
+      "end:a:1",
+      "sufficient:a",
+    ]);
   });
 
   it("carries the code under the rule's words: must and never, or should and should not", () => {
@@ -2426,7 +2454,10 @@ describe("pipeline", () => {
         lines.length === other.lines.length
           ? Effect.fail(JevBlocked.make({ ray: "a3fb098cae4f55a3-LAX" }))
           : Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} }),
-      locate: () => Effect.succeed({ a: { section: { first: 1, last: 3 }, sufficiency: 0.9 } }),
+      locate: () =>
+        Effect.succeed({
+          a: { section: { first: 1, last: 3 }, sufficiency: 0.9, lines: { first: 2, last: 2 } },
+        }),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
     });
@@ -2473,7 +2504,10 @@ describe("pipeline", () => {
         lines.length === dense.lines.length
           ? Effect.fail(JevOverflow.make())
           : Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} }),
-      locate: () => Effect.succeed({ a: { section: { first: 1, last: 3 }, sufficiency: 0.9 } }),
+      locate: () =>
+        Effect.succeed({
+          a: { section: { first: 1, last: 3 }, sufficiency: 0.9, lines: { first: 2, last: 2 } },
+        }),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
     });
@@ -2735,9 +2769,10 @@ describe("render", () => {
     expect(render(result, { root: "/repo" }).join("\n")).toBe(
       [
         "  × a (0.90): Ports are branded.",
-        "   ╭─[src/server.ts:1:1]",
+        "   ╭─[src/server.ts:2:3]",
         " 1 │ const before = 1;",
         " 2 │   const port: number = Number(process.env.PORT);",
+        "   ·   ──────────────────────────────────────────────",
         " 3 │ const after = 2;",
         "   ╰────",
         '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
@@ -2749,22 +2784,50 @@ describe("render", () => {
     );
   });
 
-  it("numbers the section's lines right-aligned, and places it at its first line's code", () => {
+  it("numbers the section's lines right-aligned, and underlines the lines Jev names past a tab", () => {
     const excerpt = { start: 9, lines: ["\tif (port) {", "\t\tlisten(port);", "\t}"] };
-    const finding = { ...findingA, section: { first: 9, last: 11 }, excerpt };
-    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(1, 6)).toEqual([
-      "    ╭─[src/server.ts:9:2]",
+    const finding = {
+      ...findingA,
+      section: { first: 9, last: 11 },
+      lines: { first: 10, last: 10 },
+      excerpt,
+    };
+    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(1, 7)).toEqual([
+      "    ╭─[src/server.ts:10:3]",
       "  9 │ \tif (port) {",
       " 10 │ \t\tlisten(port);",
+      "    · \t\t─────────────",
       " 11 │ \t}",
       "    ╰────",
+    ]);
+  });
+
+  it("marks the lines of a span of several with a bar beside the code, not an underline each", () => {
+    const finding = { ...findingA, lines: { first: 2, last: 3 } };
+    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(1, 6)).toEqual([
+      "   ╭─[src/server.ts:2:3]",
+      " 1 │   const before = 1;",
+      " 2 │ ┃   const port: number = Number(process.env.PORT);",
+      " 3 │ ┃ const after = 2;",
+      "   ╰────",
+    ]);
+  });
+
+  it("places a finding without lines at its section's first line, with no underline", () => {
+    const { lines: _, ...unlined } = findingA;
+    expect(render({ ...result, findings: [unlined] }, { root: "/repo" }).slice(1, 6)).toEqual([
+      "   ╭─[src/server.ts:1:1]",
+      " 1 │ const before = 1;",
+      " 2 │   const port: number = Number(process.env.PORT);",
+      " 3 │ const after = 2;",
+      "   ╰────",
     ]);
   });
 
   it("warns under the section when the file may not show enough to decide", () => {
     const finding = { ...findingA, insufficiency: 0.45 };
     const lines = render({ ...result, findings: [finding] }, { root: "/repo" });
-    expect(lines.slice(6, 10)).toEqual([
+    expect(lines.slice(7, 11)).toEqual([
       "  warning: this file may not show enough to check this rule (Jev: 0.45 that it does not)",
       "     help: add what the code relies on outside this file as a note Jev reads:",
       "           // @adhere <the fact>, and how you know it",
@@ -3067,7 +3130,10 @@ describe("jev over http", () => {
       const answers = Object.fromEntries(
         ids.map((id) => [
           id,
-          id.startsWith("sufficient:") ? { noul: 0.4 } : { choice: id === "a" ? "2" : "9" },
+          id.startsWith("sufficient:")
+            ? { noul: 0.4 }
+            : // a starts on 35 and ends on 33 of section 2, lines 31 to 60; the edges are ordered.
+              { choice: { a: "2", b: "9", "start:a:2": "35", "end:a:2": "33" }[id] ?? "1" },
         ]),
       );
       return Effect.succeed(HttpClientResponse.fromWeb(request, Response.json({ answers })));
@@ -3095,9 +3161,14 @@ describe("jev over http", () => {
       return [yield* jev.locate(long, { a, b }), yield* jev.locate(["const x = 1;"], { a })];
     });
     const [three, one] = await Effect.runPromise(Effect.provide(located, layer));
-    expect(three).toEqual({ a: { section: sectionsOf(long)[1], sufficiency: 0.4 } });
-    expect(one).toEqual({ a: { section: { first: 1, last: 1 }, sufficiency: 0.4 } });
-    expect(sent).toEqual([["a", "sufficient:a", "b", "sufficient:b"], ["sufficient:a"]]);
+    expect(three).toEqual({
+      a: { section: sectionsOf(long)[1], sufficiency: 0.4, lines: { first: 33, last: 35 } },
+    });
+    expect(one).toEqual({
+      a: { section: { first: 1, last: 1 }, sufficiency: 0.4, lines: { first: 1, last: 1 } },
+    });
+    expect(sent[0]).toContain("start:b:3");
+    expect(sent[1]).toEqual(["start:a:1", "end:a:1", "sufficient:a"]);
   });
 
   it("sends the key from Credentials as a bearer token", async () => {

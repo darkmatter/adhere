@@ -5,6 +5,7 @@ import { Credentials } from "#services/Credentials.ts";
 import {
   type Body,
   type ComparedRule,
+  edgeKey,
   conflictBody,
   contradictBody,
   Jev,
@@ -277,14 +278,27 @@ export const JevLive = Layer.effect(Jev)(
         LocateAnswers,
       );
       // A file of one section has every finding in it. An answer that names no section,
-      // or none at all, which Jev should not give, leaves the rule unlocated.
+      // or none at all, which Jev should not give, leaves the rule unlocated; lines outside
+      // the section leave it without lines.
       return Record.filterMap(rules, (_, id) => {
-        const section =
-          sections.length === 1 ? sections[0] : sections[Number(answers[id]?.choice) - 1];
+        const chosen = sections.length === 1 ? 1 : Number(answers[id]?.choice);
+        const section = sections[chosen - 1];
         const sufficiency = answers[sufficiencyKey(id)]?.noul;
-        return section === undefined || sufficiency === undefined
-          ? Result.failVoid
-          : Result.succeed({ section, sufficiency });
+        if (section === undefined || sufficiency === undefined) return Result.failVoid;
+        const [start, end] = (["start", "end"] as const).map((edge) =>
+          Number(answers[edgeKey(edge, id, chosen)]?.choice),
+        );
+        const within = (line: number | undefined): line is number =>
+          line !== undefined && section.first <= line && line <= section.last;
+        return Result.succeed(
+          within(start) && within(end)
+            ? {
+                section,
+                sufficiency,
+                lines: { first: Math.min(start, end), last: Math.max(start, end) },
+              }
+            : { section, sufficiency },
+        );
       });
     });
 

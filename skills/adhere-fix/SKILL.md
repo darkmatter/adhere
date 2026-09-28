@@ -35,7 +35,8 @@ Each finding shows:
   `alchemy/providers/idempotent-delete`, Jev's probability, and the rule's
   description;
 - the section of the file Jev points at, a run of whole statements of about 30
-  lines; the violation is somewhere in it;
+  lines, with the lines it names underlined, or marked with a bar when they
+  are several: usually where the violation starts, which may run on past them;
 - sometimes `warning: this file may not show enough to check this rule`: the
   rule may turn on another file, a library, or a service. Most of these are
   false; read what the code relies on before fixing it. Its `help:` suggests
@@ -124,8 +125,8 @@ delete: Effect.fn(function* ({ output }) {
 ```
 
 - The comment covers the whole statement that starts on the next line of code,
-  and a finding in any section that holds that statement. At the end of a line
-  of code, it covers the statement that starts on that line.
+  wherever in it Jev points. At the end of a line of code, it covers the
+  statement that starts on that line.
 - `// adhere-ignore-file <rule> -- <reason>` covers a whole file. Use it only
   when the rule is wrong for all of the file, such as generated code.
 - Name several rules with commas: `// adhere-ignore <rule>, <rule> -- <reason>`.
