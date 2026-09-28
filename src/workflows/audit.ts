@@ -1,6 +1,6 @@
 import { isNote, withoutComments } from "#comments.ts";
 import { type Examples, examplesOf, type Level, type Rule, type RuleId } from "#config.ts";
-import { type Excerpt, type Range, sectionName } from "#excerpt.ts";
+import { type Excerpt, type Range } from "#excerpt.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, answersOf, type Judgment, sha256, type Tally } from "#services/AuditCache.ts";
@@ -36,16 +36,14 @@ export interface Finding {
   readonly file: string;
   /** The section of the file Jev points at, which a finding is in. */
   readonly section: Range;
-  /** What the section declares, such as `class Context`, to name it by. */
-  readonly name: string;
   /** The section's code as written, comments and all, without blank lines at either end. */
   readonly excerpt: Excerpt;
   /**
-   * Jev's probability that the file shows enough to decide the rule, when it
-   * is below the sufficiency threshold: the report warns to check what the
-   * code relies on outside the file.
+   * Jev's probability that the file does not show enough to check the rule,
+   * when its probability that it does is below the sufficiency threshold:
+   * the report warns, and says how to add the context.
    */
-  readonly insufficient?: number;
+  readonly insufficiency?: number;
   readonly probability: number;
   /** An error fails the run; a warning does not, unless `--deny-warnings`. */
   readonly level: Level;
@@ -579,11 +577,10 @@ export const executeAudit = (
                   examples: examplesOf(k.rule),
                   file: file.path,
                   section: judgment.section,
-                  name: sectionName(file.lines, judgment.section),
                   excerpt: excerptOf(original, judgment.section),
                   ...(judgment.sufficiency !== undefined &&
                   judgment.sufficiency < plan.sufficiencyThreshold
-                    ? { insufficient: judgment.sufficiency }
+                    ? { insufficiency: 1 - judgment.sufficiency }
                     : {}),
                   probability: judgment.probability,
                   level: k.rule.level ?? "error",

@@ -100,8 +100,8 @@ const header = (finding: Finding): Line => [
 ];
 
 /**
- * The path at the section's first line, and what the section declares, then
- * the section with each line numbered in the gutter.
+ * The path at the section's first line, then the section with each line
+ * numbered in the gutter.
  */
 const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => {
   const { start, lines } = finding.excerpt;
@@ -110,13 +110,7 @@ const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line
   const first = lines[0] ?? "";
   const location = `:${start}:${first.length - first.trimStart().length + 1}]`;
   return [
-    [
-      gutter,
-      span("╭─["),
-      span(displayPath(finding.file, root), "path"),
-      span(location),
-      span(` ${finding.name}`, "label"),
-    ],
+    [gutter, span("╭─["), span(displayPath(finding.file, root), "path"), span(location)],
     ...highlighted(lines.join("\n")).map((code, index): Line => {
       const number = String(start + index);
       return [
@@ -131,17 +125,17 @@ const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line
 };
 
 /**
- * The warning on a finding whose file may not show enough to decide it,
- * with Jev's probability that it does.
+ * The warning on a finding whose file may not show enough to check its rule,
+ * with Jev's probability that it does not, and how to add what is missing.
  */
 const insufficient = (finding: Finding): ReadonlyArray<Line> =>
-  finding.insufficient === undefined
+  finding.insufficiency === undefined
     ? []
     : [
         [
           span("  warning: ", "warning"),
           span(
-            `the file may not show enough to decide this (${finding.insufficient.toFixed(2)}); check what the code relies on outside it`,
+            `Jev gave a ${finding.insufficiency.toFixed(2)} probability that the code in this file is insufficient to check this rule. You can include additional context by adding a comment, e.g. // @adhere this gets converted into a specific error downstream`,
           ),
         ],
       ];

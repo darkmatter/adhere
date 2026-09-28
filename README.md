@@ -61,7 +61,7 @@ built-in Effect rules. A finding looks like this:
 
 ```text
   × data/brand-ports (0.93): A port must be a branded, range-checked integer, never a bare number.
-   ╭─[src/server.ts:1:1] imports, const serve
+   ╭─[src/server.ts:1:1]
  1 │ import { Effect } from "effect";
  2 │ import { listen } from "./listen.ts";
  3 │
@@ -85,8 +85,7 @@ The header is the rule id, Jev's probability, and the rule's description. A
 preset's rule has the preset's name first, as in
 `effect/basics/gen-for-sequencing`, so a report that mixes presets
 with a repo's own rules says where each came from.
-Under it is the section of the file Jev points at, named by what it declares.
-adhere splits each file into sections of whole statements, such as its
+Under it is the section of the file Jev points at. adhere splits each file into sections of whole statements, such as its
 imports, constants, and functions, packed in order into runs of at most 30
 lines; a class or function longer than that splits into its methods or the
 statements of its body. Jev reads the file as these sections and points at one
@@ -95,16 +94,18 @@ chose a section holding the violation as often as it chose the right line.
 
 Jev is also asked whether the file shows enough to decide the rule at all:
 whether it turns on something the file does not show, such as what another
-file, a library, or a service does. When its probability is below 0.6, the
-finding gets a warning under its code:
+file, a library, or a service does. When Jev's probability that it does is
+below 0.6, the finding gets a warning under its code, with the probability
+that it does not:
 
 ```text
-  warning: the file may not show enough to decide this (0.55); check what the code relies on outside it
+  warning: Jev gave a 0.55 probability that the code in this file is insufficient to check this rule. You can include additional context by adding a comment, e.g. // @adhere this gets converted into a specific error downstream
 ```
 
 On the eval, most findings with this warning were false, where about one in
-five of all findings was: check what the warning points at before acting on
-it. `sufficiencyThreshold` in the config, or `--sufficiency-threshold`, sets
+five of all findings was: check what the code relies on outside the file
+before acting on it. What you find can go in an `@adhere` note, which Jev
+reads (see [Comments](#comments)). `sufficiencyThreshold` in the config, or `--sufficiency-threshold`, sets
 the cutoff. The warning changes neither the finding's level nor the exit code.
 
 The hint is the rule's code that must be written; a rule with only code that must

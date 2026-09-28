@@ -264,54 +264,6 @@ export const sectionsOf = (lines: ReadonlyArray<string>): ReadonlyArray<Range> =
   });
 };
 
-const DECLARATION =
-  /^(?:export\s+)?(?:default\s+)?(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(function\*?|class|interface|type|enum|const|let|var|namespace)\s+([\w$]+|\[[^\]]*\]|\{[^}]*\})/;
-const FIELD =
-  /^(?:(?:public|private|protected|static|readonly|override|declare)\s+)*(#?[\w$]+)\s*[?!]?\s*[:=][^=]/;
-const METHOD =
-  /^(?:(?:public|private|protected|static|readonly|async|override|get|set)\s+)*(#?[\w$]+)\s*[<(]/;
-const CALL =
-  /^(describe|it|test|beforeAll|beforeEach|afterAll|afterEach|useEffect|useLayoutEffect)(?:\.\w+)?\(\s*(?:(['"`])(.*?)\2)?/;
-/** Words a method's pattern matches that start a statement instead. */
-const KEYWORDS = new Set(["if", "for", "while", "switch", "return", "await", "catch", "super"]);
-
-/**
- * What a section declares, for a report to name it by, such as `class
- * Context` or `imports, const prompt`: the declarations, methods, fields,
- * and test blocks at its outermost indentation, or its first line when it
- * has none, such as a run of JSX.
- */
-export const sectionName = (lines: ReadonlyArray<string>, section: Range): string => {
-  const body = lines.slice(section.first - 1, section.last).filter((line) => line.trim() !== "");
-  const indent = Math.min(...body.map((line) => line.length - line.trimStart().length));
-  const names: Array<string> = [];
-  let imports = false;
-  for (const line of body) {
-    if (line.length - line.trimStart().length !== indent) continue;
-    const text = line.trim();
-    if (text.startsWith("import ")) {
-      imports = true;
-      continue;
-    }
-    const declared = DECLARATION.exec(text);
-    const called = CALL.exec(text);
-    const field = FIELD.exec(text);
-    const method = METHOD.exec(text);
-    if (declared !== null) {
-      names.push(`${declared[1]?.replace("*", "")} ${declared[2]?.replace(/\s+/g, " ")}`);
-    } else if (called !== null) {
-      names.push(called[3] === undefined ? `${called[1]}` : `${called[1]} "${called[3]}"`);
-    } else if (field !== null) {
-      names.push(`${field[1]}`);
-    } else if (method !== null && !KEYWORDS.has(method[1] ?? "")) {
-      names.push(`${method[1]}()`);
-    }
-  }
-  const listed = [...(imports ? ["imports"] : []), ...names];
-  if (listed.length === 0) return (body[0] ?? "").trim().slice(0, 80);
-  return listed.length > 4 ? `${listed.slice(0, 4).join(", ")}, …` : listed.join(", ");
-};
-
 /**
  * The statement that starts on `line`, such as a property, a function, or a
  * call that opens there: the outermost statement around `line` whose first

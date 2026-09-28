@@ -29,7 +29,7 @@ import {
   presetsOf,
   resolveConfig,
 } from "../src/config.ts";
-import { type Range, sectionName, sectionsOf } from "../src/excerpt.ts";
+import { type Range, sectionsOf } from "../src/excerpt.ts";
 import { tokenize } from "../src/highlight.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
@@ -266,7 +266,6 @@ const findingA = {
   examples: { good: { word: "must" as const, code: a.must } },
   file: "/repo/src/server.ts",
   section: { first: 1, last: 3 },
-  name: "const before, const after",
   excerpt: { start: 1, lines: source.lines },
   probability: 0.9,
   level: "error" as const,
@@ -1740,10 +1739,10 @@ describe("plan", () => {
         conflicts: () => Effect.die("an audit compares no rules"),
         contradicts: () => Effect.die("an audit compares no rules"),
       });
-    const result = await audit({ rules, jev: jev({ a: 0.55 }), cache: memoryCache() });
-    expect(result.findings.map(({ rule, insufficient }) => ({ rule, insufficient }))).toEqual([
-      { rule: "a", insufficient: 0.55 },
-      { rule: "b", insufficient: undefined },
+    const result = await audit({ rules, jev: jev({ a: 0.25 }), cache: memoryCache() });
+    expect(result.findings.map(({ rule, insufficiency }) => ({ rule, insufficiency }))).toEqual([
+      { rule: "a", insufficiency: 0.75 },
+      { rule: "b", insufficiency: undefined },
     ]);
 
     // An answer located before sufficiency was asked has none: its rule is located again,
@@ -2718,23 +2717,6 @@ describe("sections", () => {
       { first: 29, last: 32 },
     ]);
   });
-
-  it("names a section by what it declares, or its first line when it declares nothing", () => {
-    const code = [
-      'import { a } from "a";',
-      "export const prompt = () => a;",
-      "export class Reset {",
-      "  run() {}",
-      "}",
-      'describe("reset", () => {});',
-      "<div>",
-    ];
-    expect(sectionName(code, { first: 1, last: 2 })).toBe("imports, const prompt");
-    expect(sectionName(code, { first: 3, last: 5 })).toBe("class Reset");
-    expect(sectionName(code, { first: 4, last: 4 })).toBe("run()");
-    expect(sectionName(code, { first: 6, last: 6 })).toBe('describe "reset"');
-    expect(sectionName(code, { first: 7, last: 7 })).toBe("<div>");
-  });
 });
 
 describe("render", () => {
@@ -2753,7 +2735,7 @@ describe("render", () => {
     expect(render(result, { root: "/repo" }).join("\n")).toBe(
       [
         "  × a (0.90): Ports are branded.",
-        "   ╭─[src/server.ts:1:1] const before, const after",
+        "   ╭─[src/server.ts:1:1]",
         " 1 │ const before = 1;",
         " 2 │   const port: number = Number(process.env.PORT);",
         " 3 │ const after = 2;",
@@ -2769,9 +2751,9 @@ describe("render", () => {
 
   it("numbers the section's lines right-aligned, and places it at its first line's code", () => {
     const excerpt = { start: 9, lines: ["\tif (port) {", "\t\tlisten(port);", "\t}"] };
-    const finding = { ...findingA, section: { first: 9, last: 11 }, name: "listen()", excerpt };
+    const finding = { ...findingA, section: { first: 9, last: 11 }, excerpt };
     expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(1, 6)).toEqual([
-      "    ╭─[src/server.ts:9:2] listen()",
+      "    ╭─[src/server.ts:9:2]",
       "  9 │ \tif (port) {",
       " 10 │ \t\tlisten(port);",
       " 11 │ \t}",
@@ -2780,10 +2762,10 @@ describe("render", () => {
   });
 
   it("warns under the section when the file may not show enough to decide", () => {
-    const finding = { ...findingA, insufficient: 0.55 };
+    const finding = { ...findingA, insufficiency: 0.45 };
     const lines = render({ ...result, findings: [finding] }, { root: "/repo" });
     expect(lines[6]).toBe(
-      "  warning: the file may not show enough to decide this (0.55); check what the code relies on outside it",
+      "  warning: Jev gave a 0.45 probability that the code in this file is insufficient to check this rule. You can include additional context by adding a comment, e.g. // @adhere this gets converted into a specific error downstream",
     );
     expect(lines[7]).toBe('  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))');
   });
