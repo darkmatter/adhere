@@ -209,6 +209,121 @@ const statementsAround = (
   ];
 };
 
+/** The most lines a section holds, unless one statement with no group to split is longer. */
+const SECTION = 30;
+
+/**
+ * The file in sections, each ending where a statement does: its top-level
+ * statements, such as its imports, constants, and functions, packed in
+ * order into sections of at most `SECTION` lines, a decorator with what it
+ * decorates. A statement longer than that splits into the statements of its
+ * largest group, such as a class's methods or a component's body, the lines
+ * around that group going with the first and last of them. Every line is in
+ * one section: the comments and blank lines above a statement go with it,
+ * and the last section runs to the end.
+ */
+export const sectionsOf = (lines: ReadonlyArray<string>): ReadonlyArray<Range> => {
+  const { pieces } = piecesOf(lines.join("\n"));
+  const closes = closesOf(pieces);
+  const lineOf = (index: number) => pieces[index]?.line ?? 0;
+  /** Statements as ranges of at most `SECTION` lines where they can be split. */
+  const units = (statements: ReadonlyArray<Statement>): ReadonlyArray<Range> =>
+    statements.flatMap((statement): ReadonlyArray<Range> => {
+      if (statement.last - statement.first < SECTION) return [statement];
+      const largest = statement.groups.reduce<readonly [number, number] | undefined>(
+        (best, group) =>
+          best === undefined ||
+          lineOf(group[1]) - lineOf(group[0]) > lineOf(best[1]) - lineOf(best[0])
+            ? group
+            : best,
+        undefined,
+      );
+      const inner =
+        largest === undefined
+          ? []
+          : units(statementsIn(pieces, closes, largest[0] + 1, largest[1]));
+      const [head, tail] = [inner[0], inner.at(-1)];
+      if (head === undefined || tail === undefined || inner.length < 2) return [statement];
+      return [
+        { first: statement.first, last: head.last },
+        ...inner.slice(1, -1),
+        { first: tail.first, last: statement.last },
+      ];
+    });
+  const sections: Array<Range> = [];
+  /** A decorator, such as `@Command({…})`, waiting for the declaration it decorates. */
+  let decorator: Range | undefined;
+  for (const found of units(statementsIn(pieces, closes, 0, pieces.length))) {
+    if ((lines[found.first - 1] ?? "").trimStart().startsWith("@")) {
+      decorator = { first: decorator?.first ?? found.first, last: found.last };
+      continue;
+    }
+    const unit = { first: decorator?.first ?? found.first, last: found.last };
+    decorator = undefined;
+    const previous = sections.at(-1);
+    if (previous !== undefined && unit.last - previous.first < SECTION) {
+      sections[sections.length - 1] = { first: previous.first, last: unit.last };
+    } else {
+      sections.push({ first: unit.first, last: unit.last });
+    }
+  }
+  if (decorator !== undefined) sections.push(decorator);
+  // Each section starts where the one before it ends, and the last one ends with the file.
+  return sections.flatMap((section, index): ReadonlyArray<Range> => {
+    const first = (sections[index - 1]?.last ?? 0) + 1;
+    const last = index === sections.length - 1 ? lines.length : section.last;
+    return last < first ? [] : [{ first, last }];
+  });
+};
+
+const DECLARATION =
+  /^(?:export\s+)?(?:default\s+)?(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(function\*?|class|interface|type|enum|const|let|var|namespace)\s+([\w$]+|\[[^\]]*\]|\{[^}]*\})/;
+const FIELD =
+  /^(?:(?:public|private|protected|static|readonly|override|declare)\s+)*(#?[\w$]+)\s*[?!]?\s*[:=][^=]/;
+const METHOD =
+  /^(?:(?:public|private|protected|static|readonly|async|override|get|set)\s+)*(#?[\w$]+)\s*[<(]/;
+const CALL =
+  /^(describe|it|test|beforeAll|beforeEach|afterAll|afterEach|useEffect|useLayoutEffect)(?:\.\w+)?\(\s*(?:(['"`])(.*?)\2)?/;
+/** Words a method's pattern matches that start a statement instead. */
+const KEYWORDS = new Set(["if", "for", "while", "switch", "return", "await", "catch", "super"]);
+
+/**
+ * What a section declares, for a report to name it by, such as `class
+ * Context` or `imports, const prompt`: the declarations, methods, fields,
+ * and test blocks at its outermost indentation, or its first line when it
+ * has none, such as a run of JSX.
+ */
+export const sectionName = (lines: ReadonlyArray<string>, section: Range): string => {
+  const body = lines.slice(section.first - 1, section.last).filter((line) => line.trim() !== "");
+  const indent = Math.min(...body.map((line) => line.length - line.trimStart().length));
+  const names: Array<string> = [];
+  let imports = false;
+  for (const line of body) {
+    if (line.length - line.trimStart().length !== indent) continue;
+    const text = line.trim();
+    if (text.startsWith("import ")) {
+      imports = true;
+      continue;
+    }
+    const declared = DECLARATION.exec(text);
+    const called = CALL.exec(text);
+    const field = FIELD.exec(text);
+    const method = METHOD.exec(text);
+    if (declared !== null) {
+      names.push(`${declared[1]?.replace("*", "")} ${declared[2]?.replace(/\s+/g, " ")}`);
+    } else if (called !== null) {
+      names.push(called[3] === undefined ? `${called[1]}` : `${called[1]} "${called[3]}"`);
+    } else if (field !== null) {
+      names.push(`${field[1]}`);
+    } else if (method !== null && !KEYWORDS.has(method[1] ?? "")) {
+      names.push(`${method[1]}()`);
+    }
+  }
+  const listed = [...(imports ? ["imports"] : []), ...names];
+  if (listed.length === 0) return (body[0] ?? "").trim().slice(0, 80);
+  return listed.length > 4 ? `${listed.slice(0, 4).join(", ")}, …` : listed.join(", ");
+};
+
 /**
  * The statement that starts on `line`, such as a property, a function, or a
  * call that opens there: the outermost statement around `line` whose first

@@ -29,7 +29,7 @@ import {
   presetsOf,
   resolveConfig,
 } from "../src/config.ts";
-import { excerptOf } from "../src/excerpt.ts";
+import { excerptOf, sectionName, sectionsOf } from "../src/excerpt.ts";
 import { tokenize } from "../src/highlight.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
@@ -2564,6 +2564,79 @@ describe("highlight", () => {
       const text = tokenize(code).map((line) => line.map((token) => token.text).join(""));
       expect(text.join("\n")).toBe(code);
     }
+  });
+});
+
+describe("sections", () => {
+  /** A statement of `n` lines: `const name = [` then its values, then `];`. */
+  const statement = (name: string, n: number): ReadonlyArray<string> => [
+    `const ${name} = [`,
+    ...Array.from({ length: n - 2 }, (_, index) => `  ${index},`),
+    "];",
+  ];
+
+  it("packs whole statements into sections of at most 30 lines, covering every line", () => {
+    const code = [
+      'import { a } from "a";',
+      "",
+      "// the first",
+      ...statement("first", 20),
+      "",
+      ...statement("second", 20),
+      ...statement("third", 5),
+    ];
+    expect(sectionsOf(code)).toEqual([
+      { first: 1, last: 23 },
+      { first: 24, last: 49 },
+    ]);
+  });
+
+  it("splits a long statement into the statements of its largest group", () => {
+    const code = [
+      "export class Big {",
+      ...Array.from({ length: 4 }, (_, index) => [
+        `  method${index}() {`,
+        ...Array.from({ length: 12 }, (_, line) => `    this.call(${line});`),
+        "  }",
+      ]).flat(),
+      "}",
+    ];
+    const sections = sectionsOf(code);
+    expect(sections.length).toBeGreaterThan(1);
+    expect(sections[0]?.first).toBe(1);
+    expect(sections.at(-1)?.last).toBe(code.length);
+    for (const section of sections) expect(section.last - section.first).toBeLessThan(30);
+  });
+
+  it("keeps a decorator with the declaration it decorates", () => {
+    const code = [
+      ...statement("before", 28),
+      "@Command({",
+      "  name: 'reset',",
+      "})",
+      "export class Reset {}",
+    ];
+    expect(sectionsOf(code)).toEqual([
+      { first: 1, last: 28 },
+      { first: 29, last: 32 },
+    ]);
+  });
+
+  it("names a section by what it declares, or its first line when it declares nothing", () => {
+    const code = [
+      'import { a } from "a";',
+      "export const prompt = () => a;",
+      "export class Reset {",
+      "  run() {}",
+      "}",
+      'describe("reset", () => {});',
+      "<div>",
+    ];
+    expect(sectionName(code, { first: 1, last: 2 })).toBe("imports, const prompt");
+    expect(sectionName(code, { first: 3, last: 5 })).toBe("class Reset");
+    expect(sectionName(code, { first: 4, last: 4 })).toBe("run()");
+    expect(sectionName(code, { first: 6, last: 6 })).toBe('describe "reset"');
+    expect(sectionName(code, { first: 7, last: 7 })).toBe("<div>");
   });
 });
 
