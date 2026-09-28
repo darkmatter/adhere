@@ -29,7 +29,7 @@ import {
   presetsOf,
   resolveConfig,
 } from "../src/config.ts";
-import { excerptOf, sectionName, sectionsOf } from "../src/excerpt.ts";
+import { type Range, sectionName, sectionsOf } from "../src/excerpt.ts";
 import { tokenize } from "../src/highlight.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
@@ -60,7 +60,6 @@ import {
 } from "../src/services/Credentials.ts";
 import { JevLive } from "../src/services/Jev.http.ts";
 import {
-  blockBody,
   conflictBody,
   contradictBody,
   fits,
@@ -157,6 +156,16 @@ const memoryCache = (
   });
 };
 
+/** A section of one line. */
+const lineAt = (line: number): Range => ({ first: line, last: line });
+
+/** The section of `lines` that holds `line`, as Jev's locate answer names it. */
+const sectionAt = (lines: ReadonlyArray<string>, line: number): Range =>
+  sectionsOf(lines).find((section) => section.first <= line && line <= section.last) ?? {
+    first: line,
+    last: line,
+  };
+
 /** Jev that answers from tables, as `recordingJev` does, and keeps the code of every request. */
 const sendingJev = (answers: {
   readonly judge: Record<string, number>;
@@ -174,7 +183,7 @@ const sendingJev = (answers: {
     locate: (code, asked) =>
       Effect.sync(() => {
         sent.push(code.join("\n"));
-        return answer(answers.locate, asked);
+        return Record.map(answer(answers.locate, asked), (line) => sectionAt(code, line));
       }),
     conflicts: () => Effect.die("an audit compares no rules"),
     contradicts: () => Effect.die("an audit compares no rules"),
@@ -195,10 +204,10 @@ const recordingJev = (answers: {
         calls.judge.push(rules);
         return { probabilities: asked(answers.judge, rules), linter: {} };
       }),
-    locate: (_lines, rules) =>
+    locate: (lines, rules) =>
       Effect.sync(() => {
         calls.locate.push(rules);
-        return asked(answers.locate, rules);
+        return Record.map(asked(answers.locate, rules), (line) => sectionAt(lines, line));
       }),
     conflicts: () => Effect.die("an audit compares no rules"),
     contradicts: () => Effect.die("an audit compares no rules"),
@@ -249,7 +258,8 @@ const findingA = {
   description: a.description,
   examples: { good: { word: "must" as const, code: a.must } },
   file: "/repo/src/server.ts",
-  line: 2,
+  section: { first: 1, last: 3 },
+  name: "const before, const after",
   excerpt: { start: 1, lines: source.lines },
   probability: 0.9,
   level: "error" as const,
@@ -257,7 +267,7 @@ const findingA = {
 
 describe("request bodies", () => {
   const code = ["const x = 1;", "", "  const y = 2;"];
-  const numbered = "1 | const x = 1;\n2 | \n3 |   const y = 2;";
+  const sectioned = { "1": "const x = 1;\n\n  const y = 2;" };
   const diverges =
     "Does `code` diverge from the pattern shown in `must`, as described by `rule`? Answer no if the pattern does not apply to this file.";
   const scoped = {
@@ -265,10 +275,10 @@ describe("request bodies", () => {
     false: "`code` follows the pattern, or has no code that `rule` is about",
   };
 
-  it("judge: the numbered code is the whole state, and each rule rides in its own noul", () => {
+  it("judge: the code's sections are the whole state, and each rule rides in its own noul", () => {
     expect(judgeBody("jev-latest", code, rules)).toEqual({
       model: "jev-latest",
-      state: { code: numbered },
+      state: { code: sectioned },
       questions: {
         a: {
           type: "noul",
@@ -306,20 +316,20 @@ describe("request bodies", () => {
     });
   });
 
-  it("locate: one choice per rule, carrying the rule, with a criterion per non-blank line", () => {
-    expect(locateBody("jev-latest", code, { a })).toEqual({
-      model: "jev-latest",
-      state: { code: numbered },
-      questions: {
-        a: {
-          type: "choice",
-          instructions: {
-            question: "Which line of `code` most clearly diverges from `must`?",
-            rule: a.description,
-            must: a.must,
-          },
-          criteria: { "1": "const x = 1;", "3": "const y = 2;" },
+  it("locate: one choice per rule among the sections' numbers, carrying the rule", () => {
+    const long = Array.from({ length: 70 }, (_, index) => `const v${index + 1} = ${index + 1};`);
+    const body = locateBody("jev-latest", long, { a });
+    expect(Object.keys(body.state.code)).toEqual(["1", "2", "3"]);
+    expect(body.state.code["2"]?.split("\n")[0]).toBe("const v31 = 31;");
+    expect(body.questions).toEqual({
+      a: {
+        type: "choice",
+        instructions: {
+          question: "Which entry of `code` most clearly diverges from `must`?",
+          rule: a.description,
+          must: a.must,
         },
+        criteria: { "1": null, "2": null, "3": null },
       },
     });
   });
@@ -373,32 +383,11 @@ describe("request bodies", () => {
 
     const located = locateBody("jev-latest", code, { both, neverOnly }).questions;
     expect(located.both?.instructions.question).toBe(
-      "Which line of `code` most clearly diverges from `must` or resembles `never`?",
+      "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
     );
     expect(located.neverOnly?.instructions.question).toBe(
-      "Which line of `code` most clearly shows the pattern in `never`?",
+      "Which entry of `code` most clearly shows the pattern in `never`?",
     );
-  });
-
-  it("over 255 lines: a choice over 20-line blocks, then a choice inside the chosen block", () => {
-    const long = Array.from({ length: 300 }, (_, index) => `const v${index + 1} = ${index + 1};`);
-    const blocks = blockBody("jev-latest", long, { a });
-    expect(blocks.questions.a?.type).toBe("choice");
-    expect(blocks.questions.a?.instructions).toEqual({
-      question: "Which block of `code` contains the line that most clearly diverges from `must`?",
-      rule: a.description,
-      must: a.must,
-    });
-    expect(Object.keys(blocks.questions.a?.criteria ?? {})).toHaveLength(15);
-    expect(blocks.questions.a?.criteria["0"]).toBe("const v1 = 1;...");
-    expect(blocks.questions.a?.criteria["14"]).toBe("const v281 = 281;...");
-
-    const inside = locateBody("jev-latest", long, { a }, { a: 3 });
-    expect(Object.keys(inside.questions.a?.criteria ?? {})).toEqual(
-      Array.from({ length: 20 }, (_, index) => String(61 + index)),
-    );
-    expect(inside.questions.a?.criteria["61"]).toBe("const v61 = 61;");
-    expect(inside.questions.a?.criteria["80"]).toBe("const v80 = 80;");
   });
 });
 
@@ -434,10 +423,11 @@ describe("jev's context", () => {
     expect(requestsOf(body)).toEqual([body]);
   });
 
-  it("fits a file whose code and longest question come within 32k tokens, in at most 5100 lines", () => {
+  it("fits a file whose code and longest question come within 32k tokens, in at most 255 sections", () => {
     expect(fits(linesOf(1000, line), rules)).toBe(true);
     expect(fits(linesOf(4000, line), rules)).toBe(false);
-    expect(fits(linesOf(5101, ""), rules)).toBe(false);
+    expect(fits(linesOf(7650, "a;"), rules)).toBe(true);
+    expect(fits(linesOf(7680, "a;"), rules)).toBe(false);
     expect(fits(code1, { a: sized(20_000) })).toBe(true);
     expect(fits(code1, { a: sized(33_000) })).toBe(false);
   });
@@ -1011,13 +1001,18 @@ describe("adhere-ignore", () => {
     expect(lines[1]).toBe("");
     expect(lines.filter((line, index) => line !== provider[index])).toEqual([""]);
     const rule = "alchemy/providers/idempotent-delete";
-    expect([3, 4, 5].map((line) => suppresses(suppressions, rule, line))).toEqual([
+    expect([3, 4, 5].map((line) => suppresses(suppressions, rule, lineAt(line)))).toEqual([
       true,
       true,
       true,
     ]);
-    expect(suppresses(suppressions, rule, 7)).toBe(false);
-    expect(suppresses(suppressions, "effect/data/brand-meaningful-primitives", 4)).toBe(false);
+    expect(suppresses(suppressions, rule, lineAt(7))).toBe(false);
+    // A section that holds the statement, beside code it does not cover, is covered too.
+    expect(suppresses(suppressions, rule, { first: 6, last: 9 })).toBe(false);
+    expect(suppresses(suppressions, rule, { first: 1, last: 7 })).toBe(true);
+    expect(suppresses(suppressions, "effect/data/brand-meaningful-primitives", lineAt(4))).toBe(
+      false,
+    );
   });
 
   it("covers a trailing comment's own line, a whole file, and several rules at once", () => {
@@ -1027,10 +1022,10 @@ describe("adhere-ignore", () => {
       "const b = 2;",
     ]);
     expect(lines).toEqual(["", "const a = 1;", "const b = 2;"]);
-    expect(suppresses(suppressions, "effect/basics/gen-for-sequencing", 3)).toBe(true);
-    expect(suppresses(suppressions, "data/ports", 2)).toBe(true);
-    expect(suppresses(suppressions, "data/names", 2)).toBe(true);
-    expect(suppresses(suppressions, "data/ports", 3)).toBe(false);
+    expect(suppresses(suppressions, "effect/basics/gen-for-sequencing", lineAt(3))).toBe(true);
+    expect(suppresses(suppressions, "data/ports", lineAt(2))).toBe(true);
+    expect(suppresses(suppressions, "data/names", lineAt(2))).toBe(true);
+    expect(suppresses(suppressions, "data/ports", lineAt(3))).toBe(false);
   });
 
   it("reads a comment only: a string that mentions adhere-ignore, or a comment naming no rule, suppresses nothing", () => {
@@ -1677,7 +1672,7 @@ describe("plan", () => {
           probabilities: Record.map(asked, (_, id) => (id === "a" && lines.length > 1 ? 0.9 : 0.2)),
           linter: {},
         }),
-      locate: (_lines, asked) => Effect.succeed(Record.map(asked, () => 2)),
+      locate: (lines, asked) => Effect.succeed(Record.map(asked, () => sectionAt(lines, 2))),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
     });
@@ -1690,10 +1685,11 @@ describe("plan", () => {
       ).pipe(Effect.provide(Layer.merge(jev, cache))),
     );
 
-    // Both files are judged; only server.ts has a finding, so only it is located too.
-    expect([...done].sort((x, y) => x.requests - y.requests)).toEqual([
+    // Both files are judged; only server.ts has a finding, and as one section it is where
+    // the finding is, with no request to locate it.
+    expect([...done].sort((x, y) => x.findings - y.findings)).toEqual([
       { requests: 1, findings: 0 },
-      { requests: 2, findings: 1 },
+      { requests: 1, findings: 1 },
     ]);
     expect(result.findings).toEqual([findingA]);
   });
@@ -1715,10 +1711,10 @@ describe("plan", () => {
             b: { appliesTo: [0.7], excludeIf: [] },
           },
         }),
-      locate: (_lines, asked) =>
+      locate: (lines, asked) =>
         Effect.sync(() => {
           located.push(Object.keys(asked));
-          return Record.map(asked, () => 2);
+          return Record.map(asked, () => sectionAt(lines, 2));
         }),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
@@ -2258,7 +2254,10 @@ describe("pipeline", () => {
     // An answer under the fingerprint adhere 0.4 used: model, description, and reference.
     const cache = memoryCache({
       [hex(source.lines.join("\n"))]: {
-        [hex(`jev-latest${a.description}${a.must}`)]: { probability: 0.9, line: 2 },
+        [hex(`jev-latest${a.description}${a.must}`)]: {
+          probability: 0.9,
+          section: { first: 1, last: 3 },
+        },
       },
     });
 
@@ -2283,11 +2282,11 @@ describe("pipeline", () => {
     ]);
   });
 
-  it("reads a cache entry that still holds the line's text, as entries did before excerpts", () => {
-    const judgment = { fingerprint: "f", probability: 0.9, line: 2 };
+  it("reads a cache entry from before sections, dropping its line and the line's text", () => {
+    const judgment = { fingerprint: "f", probability: 0.9 };
     const written = JSON.stringify({
       hash: "h",
-      judgments: { a: { ...judgment, snippet: "const port: number = 3000;" } },
+      judgments: { a: { ...judgment, line: 2, snippet: "const port: number = 3000;" } },
     });
     expect(Schema.decodeUnknownSync(Schema.fromJsonString(CacheEntry))(written)).toEqual({
       hash: "h",
@@ -2330,7 +2329,7 @@ describe("pipeline", () => {
         lines.length === other.lines.length
           ? Effect.fail(JevBlocked.make({ ray: "a3fb098cae4f55a3-LAX" }))
           : Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} }),
-      locate: () => Effect.succeed({ a: 2 }),
+      locate: () => Effect.succeed({ a: { first: 1, last: 3 } }),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
     });
@@ -2377,7 +2376,7 @@ describe("pipeline", () => {
         lines.length === dense.lines.length
           ? Effect.fail(JevOverflow.make())
           : Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} }),
-      locate: () => Effect.succeed({ a: 2 }),
+      locate: () => Effect.succeed({ a: { first: 1, last: 3 } }),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
     });
@@ -2640,139 +2639,6 @@ describe("sections", () => {
   });
 });
 
-describe("excerpt", () => {
-  /** The excerpt of `code` from line `first` to line `last`. */
-  const lines = (code: ReadonlyArray<string>, first: number, last: number) => ({
-    start: first,
-    lines: code.slice(first - 1, last),
-  });
-
-  it("shows the whole function a line is in, when it fits", () => {
-    const code = [
-      'import { Effect } from "effect";',
-      "",
-      "export const load = (path: string) =>",
-      "  Effect.gen(function* () {",
-      "    const fs = yield* FileSystem.FileSystem;",
-      "    const text = yield* fs.readFileString(path);",
-      "    return JSON.parse(text);",
-      "  });",
-      "",
-      "export const save = (path: string, value: unknown) => write(path, value);",
-    ];
-    expect(excerptOf(code, 6)).toEqual(lines(code, 3, 8));
-  });
-
-  it("shows a few whole statements on either side of a line outside any function", () => {
-    const code = [
-      "const defaults = {",
-      '  host: "localhost",',
-      "};",
-      "const host = process.env.HOST ?? defaults.host;",
-      "const port: number = Number(process.env.PORT ?? 3000);",
-      "const url = `http://${host}:${port}`;",
-      "export const serve = () => {",
-      "  listen(url);",
-      "};",
-    ];
-    expect(excerptOf(code, 5)).toEqual(lines(code, 4, 6));
-  });
-
-  it("shows the statement a line is in when its function is too long, under the line that opens it", () => {
-    const steps = Array.from(
-      { length: 30 },
-      (_, index) => `  const step${index} = yield* step(${index});`,
-    );
-    const code = [
-      "export const run = Effect.gen(function* () {",
-      "  const config = yield* Config;",
-      "  const flagged = rules.filter((rule) => {",
-      "    const judgment = judged[rule.id];",
-      "    return judgment > rule.threshold;",
-      "  });",
-      ...steps,
-      "  return flagged;",
-      "});",
-    ];
-    expect(excerptOf(code, 4)).toEqual(lines(code, 1, 7));
-  });
-
-  it("starts below a comment it would start partway through, and ends at code", () => {
-    const code = [
-      "/**",
-      " * The port and host to listen on.",
-      " */",
-      "const port = 3000;",
-      'const host = "localhost";',
-      "const url = `http://${host}:${port}`;",
-      "// Serves the app.",
-      "// Call it once.",
-      "export const serve = () => listen(url);",
-    ];
-    expect(excerptOf(code, 5)).toEqual(lines(code, 4, 6));
-  });
-
-  it("shows a comment the line is in whole, from where it opens", () => {
-    const code = [
-      "/**",
-      " * Reads the port.",
-      " *",
-      " * Falls back to 3000.",
-      " * Never throws.",
-      " */",
-      "const port = 3000;",
-    ];
-    expect(excerptOf(code, 5)).toEqual(lines(code, 1, 7));
-  });
-
-  it("reads brackets in strings, templates, regexes, and comments as text", () => {
-    const code = [
-      "export const shapes = (text: string) => {",
-      '  const open = "{(";',
-      "  const close = `)}`;",
-      "  // } ends nothing",
-      "  const fence = /[{]/;",
-      "  return text.includes(open) && !fence.test(close);",
-      "};",
-      "export const after = 1;",
-    ];
-    expect(excerptOf(code, 3)).toEqual(lines(code, 1, 7));
-  });
-
-  it("ends a statement at a line break, without semicolons, unless an operator carries it over", () => {
-    const code = [
-      "const base = 1",
-      "const total = base",
-      "  + 2",
-      "const doubled = [total]",
-      "  .map((n) => n * 2)",
-      "if (total > 2) {",
-      "  log(total)",
-      "} else {",
-      "  log(doubled)",
-      "}",
-    ];
-    expect(excerptOf(code, 1)).toEqual(lines(code, 1, 3));
-    expect(excerptOf(code, 6)).toEqual(lines(code, 4, 10));
-  });
-
-  it("keeps type arguments broken over lines together, commas and all", () => {
-    const members = Array.from(
-      { length: 6 },
-      (_, index) => `    readonly get${index}: Effect.Effect<string, never>;`,
-    );
-    const code = [
-      "export class Store extends Context.Service<",
-      "  Store,",
-      "  {",
-      ...members,
-      "  }",
-      '>()("Store") {}',
-    ];
-    expect(excerptOf(code, 9)).toEqual(lines(code, 1, 11));
-  });
-});
-
 describe("render", () => {
   const result = {
     files: 1,
@@ -2789,10 +2655,9 @@ describe("render", () => {
     expect(render(result, { root: "/repo" }).join("\n")).toBe(
       [
         "  × a (0.90): Ports are branded.",
-        "   ╭─[src/server.ts:2:3]",
+        "   ╭─[src/server.ts:1:1] const before, const after",
         " 1 │ const before = 1;",
         " 2 │   const port: number = Number(process.env.PORT);",
-        "   ·   ──────────────────────────────────────────────",
         " 3 │ const after = 2;",
         "   ╰────",
         '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
@@ -2804,15 +2669,14 @@ describe("render", () => {
     );
   });
 
-  it("numbers the excerpt's lines right-aligned, and underlines the code past a tab", () => {
-    const excerpt = { start: 9, lines: ["if (port) {", "\tlisten(port);", "}"] };
-    const finding = { ...findingA, line: 10, excerpt };
-    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(1, 7)).toEqual([
-      "    ╭─[src/server.ts:10:2]",
-      "  9 │ if (port) {",
-      " 10 │ \tlisten(port);",
-      "    · \t─────────────",
-      " 11 │ }",
+  it("numbers the section's lines right-aligned, and places it at its first line's code", () => {
+    const excerpt = { start: 9, lines: ["\tif (port) {", "\t\tlisten(port);", "\t}"] };
+    const finding = { ...findingA, section: { first: 9, last: 11 }, name: "listen()", excerpt };
+    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(1, 6)).toEqual([
+      "    ╭─[src/server.ts:9:2] listen()",
+      "  9 │ \tif (port) {",
+      " 10 │ \t\tlisten(port);",
+      " 11 │ \t}",
       "    ╰────",
     ]);
   });
@@ -2871,7 +2735,7 @@ describe("render", () => {
     expect(colored.endsWith("1 file, 1 judged, 0 cached, 2 skipped.")).toBe(true);
   });
 
-  it("highlights the offending line and the hint on a terminal", () => {
+  it("highlights the section and the hint on a terminal", () => {
     const colored = render(result, { color: true });
     expect(colored).toContain(
       ` ${sgr("2", "2")} │   ${sgr("34", "const")} port: ${sgr("36", "number")} = ${sgr("36", "Number")}(process.env.PORT);`,
@@ -3088,6 +2952,41 @@ describe("jev over http", () => {
     return { authorizations, asked, judged: result };
   };
 
+  it("locates each rule in the section Jev chooses, and asks nothing of a file of one section", async () => {
+    const sent: Array<ReadonlyArray<string>> = [];
+    const client = HttpClient.make((request) => {
+      const body: { readonly questions: Record<string, unknown> } =
+        request.body._tag === "Uint8Array"
+          ? JSON.parse(new TextDecoder().decode(request.body.body))
+          : { questions: {} };
+      sent.push(Object.keys(body.questions));
+      // b's choice names no section, which leaves it unlocated.
+      const answers = { a: { choice: "2" }, b: { choice: "9" } };
+      return Effect.succeed(HttpClientResponse.fromWeb(request, Response.json({ answers })));
+    });
+    const layer = JevLive.pipe(
+      Layer.provide([
+        Layer.succeed(HttpClient.HttpClient, client),
+        Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules: {} }),
+        Layer.succeed(Credentials, {
+          apiKey: Effect.succeed(Redacted.make("tsk_saved")),
+          file: Effect.succeed("/config/adhere/credentials.json"),
+          save: () => Effect.void,
+          remove: Effect.succeed(false),
+        }),
+      ]),
+    );
+    const long = Array.from({ length: 70 }, (_, index) => `const v${index + 1} = ${index + 1};`);
+    const located = Effect.gen(function* () {
+      const jev = yield* Jev;
+      return [yield* jev.locate(long, { a, b }), yield* jev.locate(["const x = 1;"], { a })];
+    });
+    const [three, one] = await Effect.runPromise(Effect.provide(located, layer));
+    expect(three).toEqual({ a: sectionsOf(long)[1] });
+    expect(one).toEqual({ a: { first: 1, last: 1 } });
+    expect(sent).toEqual([["a", "b"]]);
+  });
+
   it("sends the key from Credentials as a bearer token", async () => {
     const { authorizations, judged } = judge(Effect.succeed(Redacted.make("tsk_saved")));
     expect(await judged).toMatchObject({
@@ -3256,12 +3155,15 @@ describe("cache files", () => {
       Effect.gen(function* () {
         const cache = yield* AuditCache;
         yield* cache.put("c0ffee", { f1: { probability: 0.1 } });
-        yield* cache.put("c0ffee", { f2: { probability: 0.9, line: 3 } });
-        yield* cache.put("c0ffee", { f2: { probability: 0.9, line: 3 } });
+        yield* cache.put("c0ffee", { f2: { probability: 0.9, section: { first: 3, last: 3 } } });
+        yield* cache.put("c0ffee", { f2: { probability: 0.9, section: { first: 3, last: 3 } } });
         return yield* cache.get("c0ffee", join(process.cwd(), "src/a.ts"));
       }),
     );
-    expect(union).toEqual({ f1: { probability: 0.1 }, f2: { probability: 0.9, line: 3 } });
+    expect(union).toEqual({
+      f1: { probability: 0.1 },
+      f2: { probability: 0.9, section: { first: 3, last: 3 } },
+    });
     const first = '{\n  "answers": {\n    "f1": {\n      "probability": 0.1\n    }\n  }\n}\n';
     expect(listed(memory.files, "files")).toHaveLength(2);
     expect(memory.files.get(`${directory}/files/c0ffee.${sha(first).slice(0, 16)}.json`)).toBe(
@@ -3290,7 +3192,8 @@ describe("cache files", () => {
         ] as const;
       }),
     );
-    expect(answers).toEqual({ f1: { probability: 0.8, line: 2 } });
+    // Its line, from before sections, is dropped.
+    expect(answers).toEqual({ f1: { probability: 0.8 } });
     expect(stale).toEqual({});
     expect(tally).toEqual({ files: { [file]: 0.3 } });
     expect(listed(memory.files, "files")).toHaveLength(1);
@@ -3308,7 +3211,7 @@ describe("cache files", () => {
         const cache = yield* AuditCache;
         yield* cache.put("live", { f1: { probability: 0.1 } });
         yield* cache.put("live", {
-          f1: { probability: 0.1, line: 4 },
+          f1: { probability: 0.1, section: { first: 4, last: 4 } },
           other: { probability: 0.5 },
         });
         yield* cache.put("gone", { f1: { probability: 0.2 } });
@@ -3320,9 +3223,12 @@ describe("cache files", () => {
       }),
     );
     // "other" answers a rule the run left out, such as another preset's: it stays.
-    expect(kept).toEqual({ f1: { probability: 0.1, line: 4 }, other: { probability: 0.5 } });
+    expect(kept).toEqual({
+      f1: { probability: 0.1, section: { first: 4, last: 4 } },
+      other: { probability: 0.5 },
+    });
     const folded =
-      '{\n  "answers": {\n    "f1": {\n      "probability": 0.1,\n      "line": 4\n    },\n    "other": {\n      "probability": 0.5\n    }\n  }\n}\n';
+      '{\n  "answers": {\n    "f1": {\n      "probability": 0.1,\n      "section": {\n        "first": 4,\n        "last": 4\n      }\n    },\n    "other": {\n      "probability": 0.5\n    }\n  }\n}\n';
     expect(listed(memory.files, "files")).toEqual([`live.${sha(folded).slice(0, 16)}.json`]);
     const tallies = listed(memory.files, "tallies");
     // k2 is the tally of a rule the run left out: it stays too.

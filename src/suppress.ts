@@ -4,11 +4,12 @@ import { scan } from "#highlight.ts";
 /**
  * What a file's `adhere-ignore` comments suppress. `// adhere-ignore <rules>
  * -- <reason>` on a line of its own suppresses the rules it names in the
- * statement that starts on the next line of code, wherever in it Jev points;
- * at the end of a line of code, in the statement that starts on that line, or
- * the line alone. `// adhere-ignore-file <rules> -- <reason>` suppresses them
- * in the whole file, which they then do not judge. Rules are named as a report
- * names them, separated by commas.
+ * statement that starts on the next line of code, and so in the section
+ * that statement is in, wherever in it Jev points; at the end of a line of
+ * code, in the statement that starts on that line, or the line alone.
+ * `// adhere-ignore-file <rules> -- <reason>` suppresses them in the whole
+ * file, which they then do not judge. Rules are named as a report names
+ * them, separated by commas.
  */
 export interface Suppressions {
   /** Rules suppressed in the whole file. */
@@ -105,9 +106,15 @@ export const suppressionsOf = (
   };
 };
 
-/** Whether a file's comments suppress `rule`, named as a report names it, at `line`. */
-export const suppresses = (suppressions: Suppressions, rule: string, line: number): boolean =>
+/**
+ * Whether a file's comments suppress `rule`, named as a report names it, in
+ * `section`: in the whole file, or in a statement that overlaps the section.
+ */
+export const suppresses = (suppressions: Suppressions, rule: string, section: Range): boolean =>
   suppressions.file.has(rule) ||
   suppressions.statements.some(
-    (statement) => statement.rules.has(rule) && statement.first <= line && line <= statement.last,
+    (statement) =>
+      statement.rules.has(rule) &&
+      statement.first <= section.last &&
+      section.first <= statement.last,
   );

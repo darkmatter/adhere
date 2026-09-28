@@ -7,8 +7,8 @@ description: Verify and fix the findings `adhere lint` reports. Decide whether e
 
 adhere is a linter for rules a normal linter cannot check. Jev, TypeSafe AI's
 model, reads each file against each rule and answers with the probability that
-the file breaks it; adhere reports each rule above a threshold, at the line Jev
-points to. A finding is a judgment, not a proof. On one rule adhere's authors
+the file breaks it; adhere reports each rule above a threshold, in the section
+of the file Jev points to. A finding is a judgment, not a proof. On one rule adhere's authors
 checked against the live API, only 1 of its 20 findings was a real violation.
 Verify every finding before you change code for it: fix the real ones, and
 report the false ones with the evidence.
@@ -34,7 +34,8 @@ Each finding shows:
 - the rule id, a preset's with its preset first, as in
   `alchemy/providers/idempotent-delete`, Jev's probability, and the rule's
   description;
-- the line Jev points at, underlined, with the code around it;
+- the section of the file Jev points at, a run of whole statements of about 30
+  lines, named by what it declares; the violation is somewhere in it;
 - `hint:`, the code the rule wants, or `never:` for a rule that only shows code
   to avoid.
 
@@ -57,7 +58,7 @@ the code under `## Must` and `## Never`, and anything it puts out of scope.
 
 Read the code as a reviewer would, not only the excerpt:
 
-- **The whole unit.** Read the function, handler, or class the line is in,
+- **The whole unit.** Read the function, handler, or class the section holds,
   and what calls it.
 - **What it calls.** Follow helpers into other files. A helper can already do
   what the rule asks, such as a delete that looks unguarded calling a client
@@ -119,8 +120,8 @@ delete: Effect.fn(function* ({ output }) {
 ```
 
 - The comment covers the whole statement that starts on the next line of code,
-  wherever in it Jev points. At the end of a line of code, it covers the
-  statement that starts on that line.
+  and a finding in any section that holds that statement. At the end of a line
+  of code, it covers the statement that starts on that line.
 - `// adhere-ignore-file <rule> -- <reason>` covers a whole file. Use it only
   when the rule is wrong for all of the file, such as generated code.
 - Name several rules with commas: `// adhere-ignore <rule>, <rule> -- <reason>`.

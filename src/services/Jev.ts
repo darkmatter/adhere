@@ -1,4 +1,5 @@
 import { type Example, examplesOf, type Rule, type RuleId, type Rules } from "#config.ts";
+import { type Range, sectionsOf } from "#excerpt.ts";
 import { Context, type Effect, Record, Schema } from "effect";
 
 export type { Rules };
@@ -53,10 +54,11 @@ export class Jev extends Context.Service<
       rules: Rules,
       sampled?: ReadonlyArray<RuleId>,
     ) => Effect.Effect<Judged, JevUnavailable | JevOverflow | JevBlocked>;
+    /** Per rule, the section of the file that most clearly breaks it. */
     readonly locate: (
       lines: Lines,
       rules: Rules,
-    ) => Effect.Effect<Record<RuleId, number>, JevUnavailable | JevOverflow | JevBlocked>;
+    ) => Effect.Effect<Record<RuleId, Range>, JevUnavailable | JevOverflow | JevBlocked>;
     /**
      * Per rule, the partner Jev names as impossible to follow in the same code,
      * as `[rule, partner]` indexes into `rules`. A rule Jev names none for is
@@ -86,10 +88,8 @@ export interface ComparedRule {
 /** Two rules, as indexes into the rules being compared. */
 export type Pair = readonly [number, number];
 
-/** A `choice` question accepts at most this many criteria. */
+/** A `choice` question accepts at most this many criteria, so a file has at most this many sections. */
 const CHOICE_LIMIT = 255;
-const LINES_PER_BLOCK = 20;
-const MAX_LINES = CHOICE_LIMIT * LINES_PER_BLOCK;
 
 /**
  * Jev 1.13's context, from its model card: the state with its longest
@@ -111,16 +111,19 @@ const encoder = new TextEncoder();
 export const tokensOf = (value: unknown): number =>
   Math.ceil(encoder.encode(JSON.stringify(value)).length / 3);
 
-const snippetOf = (line: string): string => line.trim().slice(0, 120);
-
-const isBlank = (line: string): boolean => line.trim().length === 0;
-
-export const needsBlocks = (lines: Lines): boolean =>
-  lines.filter((line) => !isBlank(line)).length > CHOICE_LIMIT;
-
-/** The file, numbered so a line question can name a line. The only thing the questions share. */
+/**
+ * The file as Jev reads it: its sections, by `sectionsOf`, under their
+ * numbers from 1, so the locate question can name one. The only thing the
+ * questions share. On the eval it judged as well as the file with every line
+ * numbered, and located as well as a choice among the lines.
+ */
 const stateOf = (lines: Lines) => ({
-  code: lines.map((line, index) => `${index + 1} | ${line}`).join("\n"),
+  code: Object.fromEntries(
+    sectionsOf(lines).map((section, index) => [
+      String(index + 1),
+      lines.slice(section.first - 1, section.last).join("\n"),
+    ]),
+  ),
 });
 
 /** The field an example goes under in a question: its word, with `should not` as `should_not`. */
@@ -195,7 +198,7 @@ export const judgeQuestion = (rule: Rule) => {
   };
 };
 
-/** What the offending line does, for the line and block questions. */
+/** What the offending section does, for the locate question. */
 const offense = (rule: Rule): string => {
   const { good, bad } = examplesOf(rule);
   const avoided = `\`${fieldOf(bad ?? { word: "never", code: "" })}\``;
@@ -204,15 +207,6 @@ const offense = (rule: Rule): string => {
     : bad === undefined
       ? `diverges from \`${fieldOf(good)}\``
       : `diverges from \`${fieldOf(good)}\` or resembles ${avoided}`;
-};
-
-const lineCriteria = (lines: Lines, from: number, to: number): Record<string, string> => {
-  const criteria: Record<string, string> = {};
-  for (let n = from; n <= Math.min(to, lines.length); n++) {
-    const text = lines[n - 1] ?? "";
-    if (!isBlank(text)) criteria[String(n)] = snippetOf(text);
-  }
-  return criteria;
 };
 
 /**
@@ -312,45 +306,22 @@ export const judgeBody = (
   },
 });
 
-export const locateBody = (
-  model: string,
-  lines: Lines,
-  rules: Rules,
-  blocks?: Readonly<Record<RuleId, number>>,
-) => ({
-  model,
-  state: stateOf(lines),
-  questions: Record.map(rules, (rule, id) => {
-    const block = blocks?.[id];
-    return {
-      type: "choice" as const,
-      instructions: {
-        question: `Which line of \`code\` most clearly ${offense(rule)}?`,
-        ...ruleFields(rule),
-      },
-      criteria:
-        block === undefined
-          ? lineCriteria(lines, 1, lines.length)
-          : lineCriteria(lines, block * LINES_PER_BLOCK + 1, (block + 1) * LINES_PER_BLOCK),
-    };
-  }),
-});
-
-export const blockBody = (model: string, lines: Lines, rules: Rules) => {
-  const criteria: Record<string, string> = {};
-  for (let block = 0; block * LINES_PER_BLOCK < lines.length; block++) {
-    const first = lines
-      .slice(block * LINES_PER_BLOCK, (block + 1) * LINES_PER_BLOCK)
-      .find((line) => !isBlank(line));
-    if (first !== undefined) criteria[String(block)] = `${snippetOf(first)}...`;
-  }
+/**
+ * Per rule, which section of `code` breaks it: one choice among the
+ * sections' numbers. The options carry no text: each is a key of the state,
+ * and describing a section by its first line or by what it declares located
+ * no better on the eval.
+ */
+export const locateBody = (model: string, lines: Lines, rules: Rules) => {
+  const state = stateOf(lines);
+  const criteria = Record.map(state.code, () => null);
   return {
     model,
-    state: stateOf(lines),
+    state,
     questions: Record.map(rules, (rule) => ({
       type: "choice" as const,
       instructions: {
-        question: `Which block of \`code\` contains the line that most clearly ${offense(rule)}?`,
+        question: `Which entry of \`code\` most clearly ${offense(rule)}?`,
         ...ruleFields(rule),
       },
       criteria,
@@ -359,15 +330,14 @@ export const blockBody = (model: string, lines: Lines, rules: Rules) => {
 };
 
 /**
- * Whether Jev can take every request a file may need: its lines within two
- * line choices, and its code beside the longest question any rule asks.
+ * Whether Jev can take every request a file may need: its sections within
+ * one choice, and its code beside the longest question any rule asks.
  */
 export const fits = (lines: Lines, rules: Rules): boolean => {
-  if (lines.length > MAX_LINES) return false;
-  const located = needsBlocks(lines) ? blockBody("", lines, rules) : locateBody("", lines, rules);
+  if (sectionsOf(lines).length > CHOICE_LIMIT) return false;
   const questions = [
     ...Object.values(judgeBody("", lines, rules).questions),
-    ...Object.values(located.questions),
+    ...Object.values(locateBody("", lines, rules).questions),
   ];
   const longest = Math.max(0, ...questions.map(tokensOf));
   return tokensOf(stateOf(lines)) + longest <= QUESTION_CONTEXT - WRAPPER;
@@ -426,13 +396,10 @@ export const judgeRequests = (
 
 /**
  * The requests locating `rules` in a file takes, split to fit as `locate`
- * sends them: a block choice first for a long file, then a line choice. For a
- * long file the line choice is counted before a block is chosen, so it can
- * run high.
+ * sends them: none for a file of one section, which is where every finding is.
  */
 export const locateRequests = (lines: Lines, rules: Rules): number =>
-  (needsBlocks(lines) ? requestsOf(blockBody("", lines, rules)).length : 0) +
-  requestsOf(locateBody("", lines, rules)).length;
+  sectionsOf(lines).length <= 1 ? 0 : requestsOf(locateBody("", lines, rules)).length;
 
 /** A choice keeps one criterion for "none", which leaves this many for partners. */
 const PARTNERS_PER_QUESTION = CHOICE_LIMIT - 1;

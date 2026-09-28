@@ -1,6 +1,6 @@
 import { isNote, withoutComments } from "#comments.ts";
 import { type Examples, examplesOf, type Level, type Rule, type RuleId } from "#config.ts";
-import { type Excerpt, excerptOf } from "#excerpt.ts";
+import { type Excerpt, type Range, sectionName } from "#excerpt.ts";
 import type { ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, answersOf, type Judgment, sha256, type Tally } from "#services/AuditCache.ts";
@@ -33,8 +33,11 @@ export interface Finding {
   readonly description: string;
   readonly examples: Examples;
   readonly file: string;
-  readonly line: number;
-  /** The code around `line` the report shows. */
+  /** The section of the file Jev points at, which a finding is in. */
+  readonly section: Range;
+  /** What the section declares, such as `class Context`, to name it by. */
+  readonly name: string;
+  /** The section's code as written, comments and all, without blank lines at either end. */
   readonly excerpt: Excerpt;
   readonly probability: number;
   /** An error fails the run; a warning does not, unless `--deny-warnings`. */
@@ -91,16 +94,29 @@ const fileResult = (
 
 const isEmpty = Record.isEmptyReadonlyRecord;
 
+/** How Jev reads a file, which a judgment depends on: a new layout re-judges every rule. */
+const LAYOUT = "sections";
+
 /**
- * What a judgment depends on besides the file: the model, and the questions
- * asked for the rule, which carry the rule: its judge question, and its
- * matchers' when it has any. An edited rule or matcher re-judges the rule,
- * and a question asked differently re-judges every rule.
+ * What a judgment depends on besides the file: the model, how the file is
+ * laid out, and the questions asked for the rule, which carry the rule: its
+ * judge question, and its matchers' when it has any. An edited rule or
+ * matcher re-judges the rule, and a question asked differently re-judges
+ * every rule.
  */
 const fingerprintOf = (model: string, rule: Rule) => {
   const matchers = matcherQuestions("", rule).map(([, question]) => question);
   const scope = matchers.length === 0 ? "" : `\u0000${JSON.stringify(matchers)}`;
-  return sha256(`${model}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}`);
+  return sha256(`${model}\u0000${LAYOUT}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}`);
+};
+
+/** A section's lines as written, without the blank lines at either end. */
+const excerptOf = (lines: ReadonlyArray<string>, { first, last }: Range): Excerpt => {
+  let start = first;
+  let end = last;
+  while (start < end && (lines[start - 1] ?? "").trim() === "") start += 1;
+  while (end > start && (lines[end - 1] ?? "").trim() === "") end -= 1;
+  return { start, lines: lines.slice(start - 1, end) };
 };
 
 /** A matcher's score counts as a yes above this. */
@@ -510,29 +526,29 @@ export const executeAudit = (
           judgment !== undefined &&
           judgment.probability > k.threshold &&
           inScope(judgment) &&
-          judgment.line === undefined
+          judgment.section === undefined
         );
       });
-      // A blocked line question still leaves the judgments worth caching: a rerun
-      // asks only for the lines again, not for every rule.
+      // A blocked locate question still leaves the judgments worth caching: a rerun
+      // asks only for the sections again, not for every rule.
       const {
-        lines,
+        sections,
         blocked,
       }: {
-        readonly lines: Readonly<Record<RuleId, number>>;
+        readonly sections: Readonly<Record<RuleId, Range>>;
         readonly blocked: Blocked | undefined;
       } = isEmpty(flagged)
-        ? { lines: {}, blocked: undefined }
+        ? { sections: {}, blocked: undefined }
         : yield* jev.locate(file.lines, rulesOf(flagged)).pipe(
-            Effect.map((lines) => ({ lines, blocked: undefined })),
+            Effect.map((sections) => ({ sections, blocked: undefined })),
             Effect.catchTag("JevBlocked", ({ ray }) =>
-              Effect.succeed({ lines: {}, blocked: { file: file.path, ray } }),
+              Effect.succeed({ sections: {}, blocked: { file: file.path, ray } }),
             ),
             inFile(file),
           );
       const located = Record.map(judged, (judgment, id) => {
-        const line = lines[id];
-        return line === undefined ? judgment : { ...judgment, line };
+        const section = sections[id];
+        return section === undefined ? judgment : { ...judgment, section };
       });
 
       const cached = isEmpty(pending) && isEmpty(flagged);
@@ -542,7 +558,7 @@ export const executeAudit = (
         .flatMap(([id, judgment]): ReadonlyArray<Finding> => {
           const k = prepared[id];
           return k !== undefined &&
-            judgment.line !== undefined &&
+            judgment.section !== undefined &&
             judgment.probability > k.threshold &&
             inScope(judgment)
             ? [
@@ -552,15 +568,16 @@ export const executeAudit = (
                   description: k.rule.description,
                   examples: examplesOf(k.rule),
                   file: file.path,
-                  line: judgment.line,
-                  excerpt: excerptOf(original, judgment.line),
+                  section: judgment.section,
+                  name: sectionName(file.lines, judgment.section),
+                  excerpt: excerptOf(original, judgment.section),
                   probability: judgment.probability,
                   level: k.rule.level ?? "error",
                 },
               ]
             : [];
         })
-        .sort((a, b) => a.line - b.line);
+        .sort((a, b) => a.section.first - b.section.first);
       return {
         result:
           blocked === undefined
@@ -622,7 +639,7 @@ export const executeAudit = (
           !suppresses(
             plan.suppressions,
             shownId({ id: finding.rule, preset: finding.preset }),
-            finding.line,
+            finding.section,
           ),
       );
       if (shown.length < result.findings.length) {

@@ -1,8 +1,8 @@
 import type { RuleId } from "#config.ts";
+import { sectionsOf } from "#excerpt.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { Credentials } from "#services/Credentials.ts";
 import {
-  blockBody,
   type Body,
   type ComparedRule,
   conflictBody,
@@ -19,14 +19,23 @@ import {
   matcherKey,
   type MatcherScores,
   namedPairs,
-  needsBlocks,
   type Pair,
   pairProbability,
   requestsOf,
   type Rules,
   tokensOf,
 } from "#services/Jev.ts";
-import { type Cause, Duration, Effect, Layer, Option, Record, Schedule, Schema } from "effect";
+import {
+  type Cause,
+  Duration,
+  Effect,
+  Layer,
+  Option,
+  Record,
+  Result,
+  Schedule,
+  Schema,
+} from "effect";
 import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http";
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 import { RateLimiter } from "effect/unstable/persistence";
@@ -249,16 +258,21 @@ export const JevLive = Layer.effect(Jev)(
       } satisfies Judged;
     });
 
-    const chosen = (answers: Readonly<Record<string, { choice: string }>>) =>
-      Record.map(answers, (answer) => Number(answer.choice));
-
+    // A file of one section has every finding in it: nothing to ask.
     const locate = Effect.fn("Jev.locate")(function* (lines: Lines, rules: Rules) {
-      const blocks = needsBlocks(lines)
-        ? chosen(yield* answersTo("blocks", blockBody(config.model, lines, rules), ChoiceAnswers))
-        : undefined;
-      return chosen(
-        yield* answersTo("locate", locateBody(config.model, lines, rules, blocks), ChoiceAnswers),
+      const sections = sectionsOf(lines);
+      const [only] = sections;
+      if (sections.length <= 1) return only === undefined ? {} : Record.map(rules, () => only);
+      const answers = yield* answersTo(
+        "locate",
+        locateBody(config.model, lines, rules),
+        ChoiceAnswers,
       );
+      // An answer that names no section, which Jev should not give, leaves the rule unlocated.
+      return Record.filterMap(answers, ({ choice }) => {
+        const section = sections[Number(choice) - 1];
+        return section === undefined ? Result.failVoid : Result.succeed(section);
+      });
     });
 
     const conflicts = Effect.fn("Jev.conflicts")(function* (

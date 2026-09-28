@@ -14,7 +14,6 @@ type Role =
   | "description"
   | "path"
   | "lineNumber"
-  | "underline"
   | "label"
   | Kind;
 
@@ -42,7 +41,6 @@ const THEME: Readonly<Record<Role, string>> = {
   description: "38;2;230;230;255",
   path: "38;2;5;125;160;1",
   lineNumber: "2",
-  underline: "38;2;255;0;175",
   label: "38;2;242;205;205",
   comment: "2",
   string: "32",
@@ -102,31 +100,31 @@ const header = (finding: Finding): Line => [
 ];
 
 /**
- * The path, then the finding's excerpt with each line numbered in the gutter,
- * and an underline under the offending line's code.
+ * The path at the section's first line, and what the section declares, then
+ * the section with each line numbered in the gutter.
  */
 const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => {
   const { start, lines } = finding.excerpt;
   const width = String(start + lines.length - 1).length;
   const gutter = span(" ".repeat(width + 2));
-  const offending = lines[finding.line - start] ?? "";
-  // The line's own indentation, tabs and all, lines the underline up under its code.
-  const indent = offending.slice(0, offending.length - offending.trimStart().length);
-  const underline = "─".repeat(Math.max(1, offending.trim().length));
-  const location = `:${finding.line}:${indent.length + 1}]`;
+  const first = lines[0] ?? "";
+  const location = `:${start}:${first.length - first.trimStart().length + 1}]`;
   return [
-    [gutter, span("╭─["), span(displayPath(finding.file, root), "path"), span(location)],
-    ...highlighted(lines.join("\n")).flatMap((code, index): ReadonlyArray<Line> => {
+    [
+      gutter,
+      span("╭─["),
+      span(displayPath(finding.file, root), "path"),
+      span(location),
+      span(` ${finding.name}`, "label"),
+    ],
+    ...highlighted(lines.join("\n")).map((code, index): Line => {
       const number = String(start + index);
-      const numbered = [
+      return [
         span(" ".repeat(width - number.length + 1)),
         span(number, "lineNumber"),
         span(" │ "),
         ...code,
       ];
-      return start + index === finding.line
-        ? [numbered, [gutter, span("· "), span(indent), span(underline, "underline")]]
-        : [numbered];
     }),
     [gutter, span("╰────")],
   ];
@@ -145,8 +143,8 @@ const hint = (finding: Finding): ReadonlyArray<Line> => {
 
 /**
  * One diagnostic, in the frame `vp lint` prints on a terminal: a header with
- * the rule in red, the code around the offending line, a pink underline under
- * it, and the code to write as the hint.
+ * the rule in red, the section of the file Jev points at, and the code to
+ * write as the hint.
  */
 const frame = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => [
   header(finding),

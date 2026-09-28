@@ -1,19 +1,11 @@
 import { scan } from "#highlight.ts";
 
-/**
- * The lines a finding shows: the statement its line is in, such as the
- * function around it, and a few lines on either side of the line.
- */
+/** The lines a finding shows: the section of the file it is in. */
 export interface Excerpt {
   /** The number of the first line, counting from 1. */
   readonly start: number;
   readonly lines: ReadonlyArray<string>;
 }
-
-/** How far an excerpt reaches on either side of the finding's line, in whole statements. */
-const AROUND = 3;
-/** The most lines a statement can have and still be shown whole. */
-const WHOLE = 30;
 
 /** Lines of the code, first to last, counting from 1. */
 export interface Range {
@@ -48,19 +40,13 @@ const ROLES: Readonly<Record<string, Piece["role"]>> = {
   ",": "separator",
 };
 
-/**
- * The code as pieces, without whitespace and comments, and the comments and
- * literals that span lines: a line that starts inside one does not read as
- * code on its own.
- */
+/** The code as pieces, without whitespace and comments. */
 const piecesOf = (code: string) => {
   const pieces: Array<Piece> = [];
-  const spans: Array<Range> = [];
   let line = 1;
   let spaced = true;
   for (const { text, kind } of scan(code)) {
     const end = line + text.split("\n").length - 1;
-    if (kind !== undefined && end > line) spans.push({ first: line, last: end });
     if (kind === "comment" || text.trim().length === 0) {
       spaced = true;
     } else if (kind !== undefined || /^[\w$]/.test(text)) {
@@ -75,7 +61,7 @@ const piecesOf = (code: string) => {
     }
     line = end;
   }
-  return { pieces, spans };
+  return { pieces };
 };
 
 /**
@@ -268,6 +254,8 @@ export const sectionsOf = (lines: ReadonlyArray<string>): ReadonlyArray<Range> =
     }
   }
   if (decorator !== undefined) sections.push(decorator);
+  // A file of comments alone, with no statement, is one section.
+  if (sections.length === 0) return lines.length === 0 ? [] : [{ first: 1, last: lines.length }];
   // Each section starts where the one before it ends, and the last one ends with the file.
   return sections.flatMap((section, index): ReadonlyArray<Range> => {
     const first = (sections[index - 1]?.last ?? 0) + 1;
@@ -332,49 +320,4 @@ export const sectionName = (lines: ReadonlyArray<string>, section: Range): strin
 export const statementFrom = (lines: ReadonlyArray<string>, line: number): Range | undefined => {
   const { pieces } = piecesOf(lines.join("\n"));
   return statementsAround(pieces, closesOf(pieces), line).find((range) => range.first === line);
-};
-
-/**
- * The excerpt for a finding on `line`: the outermost statement around it
- * with at most `WHOLE` lines, such as the function it is in, and up to
- * `AROUND` lines on either side of `line`. A comment or template literal
- * that spans lines counts as a statement inside the one it is in.
- *
- * Around `line`, the excerpt shows only whole statements, never the end of
- * the one above or the start of the one below, so it cannot start partway
- * through a comment, whose lines do not read as code on their own. What
- * `line` itself is in can show in part: a long function's first line, above
- * the statement of its body. It ends at code, since a comment at the end
- * would be about code the excerpt leaves out.
- */
-export const excerptOf = (lines: ReadonlyArray<string>, line: number): Excerpt => {
-  const { pieces, spans } = piecesOf(lines.join("\n"));
-  const closes = closesOf(pieces);
-  /** What a line is in, outermost first. */
-  const around = (at: number): ReadonlyArray<Range> => [
-    ...statementsAround(pieces, closes, at),
-    ...spans.filter((span) => holds(span, at)),
-  ];
-  const scope = around(line).find((range) => range.last - range.first < WHOLE);
-  const top = Math.max(1, Math.min(scope?.first ?? line, line - AROUND));
-  const bottom = Math.min(lines.length, Math.max(scope?.last ?? line, line + AROUND));
-  /** What a line is in that `line` is not, which an edge shows whole or not at all. */
-  const beside = (at: number) => around(at).filter((range) => !holds(range, line));
-  let first = Math.max(
-    top,
-    ...beside(top)
-      .filter((range) => range.first < top)
-      .map((range) => range.last + 1),
-  );
-  let last = Math.min(
-    bottom,
-    ...beside(bottom)
-      .filter((range) => range.last > bottom)
-      .map((range) => range.first - 1),
-  );
-  const isBlank = (at: number) => (lines[at - 1] ?? "").trim().length === 0;
-  const hasCode = (at: number) => pieces.some((piece) => piece.line <= at && at <= piece.end);
-  while (first < line && isBlank(first)) first += 1;
-  while (last > line && !hasCode(last)) last -= 1;
-  return { start: first, lines: lines.slice(first - 1, last) };
 };

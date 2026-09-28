@@ -7,11 +7,14 @@ const MatcherFields = {
   excludeIf: Schema.optionalKey(Schema.Array(Schema.Finite)),
 };
 
+/** The lines of the section a finding is in, once located. */
+const Section = Schema.optionalKey(Schema.Struct({ first: Schema.Finite, last: Schema.Finite }));
+
 /** A rule's judgment as a run holds it: Jev's answer, with the fingerprint of the rule's text. */
 export const Judgment = Schema.Struct({
   fingerprint: Schema.String,
   probability: Schema.Finite,
-  line: Schema.optionalKey(Schema.Finite),
+  section: Section,
   ...MatcherFields,
 });
 export interface Judgment extends Schema.Schema.Type<typeof Judgment> {}
@@ -29,12 +32,13 @@ export const CacheEntry = Schema.Struct({
 export interface CacheEntry extends Schema.Schema.Type<typeof CacheEntry> {}
 
 /**
- * Jev's answer about some code for one rule text: the probability, the line
- * once located, and its matchers' scores.
+ * Jev's answer about some code for one rule text: the probability, the
+ * section once located, and its matchers' scores. An answer from before
+ * sections held a line instead, under a fingerprint no rule has now.
  */
 export const Answer = Schema.Struct({
   probability: Schema.Finite,
-  line: Schema.optionalKey(Schema.Finite),
+  section: Section,
   ...MatcherFields,
 });
 export interface Answer extends Schema.Schema.Type<typeof Answer> {}
@@ -109,13 +113,13 @@ const sorted = <A>(record: Readonly<Record<string, A>>): Record<string, A> =>
 
 const textOf = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`;
 
-/** One answer per rule text: one that has its line over one that has not, otherwise the first. */
+/** One answer per rule text: one that has its section over one that has not, otherwise the first. */
 const unionOf = (entries: ReadonlyArray<Answers>): Answers => {
   const union: Record<string, Answer> = {};
   for (const answers of entries) {
     for (const [fingerprint, answer] of Object.entries(answers)) {
       const held = union[fingerprint];
-      if (held === undefined || (held.line === undefined && answer.line !== undefined)) {
+      if (held === undefined || (held.section === undefined && answer.section !== undefined)) {
         union[fingerprint] = answer;
       }
     }

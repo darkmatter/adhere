@@ -10,8 +10,8 @@ both (which is highly recommended according to [our studies](eval/studies/exampl
 
 For each source file, adhere asks [Jev](https://typesafe.ai) (TypeSafe AI's System One
 model) whether the file breaks each rule, gets a calibrated probability per
-rule, and reports the ones above a threshold with the line Jev points at. The
-report uses the same frame as `vp lint`.
+rule, and reports the ones above a threshold with the section of the file Jev
+points at. The report uses the same frame as `vp lint`.
 
 Here's a demo of what the output looks like:
 
@@ -61,11 +61,13 @@ built-in Effect rules. A finding looks like this:
 
 ```text
   × data/brand-ports (0.93): A port must be a branded, range-checked integer, never a bare number.
-   ╭─[src/server.ts:6:3]
+   ╭─[src/server.ts:1:1] imports, const serve
+ 1 │ import { Effect } from "effect";
+ 2 │ import { listen } from "./listen.ts";
+ 3 │
  4 │ export const serve = Effect.gen(function* () {
  5 │   const host = process.env.HOST ?? "localhost";
  6 │   const port: number = Number(process.env.PORT ?? 3000);
-   ·   ──────────────────────────────────────────────────────
  7 │   yield* listen({ host, port });
  8 │   yield* Effect.log(`Listening on ${host}:${port}`);
  9 │ });
@@ -83,9 +85,13 @@ The header is the rule id, Jev's probability, and the rule's description. A
 preset's rule has the preset's name first, as in
 `effect/basics/gen-for-sequencing`, so a report that mixes presets
 with a repo's own rules says where each came from.
-Under it is the line Jev points at, underlined, with the code around it: the
-largest statement around the line that is 30 lines or fewer, usually the whole
-function, and up to 3 lines of whole statements on either side. The
+Under it is the section of the file Jev points at, named by what it declares.
+adhere splits each file into sections of whole statements, such as its
+imports, constants, and functions, packed in order into runs of at most 30
+lines; a class or function longer than that splits into its methods or the
+statements of its body. Jev reads the file as these sections and points at one
+of them rather than at a line: on the eval it judged as well that way, and
+chose a section holding the violation as often as it chose the right line. The
 hint is the rule's code that must be written; a rule with only code that must
 never be written shows that code, labeled `never:`, instead. A rule whose
 level is `warning` reports its findings with `⚠` in place of `×`, in amber. On
@@ -203,9 +209,10 @@ delete: Effect.fn(function* ({ output }) {
 ```
 
 On a line of its own, `adhere-ignore` covers the statement that starts on the
-next line of code: here the whole handler, wherever in it Jev points, since the
-line it points at can move between runs. At the end of a line of code, it
-covers the statement that starts on that line. `adhere-ignore-file`, anywhere
+next line of code: here the whole handler. It suppresses a finding in any
+section that holds that statement, so it also covers other code in the same
+section. At the end of a line of code, it covers the statement that starts on
+that line. `adhere-ignore-file`, anywhere
 in a file, covers the whole file, and the rules it names are not judged there
 at all. A comment names rules as a report does, a preset's with its preset
 first, separated by commas; what follows `--` is the reason, for whoever
@@ -674,8 +681,9 @@ rule's own `threshold` and `level`.
 
 ## How a file is judged
 
-1. One Jev request per file. The state is the file's numbered lines, without
-   their comments (see [Comments](#comments)), and nothing else. Each rule is one `noul` (yes/no probability) question that
+1. One Jev request per file. The state is the file's sections (see the
+   report, above) under their numbers from 1, as `{ "1": "…", "2": "…" }`,
+   without their comments (see [Comments](#comments)), and nothing else. Each rule is one `noul` (yes/no probability) question that
    carries the rule's description and its code under its words, `must` and
    `never` (or a guideline's `should` and `should_not`): whether the file
    diverges from the pattern `must` shows, with `never` as an example of
@@ -688,14 +696,16 @@ rule's own `threshold` and `level`.
    project rule, the rule's question has a second one beside it, the linter
    check (see [Validate](#validate)), with the same fields.
 2. A second request only when at least one rule's probability is above its
-   threshold: one `choice` question per flagged rule over the file's non-blank
-   lines, which yields the line to report. A file with more than 255 non-blank
-   lines is located in two steps (a block of 20 lines, then a line inside it).
+   threshold and the file has more than one section: one `choice` question per
+   flagged rule among the sections' numbers, which yields the section to
+   report. The options carry no text of their own, since each is a key of the
+   state: describing each section by its first line, or by what it declares,
+   located no better on the eval.
 3. Jev reads at most 32k tokens of state and one question together, and 64k
    tokens in a request. adhere estimates tokens from the JSON it sends, at
    about three bytes a token. When a file's questions would not fit in one
    request, they are split across several. A file whose code and longest
-   question would not fit together, or that has more than 5100 lines, is
+   question would not fit together, or that has more than 255 sections, is
    skipped and counted in the summary, and the rest of the run goes on. So is
    a file Jev itself counts as over its context, which text denser than the
    estimate, such as CJK, can cause.
