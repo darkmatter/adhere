@@ -13,6 +13,7 @@ import {
   judgeLoad,
   judgeRequests,
   linterQuestion,
+  type Located,
   locateRequests,
   matcherQuestions,
   questionRoom,
@@ -39,6 +40,12 @@ export interface Finding {
   readonly name: string;
   /** The section's code as written, comments and all, without blank lines at either end. */
   readonly excerpt: Excerpt;
+  /**
+   * Jev's probability that the file shows enough to decide the rule, when it
+   * is below the sufficiency threshold: the report warns to check what the
+   * code relies on outside the file.
+   */
+  readonly insufficient?: number;
   readonly probability: number;
   /** An error fails the run; a warning does not, unless `--deny-warnings`. */
   readonly level: Level;
@@ -185,6 +192,8 @@ export interface AuditPlan {
   readonly tokens: number;
   /** The model's price per million input tokens, in dollars, when adhere knows it. */
   readonly price?: number;
+  /** Below this, a finding's sufficiency adds a warning to it. */
+  readonly sufficiencyThreshold: number;
 }
 
 /** A file finished, for a progress counter: the requests it took and the findings it has. */
@@ -450,6 +459,7 @@ export const planAudit = (
       requests: loads.reduce((sum, load) => sum + load.requests, 0),
       tokens: loads.reduce((sum, load) => sum + load.tokens, 0),
       ...(price === undefined ? {} : { price }),
+      sufficiencyThreshold: config.sufficiencyThreshold,
     };
   });
 
@@ -526,29 +536,29 @@ export const executeAudit = (
           judgment !== undefined &&
           judgment.probability > k.threshold &&
           inScope(judgment) &&
-          judgment.section === undefined
+          (judgment.section === undefined || judgment.sufficiency === undefined)
         );
       });
       // A blocked locate question still leaves the judgments worth caching: a rerun
       // asks only for the sections again, not for every rule.
       const {
-        sections,
+        places,
         blocked,
       }: {
-        readonly sections: Readonly<Record<RuleId, Range>>;
+        readonly places: Readonly<Record<RuleId, Located>>;
         readonly blocked: Blocked | undefined;
       } = isEmpty(flagged)
-        ? { sections: {}, blocked: undefined }
+        ? { places: {}, blocked: undefined }
         : yield* jev.locate(file.lines, rulesOf(flagged)).pipe(
-            Effect.map((sections) => ({ sections, blocked: undefined })),
+            Effect.map((places) => ({ places, blocked: undefined })),
             Effect.catchTag("JevBlocked", ({ ray }) =>
-              Effect.succeed({ sections: {}, blocked: { file: file.path, ray } }),
+              Effect.succeed({ places: {}, blocked: { file: file.path, ray } }),
             ),
             inFile(file),
           );
       const located = Record.map(judged, (judgment, id) => {
-        const section = sections[id];
-        return section === undefined ? judgment : { ...judgment, section };
+        const place = places[id];
+        return place === undefined ? judgment : { ...judgment, ...place };
       });
 
       const cached = isEmpty(pending) && isEmpty(flagged);
@@ -571,6 +581,10 @@ export const executeAudit = (
                   section: judgment.section,
                   name: sectionName(file.lines, judgment.section),
                   excerpt: excerptOf(original, judgment.section),
+                  ...(judgment.sufficiency !== undefined &&
+                  judgment.sufficiency < plan.sufficiencyThreshold
+                    ? { insufficient: judgment.sufficiency }
+                    : {}),
                   probability: judgment.probability,
                   level: k.rule.level ?? "error",
                 },

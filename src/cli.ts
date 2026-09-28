@@ -99,6 +99,13 @@ const threshold = Flag.float("threshold").pipe(
   ),
 );
 
+const sufficiencyThreshold = Flag.float("sufficiency-threshold").pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "Warn on a finding when Jev's probability that the file shows enough to decide it is below this value, 0 to 1. Replaces the config's sufficiencyThreshold; the default is 0.7.",
+  ),
+);
+
 const limit = Flag.integer("limit").pipe(
   Flag.filter(
     (checks) => checks >= 0,
@@ -219,7 +226,7 @@ export const auditLayer = (flags: Flags, filter: ReadonlyArray<string> = []) =>
 /** `adhere lint`: the audit. */
 export const lintCommand = Command.make(
   "lint",
-  { preset, threshold, yes, limit, rpm, filter, denyWarnings },
+  { preset, threshold, sufficiencyThreshold, yes, limit, rpm, filter, denyWarnings },
   (input) =>
     Effect.gen(function* () {
       const stdio = yield* Stdio.Stdio;
@@ -264,6 +271,7 @@ export const lintCommand = Command.make(
       {
         presets: input.preset,
         threshold: Option.getOrUndefined(input.threshold),
+        sufficiencyThreshold: Option.getOrUndefined(input.sufficiencyThreshold),
         rpm: Option.getOrUndefined(input.rpm),
       },
       input.filter,

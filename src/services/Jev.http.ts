@@ -23,6 +23,7 @@ import {
   pairProbability,
   requestsOf,
   type Rules,
+  sufficiencyKey,
   tokensOf,
 } from "#services/Jev.ts";
 import {
@@ -47,6 +48,16 @@ const NoulAnswers = Schema.Struct({
 });
 const ChoiceAnswers = Schema.Struct({
   answers: Schema.Record(Schema.String, Schema.Struct({ choice: Schema.String })),
+});
+/** A locate request's answers: a choice per rule, and a noul per sufficiency question. */
+const LocateAnswers = Schema.Struct({
+  answers: Schema.Record(
+    Schema.String,
+    Schema.Struct({
+      choice: Schema.optionalKey(Schema.String),
+      noul: Schema.optionalKey(Schema.Finite),
+    }),
+  ),
 });
 
 const refused = (message: string) => JevUnavailable.make({ message });
@@ -258,20 +269,22 @@ export const JevLive = Layer.effect(Jev)(
       } satisfies Judged;
     });
 
-    // A file of one section has every finding in it: nothing to ask.
     const locate = Effect.fn("Jev.locate")(function* (lines: Lines, rules: Rules) {
       const sections = sectionsOf(lines);
-      const [only] = sections;
-      if (sections.length <= 1) return only === undefined ? {} : Record.map(rules, () => only);
       const answers = yield* answersTo(
         "locate",
         locateBody(config.model, lines, rules),
-        ChoiceAnswers,
+        LocateAnswers,
       );
-      // An answer that names no section, which Jev should not give, leaves the rule unlocated.
-      return Record.filterMap(answers, ({ choice }) => {
-        const section = sections[Number(choice) - 1];
-        return section === undefined ? Result.failVoid : Result.succeed(section);
+      // A file of one section has every finding in it. An answer that names no section,
+      // or none at all, which Jev should not give, leaves the rule unlocated.
+      return Record.filterMap(rules, (_, id) => {
+        const section =
+          sections.length === 1 ? sections[0] : sections[Number(answers[id]?.choice) - 1];
+        const sufficiency = answers[sufficiencyKey(id)]?.noul;
+        return section === undefined || sufficiency === undefined
+          ? Result.failVoid
+          : Result.succeed({ section, sufficiency });
       });
     });
 

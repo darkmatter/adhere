@@ -91,8 +91,23 @@ imports, constants, and functions, packed in order into runs of at most 30
 lines; a class or function longer than that splits into its methods or the
 statements of its body. Jev reads the file as these sections and points at one
 of them rather than at a line: on the eval it judged as well that way, and
-chose a section holding the violation as often as it chose the right line. The
-hint is the rule's code that must be written; a rule with only code that must
+chose a section holding the violation as often as it chose the right line.
+
+Jev is also asked whether the file shows enough to decide the rule at all:
+whether it turns on something the file does not show, such as what another
+file, a library, or a service does. When its probability is below 0.7, the
+finding gets a warning under its code:
+
+```text
+  warning: the file may not show enough to decide this (0.55); check what the code relies on outside it
+```
+
+On the eval, findings with this warning were real about half the time, and the
+others three times in four: check what the warning points at before acting on
+it. `sufficiencyThreshold` in the config, or `--sufficiency-threshold`, sets
+the cutoff. The warning changes neither the finding's level nor the exit code.
+
+The hint is the rule's code that must be written; a rule with only code that must
 never be written shows that code, labeled `never:`, instead. A rule whose
 level is `warning` reports its findings with `⚠` in place of `×`, in amber. On
 a terminal, the report is in color and the code in it is highlighted. The exit
@@ -107,6 +122,7 @@ an unknown command or flag; a refusal prints its reason.
 adhere lint                    # audit the working directory
 adhere lint --preset effect    # add a built-in rule set; the config becomes optional
 adhere lint --threshold 0.9    # replace the config's threshold; per-rule thresholds still apply
+adhere lint --sufficiency-threshold 0.6  # warn on fewer findings that may turn on other files
 adhere lint --yes              # send the requests without asking first
 adhere lint --limit 500        # judge at most 500 checks; the rest wait for the next run
 adhere lint --rpm 30           # send at most 30 requests a minute
@@ -353,6 +369,7 @@ import { defineConfig } from "@drkmttr/adhere";
 export default defineConfig({
   model: "jev-latest", // optional, default "jev-latest"
   threshold: 0.8, // optional, default 0.8
+  sufficiencyThreshold: 0.7, // optional, default 0.7: below it, a finding warns to check outside the file
   presets: ["effect"], // optional, built-in rule sets
   exclude: ["**/generated/**"], // optional, files no rule judges
   overrides: { "effect/basics/instrument-with-pipe": "off" }, // optional, see Presets
@@ -677,7 +694,8 @@ Highest first: `--threshold` on the command line, the config file, presets in
 order (a later preset wins), then the defaults `jev-latest` and `0.8`. A rule
 in `rules` replaces a preset rule with the same id. A rule's own `threshold`
 beats all of the above for that rule, and an entry in `overrides` beats the
-rule's own `threshold` and `level`.
+rule's own `threshold` and `level`. `--sufficiency-threshold` beats the
+config's `sufficiencyThreshold`, which beats the default, `0.7`.
 
 ## How a file is judged
 
@@ -696,11 +714,13 @@ rule's own `threshold` and `level`.
    project rule, the rule's question has a second one beside it, the linter
    check (see [Validate](#validate)), with the same fields.
 2. A second request only when at least one rule's probability is above its
-   threshold and the file has more than one section: one `choice` question per
-   flagged rule among the sections' numbers, which yields the section to
+   threshold. Per flagged rule, when the file has more than one section, one
+   `choice` question among the sections' numbers, which yields the section to
    report. The options carry no text of their own, since each is a key of the
    state: describing each section by its first line, or by what it declares,
-   located no better on the eval.
+   located no better on the eval. Beside it, one `noul` asking whether the
+   file holds enough to decide the rule, with the judge question as the
+   judgment it asks about, which yields the warning (see the report, above).
 3. Jev reads at most 32k tokens of state and one question together, and 64k
    tokens in a request. adhere estimates tokens from the JSON it sends, at
    about three bytes a token. When a file's questions would not fit in one

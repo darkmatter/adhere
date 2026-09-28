@@ -124,6 +124,12 @@ export const AdhereConfig = Schema.Struct({
    */
   threshold: Schema.optionalKey(Schema.Finite),
   /**
+   * Below this, Jev's probability that a file shows enough to decide a
+   * finding's rule adds a warning to the finding: check what the code relies
+   * on outside the file. Defaults to 0.7
+   */
+  sufficiencyThreshold: Schema.optionalKey(Schema.Finite),
+  /**
    * The presets to use for rule matching. Defaults to an empty array. Current presets
    * include "effect" and "alchemy". Subcategories can be expanded by appending `/<subcategory>`.
    */
@@ -227,11 +233,14 @@ export type Loaded<T extends { readonly rules?: unknown }> = Omit<T, "rules"> & 
 
 export const DEFAULT_MODEL = "jev-latest";
 export const DEFAULT_THRESHOLD = 0.8;
+export const DEFAULT_SUFFICIENCY_THRESHOLD = 0.7;
 
 /** A config with its presets folded in and every default applied. */
 export interface ResolvedConfig {
   readonly model: string;
   readonly threshold: number;
+  /** Below this, a finding's sufficiency adds a warning to it. */
+  readonly sufficiencyThreshold: number;
   readonly rules: Rules;
   readonly scopedRules?: RuleSet;
   /** Requests to Jev a minute, at most. Unset, requests go out as fast as they are made. */
@@ -247,6 +256,8 @@ export interface Flags {
   readonly presets?: ReadonlyArray<PresetName>;
   /** Replaces the config's global threshold. Per-rule thresholds still win. */
   readonly threshold?: number | undefined;
+  /** Replaces the config's sufficiency threshold. */
+  readonly sufficiencyThreshold?: number | undefined;
   /** Throttles requests to Jev to at most this many a minute. */
   readonly rpm?: number | undefined;
 }
@@ -286,6 +297,8 @@ export const resolveConfig = (
   return {
     model: config.model ?? last("model") ?? DEFAULT_MODEL,
     threshold: flags.threshold ?? config.threshold ?? last("threshold") ?? DEFAULT_THRESHOLD,
+    sufficiencyThreshold:
+      flags.sufficiencyThreshold ?? config.sufficiencyThreshold ?? DEFAULT_SUFFICIENCY_THRESHOLD,
     rules: Object.assign({}, ...applied.map((preset) => preset.rules), config.rules),
     ...(flags.rpm === undefined ? {} : { rpm: flags.rpm }),
     ...(config.exclude === undefined ? {} : { exclude: config.exclude }),

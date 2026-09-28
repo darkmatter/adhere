@@ -166,6 +166,12 @@ const sectionAt = (lines: ReadonlyArray<string>, line: number): Range =>
     last: line,
   };
 
+/** Jev's locate answer for a finding on `line`: its section, in a file that shows enough. */
+const placedAt = (lines: ReadonlyArray<string>, line: number) => ({
+  section: sectionAt(lines, line),
+  sufficiency: 0.9,
+});
+
 /** Jev that answers from tables, as `recordingJev` does, and keeps the code of every request. */
 const sendingJev = (answers: {
   readonly judge: Record<string, number>;
@@ -183,7 +189,7 @@ const sendingJev = (answers: {
     locate: (code, asked) =>
       Effect.sync(() => {
         sent.push(code.join("\n"));
-        return Record.map(answer(answers.locate, asked), (line) => sectionAt(code, line));
+        return Record.map(answer(answers.locate, asked), (line) => placedAt(code, line));
       }),
     conflicts: () => Effect.die("an audit compares no rules"),
     contradicts: () => Effect.die("an audit compares no rules"),
@@ -207,7 +213,7 @@ const recordingJev = (answers: {
     locate: (lines, rules) =>
       Effect.sync(() => {
         calls.locate.push(rules);
-        return Record.map(asked(answers.locate, rules), (line) => sectionAt(lines, line));
+        return Record.map(asked(answers.locate, rules), (line) => placedAt(lines, line));
       }),
     conflicts: () => Effect.die("an audit compares no rules"),
     contradicts: () => Effect.die("an audit compares no rules"),
@@ -239,6 +245,7 @@ const audit = (options: {
           Layer.succeed(AdhereConfig, {
             model: "jev-latest",
             threshold: options.threshold ?? 0.7,
+            sufficiencyThreshold: 0.7,
             rules: options.rules,
             ...(options.includeComments === undefined
               ? {}
@@ -321,17 +328,27 @@ describe("request bodies", () => {
     const body = locateBody("jev-latest", long, { a });
     expect(Object.keys(body.state.code)).toEqual(["1", "2", "3"]);
     expect(body.state.code["2"]?.split("\n")[0]).toBe("const v31 = 31;");
-    expect(body.questions).toEqual({
-      a: {
-        type: "choice",
-        instructions: {
-          question: "Which entry of `code` most clearly diverges from `must`?",
-          rule: a.description,
-          must: a.must,
-        },
-        criteria: { "1": null, "2": null, "3": null },
+    expect(Object.keys(body.questions)).toEqual(["a", "sufficient:a"]);
+    expect(body.questions.a).toEqual({
+      type: "choice",
+      instructions: {
+        question: "Which entry of `code` most clearly diverges from `must`?",
+        rule: a.description,
+        must: a.must,
+      },
+      criteria: { "1": null, "2": null, "3": null },
+    });
+    expect(body.questions["sufficient:a"]).toMatchObject({
+      type: "noul",
+      instructions: {
+        question: "Does `code` contain sufficient information to make `judgment`?",
+        judgment: expect.stringContaining("Does `code` diverge from the pattern shown in `must`"),
+        rule: a.description,
+        must: a.must,
       },
     });
+    // A file of one section has nothing to choose among: only the sufficiency question.
+    expect(Object.keys(locateBody("jev-latest", code, { a }).questions)).toEqual(["sufficient:a"]);
   });
 
   it("carries the code under the rule's words: must and never, or should and should not", () => {
@@ -381,7 +398,8 @@ describe("request bodies", () => {
       should_not: guideline.shouldNot,
     });
 
-    const located = locateBody("jev-latest", code, { both, neverOnly }).questions;
+    const long = Array.from({ length: 40 }, (_, index) => `const v${index} = ${index};`);
+    const located = locateBody("jev-latest", long, { both, neverOnly }).questions;
     expect(located.both?.instructions.question).toBe(
       "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
     );
@@ -438,15 +456,22 @@ const loaded = (config: typeof AdhereConfigSchema.Encoded, rules: Rules = {}) =>
   Effect.map(decodeConfig(config), (decoded) => ({ ...decoded, rules }));
 
 describe("config", () => {
-  it("applies the default model and threshold", async () => {
+  it("applies the default model and thresholds", async () => {
     const config = await Effect.runPromise(
       loaded({}, { "data/brand": { description: "d", must: "r" } }),
     );
     expect(resolveConfig(config)).toEqual({
       model: "jev-latest",
       threshold: 0.8,
+      sufficiencyThreshold: 0.7,
       rules: { "data/brand": { description: "d", must: "r" } },
     });
+  });
+
+  it("takes the sufficiency threshold from the flag, then the config, then the default", async () => {
+    const config = await Effect.runPromise(loaded({ sufficiencyThreshold: 0.6 }));
+    expect(resolveConfig(config).sufficiencyThreshold).toBe(0.6);
+    expect(resolveConfig(config, { sufficiencyThreshold: 0.5 }).sufficiencyThreshold).toBe(0.5);
   });
 
   it("folds presets into the rules, with a config rule winning over a preset rule", async () => {
@@ -1570,6 +1595,7 @@ const planOf = (options: {
           Layer.succeed(AdhereConfig, {
             model: "jev-latest",
             threshold: 0.7,
+            sufficiencyThreshold: 0.7,
             rules: options.rules,
           }),
           Layer.succeed(SourceWalker, { files: Effect.succeed(options.files) }),
@@ -1635,6 +1661,7 @@ describe("plan", () => {
       requests: 1,
       tokens: expect.any(Number),
       price: 0.042,
+      sufficiencyThreshold: 0.7,
     });
   });
 
@@ -1649,7 +1676,12 @@ describe("plan", () => {
       planAudit().pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules }),
+            Layer.succeed(AdhereConfig, {
+              model: "jev-latest",
+              threshold: 0.7,
+              sufficiencyThreshold: 0.7,
+              rules,
+            }),
             Layer.succeed(SourceWalker, { files: Effect.succeed([source, other]) }),
             memoryCache(),
             testCrypto,
@@ -1672,7 +1704,7 @@ describe("plan", () => {
           probabilities: Record.map(asked, (_, id) => (id === "a" && lines.length > 1 ? 0.9 : 0.2)),
           linter: {},
         }),
-      locate: (lines, asked) => Effect.succeed(Record.map(asked, () => sectionAt(lines, 2))),
+      locate: (lines, asked) => Effect.succeed(Record.map(asked, () => placedAt(lines, 2))),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
     });
@@ -1685,13 +1717,60 @@ describe("plan", () => {
       ).pipe(Effect.provide(Layer.merge(jev, cache))),
     );
 
-    // Both files are judged; only server.ts has a finding, and as one section it is where
-    // the finding is, with no request to locate it.
+    // Both files are judged; only server.ts has a finding, so only it is located too.
     expect([...done].sort((x, y) => x.findings - y.findings)).toEqual([
       { requests: 1, findings: 0 },
-      { requests: 1, findings: 1 },
+      { requests: 2, findings: 1 },
     ]);
     expect(result.findings).toEqual([findingA]);
+  });
+
+  it("warns on a finding whose file may not show enough to decide it, and locates again one cached without", async () => {
+    const located: Array<ReadonlyArray<string>> = [];
+    const jev = (sufficiency: Record<string, number>) =>
+      Layer.succeed(Jev, {
+        judge: () => Effect.succeed({ probabilities: { a: 0.9, b: 0.9 }, linter: {} }),
+        locate: (lines, asked) =>
+          Effect.sync(() => {
+            located.push(Object.keys(asked));
+            return Record.map(asked, (_, id) => ({
+              section: sectionAt(lines, 2),
+              sufficiency: sufficiency[id] ?? 0.9,
+            }));
+          }),
+        conflicts: () => Effect.die("an audit compares no rules"),
+        contradicts: () => Effect.die("an audit compares no rules"),
+      });
+    const result = await audit({ rules, jev: jev({ a: 0.55 }), cache: memoryCache() });
+    expect(result.findings.map(({ rule, insufficient }) => ({ rule, insufficient }))).toEqual([
+      { rule: "a", insufficient: 0.55 },
+      { rule: "b", insufficient: undefined },
+    ]);
+
+    // An answer located before sufficiency was asked has none: its rule is located again,
+    // and not judged again.
+    const entries = new Map<string, Answers>();
+    const withoutSufficiency = Layer.succeed(AuditCache, {
+      get: (hash) =>
+        Effect.sync(() =>
+          Record.map(entries.get(hash) ?? {}, (answer) => {
+            const { sufficiency, ...rest } = answer;
+            return sufficiency === undefined ? answer : rest;
+          }),
+        ),
+      put: (hash, answers) =>
+        Effect.sync(() => {
+          entries.set(hash, { ...entries.get(hash), ...answers });
+        }),
+      tally: () => Effect.succeed(undefined),
+      putTally: () => Effect.void,
+      prune: () => Effect.succeed(0),
+    });
+    await audit({ rules, jev: jev({}), cache: withoutSufficiency });
+    located.length = 0;
+    const again = recordingJev({ judge: {}, locate: { a: 2, b: 2 } });
+    await audit({ rules, jev: again.layer, cache: withoutSufficiency });
+    expect(again.calls).toEqual({ judge: [], locate: [rules] });
   });
 
   it("drops a finding its matchers put out of scope, and keeps their scores in the cache", async () => {
@@ -1714,7 +1793,7 @@ describe("plan", () => {
       locate: (lines, asked) =>
         Effect.sync(() => {
           located.push(Object.keys(asked));
-          return Record.map(asked, () => sectionAt(lines, 2));
+          return Record.map(asked, () => placedAt(lines, 2));
         }),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
@@ -1748,7 +1827,12 @@ describe("plan", () => {
         runAudit.pipe(
           Effect.provide(
             Layer.mergeAll(
-              Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules }),
+              Layer.succeed(AdhereConfig, {
+                model: "jev-latest",
+                threshold: 0.7,
+                sufficiencyThreshold: 0.7,
+                rules,
+              }),
               Layer.succeed(SourceWalker, { files: Effect.succeed([source]) }),
               refusing,
               memoryCache(),
@@ -1776,12 +1860,15 @@ describe("plan", () => {
     original: [],
   });
   const summary = (
-    fields: Omit<AuditPlan, "files" | "tokens" | "unjudged"> & { readonly tokens?: number },
+    fields: Omit<AuditPlan, "files" | "tokens" | "unjudged" | "sufficiencyThreshold"> & {
+      readonly tokens?: number;
+    },
     files = 200,
   ): AuditPlan => ({
     files: Array.from({ length: files }, (_, index) => filePlan(`/repo/${index}.ts`)),
     unjudged: [],
     tokens: 0,
+    sufficiencyThreshold: 0.7,
     ...fields,
   });
 
@@ -1912,6 +1999,7 @@ describe("plan", () => {
             Layer.succeed(AdhereConfig, {
               model: "jev-latest",
               threshold: 0.7,
+              sufficiencyThreshold: 0.7,
               rules,
               scopedRules,
             }),
@@ -2024,6 +2112,7 @@ describe("linter check", () => {
               Layer.succeed(AdhereConfig, {
                 model: "jev-latest",
                 threshold: 0.7,
+                sufficiencyThreshold: 0.7,
                 rules: { ports, logs },
                 scopedRules,
               }),
@@ -2203,7 +2292,12 @@ describe("pipeline", () => {
         Effect.tap(pruneCache),
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules }),
+            Layer.succeed(AdhereConfig, {
+              model: "jev-latest",
+              threshold: 0.7,
+              sufficiencyThreshold: 0.7,
+              rules,
+            }),
             Layer.succeed(SourceWalker, { files: Effect.succeed([source]) }),
             memoryCache({}, new Map(), pruned),
             testCrypto,
@@ -2233,7 +2327,12 @@ describe("pipeline", () => {
         Effect.tap(pruneCache),
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules }),
+            Layer.succeed(AdhereConfig, {
+              model: "jev-latest",
+              threshold: 0.7,
+              sufficiencyThreshold: 0.7,
+              rules,
+            }),
             Layer.succeed(SourceWalker, { files: Effect.succeed([source, helper]) }),
             memoryCache({}, new Map(), pruned),
             testCrypto,
@@ -2329,7 +2428,7 @@ describe("pipeline", () => {
         lines.length === other.lines.length
           ? Effect.fail(JevBlocked.make({ ray: "a3fb098cae4f55a3-LAX" }))
           : Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} }),
-      locate: () => Effect.succeed({ a: { first: 1, last: 3 } }),
+      locate: () => Effect.succeed({ a: { section: { first: 1, last: 3 }, sufficiency: 0.9 } }),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
     });
@@ -2376,7 +2475,7 @@ describe("pipeline", () => {
         lines.length === dense.lines.length
           ? Effect.fail(JevOverflow.make())
           : Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} }),
-      locate: () => Effect.succeed({ a: { first: 1, last: 3 } }),
+      locate: () => Effect.succeed({ a: { section: { first: 1, last: 3 }, sufficiency: 0.9 } }),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
     });
@@ -2681,6 +2780,15 @@ describe("render", () => {
     ]);
   });
 
+  it("warns under the section when the file may not show enough to decide", () => {
+    const finding = { ...findingA, insufficient: 0.55 };
+    const lines = render({ ...result, findings: [finding] }, { root: "/repo" });
+    expect(lines[6]).toBe(
+      "  warning: the file may not show enough to decide this (0.55); check what the code relies on outside it",
+    );
+    expect(lines[7]).toBe('  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))');
+  });
+
   it("shows the code never to write, labeled with its word, for a rule without code to write", () => {
     const code = 'throw new Error("x")\nthrow new Error("y")';
     const finding = { ...findingA, examples: { bad: { word: "never" as const, code } } };
@@ -2889,7 +2997,13 @@ describe("jev over http", () => {
       Layer.provide([
         Layer.succeed(HttpClient.HttpClient, client),
         // 1200 a minute is one every 50 milliseconds.
-        Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules: {}, rpm: 1200 }),
+        Layer.succeed(AdhereConfig, {
+          model: "jev-latest",
+          threshold: 0.7,
+          sufficiencyThreshold: 0.7,
+          rules: {},
+          rpm: 1200,
+        }),
         Layer.succeed(Credentials, {
           apiKey: Effect.succeed(Redacted.make("tsk_saved")),
           file: Effect.succeed("/config/adhere/credentials.json"),
@@ -2936,7 +3050,12 @@ describe("jev over http", () => {
     const layer = JevLive.pipe(
       Layer.provide([
         Layer.succeed(HttpClient.HttpClient, client),
-        Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules: {} }),
+        Layer.succeed(AdhereConfig, {
+          model: "jev-latest",
+          threshold: 0.7,
+          sufficiencyThreshold: 0.7,
+          rules: {},
+        }),
         Layer.succeed(Credentials, {
           apiKey: key,
           file: Effect.succeed("/config/adhere/credentials.json"),
@@ -2952,22 +3071,33 @@ describe("jev over http", () => {
     return { authorizations, asked, judged: result };
   };
 
-  it("locates each rule in the section Jev chooses, and asks nothing of a file of one section", async () => {
+  it("locates each rule in the section Jev chooses, with its sufficiency, and chooses nothing in a file of one section", async () => {
     const sent: Array<ReadonlyArray<string>> = [];
     const client = HttpClient.make((request) => {
       const body: { readonly questions: Record<string, unknown> } =
         request.body._tag === "Uint8Array"
           ? JSON.parse(new TextDecoder().decode(request.body.body))
           : { questions: {} };
-      sent.push(Object.keys(body.questions));
+      const ids = Object.keys(body.questions);
+      sent.push(ids);
       // b's choice names no section, which leaves it unlocated.
-      const answers = { a: { choice: "2" }, b: { choice: "9" } };
+      const answers = Object.fromEntries(
+        ids.map((id) => [
+          id,
+          id.startsWith("sufficient:") ? { noul: 0.4 } : { choice: id === "a" ? "2" : "9" },
+        ]),
+      );
       return Effect.succeed(HttpClientResponse.fromWeb(request, Response.json({ answers })));
     });
     const layer = JevLive.pipe(
       Layer.provide([
         Layer.succeed(HttpClient.HttpClient, client),
-        Layer.succeed(AdhereConfig, { model: "jev-latest", threshold: 0.7, rules: {} }),
+        Layer.succeed(AdhereConfig, {
+          model: "jev-latest",
+          threshold: 0.7,
+          sufficiencyThreshold: 0.7,
+          rules: {},
+        }),
         Layer.succeed(Credentials, {
           apiKey: Effect.succeed(Redacted.make("tsk_saved")),
           file: Effect.succeed("/config/adhere/credentials.json"),
@@ -2982,9 +3112,9 @@ describe("jev over http", () => {
       return [yield* jev.locate(long, { a, b }), yield* jev.locate(["const x = 1;"], { a })];
     });
     const [three, one] = await Effect.runPromise(Effect.provide(located, layer));
-    expect(three).toEqual({ a: sectionsOf(long)[1] });
-    expect(one).toEqual({ a: { first: 1, last: 1 } });
-    expect(sent).toEqual([["a", "b"]]);
+    expect(three).toEqual({ a: { section: sectionsOf(long)[1], sufficiency: 0.4 } });
+    expect(one).toEqual({ a: { section: { first: 1, last: 1 }, sufficiency: 0.4 } });
+    expect(sent).toEqual([["a", "sufficient:a", "b", "sufficient:b"], ["sufficient:a"]]);
   });
 
   it("sends the key from Credentials as a bearer token", async () => {

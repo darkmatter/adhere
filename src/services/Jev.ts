@@ -54,11 +54,15 @@ export class Jev extends Context.Service<
       rules: Rules,
       sampled?: ReadonlyArray<RuleId>,
     ) => Effect.Effect<Judged, JevUnavailable | JevOverflow | JevBlocked>;
-    /** Per rule, the section of the file that most clearly breaks it. */
+    /**
+     * Per rule, the section of the file that most clearly breaks it, and
+     * whether the file shows enough to decide. A rule Jev answers either
+     * question for with nothing it offered is left out.
+     */
     readonly locate: (
       lines: Lines,
       rules: Rules,
-    ) => Effect.Effect<Record<RuleId, Range>, JevUnavailable | JevOverflow | JevBlocked>;
+    ) => Effect.Effect<Record<RuleId, Located>, JevUnavailable | JevOverflow | JevBlocked>;
     /**
      * Per rule, the partner Jev names as impossible to follow in the same code,
      * as `[rule, partner]` indexes into `rules`. A rule Jev names none for is
@@ -78,6 +82,13 @@ export class Jev extends Context.Service<
     ) => Effect.Effect<ReadonlyArray<number>, JevUnavailable>;
   }
 >()("@drkmttr/adhere/services/Jev") {}
+
+/** Where a finding is, and how sure Jev is that the file shows enough to decide it. */
+export interface Located {
+  readonly section: Range;
+  /** Jev's probability that everything judging the rule turns on is in the file. */
+  readonly sufficiency: number;
+}
 
 /** A rule compared with other rules rather than with a file. */
 export interface ComparedRule {
@@ -307,25 +318,65 @@ export const judgeBody = (
 });
 
 /**
- * Per rule, which section of `code` breaks it: one choice among the
- * sections' numbers. The options carry no text: each is a key of the state,
- * and describing a section by its first line or by what it declares located
- * no better on the eval.
+ * Whether the file shows enough to decide the rule at all: a finding that
+ * turns on another file, a library, or a service is a coin flip, and the
+ * report says so. On the eval, findings it scored below 0.7 were real about
+ * half the time, and the rest three times in four.
+ */
+export const sufficiencyQuestion = (rule: Rule) => {
+  const { instructions } = judgeQuestion(rule);
+  return {
+    type: "noul" as const,
+    instructions: {
+      ...instructions,
+      judgment: instructions.question,
+      question: "Does `code` contain sufficient information to make `judgment`?",
+    },
+    criteria: {
+      true: "Everything `judgment` turns on is in `code`",
+      false:
+        "`judgment` turns on something `code` does not show, such as what another file, a library, a service, or the program's configuration does",
+    },
+  };
+};
+
+/** The key a rule's sufficiency question rides under, beside its locate question. */
+export const sufficiencyKey = (id: RuleId): string => `sufficient:${id}`;
+
+/**
+ * Per rule, which section of `code` breaks it, one choice among the
+ * sections' numbers, and its sufficiency question. The options carry no
+ * text: each is a key of the state, and describing a section by its first
+ * line or by what it declares located no better on the eval. A file of one
+ * section has nothing to choose among.
  */
 export const locateBody = (model: string, lines: Lines, rules: Rules) => {
   const state = stateOf(lines);
   const criteria = Record.map(state.code, () => null);
+  const choosing = Object.keys(criteria).length > 1;
   return {
     model,
     state,
-    questions: Record.map(rules, (rule) => ({
-      type: "choice" as const,
-      instructions: {
-        question: `Which entry of \`code\` most clearly ${offense(rule)}?`,
-        ...ruleFields(rule),
-      },
-      criteria,
-    })),
+    questions: Object.fromEntries(
+      Object.entries(rules).flatMap(([id, rule]) => [
+        ...(choosing
+          ? [
+              [
+                id,
+                {
+                  type: "choice" as const,
+                  instructions: {
+                    question: `Which entry of \`code\` most clearly ${offense(rule)}?`,
+                    ...ruleFields(rule),
+                  },
+                  criteria,
+                },
+              ] as const,
+            ]
+          : []),
+        [sufficiencyKey(id), sufficiencyQuestion(rule)] as const,
+      ]),
+    ),
   };
 };
 
@@ -394,12 +445,9 @@ export const judgeRequests = (
   sampled: ReadonlyArray<RuleId> = [],
 ): number => requestsOf(judgeBody("", lines, rules, sampled)).length;
 
-/**
- * The requests locating `rules` in a file takes, split to fit as `locate`
- * sends them: none for a file of one section, which is where every finding is.
- */
+/** The requests locating `rules` in a file takes, split to fit as `locate` sends them. */
 export const locateRequests = (lines: Lines, rules: Rules): number =>
-  sectionsOf(lines).length <= 1 ? 0 : requestsOf(locateBody("", lines, rules)).length;
+  requestsOf(locateBody("", lines, rules)).length;
 
 /** A choice keeps one criterion for "none", which leaves this many for partners. */
 const PARTNERS_PER_QUESTION = CHOICE_LIMIT - 1;

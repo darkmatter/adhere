@@ -131,6 +131,22 @@ const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line
 };
 
 /**
+ * The warning on a finding whose file may not show enough to decide it,
+ * with Jev's probability that it does.
+ */
+const insufficient = (finding: Finding): ReadonlyArray<Line> =>
+  finding.insufficient === undefined
+    ? []
+    : [
+        [
+          span("  warning: ", "warning"),
+          span(
+            `the file may not show enough to decide this (${finding.insufficient.toFixed(2)}); check what the code relies on outside it`,
+          ),
+        ],
+      ];
+
+/**
  * The code to write as the hint. A rule with only code not to write shows
  * that instead, labeled with its word: `never`, or `should not`.
  */
@@ -143,12 +159,13 @@ const hint = (finding: Finding): ReadonlyArray<Line> => {
 
 /**
  * One diagnostic, in the frame `vp lint` prints on a terminal: a header with
- * the rule in red, the section of the file Jev points at, and the code to
- * write as the hint.
+ * the rule in red, the section of the file Jev points at, a warning when the
+ * file may not show enough to decide, and the code to write as the hint.
  */
 const frame = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => [
   header(finding),
   ...excerpt(finding, root),
+  ...insufficient(finding),
   ...hint(finding),
 ];
 

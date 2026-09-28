@@ -10,11 +10,15 @@ const MatcherFields = {
 /** The lines of the section a finding is in, once located. */
 const Section = Schema.optionalKey(Schema.Struct({ first: Schema.Finite, last: Schema.Finite }));
 
+/** Jev's probability, asked with the section, that the file shows enough to decide the rule. */
+const Sufficiency = Schema.optionalKey(Schema.Finite);
+
 /** A rule's judgment as a run holds it: Jev's answer, with the fingerprint of the rule's text. */
 export const Judgment = Schema.Struct({
   fingerprint: Schema.String,
   probability: Schema.Finite,
   section: Section,
+  sufficiency: Sufficiency,
   ...MatcherFields,
 });
 export interface Judgment extends Schema.Schema.Type<typeof Judgment> {}
@@ -33,12 +37,13 @@ export interface CacheEntry extends Schema.Schema.Type<typeof CacheEntry> {}
 
 /**
  * Jev's answer about some code for one rule text: the probability, the
- * section once located, and its matchers' scores. An answer from before
+ * section and sufficiency once located, and its matchers' scores. An answer from before
  * sections held a line instead, under a fingerprint no rule has now.
  */
 export const Answer = Schema.Struct({
   probability: Schema.Finite,
   section: Section,
+  sufficiency: Sufficiency,
   ...MatcherFields,
 });
 export interface Answer extends Schema.Schema.Type<typeof Answer> {}

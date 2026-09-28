@@ -36,6 +36,9 @@ Each finding shows:
   description;
 - the section of the file Jev points at, a run of whole statements of about 30
   lines, named by what it declares; the violation is somewhere in it;
+- sometimes `warning: the file may not show enough to decide this`: the rule
+  may turn on another file, a library, or a service. About half of these are
+  real; read what the code relies on before fixing it;
 - `hint:`, the code the rule wants, or `never:` for a rule that only shows code
   to avoid.
 
