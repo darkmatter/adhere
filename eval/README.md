@@ -88,7 +88,12 @@ directory per repo and one file per rule.
 
 All on jev-1.13.0. The Effect preset's are scored against `labels.json` as
 committed; the one on alchemy against the verdicts it lists, checked against
-AWS.
+AWS; the typescript, react, and security presets' against
+`studies/presets-labels.json`, 384 findings on dub, immich, hono, and
+excalidraw labeled by hand, and `studies/violations.json`, the lines each real
+one's violation is on. Those read the repos from `~/.agents/repos/<owner>/<repo>`,
+or `$ADHERE_EVAL_REPOS`, at the commits `studies/presets.md` names, and take
+the key from `TYPESAFE_API_KEY` alone.
 
 | Study                                                         | Question                                                                                                    | Finding                                                                                                                                                               |
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -99,3 +104,7 @@ AWS.
 | [Tokens and context](studies/tokens.md)                       | How Jev counts tokens, and what it does past its context                                                    | 3.2 bytes a token for numbered TypeScript. A request past the context is a 400.                                                                                       |
 | [Comments](studies/comments.md)                               | With the file's comments taken out, or kept                                                                 | On the Effect preset, no change: the same ranking, and more flags on other rules' questions.                                                                          |
 | [Idempotent deletes on alchemy](studies/idempotent-delete.md) | alchemy's idempotent-delete rule scoped to a provider's delete handler, and without the file's comments     | Scoping dropped every finding outside providers. Without comments, Jev flagged all 9 real deletes, 8 hidden by wrong comments, at about the same share of flags real. |
+| [The new presets on four repos](studies/presets.md)           | How often a finding from typescript, react, and security is real, and whether the misses follow patterns    | 73% real above 0.8. The misses there mostly repeat within a rule; excludeIf matchers scored real and false findings alike, so they thinned both.                      |
+| [Sufficiency](studies/sufficiency.md)                         | Whether asking if the file shows enough to decide tells real findings from false                            | No better than a higher threshold as a filter; as a warning below 0.7, it marks one finding in five that is a coin flip.                                              |
+| [Sections](studies/sections.md)                               | The file as numbered lines, or as sections of whole statements, keyed, marked, or in an array               | The same judgment every way. Keyed sections locate as well as lines, in one request, with options that need no text; an array's index is off by one.                  |
+| [Lines within a section](studies/pinpoint.md)                 | Once in a section, can Jev name the lines: by tenths, choices, halving, or a noul per line                  | A noul per line spans the violation; a choice names its first line; tenths miss a third of the time; halving adds requests for nothing.                               |

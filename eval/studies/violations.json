@@ -1,0 +1,2654 @@
+[
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/admin.dub.co/(dashboard)/domains/components/register-premium-domain.tsx",
+    "rule": "react/effects/fetches-ignore-stale-responses",
+    "ranges": [
+      {
+        "first": 37,
+        "last": 72
+      }
+    ],
+    "note": "The debouncedDomain effect fetches availability and sets searchResult from every response with no ignore flag or AbortController cleanup."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/cron/framer/backfill-leads-batch/route.ts",
+    "rule": "typescript/types/derive-dont-restate",
+    "ranges": [
+      {
+        "first": 31,
+        "last": 36
+      }
+    ],
+    "note": "PayloadItem restates the zod schema's fields by hand instead of using z.infer on the schema."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/cron/import/bitly/rate-limit.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 19,
+        "last": 28
+      }
+    ],
+    "note": "The Bitly response.json() is cast `as { platform_limits: ... }` without a runtime check."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/cron/streams/update-click-stats/route.ts",
+    "rule": "typescript/errors/release-on-every-path",
+    "ranges": [
+      {
+        "first": 321,
+        "last": 337
+      }
+    ],
+    "note": "Redis lock acquired with redis.set is released by redis.del only after processing succeeds, not in a finally."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/paypal/webhook/payouts-item-succeeded.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 87,
+        "last": 93
+      }
+    ],
+    "note": "catch around commission updateMany only logs and continues, so the payout is treated as fully succeeded."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/app.dub.co/embed/referrals/bounties/detail.tsx",
+    "rule": "react/state/no-props-copied-into-state",
+    "ranges": [
+      {
+        "first": 55,
+        "last": 55
+      }
+    ],
+    "note": "EmbedBountyDetail copies the bounty prop into bounty state, which stops following the prop."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/app.dub.co/embed/referrals/bounties/submission-fields.tsx",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 101,
+        "last": 108
+      }
+    ],
+    "note": "The PUT fetch to the external signedUrl has no timeout or AbortSignal."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/app.dub.co/invoices/[invoiceId]/domain-renewal-invoice.tsx",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 52,
+        "last": 52
+      },
+      {
+        "first": 32,
+        "last": 42
+      }
+    ],
+    "note": "The Stripe customers.retrieve response is cast `as Stripe.Customer` without checking it is not deleted, and the JSON registeredDomains field is cast `as string[]`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/partners.dub.co/(apply)/[programSlug]/(default)/apply/page.tsx",
+    "rule": "react/server/no-private-data-to-client",
+    "ranges": [
+      {
+        "first": 78,
+        "last": 78
+      },
+      {
+        "first": 60,
+        "last": 60
+      }
+    ],
+    "note": "The whole program record and group record from getProgram are passed to client components ProgramApplicationForm and ApplyHeader."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/partners.dub.co/(dashboard)/payouts/payout-table.tsx",
+    "rule": "react/state/store-ids-not-copies",
+    "ranges": [
+      {
+        "first": 50,
+        "last": 53
+      },
+      {
+        "first": 60,
+        "last": 60
+      }
+    ],
+    "note": "detailsSheetState holds a copy of the selected payout object from payouts rather than its id."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/partners.dub.co/(dashboard)/payouts/payout-table.tsx",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 227,
+        "last": 227
+      }
+    ],
+    "note": "`as any` silences the union type error when spreading open into detailsSheetState."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/partners.dub.co/(dashboard)/programs/[programSlug]/invite/page.tsx",
+    "rule": "react/server/no-private-data-to-client",
+    "ranges": [
+      {
+        "first": 122,
+        "last": 122
+      },
+      {
+        "first": 123,
+        "last": 123
+      },
+      {
+        "first": 151,
+        "last": 151
+      }
+    ],
+    "note": "The whole program record (with included partner enrollment and rewards) is passed to client invite buttons that only need id/slug, and the whole group record to block components."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/partners.dub.co/(dashboard)/rewind/2025/share-rewind-modal.tsx",
+    "rule": "react/effects/fetches-ignore-stale-responses",
+    "ranges": [
+      {
+        "first": 30,
+        "last": 42
+      }
+    ],
+    "note": "useEffect fetches imageUrl and sets blob state from every response with no ignore flag or abort on cleanup."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/ai/sync-embeddings/fetch-plausible-pageviews.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 54,
+        "last": 57
+      }
+    ],
+    "note": "catch logs the Plausible fetch error and returns an empty Map as if no pageviews."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/ai/sync-embeddings/route.ts",
+    "rule": "security/constant-time-secret-compare",
+    "ranges": [
+      {
+        "first": 36,
+        "last": 38
+      }
+    ],
+    "note": "Authorization header is compared to `Bearer ${secret}` with `!==`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/callback/plain/partner/route.ts",
+    "rule": "security/constant-time-secret-compare",
+    "ranges": [
+      {
+        "first": 24,
+        "last": 26
+      }
+    ],
+    "note": "X-Plain-Webhook-Secret header is compared to PLAIN_WEBHOOK_SECRET with `!==`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/callback/plain/workspace/route.ts",
+    "rule": "security/constant-time-secret-compare",
+    "ranges": [
+      {
+        "first": 23,
+        "last": 25
+      }
+    ],
+    "note": "X-Plain-Webhook-Secret header is compared to PLAIN_WEBHOOK_SECRET with `!==`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/workspaces/[idOrSlug]/billing/invoices/route.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 62,
+        "last": 65
+      }
+    ],
+    "note": "getSubscriptionInvoices catch logs the Stripe error and returns [], reading as no invoices."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/workspaces/[idOrSlug]/billing/payment-methods/verify-microdeposits/route.ts",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 12,
+        "last": 27
+      }
+    ],
+    "note": "verifyMicrodepositsSchema makes amounts and descriptorCode both optional with a refine requiring exactly one, instead of a union of the two shapes."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/workspaces/[idOrSlug]/import/bitly/route.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 22,
+        "last": 27
+      },
+      {
+        "first": 43,
+        "last": 51
+      }
+    ],
+    "note": "Server fetches to api-ssl.bitly.com for groups and tags have no timeout or AbortSignal."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(auth)/oauth/authorize/authorize-workspace-context.tsx",
+    "rule": "react/state/store-ids-not-copies",
+    "ranges": [
+      {
+        "first": 43,
+        "last": 44
+      }
+    ],
+    "note": "selectedWorkspace state holds a copy of a WorkspaceProps object from the workspaces list instead of its id/slug."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/program/groups/[groupSlug]/settings/group-move-rules.tsx",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 219,
+        "last": 223
+      },
+      {
+        "first": 192,
+        "last": 196
+      },
+      {
+        "first": 295,
+        "last": 298
+      },
+      {
+        "first": 287,
+        "last": 292
+      }
+    ],
+    "note": "Draft rules are forced into WorkflowCondition with `as unknown as WorkflowCondition` and `{} as any` / `{ min } as any` to silence type errors."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/program/resources/program-brand-assets/index.tsx",
+    "rule": "react/state/store-ids-not-copies",
+    "ranges": [
+      {
+        "first": 37,
+        "last": 39
+      },
+      {
+        "first": 40,
+        "last": 42
+      },
+      {
+        "first": 43,
+        "last": 45
+      },
+      {
+        "first": 46,
+        "last": 48
+      }
+    ],
+    "note": "editingLogo/editingColor/editingFile/editingLink states hold copies of resources from the fetched list instead of their ids."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/billing/upgrade/adjust-usage-row.tsx",
+    "rule": "react/effects/notify-parents-in-handlers",
+    "ranges": [
+      {
+        "first": 143,
+        "last": 145
+      }
+    ],
+    "note": "useEffect calls onChange(monthlySelectedValue) whenever the slider's own state changes rather than in the slider handler."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/domains/email/page-client.tsx",
+    "rule": "react/effects/clean-up-what-they-start",
+    "ranges": [
+      {
+        "first": 36,
+        "last": 71
+      }
+    ],
+    "note": "The effect starts two window.setTimeout revalidations and returns no cleanup that clears them."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/domains/page-client.tsx",
+    "rule": "react/effects/clean-up-what-they-start",
+    "ranges": [
+      {
+        "first": 78,
+        "last": 111
+      }
+    ],
+    "note": "The domain_connect callback effect starts two window.setTimeout revalidations and returns no cleanup that clears them."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/integrations/[integrationSlug]/manage/page.tsx",
+    "rule": "react/server/no-private-data-to-client",
+    "ranges": [
+      {
+        "first": 27,
+        "last": 32
+      }
+    ],
+    "note": "The whole prisma integration record is spread into the client AddEditIntegrationForm's props."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/integrations/featured-integrations.tsx",
+    "rule": "react/effects/clean-up-what-they-start",
+    "ranges": [
+      {
+        "first": 132,
+        "last": 138
+      }
+    ],
+    "note": "The effect subscribes api.on('reInit'/'select', onSelect) and returns no cleanup calling api.off."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(invites)/[slug]/invite/accept-invite-button.tsx",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 34,
+        "last": 36
+      }
+    ],
+    "note": "catch (e) only resets isAccepting, discarding the error with no message to the user."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(onboarding)/onboarding/(steps)/program/form.tsx",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 100,
+        "last": 107
+      }
+    ],
+    "note": "The PUT fetch to the external signedUrl has no timeout or AbortSignal."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/password/[linkId]/action.ts",
+    "rule": "security/constant-time-secret-compare",
+    "ranges": [
+      {
+        "first": 23,
+        "last": 23
+      }
+    ],
+    "note": "The submitted link password is compared to the stored one with `===`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/password/[linkId]/action.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 9,
+        "last": 9
+      },
+      {
+        "first": 10,
+        "last": 10
+      }
+    ],
+    "note": "FormData fields linkId and password are cast `as string` without checking they are strings."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/password/[linkId]/page.tsx",
+    "rule": "security/constant-time-secret-compare",
+    "ranges": [
+      {
+        "first": 86,
+        "last": 91
+      }
+    ],
+    "note": "Password cookie is compared to link.password with `===` instead of a constant-time compare."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/actions/partners/program-resources/delete-program-resource.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 42,
+        "last": 42
+      },
+      {
+        "first": 73,
+        "last": 73
+      }
+    ],
+    "note": "program.resources is cast to any to index it, and the parsed resources are cast to any to silence prisma's type."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/ai/build-system-prompt.ts",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 4,
+        "last": 9
+      }
+    ],
+    "note": "GlobalChatContext has optional accountType with optional selectedWorkspace/selectedProgram valid only for workspace or partner respectively, instead of a union."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/ai/generate-csv-mapping.ts",
+    "rule": "react/server/server-functions-authorize-and-validate",
+    "ranges": [
+      {
+        "first": 8,
+        "last": 62
+      }
+    ],
+    "note": "Server function generateCsvMapping neither checks the caller's session nor validates fieldColumns/firstRows before calling the AI model."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/analytics/export-analytics-to-zip.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 68,
+        "last": 90
+      }
+    ],
+    "note": "getAnalytics is awaited once per endpoint in a for loop though each endpoint's query is independent."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/campaigns/validate-campaign.ts",
+    "rule": "typescript/design/no-argument-mutation",
+    "ranges": [
+      {
+        "first": 54,
+        "last": 56
+      },
+      {
+        "first": 58,
+        "last": 60
+      }
+    ],
+    "note": "validateCampaign deletes triggerConditions and scheduledAt from the input argument."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/demo/guard.ts",
+    "rule": "security/constant-time-secret-compare",
+    "ranges": [
+      {
+        "first": 10,
+        "last": 15
+      }
+    ],
+    "note": "Authorization header is compared to the demo secret with `!==`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/fraud/utils.ts",
+    "rule": "typescript/design/no-argument-mutation",
+    "ranges": [
+      {
+        "first": 119,
+        "last": 123
+      }
+    ],
+    "note": "sanitizeFraudEventMetadata deletes keys from the metadata argument in place instead of copying it."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/partners/create-and-enroll-partner.ts",
+    "rule": "react/server/server-functions-authorize-and-validate",
+    "ranges": [
+      {
+        "first": 32,
+        "last": 264
+      }
+    ],
+    "note": "The exported createAndEnrollPartner in a \"use server\" file trusts its typed arguments, with no session or permission check and no runtime validation."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/scrape-creators/client.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 6,
+        "last": 58
+      }
+    ],
+    "note": "The scrapeCreatorsFetch client is created with createFetch without any timeout or signal."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/scrape-creators/get-social-profile.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 27,
+        "last": 38
+      }
+    ],
+    "note": "The scrapeCreatorsFetch call passes no timeout or signal and its client has no default timeout."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/bounty/periods.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 159,
+        "last": 159
+      },
+      {
+        "first": 190,
+        "last": 190
+      },
+      {
+        "first": 237,
+        "last": 237
+      }
+    ],
+    "note": "submission.status, typed string, is asserted as SubmissionPeriodStatus without any check."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/cron/verify-vercel.ts",
+    "rule": "security/constant-time-secret-compare",
+    "ranges": [
+      {
+        "first": 27,
+        "last": 32
+      }
+    ],
+    "note": "Authorization header is compared to `Bearer ${cronSecret}` with `!==`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/hooks/use-synced-local-storage.ts",
+    "rule": "react/effects/external-stores-use-sync-external-store",
+    "ranges": [
+      {
+        "first": 40,
+        "last": 61
+      }
+    ],
+    "note": "The effect subscribes to window storage events and the module storageEventChannel and copies values into state instead of using useSyncExternalStore."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/integrations/google-ads/upload-conversion.ts",
+    "rule": "typescript/design/no-argument-mutation",
+    "ranges": [
+      {
+        "first": 62,
+        "last": 68
+      }
+    ],
+    "note": "queueGoogleAdsConversionUpload reassigns payload.conversionValue on its argument."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/integrations/hubspot/ui/settings.tsx",
+    "rule": "react/state/no-props-copied-into-state",
+    "ranges": [
+      {
+        "first": 28,
+        "last": 30
+      },
+      {
+        "first": 32,
+        "last": 34
+      },
+      {
+        "first": 36,
+        "last": 38
+      }
+    ],
+    "note": "leadTriggerEvent, leadLifecycleStageId and closedWonDealStageId are copied from the settings prop into state and never reset when it changes."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/integrations/shopify/admin-graphql.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 57,
+        "last": 57
+      },
+      {
+        "first": 47,
+        "last": 55
+      }
+    ],
+    "note": "The Shopify response JSON is used as any and returned as `json.data as T` without validation."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/stripe/create-stripe-recipient-account.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 16,
+        "last": 35
+      }
+    ],
+    "note": "stripeV2Fetch POST to Stripe carries no timeout and the client has no default timeout."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/submitted-leads/mark-submitted-lead-closed-won.ts",
+    "rule": "react/server/server-functions-authorize-and-validate",
+    "ranges": [
+      {
+        "first": 18,
+        "last": 55
+      }
+    ],
+    "note": "markSubmittedLeadClosedWon in a \"use server\" file takes workspace, lead and userId from the caller with no auth check or validation."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/submitted-leads/mark-submitted-lead-qualified.ts",
+    "rule": "react/server/server-functions-authorize-and-validate",
+    "ranges": [
+      {
+        "first": 17,
+        "last": 88
+      }
+    ],
+    "note": "markSubmittedLeadQualified in a \"use server\" file takes workspace, lead and userId from the caller with no auth check or validation."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/swr/use-api-mutation.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 79,
+        "last": 79
+      },
+      {
+        "first": 72,
+        "last": 72
+      }
+    ],
+    "note": "Fetch response JSON is cast with `as TResponse` and `as ApiError` without runtime validation."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/tapfiliate/cleanup-partners.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 86,
+        "last": 103
+      },
+      {
+        "first": 60,
+        "last": 74
+      }
+    ],
+    "note": "queuePartnerSearchSync and the independent otherProgramEnrollments findMany are awaited one after another, as are bulkDeleteLinks and the unrelated removedEnrollments read."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/tinybird/delete-customer-events.ts",
+    "rule": "security/parameterized-queries",
+    "ranges": [
+      {
+        "first": 50,
+        "last": 50
+      },
+      {
+        "first": 23,
+        "last": 23
+      }
+    ],
+    "note": "customerId is interpolated into the Tinybird delete_condition SQL expression, which is then interpolated into the request body."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/tolt/import-links.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 65,
+        "last": 80
+      }
+    ],
+    "note": "createPartnerLink is awaited once per partner link in a for loop instead of running concurrently."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/customers/beehiiv/fix-case-a-complex.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 244,
+        "last": 251
+      },
+      {
+        "first": 73,
+        "last": 96
+      },
+      {
+        "first": 140,
+        "last": 165
+      },
+      {
+        "first": 72,
+        "last": 271
+      }
+    ],
+    "note": "Independent syncTotalCommissions calls, link and customer updates, and commission update/activity log delete are awaited one after another, and each link is processed per loop iteration."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/customers/beehiiv/fix-case-c.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 242,
+        "last": 249
+      },
+      {
+        "first": 190,
+        "last": 237
+      },
+      {
+        "first": 85,
+        "last": 111
+      },
+      {
+        "first": 125,
+        "last": 174
+      }
+    ],
+    "note": "The two independent syncTotalCommissions calls, the old/new link updates, the commission update and activity log delete, and the per-payout loop are all awaited sequentially."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/customers/upheal/update-tremendous-emails.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 85,
+        "last": 100
+      }
+    ],
+    "note": "prisma.partner.update is awaited once per eligible partner in a for loop."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/misc/restore-program-enrollments.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 166,
+        "last": 212
+      },
+      {
+        "first": 73,
+        "last": 109
+      },
+      {
+        "first": 121,
+        "last": 152
+      }
+    ],
+    "note": "Each discount code's Stripe lookup and update is awaited per loop iteration, and the independent message, bounty submission, activity log, link tag and customer restores run one after another."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/misc/restore-program-enrollments.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 65,
+        "last": 69
+      },
+      {
+        "first": 88,
+        "last": 92
+      },
+      {
+        "first": 103,
+        "last": 107
+      },
+      {
+        "first": 115,
+        "last": 118
+      }
+    ],
+    "note": "createMany data is cast `as never` (commissions, bounty submissions, activity logs, links, and also link tags and customers) to silence type errors."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/partners/backfill-partner-search-args.ts",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 6,
+        "last": 12
+      }
+    ],
+    "note": "BackfillArguments has optional programId, all flag and afterProgram whose valid combinations (programId xor all; afterProgram only with all) are enforced only by the parser."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/programs/delete-network-invites.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 38,
+        "last": 44
+      }
+    ],
+    "note": "bulkDeleteLinks is awaited once per enrollment in a for loop instead of running the independent deletes concurrently."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/programs/update-commissions-canceled.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 64,
+        "last": 69
+      }
+    ],
+    "note": "syncTotalCommissions is awaited once per partner in a for loop."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/tests/commissions/index.test.ts",
+    "rule": "typescript/testing/independent-tests",
+    "ranges": [
+      {
+        "first": 130,
+        "last": 144
+      },
+      {
+        "first": 102,
+        "last": 114
+      },
+      {
+        "first": 178,
+        "last": 190
+      },
+      {
+        "first": 192,
+        "last": 204
+      }
+    ],
+    "note": "PATCH tests use testCommissionId/testLeadCommissionId/testPaidCommissionId set by earlier tests, and modifySaleAmount expects the amount a prior test set."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/tests/embed-tokens/referrals.test.ts",
+    "rule": "typescript/testing/independent-tests",
+    "ranges": [
+      {
+        "first": 54,
+        "last": 65
+      }
+    ],
+    "note": "\"with existing tenantId\" test uses createdPartnerTenantId and the partner created by the previous test."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/tests/links/upsert-link.test.ts",
+    "rule": "typescript/testing/independent-tests",
+    "ranges": [
+      {
+        "first": 43,
+        "last": 60
+      }
+    ],
+    "note": "\"Existing link\" test relies on the link and createdLink set by the \"New link\" test."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/tests/partners/upsert-partner-link.test.ts",
+    "rule": "typescript/testing/independent-tests",
+    "ranges": [
+      {
+        "first": 39,
+        "last": 59
+      }
+    ],
+    "note": "\"Existing link\" test relies on createdLink and the link inserted by the \"New link\" test."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/analytics/analytics-provider.tsx",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 244,
+        "last": 280
+      },
+      {
+        "first": 114,
+        "last": 117
+      },
+      {
+        "first": 128,
+        "last": 129
+      },
+      {
+        "first": 132,
+        "last": 134
+      }
+    ],
+    "note": "The fetched totalEvents is typed via useSWR generic without validation, useParams() is cast with `as`, and localStorage/search param values are given types without checks."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/analytics/utils.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 51,
+        "last": 72
+      },
+      {
+        "first": 76,
+        "last": 80
+      }
+    ],
+    "note": "The API response is typed via useSWR<Record<string, any>[]> with no runtime check, and its fields are cast `as number | undefined`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/domains/add-edit-domain-form.tsx",
+    "rule": "react/effects/fetches-ignore-stale-responses",
+    "ranges": [
+      {
+        "first": 271,
+        "last": 281
+      },
+      {
+        "first": 230,
+        "last": 266
+      }
+    ],
+    "note": "The domain effect triggers the debounced validate fetch, whose .then sets domainStatus from every response, so a stale response can overwrite a newer one."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/domains/register-domain-form.tsx",
+    "rule": "react/effects/fetches-ignore-stale-responses",
+    "ranges": [
+      {
+        "first": 77,
+        "last": 79
+      },
+      {
+        "first": 51,
+        "last": 74
+      }
+    ],
+    "note": "The debouncedSlug effect calls searchDomainAvailability, whose fetch sets searchedDomains from every response with no ignore flag or abort."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/link-builder/link-builder-header.tsx",
+    "rule": "react/state/no-props-copied-into-state",
+    "ranges": [
+      {
+        "first": 195,
+        "last": 195
+      }
+    ],
+    "note": "LinkSelector copies the selectedLink prop into selectedLink state."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/link-builder/use-metatags.ts",
+    "rule": "react/effects/fetches-ignore-stale-responses",
+    "ranges": [
+      {
+        "first": 45,
+        "last": 59
+      }
+    ],
+    "note": "The effect's fetch of /api/links/metatags sets form values from every response with no ignore flag or AbortController cleanup."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/use-available-domains.ts",
+    "rule": "typescript/design/no-argument-mutation",
+    "ranges": [
+      {
+        "first": 6,
+        "last": 17
+      }
+    ],
+    "note": "sortDomains calls domains.sort in place on the SWR-provided arrays passed to it."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/logs/logs-histogram.tsx",
+    "rule": "typescript/types/derive-dont-restate",
+    "ranges": [
+      {
+        "first": 33,
+        "last": 38
+      }
+    ],
+    "note": "HistogramValues restates the status2xx/4xx/5xx/Other keys by hand instead of deriving them from SERIES ids."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/import-csv-modal/field-mapping.tsx",
+    "rule": "react/effects/fetches-ignore-stale-responses",
+    "ranges": [
+      {
+        "first": 30,
+        "last": 53
+      }
+    ],
+    "note": "The effect streams generateCsvMapping results into setValue/setIsStreaming with no ignore flag or abort when fileColumns/firstRows change or on unmount."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/import-rebrandly-modal.tsx",
+    "rule": "react/state/store-ids-not-copies",
+    "ranges": [
+      {
+        "first": 70,
+        "last": 72
+      }
+    ],
+    "note": "selectedDomains state holds copies of ImportedDomainCountProps objects rather than their ids."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/oauth-apps/add-edit-integration-form.tsx",
+    "rule": "react/state/no-props-copied-into-state",
+    "ranges": [
+      {
+        "first": 52,
+        "last": 52
+      },
+      {
+        "first": 39,
+        "last": 50
+      }
+    ],
+    "note": "The integration prop is copied into data state and its screenshots into screenshots state, with no reset when the prop changes."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/partners/groups/design/application-form/fields/image-upload-field.tsx",
+    "rule": "react/effects/notify-parents-in-handlers",
+    "ranges": [
+      {
+        "first": 114,
+        "last": 137
+      },
+      {
+        "first": 240,
+        "last": 242
+      }
+    ],
+    "note": "Effects watching files state call controllerField.onChange and onStatusChange to notify the parent."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/partners/merge-accounts/send-verification-code-form.tsx",
+    "rule": "react/effects/notify-parents-in-handlers",
+    "ranges": [
+      {
+        "first": 48,
+        "last": 50
+      },
+      {
+        "first": 52,
+        "last": 54
+      }
+    ],
+    "note": "Effects push watched sourceEmail/targetEmail into the parent context via setSourceAccount/setTargetAccount instead of in the change handler."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/placeholders/feature-graphics/personalization.tsx",
+    "rule": "react/state/no-props-copied-into-state",
+    "ranges": [
+      {
+        "first": 73,
+        "last": 73
+      }
+    ],
+    "note": "DummySwitch copies the checked prop into isChecked state."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/workspaces/create-workspace-form.tsx",
+    "rule": "react/effects/fetches-ignore-stale-responses",
+    "ranges": [
+      {
+        "first": 45,
+        "last": 68
+      }
+    ],
+    "note": "The session effect fetches check-favicon and calls setValue('logo') from the response with no ignore flag or abort cleanup."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/email/src/templates/connected-payout-method.tsx",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 32,
+        "last": 40
+      }
+    ],
+    "note": "payoutMethod is one object of optional fields where wallet fields apply only to stablecoin and bank fields only to connect, instead of a union by type."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/email/src/templates/links-limit.tsx",
+    "rule": "typescript/types/derive-dont-restate",
+    "ranges": [
+      {
+        "first": 32,
+        "last": 38
+      }
+    ],
+    "note": "The inline cast type restates slug/name/linksUsage/linksLimit/plan by hand instead of deriving from WorkspaceProps (e.g. Required<Pick<...>>)."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/stripe-app/src/hooks/use-workspace.ts",
+    "rule": "react/effects/fetches-ignore-stale-responses",
+    "ranges": [
+      {
+        "first": 18,
+        "last": 20
+      },
+      {
+        "first": 11,
+        "last": 16
+      }
+    ],
+    "note": "The effect calls loadWorkspace, which awaits fetchWorkspace and sets state from every response with no ignore flag when stripe changes or on unmount."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/stripe-app/src/utils/secrets.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 47,
+        "last": 49
+      }
+    ],
+    "note": "getSecret's catch discards any error and returns null, indistinguishable from a missing secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/carousel/carousel.tsx",
+    "rule": "react/effects/clean-up-what-they-start",
+    "ranges": [
+      {
+        "first": 66,
+        "last": 72
+      },
+      {
+        "first": 155,
+        "last": 167
+      }
+    ],
+    "note": "useCarouselActiveIndex's effect registers api.on handlers with no cleanup; Carousel's effect cleans up only 'select', leaving the 'reInit' listener."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/carousel/nav-bar.tsx",
+    "rule": "react/effects/clean-up-what-they-start",
+    "ranges": [
+      {
+        "first": 57,
+        "last": 66
+      }
+    ],
+    "note": "The effect subscribes api.on(reInit/select/autoplay:play/autoplay:stop) and returns no cleanup calling api.off."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/date-picker/date-range-picker.tsx",
+    "rule": "react/state/store-ids-not-copies",
+    "ranges": [
+      {
+        "first": 46,
+        "last": 50
+      },
+      {
+        "first": 69,
+        "last": 69
+      },
+      {
+        "first": 121,
+        "last": 121
+      }
+    ],
+    "note": "The preset state holds a copy of the DateRangePreset object found in presets rather than its id."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/hooks/use-cookies.ts",
+    "rule": "react/effects/external-stores-use-sync-external-store",
+    "ranges": [
+      {
+        "first": 15,
+        "last": 31
+      }
+    ],
+    "note": "useCookies copies the cookie value into state from a storage listener set up in an effect instead of useSyncExternalStore."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/hooks/use-media-query.ts",
+    "rule": "react/effects/external-stores-use-sync-external-store",
+    "ranges": [
+      {
+        "first": 28,
+        "last": 44
+      }
+    ],
+    "note": "useMediaQuery copies matchMedia/window dimensions into state from a resize listener set up in an effect instead of useSyncExternalStore."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/shimmer-dots.tsx",
+    "rule": "react/effects/clean-up-what-they-start",
+    "ranges": [
+      {
+        "first": 164,
+        "last": 168
+      },
+      {
+        "first": 172,
+        "last": 172
+      }
+    ],
+    "note": "The webglcontextlost listener is an inline arrow, and the cleanup removes a different new function, so the listener is never removed."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/table/table.tsx",
+    "rule": "react/effects/notify-parents-in-handlers",
+    "ranges": [
+      {
+        "first": 114,
+        "last": 116
+      },
+      {
+        "first": 128,
+        "last": 130
+      }
+    ],
+    "note": "Effects call props.onRowSelectionChange and props.onColumnVisibilityChange when internal state changes."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/utils/src/functions/log.ts",
+    "rule": "typescript/types/derive-dont-restate",
+    "ranges": [
+      {
+        "first": 15,
+        "last": 15
+      }
+    ],
+    "note": "The `type` parameter restates the union \"alerts\" | \"cron\" | ... by hand instead of `keyof typeof logTypeToEnv`."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/common/src/promise-pool.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 24,
+        "last": 27
+      }
+    ],
+    "note": "The iterator source is forced through `as unknown as () => ...` and the Pool is cast `as TPromisePool<T>` to paper over mismatched types."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/element/src/utils.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 340,
+        "last": 343
+      },
+      {
+        "first": 472,
+        "last": 475
+      },
+      {
+        "first": 370,
+        "last": 370
+      },
+      {
+        "first": 503,
+        "last": 503
+      }
+    ],
+    "note": "curveCatmullRomCubicApproxPoints(...)! asserts a possibly-undefined result is defined, and `[sides, corners.flat()] as ElementShape` forces the tuple type."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/element/tests/recognizeShape.test.ts",
+    "rule": "typescript/testing/independent-tests",
+    "ranges": [
+      {
+        "first": 6,
+        "last": 10
+      },
+      {
+        "first": 281,
+        "last": 288
+      },
+      {
+        "first": 257,
+        "last": 262
+      }
+    ],
+    "note": "The module-level `seed` that random() mutates is never reset, so noisy tests depend on how many random calls earlier tests made."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/actions/actionElementLink.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 58,
+        "last": 60
+      }
+    ],
+    "note": "actionCopyElementLink's catch only console.errors a clipboard/link failure and returns the unchanged state as if it succeeded."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/Card.tsx",
+    "rule": "typescript/types/derive-dont-restate",
+    "ranges": [
+      {
+        "first": 23,
+        "last": 23
+      }
+    ],
+    "note": "The `color` prop restates COLOR_MAP's keys as `\"primary\" | \"lime\" | \"pink\"` instead of `keyof typeof COLOR_MAP`."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/CommandPalette/CommandPalette.tsx",
+    "rule": "react/state/store-ids-not-copies",
+    "ranges": [
+      {
+        "first": 639,
+        "last": 640
+      }
+    ],
+    "note": "currentCommand state holds a copy of the selected CommandPaletteItem rather than its id or label."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/FontPicker/FontPicker.test.tsx",
+    "rule": "typescript/testing/no-real-waits",
+    "ranges": [
+      {
+        "first": 78,
+        "last": 78
+      },
+      {
+        "first": 82,
+        "last": 82
+      }
+    ],
+    "note": "The drag helper sleeps a real 120ms setTimeout to wait out the sloppy-click grace period and the post-drop click suppression, instead of using fake timers."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/FontPicker/FontPickerList.tsx",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 224,
+        "last": 226
+      },
+      {
+        "first": 240,
+        "last": 242
+      },
+      {
+        "first": 394,
+        "last": 396
+      },
+      {
+        "first": 149,
+        "last": 149
+      }
+    ],
+    "note": "document.querySelector('.excalidraw-wysiwyg') is cast `as HTMLTextAreaElement` unchecked, and a partially built object is cast `as FontDescriptor`."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/ProjectName.tsx",
+    "rule": "react/state/no-props-copied-into-state",
+    "ranges": [
+      {
+        "first": 19,
+        "last": 19
+      }
+    ],
+    "note": "useState(props.value) copies the value prop into fileName state that is never reset when the prop changes."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/PublishLibrary.tsx",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 64,
+        "last": 96
+      }
+    ],
+    "note": "generatePreviewImage awaits exportToCanvas once per library item in a for loop instead of running them concurrently."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/TTDDialog/useTTDChatStorage.ts",
+    "rule": "react/state/no-contradictory-state",
+    "ranges": [
+      {
+        "first": 40,
+        "last": 41
+      },
+      {
+        "first": 32,
+        "last": 33
+      }
+    ],
+    "note": "Loading status is split into separate isLoading and chatsLoaded booleans that can contradict each other."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/TTDDialog/useTTDChatStorage.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 61,
+        "last": 65
+      },
+      {
+        "first": 166,
+        "last": 168
+      },
+      {
+        "first": 140,
+        "last": 142
+      }
+    ],
+    "note": "Failures to load or save chats are only console.warn'd, with load falling back to an empty list and delete returning as if saved."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/canvases/InteractiveCanvas.tsx",
+    "rule": "react/effects/clean-up-what-they-start",
+    "ranges": [
+      {
+        "first": 170,
+        "last": 195
+      }
+    ],
+    "note": "The useEffect starts an AnimationController animation loop and returns no cleanup that stops it."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/hyperlink/Hyperlink.tsx",
+    "rule": "react/state/no-props-copied-into-state",
+    "ranges": [
+      {
+        "first": 95,
+        "last": 95
+      }
+    ],
+    "note": "useState(linkVal) copies element.link into inputVal state that is never reset when the element's link changes."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/EditorLocalStorage.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 24,
+        "last": 27
+      },
+      {
+        "first": 9,
+        "last": 12
+      },
+      {
+        "first": 48,
+        "last": 50
+      }
+    ],
+    "note": "The EditorLocalStorage catches log with console.warn and return null or false (or nothing), the same as a missing value."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/EditorLocalStorage.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 21,
+        "last": 21
+      }
+    ],
+    "note": "EditorLocalStorage.get returns JSON.parse of a localStorage value cast `as T` without validation."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/encode.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 107,
+        "last": 107
+      },
+      {
+        "first": 303,
+        "last": 303
+      }
+    ],
+    "note": "`let deflated!: string` claims an assignment that may never happen, and `deflate(data) as Uint8Array<ArrayBuffer>` silences a type error."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/library.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 733,
+        "last": 733
+      }
+    ],
+    "note": "fetch(libraryUrl) for an external library URL has no timeout or AbortSignal."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/restore.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 982,
+        "last": 985
+      },
+      {
+        "first": 423,
+        "last": 425
+      }
+    ],
+    "note": "Errors restoring an element or repairing a binding are console.error'd and turned into null, silently dropping the element or binding."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/fonts/ExcalidrawFontFace.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 92,
+        "last": 100
+      }
+    ],
+    "note": "fetchFont's fetch(url, {...}) has no timeout or AbortSignal."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/hooks/useAppStateValue.ts",
+    "rule": "react/effects/external-stores-use-sync-external-store",
+    "ranges": [
+      {
+        "first": 107,
+        "last": 117
+      }
+    ],
+    "note": "useAppStateValue subscribes to api.onStateChange in a useEffect and copies the value into a ref plus a rerender counter instead of using useSyncExternalStore."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/hooks/useTextEditorFocus.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 11,
+        "last": 13
+      }
+    ],
+    "note": "getTextEditor casts querySelector's result `as HTMLTextAreaElement` without checking the element type (and drops null)."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/index.tsx",
+    "rule": "typescript/design/no-import-time-effects",
+    "ranges": [
+      {
+        "first": 45,
+        "last": 45
+      }
+    ],
+    "note": "Top-level polyfill() call patches Array.prototype globally when the module is imported."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/subset/harfbuzz/harfbuzz-bindings.ts",
+    "rule": "typescript/errors/release-on-every-path",
+    "ranges": [
+      {
+        "first": 191,
+        "last": 195
+      },
+      {
+        "first": 157,
+        "last": 170
+      }
+    ],
+    "note": "The face, fontBuffer, subset and result blob are freed only after the work succeeds (or in specific if branches), not in a finally, so a throw leaks them."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/subset/subset-shared.chunk.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 50,
+        "last": 51
+      }
+    ],
+    "note": "The independent loadWoff2() and loadHbSubset() are awaited one after another."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "benchmarks/http-server/benchmark.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 137,
+        "last": 137
+      },
+      {
+        "first": 142,
+        "last": 142
+      },
+      {
+        "first": 148,
+        "last": 152
+      }
+    ],
+    "note": "The endpoint-test fetch calls to the spawned server have no timeout or AbortSignal."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "benchmarks/http-server/benchmark.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 111,
+        "last": 113
+      }
+    ],
+    "note": "`catch { // No changes to stash }` discards any git stash failure, assuming it only means nothing to stash."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "perf-measures/bundle-check/scripts/check-bundle-size.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 43,
+        "last": 45
+      }
+    ],
+    "note": "The catch logs 'Build failed' and carries on, so the script exits successfully on a failed build."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "runtime-tests/deno/ssg.test.tsx",
+    "rule": "typescript/testing/assert-outcomes",
+    "ranges": [
+      {
+        "first": 29,
+        "last": 31
+      }
+    ],
+    "note": "The toSSG test asserts only success, no error, and `result.files !== undefined`, not which files were generated or their content."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/adapter/bun/serve-static.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 19,
+        "last": 22
+      }
+    ],
+    "note": "isDir's `catch {}` discards any stat error and returns undefined as if the path were simply not a directory."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/adapter/deno/serve-static.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 20,
+        "last": 25
+      },
+      {
+        "first": 29,
+        "last": 32
+      }
+    ],
+    "note": "getContent's catch logs any non-NotFound error and returns null as if the file were absent; isDir's empty catch {} discards every lstat error."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/helper/adapter/index.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 21,
+        "last": 21
+      },
+      {
+        "first": 32,
+        "last": 32
+      }
+    ],
+    "note": "Environment variables from process.env and Deno.env.toObject() are cast `as T` without validation."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/helper/conninfo/types.ts",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 5,
+        "last": 30
+      }
+    ],
+    "note": "NetAddrInfo makes address/addressType optional and intersects with `| {}`, so address without addressType (and vice versa) is representable."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/jsx/dom/css.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 193,
+        "last": 193
+      },
+      {
+        "first": 136,
+        "last": 136
+      },
+      {
+        "first": 202,
+        "last": 202
+      },
+      {
+        "first": 127,
+        "last": 140
+      }
+    ],
+    "note": "Objects are forced through `as unknown as string`, `as unknown as CssClassName`, and `as any` to silence type errors."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/jsx/dom/server.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 68,
+        "last": 68
+      }
+    ],
+    "note": "`element as HtmlEscapedString` asserts a Child (possibly a plain string or other node) is an HtmlEscapedString without proof."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/middleware/basic-auth/index.ts",
+    "rule": "typescript/design/no-argument-mutation",
+    "ranges": [
+      {
+        "first": 93,
+        "last": 95
+      },
+      {
+        "first": 97,
+        "last": 99
+      }
+    ],
+    "note": "basicAuth assigns defaults onto the caller's options object (options.realm, options.invalidUserMessage)."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/middleware/jwk/jwk.ts",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 50,
+        "last": 65
+      }
+    ],
+    "note": "jwk's options type makes both keys and jwks_uri optional though at least one is required, a rule enforced only by the runtime check at line 70."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/middleware/timeout/index.test.ts",
+    "rule": "typescript/testing/no-real-waits",
+    "ranges": [
+      {
+        "first": 23,
+        "last": 26
+      },
+      {
+        "first": 28,
+        "last": 31
+      },
+      {
+        "first": 33,
+        "last": 36
+      },
+      {
+        "first": 38,
+        "last": 41
+      }
+    ],
+    "note": "Handlers sleep 900-1300ms with real setTimeout so the tests wait real time for the 1000-1200ms timeout middleware instead of using fake timers."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/cookie.ts",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 17,
+        "last": 28
+      },
+      {
+        "first": 11,
+        "last": 13
+      }
+    ],
+    "note": "CookieOptions is a bag of optional flags (secure, partitioned, prefix, domain, path) whose valid combinations are checked only at runtime in _serialize, and PartitionedCookieConstraint's fallback member still allows partitioned without secure."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/jwt/jwa.ts",
+    "rule": "typescript/types/derive-dont-restate",
+    "ranges": [
+      {
+        "first": 25,
+        "last": 25
+      },
+      {
+        "first": 27,
+        "last": 37
+      }
+    ],
+    "note": "SymmetricAlgorithm and AsymmetricAlgorithm restate AlgorithmTypes members as hand-written string literal unions."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/jwt/jwt.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 236,
+        "last": 236
+      },
+      {
+        "first": 244,
+        "last": 244
+      },
+      {
+        "first": 271,
+        "last": 272
+      },
+      {
+        "first": 288,
+        "last": 288
+      }
+    ],
+    "note": "The JWKS fetch response is cast `as { keys?: JsonWebKey[] }` and its keys `as HonoJsonWebKey[]`, and decoded JWT header/payload JSON is cast to TokenHeader/JWTPayload."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/jwt/types.ts",
+    "rule": "security/no-secrets-in-output",
+    "ranges": [
+      {
+        "first": 29,
+        "last": 29
+      },
+      {
+        "first": 94,
+        "last": 94
+      },
+      {
+        "first": 43,
+        "last": 43
+      },
+      {
+        "first": 36,
+        "last": 36
+      }
+    ],
+    "note": "JWT error classes interpolate the full token into the error message (JwtTokenInvalid, SignatureMismatched, Expired, NotBefore)."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/stream.test.ts",
+    "rule": "typescript/testing/assert-outcomes",
+    "ranges": [
+      {
+        "first": 106,
+        "last": 112
+      },
+      {
+        "first": 114,
+        "last": 122
+      }
+    ],
+    "note": "The write() and close() tests only assert `not.toThrow()` and check nothing the calls did."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/stream.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 54,
+        "last": 56
+      },
+      {
+        "first": 73,
+        "last": 75
+      },
+      {
+        "first": 100,
+        "last": 100
+      },
+      {
+        "first": 101,
+        "last": 103
+      }
+    ],
+    "note": "write() and close() swallow writer errors with empty catches, and abort() discards listener errors with `.catch(() => {})` and an empty catch."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "vite.config.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 82,
+        "last": 83
+      }
+    ],
+    "note": "package.json and jsr.json are imported with two sequential awaits although they are independent."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/constants.ts",
+    "rule": "typescript/design/no-import-time-effects",
+    "ranges": [
+      {
+        "first": 54,
+        "last": 54
+      }
+    ],
+    "note": "Top-level readFileSync of package.json runs when the constants module is imported."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/activity.dto.ts",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 50,
+        "last": 63
+      },
+      {
+        "first": 21,
+        "last": 30
+      }
+    ],
+    "note": "ActivityCreateSchema has a type plus an optional comment whose valid combination only the refines enforce; the response has type with a nullish comment."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/album.dto.ts",
+    "rule": "typescript/types/derive-dont-restate",
+    "ranges": [
+      {
+        "first": 218,
+        "last": 230
+      }
+    ],
+    "note": "MapAlbumDto restates the album row's fields by hand instead of deriving them with Pick from the database type."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/asset-ids.response.dto.ts",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 44,
+        "last": 51
+      },
+      {
+        "first": 17,
+        "last": 23
+      }
+    ],
+    "note": "BulkIdResponseSchema and AssetIdsResponseSchema pair a success flag with optional error fields instead of a success/failure union."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/maintenance.dto.ts",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 28,
+        "last": 36
+      },
+      {
+        "first": 5,
+        "last": 14
+      }
+    ],
+    "note": "MaintenanceStatusResponseSchema pairs an active flag with optional progress/task/error, and SetMaintenanceModeSchema makes restoreBackupFilename optional and requires it only through a refine."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/notification.dto.ts",
+    "rule": "typescript/types/derive-dont-restate",
+    "ranges": [
+      {
+        "first": 88,
+        "last": 98
+      }
+    ],
+    "note": "MapNotification restates the notification row's fields by hand instead of deriving from the database type."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/plugin.dto.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 160,
+        "last": 160
+      }
+    ],
+    "note": "mapMethod casts `method.schema as any` to silence the mismatch with the response schema's type."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/plugin.dto.ts",
+    "rule": "typescript/types/derive-dont-restate",
+    "ranges": [
+      {
+        "first": 114,
+        "last": 124
+      },
+      {
+        "first": 126,
+        "last": 135
+      },
+      {
+        "first": 86,
+        "last": 97
+      }
+    ],
+    "note": "Plugin and PluginMethod restate PluginTable/PluginMethodTable columns by hand (database.ts already has Plugin = Selectable<PluginTable>), and PluginTemplate's steps restate the template step schema."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/shared-link.dto.ts",
+    "rule": "security/no-secrets-in-output",
+    "ranges": [
+      {
+        "first": 109,
+        "last": 109
+      },
+      {
+        "first": 81,
+        "last": 81
+      }
+    ],
+    "note": "mapSharedLink returns the shared link's plaintext password in the HTTP response, which the schema describes as 'Has password'."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/shared-link.dto.ts",
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "ranges": [
+      {
+        "first": 21,
+        "last": 57
+      },
+      {
+        "first": 77,
+        "last": 95
+      }
+    ],
+    "note": "SharedLinkCreateSchema has type plus optional albumId/assetIds whose valid combos are enforced only in superRefine; the response similarly has assets and an optional album regardless of type."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/main.ts",
+    "rule": "typescript/errors/release-on-every-path",
+    "ranges": [
+      {
+        "first": 68,
+        "last": 91
+      }
+    ],
+    "note": "waitForFreeLock creates a Kysely instance and calls kysely.destroy() only after the loop succeeds, not in a finally."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/maintenance/maintenance-worker.service.spec.ts",
+    "rule": "typescript/testing/assert-outcomes",
+    "ranges": [
+      {
+        "first": 61,
+        "last": 63
+      }
+    ],
+    "note": "The 'should work' test only asserts expect(sut).toBeDefined()."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/app.repository.ts",
+    "rule": "typescript/errors/release-on-every-path",
+    "ranges": [
+      {
+        "first": 37,
+        "last": 45
+      },
+      {
+        "first": 29,
+        "last": 32
+      }
+    ],
+    "note": "Redis pub/sub clients are disconnected only inside the ack callback after a successful response, not on the throw or failed-connect paths."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/database.repository.ts",
+    "rule": "security/parameterized-queries",
+    "ranges": [
+      {
+        "first": 430,
+        "last": 430
+      }
+    ],
+    "note": "The sourceFolder argument is interpolated into sql.raw(`'${sourceRegex}'`) with only regex characters escaped, not bound."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/email.repository.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 118,
+        "last": 119
+      }
+    ],
+    "note": "renderEmail awaits the html and plain-text renders of the same component one after the other."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/machine-learning.repository.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 171,
+        "last": 171
+      }
+    ],
+    "note": "The predict fetch to the ML server POSTs with no signal or timeout."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/metadata.repository.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 127,
+        "last": 130
+      },
+      {
+        "first": 144,
+        "last": 146
+      }
+    ],
+    "note": "readTags turns exiftool read errors into an empty tags object and writeTags only logs write errors."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/metadata.repository.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 127,
+        "last": 130
+      }
+    ],
+    "note": "exiftool.read's result (read from a file) is cast `as Promise<ImmichTags>` without runtime validation."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/oauth.repository.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 133,
+        "last": 133
+      }
+    ],
+    "note": "getProfilePicture's fetch(url) to an external URL has no timeout or AbortSignal."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/oauth.repository.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 98,
+        "last": 98
+      },
+      {
+        "first": 183,
+        "last": 186
+      },
+      {
+        "first": 172,
+        "last": 172
+      }
+    ],
+    "note": "Token claims are cast with `as OAuthProfile` and payload.sid/events with `as` instead of being validated at runtime."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/server-info.repository.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 72,
+        "last": 72
+      }
+    ],
+    "note": "getLatestRelease calls fetch(url) to the external version-check service with no timeout or AbortSignal."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/asset-media.service.ts",
+    "rule": "typescript/async/concurrent-independent-work",
+    "ranges": [
+      {
+        "first": 179,
+        "last": 185
+      },
+      {
+        "first": 169,
+        "last": 178
+      }
+    ],
+    "note": "In uploadAsset, the independent utimes calls, upsertExif, upsertMetadata and the sidecar upsertFile are awaited one after another."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/auth.service.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 242,
+        "last": 243
+      },
+      {
+        "first": 244,
+        "last": 248
+      },
+      {
+        "first": 249,
+        "last": 249
+      },
+      {
+        "first": 637,
+        "last": 637
+      }
+    ],
+    "note": "validate casts request headers and query params `as string` (headers can be string[]), and getClaim casts an OAuth claim `as T` after a non-narrowing isValid check."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/database.service.spec.ts",
+    "rule": "typescript/testing/assert-outcomes",
+    "ranges": [
+      {
+        "first": 43,
+        "last": 45
+      },
+      {
+        "first": 281,
+        "last": 281
+      }
+    ],
+    "note": "The 'should work' test only asserts expect(sut).toBeDefined(); the reindex-failure test checks only rejects.toBeDefined() for the error."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/maintenance.service.spec.ts",
+    "rule": "typescript/testing/assert-outcomes",
+    "ranges": [
+      {
+        "first": 13,
+        "last": 15
+      },
+      {
+        "first": 186,
+        "last": 197
+      }
+    ],
+    "note": "The 'should work' test only asserts toBeDefined, and 'should use the given secret' only checks for a non-empty string."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/notification-admin.service.spec.ts",
+    "rule": "typescript/testing/assert-outcomes",
+    "ranges": [
+      {
+        "first": 33,
+        "last": 35
+      }
+    ],
+    "note": "The 'should work' test only asserts expect(sut).toBeDefined()."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/shared-link.service.ts",
+    "rule": "security/constant-time-secret-compare",
+    "ranges": [
+      {
+        "first": 39,
+        "last": 41
+      },
+      {
+        "first": 57,
+        "last": 59
+      }
+    ],
+    "note": "The shared-link password is checked with `password !== dto.password`, and the password token with authTokens.includes(...)."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/smart-info.service.spec.ts",
+    "rule": "typescript/testing/assert-outcomes",
+    "ranges": [
+      {
+        "first": 20,
+        "last": 22
+      },
+      {
+        "first": 25,
+        "last": 32
+      },
+      {
+        "first": 34,
+        "last": 41
+      }
+    ],
+    "note": "The 'should work' test only asserts expect(sut).toBeDefined(); the valid-model tests assert only not.toThrow()."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/storage-template.service.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 391,
+        "last": 394
+      },
+      {
+        "first": 262,
+        "last": 264
+      }
+    ],
+    "note": "getTemplatePath logs and returns asset.originalPath on error, and the move catch only logs, so failures look like success."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/storage.service.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 149,
+        "last": 151
+      }
+    ],
+    "note": "handleDeleteFiles catches unlink failures, only logs a warning, and the job still returns JobStatus.Success."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/tag.service.spec.ts",
+    "rule": "typescript/testing/assert-outcomes",
+    "ranges": [
+      {
+        "first": 19,
+        "last": 21
+      },
+      {
+        "first": 58,
+        "last": 58
+      },
+      {
+        "first": 135,
+        "last": 135
+      },
+      {
+        "first": 146,
+        "last": 146
+      }
+    ],
+    "note": "The 'should work' test only asserts toBeDefined(), and create/upsert results are checked only with resolves.toBeDefined()."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/timeline.service.ts",
+    "rule": "typescript/design/no-argument-mutation",
+    "ranges": [
+      {
+        "first": 55,
+        "last": 55
+      },
+      {
+        "first": 72,
+        "last": 74
+      }
+    ],
+    "note": "timeBucketChecks mutates its dto argument by setting dto.userId and dto.withCoordinates."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/trash.service.spec.ts",
+    "rule": "typescript/testing/assert-outcomes",
+    "ranges": [
+      {
+        "first": 18,
+        "last": 20
+      }
+    ],
+    "note": "The 'should work' test only asserts expect(sut).toBeDefined()."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/version.service.spec.ts",
+    "rule": "typescript/testing/assert-outcomes",
+    "ranges": [
+      {
+        "first": 25,
+        "last": 27
+      }
+    ],
+    "note": "The 'should work' test only asserts expect(sut).toBeDefined()."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/workflow-execution.service.ts",
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "ranges": [
+      {
+        "first": 101,
+        "last": 101
+      }
+    ],
+    "note": "The httpRequest host function calls fetch(...args) to an external host with no timeout or AbortSignal."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/workflow-execution.service.ts",
+    "rule": "typescript/errors/no-swallowed-errors",
+    "ranges": [
+      {
+        "first": 280,
+        "last": 282
+      },
+      {
+        "first": 220,
+        "last": 222
+      },
+      {
+        "first": 159,
+        "last": 161
+      },
+      {
+        "first": 144,
+        "last": 146
+      }
+    ],
+    "note": "importFolder's bare catch discards the error and returns undefined; importFolders and plugin loads log errors and carry on."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/asset.util.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 206,
+        "last": 206
+      },
+      {
+        "first": 205,
+        "last": 205
+      },
+      {
+        "first": 207,
+        "last": 207
+      }
+    ],
+    "note": "asUploadRequest casts the multipart fieldname `as UploadFieldName`, passes the any-typed request.body into the typed body, and casts the file `as ImmichFile`."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/config.ts",
+    "rule": "typescript/types/assertions-only-when-proven",
+    "ranges": [
+      {
+        "first": 115,
+        "last": 115
+      },
+      {
+        "first": 40,
+        "last": 40
+      }
+    ],
+    "note": "`(result.success ? result.data : rawConfig) as SystemConfig` claims a config that failed validation is a SystemConfig; `config!` asserts it is non-null after the lock."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/preferences.ts",
+    "rule": "typescript/design/no-argument-mutation",
+    "ranges": [
+      {
+        "first": 91,
+        "last": 93
+      }
+    ],
+    "note": "mergePreferences assigns dto values into its preferences argument with lodash set, mutating it."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/sync.ts",
+    "rule": "typescript/types/validate-external-data",
+    "ranges": [
+      {
+        "first": 13,
+        "last": 13
+      }
+    ],
+    "note": "fromAck casts the type part of a client-sent ack string with `as SyncEntityType` without checking it."
+  }
+]
