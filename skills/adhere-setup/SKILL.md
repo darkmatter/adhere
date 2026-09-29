@@ -35,17 +35,7 @@ manager, so the repo pins the version the team and CI run. From then on,
 wherever this skill says `adhere`, run it the manager's way, as in
 `pnpm exec adhere lint`.
 
-With pnpm, at a workspace root, add `--ignore-workspace-root-check`. pnpm 11
-refuses to install a package whose build script no one approved, and one of
-adhere's dependencies, msgpackr-extract, an optional native add-on adhere
-never uses, has one. Before adding adhere, deny that build in
-`pnpm-workspace.yaml`, creating the file if there is none, so every later
-install, `pnpm exec`, and CI run passes too:
-
-```yaml
-allowBuilds:
-  msgpackr-extract: false
-```
+With pnpm, at a workspace root, add `--ignore-workspace-root-check`.
 
 In a repo without a `package.json`, use the `adhere` on PATH (`adhere
 --version`), or **Ask** before installing it globally with the manager the
