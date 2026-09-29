@@ -28,7 +28,11 @@ export interface InitOptions {
    * install`, rather than one that lints itself.
    */
   readonly shared?: string;
+  /** Who can see the shared repo alchemy creates. Defaults to public. */
+  readonly visibility?: Visibility;
 }
+
+export type Visibility = "public" | "private";
 
 // adhere-ignore-file rules/import-written-files -- src/index.ts exports initProject, so a Bun text import here breaks loading the package on Node and in Vitest (checked 2026-09-26), and the compiled executable has no files beside it to read.
 const CONFIG = `import { defineConfig } from "@drkmttr/adhere";
@@ -172,7 +176,11 @@ jobs:
           TYPESAFE_API_KEY: \${{ secrets.TYPESAFE_API_KEY }}
 `;
 
-const sharedStack = (org: string, repo: string) => `import * as Alchemy from "alchemy";
+const sharedStack = (
+  org: string,
+  repo: string,
+  visibility: Visibility,
+) => `import * as Alchemy from "alchemy";
 import * as GitHub from "alchemy/GitHub";
 import * as Output from "alchemy/Output";
 import * as Config from "effect/Config";
@@ -188,7 +196,7 @@ export default Alchemy.Stack(
       owner,
       name: "${repo}",
       description: "Shared adhere rules",
-      visibility: "private",
+      visibility: "${visibility}",
     });
     // CI's adhere validate asks Jev whether any two rules contradict. Naming
     // the repository by its output makes alchemy create it before the secret.
@@ -244,7 +252,10 @@ const EXAMPLES = [
  * A shared repo has no config: \`adhere install\` copies only rule files, and
  * \`validate\` reads \`.adhere/\` without one.
  */
-const filesFor = (shared: string | undefined): ReadonlyArray<readonly [string, string]> => {
+const filesFor = (
+  shared: string | undefined,
+  visibility: Visibility,
+): ReadonlyArray<readonly [string, string]> => {
   if (shared === undefined) {
     return [[CONFIG_PATH, CONFIG], [CONFIG_PROJECT, TSCONFIG], ...EXAMPLES];
   }
@@ -252,7 +263,7 @@ const filesFor = (shared: string | undefined): ReadonlyArray<readonly [string, s
   return [
     ["README.md", sharedReadme(org, repo)],
     [".github/workflows/adhere.yaml", SHARED_WORKFLOW],
-    ["alchemy.run.ts", sharedStack(org, repo)],
+    ["alchemy.run.ts", sharedStack(org, repo, visibility)],
     ["package.json", sharedPackage(repo)],
     [".gitignore", SHARED_GITIGNORE],
     ...EXAMPLES,
@@ -369,7 +380,7 @@ export const initProject = (
     const created: Array<string> = [];
     const skipped: Array<string> = [];
     const existing = options.shared === undefined ? yield* otherConfig(root) : undefined;
-    for (const [path, contents] of filesFor(options.shared)) {
+    for (const [path, contents] of filesFor(options.shared, options.visibility ?? "public")) {
       if (path === CONFIG_PATH && existing !== undefined) {
         skipped.push(existing);
         continue;

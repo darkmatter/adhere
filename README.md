@@ -321,8 +321,12 @@ install copies only rule files, and with them:
   to main and every pull request, with the `TYPESAFE_API_KEY` secret. A pull
   request from a fork gets no secrets, so validate refuses there.
 - `alchemy.run.ts`, an [alchemy](https://alchemy.run) stack that creates the
-  private GitHub repo, or adopts it, and sets that secret from
-  `TYPESAFE_API_KEY` when deployed with `npx alchemy deploy`.
+  GitHub repo, or adopts it, and sets that secret from `TYPESAFE_API_KEY`
+  when deployed with `npx alchemy deploy`. The repo is public unless you
+  answer yes when init asks, at a terminal, whether to make it private. Other
+  repos then need git's credentials for it to list and install its rules.
+  Without a terminal it is public; change `visibility` in the stack to make it
+  private.
 - `package.json`, with alchemy and effect pinned to versions that work
   together, which init installs, and a `.gitignore` for them and alchemy's
   state.

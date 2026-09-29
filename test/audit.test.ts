@@ -1623,7 +1623,19 @@ describe("init", () => {
     expect(stack).toContain('const owner = "acme";');
     expect(stack).toContain('name: "standards",');
     expect(stack).toContain('name: "TYPESAFE_API_KEY",');
+    expect(stack).toContain('visibility: "public",');
     await expect(access(join(root, ".adhere", "config.ts"))).rejects.toThrow();
+  });
+
+  it("makes a shared repo private when asked", async () => {
+    const root = join(tmpdir(), `adhere-init-private-${Date.now()}`);
+    await mkdir(root, { recursive: true });
+    await writeFile(join(root, "package.json"), '{ "name": "standards" }\n', "utf8");
+    await Effect.runPromise(initProject(root, { shared: "acme/standards", visibility: "private" }));
+
+    expect(await readFile(join(root, "alchemy.run.ts"), "utf8")).toContain(
+      'visibility: "private",',
+    );
   });
 
   it("keeps a config at another accepted path instead of adding a second one", async () => {

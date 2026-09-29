@@ -342,7 +342,7 @@ const shared = Flag.string("shared").pipe(
   ),
   Flag.optional,
   Flag.withDescription(
-    "Scaffold a repo of rules other repos copy with adhere install, named org/repo on GitHub: example rules, a README, a CI workflow that runs adhere validate, and an alchemy.run.ts that creates the repo and its TYPESAFE_API_KEY secret.",
+    "Scaffold a repo of rules other repos copy with adhere install, named org/repo on GitHub: example rules, a README, a CI workflow that runs adhere validate, and an alchemy.run.ts that creates the repo, public unless you make it private when asked, and its TYPESAFE_API_KEY secret.",
   ),
 );
 
@@ -350,8 +350,16 @@ const shared = Flag.string("shared").pipe(
 export const initCommand = Command.make("init", { force, shared }, (input) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
+    const stdio = yield* Stdio.Stdio;
+    // A shared repo is public unless the user, asked at a terminal, makes it private.
+    const interactive = (yield* stdio.stdinIsTerminal) && (yield* stdio.stdoutIsTerminal);
+    const makePrivate =
+      Option.isSome(input.shared) && interactive
+        ? yield* Prompt.run(Prompt.confirm({ message: "Make the repo private?", initial: false }))
+        : false;
     const result = yield* initProject(path.resolve(), {
       force: input.force,
+      visibility: makePrivate ? "private" : "public",
       ...Option.match(input.shared, { onNone: () => ({}), onSome: (repo) => ({ shared: repo }) }),
     });
     const lines = [
