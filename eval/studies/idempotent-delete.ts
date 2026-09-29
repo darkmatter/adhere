@@ -20,7 +20,7 @@ import { isInSkippedTree, isTestFile } from "#services/SourceWalker.ts";
 import { walkFiles } from "#walk.ts";
 import { BunRuntime, BunServices } from "@effect/platform-bun";
 import { Console, Effect, FileSystem, Layer, Path, Schema } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
+import { FetchHttpClient } from "effect/http";
 import { type Arm, askJev, auc, Run, table } from "../harness.ts";
 
 const ID = "providers/idempotent-delete";

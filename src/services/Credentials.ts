@@ -46,10 +46,10 @@ export const CredentialsLive = Layer.effect(Credentials)(
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
 
-    const file = Config.nonEmptyString("XDG_CONFIG_HOME").pipe(
+    const file = Config.NonEmptyString("XDG_CONFIG_HOME").pipe(
       Config.orElse(() =>
-        Config.nonEmptyString("HOME").pipe(
-          Config.orElse(() => Config.nonEmptyString("USERPROFILE")),
+        Config.NonEmptyString("HOME").pipe(
+          Config.orElse(() => Config.NonEmptyString("USERPROFILE")),
           Config.map((home) => path.join(home, ".config")),
         ),
       ),
@@ -78,7 +78,7 @@ export const CredentialsLive = Layer.effect(Credentials)(
 
     // Read when a request needs the key, not before: a cached run needs none.
     const apiKey = Effect.fn("Credentials.apiKey")(function* () {
-      const fromEnvironment = yield* Config.option(Config.redacted("TYPESAFE_API_KEY")).pipe(
+      const fromEnvironment = yield* Config.option(Config.Redacted("TYPESAFE_API_KEY")).pipe(
         Effect.mapError((problem) => refused(`Cannot read TYPESAFE_API_KEY: ${problem.message}`)),
       );
       if (Option.isSome(fromEnvironment)) return fromEnvironment.value;

@@ -5,7 +5,7 @@ import { version } from "#version.ts";
 import { BunRuntime, BunServices } from "@effect/platform-bun";
 import { plugin } from "bun";
 import { Cause, Effect, Layer, Logger, References, Runtime } from "effect";
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 
 // A config file may import `@drkmttr/adhere`, for `defineConfig`. The compiled
 // executable resolves no packages from disk, so it answers that import with

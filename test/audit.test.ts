@@ -16,7 +16,7 @@ import {
   Schema,
 } from "effect";
 import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
-import { HttpClient, HttpClientResponse } from "effect/unstable/http";
+import { HttpClient, HttpClientResponse } from "effect/http";
 import { describe, expect, it } from "vite-plus/test";
 import { isNote, withoutComments } from "../src/comments.ts";
 import { NO_SUPPRESSIONS, suppresses, suppressionsOf } from "../src/suppress.ts";

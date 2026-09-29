@@ -43,8 +43,8 @@ import {
   Stdio,
   Stream,
 } from "effect";
-import { Argument, Command, Flag, Prompt } from "effect/unstable/cli";
-import { FetchHttpClient } from "effect/unstable/http";
+import { Argument, Command, Flag, Prompt } from "effect/cli";
+import { FetchHttpClient } from "effect/http";
 // A Bun text import (https://bun.sh/docs/bundler/loaders#text): the file's
 // contents become a string at bundle time, so the compiled binary carries the
 // skill without an --asset flag. `skills/` sits beside `src/`, outside the `#`
@@ -76,7 +76,7 @@ const presetsIn = (values: ReadonlyArray<string>): ReadonlyArray<string> =>
 const isPresetName = (name: string): name is PresetName =>
   (presetNames as ReadonlyArray<string>).includes(name);
 
-const preset = Flag.string("preset").pipe(
+const preset = Flag.String("preset").pipe(
   Flag.atLeast(0),
   Flag.filterMap(
     (values): Option.Option<ReadonlyArray<PresetName>> => {
@@ -94,21 +94,21 @@ const preset = Flag.string("preset").pipe(
   ),
 );
 
-const threshold = Flag.float("threshold").pipe(
+const threshold = Flag.Finite("threshold").pipe(
   Flag.optional,
   Flag.withDescription(
     "Report a rule when Jev's probability is above this value, 0 to 1. Replaces the config's threshold; per-rule thresholds still apply.",
   ),
 );
 
-const sufficiencyThreshold = Flag.float("sufficiency-threshold").pipe(
+const sufficiencyThreshold = Flag.Finite("sufficiency-threshold").pipe(
   Flag.optional,
   Flag.withDescription(
     "Warn on a finding when Jev's probability that the file shows enough to decide it is below this value, 0 to 1. Replaces the config's sufficiencyThreshold; the default is 0.6.",
   ),
 );
 
-const limit = Flag.integer("limit").pipe(
+const limit = Flag.Int("limit").pipe(
   Flag.filter(
     (checks) => checks >= 0,
     (checks) => `--limit is a number of checks, 0 or more, not ${checks}.`,
@@ -119,7 +119,7 @@ const limit = Flag.integer("limit").pipe(
   ),
 );
 
-const rpm = Flag.integer("rpm").pipe(
+const rpm = Flag.Int("rpm").pipe(
   Flag.filter(
     (requests) => requests > 0,
     (requests) => `--rpm is a number of requests a minute, more than 0, not ${requests}.`,
@@ -128,19 +128,19 @@ const rpm = Flag.integer("rpm").pipe(
   Flag.withDescription("Send at most this many requests to Jev a minute, evenly spaced."),
 );
 
-const filter = Flag.string("filter").pipe(
+const filter = Flag.String("filter").pipe(
   Flag.atLeast(0),
   Flag.withDescription(
     "Read only files whose path from the working directory matches this glob, such as 'src/**' or '**/*.service.ts'. Repeat it for more; a pattern starting with ! leaves out what it matches.",
   ),
 );
 
-const denyWarnings = Flag.boolean("deny-warnings").pipe(
+const denyWarnings = Flag.Boolean("deny-warnings").pipe(
   Flag.withDefault(false),
   Flag.withDescription("Fail the run on warnings as well as errors."),
 );
 
-const yes = Flag.boolean("yes").pipe(
+const yes = Flag.Boolean("yes").pipe(
   Flag.withAlias("y"),
   Flag.withDefault(false),
   Flag.withDescription(
@@ -213,7 +213,7 @@ const statusLayer = Layer.effect(Status)(
   }),
 );
 
-const force = Flag.boolean("force").pipe(
+const force = Flag.Boolean("force").pipe(
   Flag.withDefault(false),
   Flag.withDescription("Overwrite existing scaffold files."),
 );
@@ -240,7 +240,7 @@ export const lintCommand = Command.make(
       const interactive = (yield* stdio.stdinIsTerminal) && (yield* stdio.stdoutIsTerminal);
       if (plan.requests > 0 && interactive && !input.yes) {
         const send = yield* Prompt.run(
-          Prompt.confirm({ message: sendQuestion(plan), initial: true }),
+          Prompt.Confirm({ message: sendQuestion(plan), initial: true }),
         );
         if (!send) {
           yield* toStderr("Nothing sent.\n");
@@ -336,7 +336,7 @@ const installLine = (install: Install): string => {
   }
 };
 
-const shared = Flag.string("shared").pipe(
+const shared = Flag.String("shared").pipe(
   Flag.filter(
     (repo) => /^[\w.-]+\/[\w.-]+$/.test(repo),
     (repo) => `--shared names a GitHub repo as org/repo, not ${repo}.`,
@@ -356,7 +356,7 @@ export const initCommand = Command.make("init", { force, shared }, (input) =>
     const interactive = (yield* stdio.stdinIsTerminal) && (yield* stdio.stdoutIsTerminal);
     const makePrivate =
       Option.isSome(input.shared) && interactive
-        ? yield* Prompt.run(Prompt.confirm({ message: "Make the repo private?", initial: false }))
+        ? yield* Prompt.run(Prompt.Confirm({ message: "Make the repo private?", initial: false }))
         : false;
     const result = yield* initProject(path.resolve(), {
       force: input.force,
@@ -376,7 +376,7 @@ export const initCommand = Command.make("init", { force, shared }, (input) =>
   ),
 );
 
-const source = Argument.string("source").pipe(
+const source = Argument.String("source").pipe(
   Argument.filterMap(
     (spec) => Option.fromNullishOr(parseSource(spec)),
     (spec) => `org/repo, then optionally a topic or rule and #ref, not ${spec}`,
@@ -406,7 +406,7 @@ export const installCommand = Command.make(
   "install",
   {
     source,
-    force: Flag.boolean("force").pipe(
+    force: Flag.Boolean("force").pipe(
       Flag.withDefault(false),
       Flag.withDescription("Overwrite rule files already in .adhere/."),
     ),
@@ -435,7 +435,7 @@ export const installCommand = Command.make(
 const readApiKey = Effect.fn("login.readApiKey")(function* () {
   const stdio = yield* Stdio.Stdio;
   const typed: string = (yield* stdio.stdinIsTerminal)
-    ? Redacted.value(yield* Prompt.run(Prompt.password({ message: "TypeSafe AI API key" })))
+    ? Redacted.value(yield* Prompt.run(Prompt.Password({ message: "TypeSafe AI API key" })))
     : yield* stdio.stdin.pipe(
         Stream.decodeText(),
         Stream.mkString,
@@ -488,7 +488,7 @@ export const logoutCommand = Command.make("logout", {}, () =>
 /** The agent skills the binary carries, by the name `adhere skill` takes. */
 const skills = { docs: skill, setup: setupSkill, fix: fixSkill } as const;
 
-const skillName = Argument.choice("skill", ["docs", "setup", "fix"] as const).pipe(
+const skillName = Argument.Literals("skill", ["docs", "setup", "fix"] as const).pipe(
   Argument.withDefault("docs" as const),
   Argument.withDescription(
     "docs, the default, the reference for rules, the config, and reports; setup, to set adhere up in a repo with the user, through its first lint and CI; fix, to verify and fix the findings lint reports.",

@@ -38,9 +38,9 @@ import {
   Schedule,
   Schema,
 } from "effect";
-import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http";
-import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
-import { RateLimiter } from "effect/unstable/persistence";
+import { HttpClient, HttpClientError, HttpClientResponse } from "effect/http";
+import * as HttpClientRequest from "effect/http/HttpClientRequest";
+import { RateLimiter } from "effect/persistence";
 
 const SYSTEM_ONE = "https://api.typesafe.ai/v1/systemone";
 

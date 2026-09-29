@@ -19,8 +19,8 @@ import { Credentials, CredentialsLive } from "#services/Credentials.ts";
 import { type Body, type Lines, requestsOf, type Rules, tokensOf } from "#services/Jev.ts";
 import { BunRuntime, BunServices } from "@effect/platform-bun";
 import { Console, Effect, FileSystem, Layer, Path, Schedule, Schema } from "effect";
-import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/unstable/http";
-import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
+import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/http";
+import * as HttpClientRequest from "effect/http/HttpClientRequest";
 
 const SYSTEM_ONE = "https://api.typesafe.ai/v1/systemone";
 const MODEL = "jev-latest";

@@ -37,10 +37,10 @@
     "release": "release-it"
   },
   "dependencies": {
-    "effect": "4.0.0-rc.112"
+    "effect": "4.0.0-rc.118"
   },
   "devDependencies": {
-    "@effect/platform-bun": "4.0.0-rc.112",
+    "@effect/platform-bun": "4.0.0-rc.118",
     "@types/bun": "^1.4.2",
     "@types/node": "^24.13.6",
     "release-it": "^21.1.0",
@@ -49,7 +49,7 @@
     "vitest": "4.1.11"
   },
   "overrides": {
-    "@effect/platform-node-shared": "4.0.0-rc.112"
+    "@effect/platform-node-shared": "4.0.0-rc.118"
   },
   "release-it": {
     "$schema": "https://unpkg.com/release-it@21.1.0/schema/release-it.json",
