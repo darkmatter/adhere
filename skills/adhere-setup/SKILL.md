@@ -17,15 +17,43 @@ choices.
 
 ## 1. Check the tools
 
-```sh
-adhere --version
+Use the package manager the repo already uses, for every command in this
+skill; never bring in another. Tell it by the lockfile beside `package.json`,
+as `adhere init` does: `bun.lock` or `bun.lockb` for bun, `pnpm-lock.yaml` for
+pnpm, `yarn.lock` for yarn, `package-lock.json` for npm. Without a lockfile,
+the `packageManager` field in `package.json` names it; with neither, **Ask**.
+
+| Manager | Add adhere                       | Run adhere         |
+| ------- | -------------------------------- | ------------------ |
+| bun     | `bun add -D @drkmttr/adhere`     | `bunx adhere`      |
+| pnpm    | `pnpm add -D @drkmttr/adhere`    | `pnpm exec adhere` |
+| yarn    | `yarn add -D @drkmttr/adhere`    | `yarn adhere`      |
+| npm     | `npm install -D @drkmttr/adhere` | `npx adhere`       |
+
+In a repo with a `package.json`, add adhere as a dev dependency with its
+manager, so the repo pins the version the team and CI run. From then on,
+wherever this skill says `adhere`, run it the manager's way, as in
+`pnpm exec adhere lint`.
+
+With pnpm, at a workspace root, add `--ignore-workspace-root-check`. pnpm 11
+refuses to install a package whose build script no one approved, and one of
+adhere's dependencies, msgpackr-extract, an optional native add-on adhere
+never uses, has one. Before adding adhere, deny that build in
+`pnpm-workspace.yaml`, creating the file if there is none, so every later
+install, `pnpm exec`, and CI run passes too:
+
+```yaml
+allowBuilds:
+  msgpackr-extract: false
 ```
 
-Without it, install it: `npm install -D @drkmttr/adhere` in a repo with a
-`package.json`, which `adhere init` also does, or run it as
-`npx @drkmttr/adhere`. Validate and lint need a TypeSafe AI API key:
-`TYPESAFE_API_KEY`, or one saved by `adhere login`, which the user runs; never
-ask for the key in chat or print it.
+In a repo without a `package.json`, use the `adhere` on PATH (`adhere
+--version`), or **Ask** before installing it globally with the manager the
+user has, such as `bun add --global @drkmttr/adhere`.
+
+Validate and lint need a TypeSafe AI API key: `TYPESAFE_API_KEY`, or one saved
+by `adhere login`, which the user runs; never ask for the key in chat or print
+it.
 
 ## 2. Find candidates
 
@@ -153,7 +181,10 @@ Offer to add `.adhere/cache/** linguist-generated -diff` to `.gitattributes`.
 
 **Ask** before writing a workflow and before touching the repo's secrets.
 
-For GitHub Actions, add `.github/workflows/adhere.yaml`:
+If the repo's CI already installs its dependencies, add adhere as a job or a
+step there, with the same setup, so it runs the pinned adhere the way the
+rest of CI runs its tools. Otherwise, for GitHub Actions, add
+`.github/workflows/adhere.yaml`:
 
 ```yaml
 name: adhere
@@ -168,16 +199,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npx --yes @drkmttr/adhere lint --yes
+      # Set up the repo's package manager and install, from the table below.
+      - run: pnpm exec adhere lint --yes # the manager's way of running adhere
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
 ```
 
-When `package.json` lists `@drkmttr/adhere`, install with the repo's package
-manager and run its `adhere` instead of `npx`, so CI uses the pinned version.
-Add `--deny-warnings` if the user wants warnings to fail the job too. Match the
-branch to the repo's default branch. For another CI system, write the same
-job: check out, run `adhere lint --yes` with the key from a secret.
+| Manager | Setup steps                                                                         | Install                                                      |
+| ------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| bun     | `uses: oven-sh/setup-bun@v2`                                                        | `bun install --frozen-lockfile`                              |
+| pnpm    | `uses: pnpm/action-setup@v4`, then `uses: actions/setup-node@v4` with `cache: pnpm` | `pnpm install --frozen-lockfile`                             |
+| yarn    | `uses: actions/setup-node@v4` with `cache: yarn`, then `run: corepack enable`       | `yarn install --immutable`, or `--frozen-lockfile` on Yarn 1 |
+| npm     | `uses: actions/setup-node@v4` with `cache: npm`                                     | `npm ci`                                                     |
+
+Pin the versions the repo already uses: bun's `bun-version`, Node's
+`node-version` from `.nvmrc` or `engines`, and pnpm's from `packageManager`,
+which `pnpm/action-setup` reads. In a repo without a `package.json`, set up
+the manager the user has and run adhere at the version they ran locally, as
+in `bunx @drkmttr/adhere@0.11.0 lint --yes`.
+
+Add `--deny-warnings` if the user wants warnings to fail the job too. Match
+the branch to the repo's default branch. For another CI system, write the
+same job: check out, install, run adhere's `lint --yes` with the key from a
+secret.
 
 The user adds the key as a secret: `gh secret set TYPESAFE_API_KEY`, which
 prompts for it, or in the repo's settings. Pull requests from forks get no
@@ -188,11 +232,11 @@ saying their code passes. To lint a pull request against the cache as merged,
 fetch the base branch and restore its cache before linting:
 
 ```yaml
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - if: github.event_name == 'pull_request'
-        run: rm -rf .adhere/cache && git checkout origin/${{ github.base_ref }} -- .adhere/cache
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0
+- if: github.event_name == 'pull_request'
+  run: rm -rf .adhere/cache && git checkout origin/${{ github.base_ref }} -- .adhere/cache
 ```
 
 This needs the cache committed on the base branch first.
