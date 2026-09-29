@@ -38,11 +38,12 @@ describe("cli", () => {
     }
   });
 
-  it("prints the skill for writing rules, or with fix, the one for verifying and fixing findings", async () => {
+  it("prints the reference skill, or with setup or fix, the one for setting up or fixing findings", async () => {
     const print = async (...args: ReadonlyArray<string>) =>
       (await execFileAsync("bun", [main, "skill", ...args], { cwd: process.cwd() })).stdout;
     expect(await print()).toMatch(/^---\nname: adhere\n/);
-    expect(await print("rules")).toBe(await print());
+    expect(await print("docs")).toBe(await print());
+    expect(await print("setup")).toMatch(/^---\nname: adhere-setup\n/);
     expect(await print("fix")).toMatch(/^---\nname: adhere-fix\n/);
   });
 

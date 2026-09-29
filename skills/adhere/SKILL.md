@@ -1,167 +1,231 @@
 ---
 name: adhere
-description: Gather a repository's non-deterministic coding conventions into adhere rules (Markdown files with a description and code that must, or must never, be written, judged by Jev), configure adhere, run it, and calibrate thresholds. Use when setting up adhere in a repo, when the user asks to turn conventions, AGENTS.md guidance, ADRs, or review feedback into lint rules a normal linter cannot express, or when tuning adhere findings.
+description: Reference for adhere, the linter for coding conventions a normal linter cannot check, judged by TypeSafe AI's Jev. Covers its commands, the Markdown rule format and how to word a rule, the config, presets, shared rules, comments and suppressions, the cache, reading a report, and tuning a noisy rule. Use when writing or editing adhere rules, configuring adhere, reading its findings, or answering questions about it. To set adhere up in a repo, use adhere-setup; to fix findings, adhere-fix.
 ---
 
-# Gather adhere rules from a repo
+# adhere
 
 adhere is a linter for rules a normal linter cannot check. Each rule is one
 sentence in RFC 2119's words plus code that must be written and code that must
-never be; Jev judges every source file against it and returns a probability. Your job is to find the conventions a repo already
-has, write the ones that need judgment as rule files, and tune until the
-report is trustworthy.
+never be. Jev, TypeSafe AI's model, reads every source file against every rule
+and answers with the probability that the file breaks it; adhere reports a
+rule above its threshold, 0.8 by default, in the section of the file Jev
+points to. A finding is a judgment, not a proof.
 
-## 1. Survey where conventions live
+Two other skills build on this one: adhere-setup walks a repo through its
+first rules, first lint, and CI, and adhere-fix verifies and fixes findings.
+`adhere skill setup` and `adhere skill fix` print them.
 
-Read, in this order, and note every "we always" or "never" statement:
+## Commands
 
-- `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `README.md` convention sections.
-- `docs/`, ADRs, design notes, `CONTEXT.md`.
-- Lint and type configuration (`oxlint`, `eslint`, `biome`, `tsconfig`). These
-  tell you what is already enforced deterministically, so you can exclude it.
-- Recent review feedback: `gh pr list --state merged --limit 20`, then
-  `gh pr view <n> --comments` on a few. Repeated review comments are unwritten
-  rules.
-- The code. Find the module others copy from: the canonical service, the
-  canonical error type, the canonical test. Those files are your references.
+```sh
+adhere init [--force]            # .adhere/config.ts, two example rules, and the dev dependency
+adhere init --shared org/repo    # a repo of rules other repos install, with CI and an alchemy stack
+adhere login                     # save a TypeSafe AI API key; TYPESAFE_API_KEY takes precedence
+adhere validate                  # rule wording, rules a linter could check, contradictions
+adhere lint                      # judge the working directory; exit 1 on an error finding
+adhere lint --limit 0            # show the plan and its cost, judge nothing
+adhere lint --yes                # send without asking, as in CI
+adhere lint --preset effect      # add a built-in rule set; the config becomes optional
+adhere lint --filter 'src/**'    # read only matching files; repeat, and ! to leave out
+adhere lint --threshold 0.9      # report at another threshold from the cache; judges nothing again
+adhere lint --deny-warnings      # fail on warnings too
+adhere list org/repo             # the rules in a GitHub repo's .adhere/
+adhere install org/repo[/topic[/rule]][#ref]   # copy them into .adhere/org/repo/
+adhere skill [docs|setup|fix]    # print a skill
+```
 
-## 2. Keep only what needs judgment
+`adhere <command> --help` lists every flag.
 
-For each candidate ask: could a regex, an import check, or the type checker
-flag every violation? If yes, it belongs in the existing linter, not adhere.
-Drop it or file it as a lint request.
+## Rule files
 
-Keep rules about intent, shape, and placement:
-
-- "Sequential effectful steps use `Effect.gen`, not nested `flatMap`."
-- "A call over the network carries a timeout and a retry schedule."
-- "Business logic depends on a config service, not on `Config.*` reads."
-- "Domain errors are `Schema.TaggedError` classes, not thrown `Error`."
-
-Skip rules a preset already covers. Run `adhere lint --help` and read
-`presets/effect/` in the adhere repo before writing Effect rules; extend with
-`presets: ["effect"]` and add only what is specific to this repo.
-
-## 3. Write each rule as a file
-
-Default location `.adhere/<topic>/<slug>.md`, next to the config and the
-cache. Use `docs/adhere/<topic>/<slug>.md` with `rules: "./docs/adhere"` in the
-config only when the user wants rules kept with the repo's docs; rules read
-that way apply project-wide, and nested `.adhere/` directories are not read.
-The path without `.md` is the rule id.
+A repo's rules live in `.adhere/`, one Markdown file per rule. The path
+without `.md` is the rule id: `.adhere/data/brand-ports.md` is
+`data/brand-ports`. A `.adhere/` in a subdirectory holds rules for that
+subtree only, and the most specific rule with an id wins. `cache/` and the
+config in `.adhere/` are not rules.
 
 ````md
 ---
-description: One sentence saying what code must be, then what it must never be.
-threshold: 0.8
+description: A port must be a branded, range-checked integer, never a bare number.
 ---
 
-Optional prose for readers on GitHub. adhere ignores it.
+Prose here renders on GitHub and is ignored.
 
 ## Must
 
 ```ts
-// Correct code lifted from this repo, trimmed to the pattern.
+const Port = Schema.Int.pipe(
+  Schema.check(Schema.isBetween({ minimum: 1, maximum: 65535 })),
+  Schema.brand("Port"),
+);
 ```
 
 ## Never
 
 ```ts
-// Optional: the incorrect form this rule catches, as it appeared in the repo.
+const port: number = Number(process.env.PORT);
 ```
 ````
 
-Rules for the rule:
+How to word a rule, from adhere's evals:
 
-- `description` is one sentence, specific, in the same words as the headings:
-  what code must be, and what it must never be. Jev reads the description
-  with the code, and "must" in both is one demand; vague words ("properly",
-  "correctly") give it nothing to judge.
-- A heading names the code under it only when it is the word alone: `## Never`,
-  not `## Never do this`. The next heading at its level or higher ends it.
-- The `must` block is real code from the repo, not invented, and only correct
-  code: Jev compares files to it, so incorrect code there teaches the wrong
-  thing. Incorrect code goes under `## Never`, which Jev reads as what a
-  violation looks like. Add one whenever violations have a recognizable
-  shape, ideally one found in the repo's history: over the effect preset, a
-  `never` block raised how well Jev told violations from compliant code under
-  every wording tried. A rule with no single correct form can be only a
-  `never` block.
-- A convention that is a guideline rather than a requirement says "should" in
-  its description and puts its code under `## Should` and `## Should not`. A
-  rule is one or the other; it cannot mix the two.
-- One pattern per file. Two patterns in one `must` block blur the probability.
-- Jev reads code without its comments, except comments that say `@adhere`. A
-  rule about comments, such as doc comments on exports, needs
-  `includeComments: true` in the config.
-- Rules skip tests: `.test` and `.spec` files, such as `a.test.ts` and
-  `Button.spec.tsx`, and files under `test/`, `tests/`, `__tests__/`, or
-  `fixtures/`. A rule about tests says `tests: only` in its front matter, and
-  one that holds in tests as well `tests: include`.
-- A nit, or a rule that tends to flag code wrongly, says `level: warning` in
-  its front matter: its findings show in amber and do not fail CI.
-- `threshold` is optional. Start without it; set it in step 5 if needed.
+- The description is one specific sentence in the same words as the headings:
+  what code must be, then what it must never be. Vague words such as
+  "properly" give Jev nothing to judge.
+- Give one example of each kind: one `## Must` block and one `## Never` block.
+  Three of each did no better, and several of one kind alone did worse. A rule
+  with no single correct form can have only a `never` block.
+- The `must` block is real, correct code from the repo, trimmed to the
+  pattern; Jev compares files to it. Incorrect code goes under `## Never`,
+  ideally a violation found in the repo or its history.
+- A guideline rather than a requirement says "should" and "should not", in
+  the description and as `## Should` and `## Should not`. A rule is one or the
+  other.
+- One pattern per rule. Two in one block blur the probability.
+- A heading names its code only when it is the word alone: `## Never`, not
+  `## Never do this`. A fence tagged `ts never` names its code itself.
 
-## 4. Configure
+Front matter besides `description`, all optional:
 
-Put the config at `.adhere/config.ts`. `adhere.config.ts` and
-`.adhere.config.ts` also load; keep one. A config is optional when `.adhere/`
-exists or a preset is passed on the command line. `adhere init` scaffolds it
-with `defineConfig`, adds `@drkmttr/adhere` as a dev dependency, and writes
-`.adhere/tsconfig.json` so the editor resolves its types; the native binary
-supplies the import either way:
+- `threshold: 0.9` sets the rule's own cutoff.
+- `level: warning` reports its findings in amber without failing the run, for
+  a nit or a rule that errs toward false findings.
+- `tests: only` for a rule about tests, `tests: include` for one that holds in
+  tests too. Otherwise rules skip `.test` and `.spec` files and files under
+  `test/`, `tests/`, `__tests__/`, and `fixtures/`.
+- `appliesTo: ["a declared union type or schema"]` and
+  `excludeIf: ["a type that mirrors a third-party format"]`, JSON arrays on
+  one line, scope a rule without widening its description: a finding stands
+  only when Jev says the code that breaks the rule is as every `appliesTo`
+  describes and as no `excludeIf` does.
+
+A rule a regex, an import check, or the type checker could flag every time
+belongs in that tool, not adhere. `adhere validate` reports rules that look
+like that.
+
+## Config
+
+A config is optional when `.adhere/` holds rules or `--preset` is given. It
+sits at `.adhere/config.ts`, `adhere.config.ts`, or `.adhere.config.ts`; keep
+one.
 
 ```ts
 import { defineConfig } from "@drkmttr/adhere";
 
 export default defineConfig({
-  presets: ["effect"],
-  threshold: 0.75,
-  exclude: ["**/generated/**"],
+  presets: ["typescript", "security"], // built-in rule sets, or topics such as "effect/basics"
+  threshold: 0.8, // default 0.8
+  sufficiencyThreshold: 0.6, // below it, a finding warns the file may not show enough
+  exclude: ["**/generated/**"], // files no rule judges
+  includeComments: false, // true only for rules about comments
+  overrides: {
+    "effect/basics/instrument-with-pipe": "off",
+    "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
+  },
 });
 ```
 
-To quiet a preset rule that does not suit the repo, override it rather than
-copy it: `overrides: { "alchemy/providers/idempotent-delete": "warning" }`, or
-`"off"`, or `{ threshold: 0.9 }`. The id is the one the report shows.
+`overrides` changes any rule by the id the report shows, a preset's with the
+preset first, without copying it; an id no rule has refuses the run. `rules`
+in the config, inline or as a directory path, replaces the `.adhere/` rule
+files entirely. Precedence, highest first: `--threshold`, the config, presets
+in order, the default; a rule's own `threshold` beats those, and `overrides`
+beats the rule.
 
-`exclude` lists globs, from the working directory, of files no rule judges.
-Exclude generated and vendored code the skipped directories do not already
-cover, since findings there are noise no one will fix.
+Node packages cannot be imported from the config, except `@drkmttr/adhere`,
+which the executable supplies.
 
-Commit `.adhere/cache/` with the code, so the team and CI reuse its judgments
-instead of paying for them again. Uncached files need a TypeSafe AI API
-key: one saved by `adhere login`, or `TYPESAFE_API_KEY`, which takes
-precedence; in this org it comes from SOPS via `just shell`.
+## Presets
 
-## 5. Run and calibrate
+`typescript` (any TypeScript project), `react`, `security`, `effect`, and
+`alchemy` (code deployed with alchemy.run). Each divides into topics, its
+subdirectories, and a topic is a preset of its own. Their rules are in the
+adhere package under `presets/`, and at
+https://github.com/darkmatter/adhere/tree/main/presets. A preset leaves out
+what that ecosystem's linters check exactly. Quiet a preset rule with
+`overrides` rather than copying it.
 
-```sh
-adhere validate              # decodes the config and rules; reports their wording, rules a linter could check, and contradictions
-adhere lint                  # or: adhere lint --preset effect
-adhere lint --threshold 0.9  # re-reads the cache, sends nothing
+## Shared rules
+
+An organization keeps rules in one repo's `.adhere/`, scaffolded by
+`adhere init --shared org/repo`, and other repos copy them in with
+`adhere install org/repo`, or one topic or rule with
+`adhere install org/repo/<topic>[/<rule>]`. Copies land in `.adhere/org/repo/`,
+so `data/brand-ports` becomes the rule `org/repo/data/brand-ports`. They are
+the repo's own rules from then on; a second install skips existing files
+unless `--force`, which overwrites local edits. The source is cloned with git,
+so a private repo needs git's credentials for GitHub.
+
+## Comments and suppressions
+
+Jev never sees comments: adhere blanks them before judging, since comments
+claiming code is safe hid real violations in the evals. A comment containing
+`@adhere` is a note Jev does read: use it for a checked fact the code relies
+on that the file cannot show, with how you know.
+
+```ts
+// @adhere DeleteActivity succeeds on a missing activity; probed 2026-09-25.
 ```
 
-Then, per rule, read the findings and decide:
+A finding Jev got wrong is suppressed in the code, with the reason:
+
+```ts
+// adhere-ignore alchemy/providers/idempotent-delete -- DeleteActivity succeeds on a missing activity
+```
+
+On its own line it covers the next statement; at the end of a line, the
+statement starting there. `adhere-ignore-file <rule> -- <reason>` covers a
+file. Name several rules with commas.
+
+## Cache and API key
+
+Judgments are cached in `.adhere/cache/`, keyed by each file's content without
+comments and by the rule's text. Commit it: every judgment is a paid request,
+and a committed cache gives the team and CI the same findings without paying
+again. A changed file re-judges every rule for it; an edited rule re-judges
+only that rule; a threshold change re-judges nothing. A run where everything
+is cached needs no key or network. Mark it generated to keep it out of diffs:
+
+```text
+.adhere/cache/** linguist-generated -diff
+```
+
+The key comes from `TYPESAFE_API_KEY` or from `adhere login`. lint prints a
+plan with the request count and estimated cost before sending, and asks at a
+terminal.
+
+## Reading a report
+
+```text
+  × data/brand-ports (0.93): A port must be a branded, range-checked integer, never a bare number.
+   ╭─[src/server.ts:6:3]
+ 6 │   const port: number = Number(process.env.PORT ?? 3000);
+   ·   ──────────────────────────────────────────────────────
+  hint: const Port = Schema.Int.pipe(...)
+```
+
+The header is the rule id, Jev's probability, and the description; `×` is an
+error, `⚠` a warning. The underline is the line Jev names. A finding with
+`warning: this file may not show enough to check this rule` turns on
+something outside the file, and was usually false in the evals: check that
+before acting on it.
+
+## Tuning a rule
+
+Per rule, read its findings and decide:
 
 - Many hits at 0.80 to 0.90, mostly not violations: the description is too
-  broad. Narrow it (say what is out of scope) or raise that rule's
-  `threshold`. Prefer narrowing; a threshold hides, a sentence explains.
-- Hits on code that follows the pattern through a different API: the `must`
+  broad. Narrow it, or scope it with `appliesTo` or `excludeIf`, before
+  raising its `threshold`: a threshold hides, a sentence explains.
+- Hits on code that follows the pattern through another API: the `must`
   block is too specific. Use the repo's most general correct example.
-- Zero hits: plant a deliberate violation in a scratch file, run, confirm the
-  rule fires, remove the file. A rule that cannot fire is not a rule.
-- Hits at 0.9 and above: read them first. They are usually real.
+- Right less than half the time and not fixable by wording: `level: warning`,
+  or `off`.
+- Zero hits: plant a violation in a scratch file, run lint on it with
+  `--filter`, confirm the rule fires, and delete the file. A rule that cannot
+  fire is not a rule.
+- Hits at 0.9 and above are usually real. Read them first.
 
-To verify and fix the findings themselves, one at a time, use the adhere-fix
-skill, which `adhere skill fix` prints.
-
-Threshold changes never re-judge; only edited rules do (per rule) and edited
-files do (per file). Iterate on wording freely, it costs one request per file
-per changed rule.
-
-## 6. Report
-
-Give the user: the rule ids written and where, the config path, the finding
-count at the chosen threshold and at 0.9, and the rules you dropped as
-deterministic with where they belong instead.
+Editing a rule re-judges only that rule, one request per file, so iterate on
+wording freely.

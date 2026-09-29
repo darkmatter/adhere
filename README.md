@@ -144,7 +144,7 @@ adhere list org/repo           # list the rules in another repo's .adhere/
 adhere install org/repo        # copy them into this repo's .adhere/org/repo/
 adhere login                   # save a TypeSafe AI API key for later runs
 adhere logout                  # delete the saved key
-adhere skill                   # print the agent skill (below)
+adhere skill [setup|fix]       # print an agent skill (below)
 ```
 
 Bare `adhere` prints the help, which lists the commands, and
@@ -852,18 +852,25 @@ every file is cached needs no key and no network.
 
 ## Agent skill
 
-Two skills teach an agent to work with adhere:
+Three skills teach an agent to work with adhere:
 
-- [`skills/adhere/SKILL.md`](./skills/adhere/SKILL.md) gathers a repo's
-  conventions into rule files, configures adhere, and calibrates thresholds.
+- [`skills/adhere/SKILL.md`](./skills/adhere/SKILL.md) is the reference: the
+  commands, how to write and word a rule, the config, presets, shared rules,
+  comments and suppressions, the cache, reading a report, and tuning a rule.
+- [`skills/adhere-setup/SKILL.md`](./skills/adhere-setup/SKILL.md) sets adhere
+  up in a repo with the user. It drafts rules from the repo's conventions,
+  offers fitting presets and a shared org repo's rules, shows them all in one
+  list to choose from, imports and validates the chosen ones, walks through
+  the first lint, and adds a CI workflow.
 - [`skills/adhere-fix/SKILL.md`](./skills/adhere-fix/SKILL.md) verifies and
   fixes the findings `lint` reports: it checks each against its rule and the
   code, fixes the real ones, reports the false ones with the evidence, and says
   when a rule is wrong more often than right.
 
 Install them with the [skills](https://github.com/vercel-labs/skills) CLI:
-`skills add darkmatter/adhere`. The binary carries both: `adhere skill` prints
-the first and `adhere skill fix` the second, so
+`skills add darkmatter/adhere`. The binary carries all three: `adhere skill`
+prints the reference, `adhere skill setup` the setup skill, and
+`adhere skill fix` the fix skill, so
 `adhere skill fix > .agents/skills/adhere-fix/SKILL.md` works without a
 checkout.
 

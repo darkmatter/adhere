@@ -51,6 +51,7 @@ import { FetchHttpClient } from "effect/unstable/http";
 // import map, hence the relative path.
 import skill from "../skills/adhere/SKILL.md" with { type: "text" };
 import fixSkill from "../skills/adhere-fix/SKILL.md" with { type: "text" };
+import setupSkill from "../skills/adhere-setup/SKILL.md" with { type: "text" };
 
 class FindingsReported extends Schema.TaggedError<FindingsReported>()("FindingsReported", {
   count: Schema.Finite,
@@ -485,21 +486,21 @@ export const logoutCommand = Command.make("logout", {}, () =>
 );
 
 /** The agent skills the binary carries, by the name `adhere skill` takes. */
-const skills = { rules: skill, fix: fixSkill } as const;
+const skills = { docs: skill, setup: setupSkill, fix: fixSkill } as const;
 
-const skillName = Argument.choice("skill", ["rules", "fix"] as const).pipe(
-  Argument.withDefault("rules" as const),
+const skillName = Argument.choice("skill", ["docs", "setup", "fix"] as const).pipe(
+  Argument.withDefault("docs" as const),
   Argument.withDescription(
-    "rules, the default, to gather a repo's conventions into rules and configure adhere; fix, to verify and fix the findings lint reports.",
+    "docs, the default, the reference for rules, the config, and reports; setup, to set adhere up in a repo with the user, through its first lint and CI; fix, to verify and fix the findings lint reports.",
   ),
 );
 
-/** `adhere skill [rules|fix]`: an agent skill, as shipped in the binary. */
+/** `adhere skill [docs|setup|fix]`: an agent skill, as shipped in the binary. */
 export const skillCommand = Command.make("skill", { name: skillName }, ({ name }) =>
   Console.log(skills[name].trimEnd()),
 ).pipe(
   Command.withDescription(
-    "Print an agent skill: by default the one that gathers a repo's conventions into rules and configures adhere, or with fix, the one that verifies and fixes lint's findings. Pipe it into .agents/skills/<name>/SKILL.md or hand it to an agent.",
+    "Print an agent skill: by default adhere's reference, for writing rules, configuring adhere, and reading reports; with setup, the one that sets adhere up in a repo with the user, from choosing rules through the first lint to CI; with fix, the one that verifies and fixes lint's findings. Pipe it into .agents/skills/<name>/SKILL.md or hand it to an agent.",
   ),
 );
 
