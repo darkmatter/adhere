@@ -53,9 +53,9 @@ are wrong more often.
 The report gives the rule's description and one example. Read the whole rule:
 the code under `## Must` and `## Never`, and anything it puts out of scope.
 
-- A project rule is `.adhere/<id>.md`, or under the directory the config's
-  `rules` names.
-- A preset rule is `presets/<preset>/<id>.md` in the adhere package, in
+- A project rule is `.adhere/rules/<id>/RULE.md`, or `RULE.ts`, or under the
+  directory the config's `rules` names.
+- A preset rule is `presets/<preset>/<id>/RULE.md` in the adhere package, in
   `node_modules/@drkmttr/adhere/presets/`, or at
   https://github.com/darkmatter/adhere/tree/main/presets.
 

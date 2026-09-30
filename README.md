@@ -140,8 +140,8 @@ adhere lint --log-level debug  # log each request to Jev on stderr
 adhere validate                # check the rules' wording; ask Jev whether any contradict
 adhere init [--force]          # scaffold .adhere/config.ts and two example rules
 adhere init --shared org/repo  # scaffold a repo of rules other repos install
-adhere list org/repo           # list the rules in another repo's .adhere/
-adhere install org/repo        # copy them into this repo's .adhere/org/repo/
+adhere list org/repo           # list the rules in another repo's .adhere/rules/
+adhere install org/repo        # copy them into this repo's .adhere/rules/org/repo/
 adhere login                   # save a TypeSafe AI API key for later runs
 adhere logout                  # delete the saved key
 adhere skill [setup|fix]       # print an agent skill (below)
@@ -330,12 +330,13 @@ install copies only rule files, and with them:
 
 ### Sharing rules
 
-An organization's rules can live in one repo's `.adhere/`, and other repos
-copy them in. `adhere list org/repo` prints each rule there with its
-description. `adhere install org/repo` copies every rule into this repo's
-`.adhere/org/repo/`, so `data/brand-ports` from darkmatter/standards is
-`.adhere/darkmatter/standards/data/brand-ports.md`, the rule
-`darkmatter/standards/data/brand-ports`, and two repos' rules never collide.
+An organization's rules can live in one repo's `.adhere/rules/`, and other
+repos copy them in. `adhere list org/repo` prints each rule there with its
+description. `adhere install org/repo` copies every rule's directory into this
+repo's `.adhere/rules/org/repo/`, so `data/brand-ports` from
+darkmatter/standards is `.adhere/rules/darkmatter/standards/data/brand-ports/`,
+the rule `darkmatter/standards/data/brand-ports`, and two repos' rules never
+collide.
 A topic or a rule after the repo copies only that part, and `#` picks a branch
 or tag:
 
@@ -347,10 +348,13 @@ adhere install darkmatter/standards#v3                  # every rule, as tagged 
 
 The copies are the repo's own rules from then on: commit them, edit them, or
 start new rules from them. Nothing tracks where they came from, so a later
-install skips a file already there, as init does, and `--force` overwrites it,
-edits and all. Only Markdown rule files are copied; the source's config, its
-inline rules, its rules written in TypeScript, and its cache are not. A config with inline `rules` replaces
-the `.adhere/` rule files, so it replaces copied ones too.
+install skips a rule already there, as init does, and `--force` replaces its
+directory, edits and all. A rule's whole directory is copied, so a `RULE.ts`
+comes with the helpers beside it, and runs whenever lint does, in CI too: read
+what you install. `adhere list` names a `RULE.ts` without its description,
+since reading it would run it. The source's config, its inline rules, and its
+cache are not copied. A config with inline `rules` replaces `.adhere/rules/`,
+so it replaces copied rules too.
 
 The source is cloned with `git` from `https://github.com/org/repo.git`, so a
 private repo needs git's credentials for GitHub, as `gh auth setup-git` sets
@@ -412,8 +416,8 @@ login. `adhere logout` deletes the saved key.
 
 ## Config
 
-A config file is optional. Without one, adhere reads the rule files in
-`.adhere/` and any `--preset`. A config names presets, sets the model and
+A config file is optional. Without one, adhere reads the rules in
+`.adhere/rules/` and any `--preset`. A config names presets, sets the model and
 thresholds, or gives rules inline. It sits in the working directory of the
 repo being audited, at one of these paths (keep one):
 
@@ -465,18 +469,28 @@ resolution. For a config written by hand, add that file, or include
 before rules could be TypeScript includes only `config.ts`; make its `include`
 `["**/*.ts"]` to give rule files their types.
 
-`rules` in the config, inline as above or as a directory (below), replaces the
-`.adhere/` rule files: none of them, root or nested, is read then.
+`rules` in the config, inline as above or as a directory (below), replaces
+`.adhere/rules/`: none of its rules, root or nested, is read then.
 
 ### Rules as Markdown files
 
-A repo's own rules live in `.adhere/`, one `*.md` file per rule, or a `*.ts`
-file (see [Rules as TypeScript files](#rules-as-typescript-files)), next to the
-config and the cache (neither is read as a rule). The path without `.md` is the
-rule id, so `.adhere/data/brand-ports.md` is `data/brand-ports`. When that
-directory exists, it is read without any config.
+A repo's own rules live in `.adhere/rules/`, a directory per rule, which holds
+the rule as a `RULE.md`, or as a `RULE.ts` (see
+[Rules as TypeScript files](#rules-as-typescript-files)). The directory's path
+is the rule id, so `.adhere/rules/data/brand-ports/RULE.md` is
+`data/brand-ports`, and a directory that holds no rule, such as `data/`, is a
+topic. Nothing else in a rule's directory, such as notes or a helper its
+`RULE.ts` imports, is read as a rule, and a directory with both a `RULE.md` and
+a `RULE.ts` refuses the run. When `.adhere/rules/` exists, it is read without
+any config.
 
-A file is front matter, then a body. The body's code goes in fences under
+Rules used to be any `*.md` file in `.adhere/`, as
+`.adhere/data/brand-ports.md`. A `*.md` file outside every rule's directory,
+but a `README.md`, now refuses the run, and the refusal says where each such
+file goes to keep its id, so `adhere-ignore` comments and `overrides` still
+name it.
+
+A `RULE.md` is front matter, then a body. The body's code goes in fences under
 headings of RFC 2119's words: `## Must` for code that must be written, and
 `## Never` for code that must never be, which is what a violation looks like.
 A heading names the code in its section, which runs to the next heading at its
@@ -543,7 +557,7 @@ the names before 0.7, read as `must` and `never`.
 
 Nested `.adhere/` directories are also discovered, except under
 `node_modules/`, `dist/`, and the other skipped directories (above). A rule in
-`packages/api/.adhere/data/brand-ports.md` has the same id,
+`packages/api/.adhere/rules/data/brand-ports/RULE.md` has the same id,
 `data/brand-ports`, but applies only to files under `packages/api/`. Root
 `.adhere/` rules apply project-wide. If a nested rule has the same id as a root
 rule, the nearest containing `.adhere/` shadows the less-specific rule for that
@@ -552,8 +566,8 @@ priority system: presets are global, project rules override preset rules with
 the same id, and nested project rules override less-specific project rules with
 the same id for files in their subtree.
 
-`.adhere/` is the default rather than `docs/adhere/` because it keeps
-everything adhere owns in one directory: the config and the cache are tool
+`.adhere/rules/` is the default rather than `docs/adhere/` because it keeps
+everything adhere owns in `.adhere/`: the config and the cache are tool
 state, not documentation, and would stay in `.adhere/` anyway. A nested
 `.adhere/` also scopes its rules to the directory that contains it (above). The
 cost is visibility: a dot directory is hidden from `ls`, and from `rg` without
@@ -564,16 +578,17 @@ documentation can point `rules` at `docs/adhere/`:
 export default defineConfig({ presets: ["effect"], rules: "./docs/adhere" });
 ```
 
-Rules read through `rules` apply project-wide.
+That directory holds its rules as `.adhere/rules/` does, a directory per rule,
+and they apply project-wide.
 
 ### Rules as TypeScript files
 
-A rule can also be a `.ts` file in `.adhere/` that default-exports
-`defineRule({...})`, which takes the fields a config's inline rule does. The
-path without `.ts` is the rule id, as for Markdown. What TypeScript adds is
-`appendState`, a hook on what Jev reads for the rule:
+A rule's directory can hold it as a `RULE.ts` instead, which default-exports
+`defineRule({...})`, taking the fields a config's inline rule does. What
+TypeScript adds is `appendState`, a hook on what Jev reads for the rule:
 
 ```ts
+// .adhere/rules/data/columns/RULE.ts
 import { defineRule } from "@drkmttr/adhere";
 
 export default defineRule({
@@ -609,14 +624,13 @@ part of the rule by its source: editing the hook judges the rule again. What
 the hook reads outside the file is not, so when `db/schema.sql` changes, a file
 already judged is not judged again until it or the rule changes.
 
-A rule file is imported, as a config is, so its code runs on every lint. It can
-import other files by relative path, but the executable resolves no packages
-besides `@drkmttr/adhere`. `Bun` is typed when `@types/bun` is installed and
-`.adhere/tsconfig.json` lists it, as `"types": ["bun"]`, and is `unknown`
-otherwise. Every `.ts` file in a `.adhere/`, or in a directory a config's
-`rules` names, is read as a rule, but `config.ts` and declaration files; one
-that default-exports no rule refuses the run, so keep a helper a rule imports
-elsewhere. A config's inline rules can have `appendState` too.
+A `RULE.ts` is imported, as a config is, so its code runs on every lint, and
+one that default-exports no rule refuses the run. It can import other files by
+relative path, such as a helper beside it in its directory, but the executable
+resolves no packages besides `@drkmttr/adhere`. `Bun` is typed when
+`@types/bun` is installed and `.adhere/tsconfig.json` lists it, as
+`"types": ["bun"]`, and is `unknown` otherwise. A config's inline rules can
+have `appendState` too.
 
 ### Scoping a rule
 

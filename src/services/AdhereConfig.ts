@@ -1,5 +1,4 @@
 import {
-  ADHERE_DIRECTORY,
   AdhereConfig as AdhereConfigSchema,
   CONFIG_FILES,
   ConfigUnavailable,
@@ -10,6 +9,7 @@ import {
   presetsOf,
   type ResolvedConfig,
   resolveConfig,
+  RULES_DIRECTORY,
 } from "#config.ts";
 import { type PresetName, presetOf, presets, wholePresetOf } from "#presets.ts";
 import {
@@ -94,7 +94,7 @@ export const AdhereConfigLive = (flags: Flags) =>
       const hasProjectRules = discoveredEntries.length > 0;
       if (configFile === undefined && !hasProjectRules && !hasPreset) {
         return yield* ConfigUnavailable.make({
-          message: `Nothing to audit against: no config file (${CONFIG_FILES.join(", ")}), no ${ADHERE_DIRECTORY}/ directory of rules, and no --preset. Pass --preset effect to use the built-in rules.`,
+          message: `Nothing to audit against: no config file (${CONFIG_FILES.join(", ")}), no rules in ${RULES_DIRECTORY}/, and no --preset. Pass --preset effect to use the built-in rules.`,
         });
       }
       const projectEntries: RuleSet =

@@ -134,7 +134,7 @@ const program = Effect.gen(function* () {
   }
   const presetFile = path.resolve(
     import.meta.dirname,
-    "../../presets/alchemy/providers/idempotent-delete.md",
+    "../../presets/alchemy/providers/idempotent-delete/RULE.md",
   );
   const scoped = yield* parseRuleMarkdown(yield* fs.readFileString(presetFile), presetFile);
   const preset: Rule = { ...scoped, description: UNSCOPED };

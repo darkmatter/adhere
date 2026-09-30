@@ -49,9 +49,9 @@ describe("cli", () => {
 
   it("validates a single rule without asking Jev, and says how its wording differs from the tips", async () => {
     const root = join(tmpdir(), `adhere-validate-${Date.now()}`);
-    await mkdir(join(root, ".adhere"), { recursive: true });
+    await mkdir(join(root, ".adhere", "rules", "ports"), { recursive: true });
     await writeFile(
-      join(root, ".adhere", "ports.md"),
+      join(root, ".adhere", "rules", "ports", "RULE.md"),
       '---\ndescription: A port is a branded integer.\n---\n\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\n',
       "utf8",
     );
@@ -63,7 +63,7 @@ describe("cli", () => {
       [
         "1 rule loaded.",
         "1 rule is not worded as the rule writing tips recommend:",
-        "  ports (.adhere/ports.md)",
+        "  ports (.adhere/rules/ports/RULE.md)",
         '    The description does not say "must", though the rule has a must example.',
         "    The rule has no never example. Rules with one example of each kind judge best.",
         "Rule writing tips: https://github.com/darkmatter/adhere#rule-writing-tips",
@@ -117,10 +117,10 @@ describe("cli", () => {
 
   it("asks Jev to compare rules that share files, and refuses without an API key", async () => {
     const root = join(tmpdir(), `adhere-validate-key-${Date.now()}`);
-    await mkdir(join(root, ".adhere"), { recursive: true });
     for (const name of ["ports", "secrets"]) {
+      await mkdir(join(root, ".adhere", "rules", name), { recursive: true });
       await writeFile(
-        join(root, ".adhere", `${name}.md`),
+        join(root, ".adhere", "rules", name, "RULE.md"),
         `---\ndescription: Rule about ${name}.\n---\n\n${name}()\n`,
         "utf8",
       );
@@ -142,14 +142,23 @@ describe("cli", () => {
   it("lists another repo's rules, and copies one topic, then the rest, under its org and repo, skipping what is there", async () => {
     const source = join(tmpdir(), `adhere-install-source-${Date.now()}`);
     const root = join(tmpdir(), `adhere-install-${Date.now()}`);
-    await mkdir(join(source, ".adhere", "data"), { recursive: true });
-    await mkdir(join(source, ".adhere", "style"), { recursive: true });
+    const rules = join(source, ".adhere", "rules");
+    for (const directory of ["data/ports", "data/columns", "style/small"]) {
+      await mkdir(join(rules, directory), { recursive: true });
+    }
     await mkdir(join(source, ".adhere", "cache"), { recursive: true });
     await mkdir(root, { recursive: true });
     const ports = "---\ndescription: A port must be branded.\n---\n\nconst Port = 1\n";
-    await writeFile(join(source, ".adhere", "data", "ports.md"), ports, "utf8");
+    await writeFile(join(rules, "data", "ports", "RULE.md"), ports, "utf8");
+    // Listing a RULE.ts would run it, so list names it without a description.
     await writeFile(
-      join(source, ".adhere", "style", "small.md"),
+      join(rules, "data", "columns", "RULE.ts"),
+      'throw new Error("list and install never run a rule");\n',
+      "utf8",
+    );
+    await writeFile(join(rules, "data", "columns", "schema.ts"), "export const schema = 1;\n", "utf8");
+    await writeFile(
+      join(rules, "style", "small", "RULE.md"),
       "---\ndescription: A file should be small.\n---\n\nx\n",
       "utf8",
     );
@@ -169,21 +178,27 @@ describe("cli", () => {
       (await execFileAsync("bun", [main, ...args], { cwd: root, env })).stdout;
 
     expect(await adhere("list", "acme/rules")).toBe(
-      "data/ports   A port must be branded.\nstyle/small  A file should be small.\n",
+      [
+        "data/columns  (TypeScript, which list does not run)",
+        "data/ports    A port must be branded.",
+        "style/small   A file should be small.",
+        "",
+      ].join("\n"),
     );
+    const installed = ".adhere/rules/acme/rules";
     expect(await adhere("install", "acme/rules/data")).toBe(
-      "created: .adhere/acme/rules/data/ports.md\nskipped: none\n",
+      `created: ${installed}/data/columns/, ${installed}/data/ports/\nskipped: none\n`,
     );
     expect(await adhere("install", "acme/rules")).toBe(
-      "created: .adhere/acme/rules/style/small.md\nskipped: .adhere/acme/rules/data/ports.md\n",
+      `created: ${installed}/style/small/\nskipped: ${installed}/data/columns/, ${installed}/data/ports/\n`,
     );
-    expect(await readFile(join(root, ".adhere", "acme", "rules", "data", "ports.md"), "utf8")).toBe(
-      ports,
-    );
-    expect((await readdir(join(root, ".adhere", "acme", "rules"))).sort()).toEqual([
-      "data",
-      "style",
+    expect(await readFile(join(root, installed, "data", "ports", "RULE.md"), "utf8")).toBe(ports);
+    // A rule's directory comes whole, with the helpers its RULE.ts imports.
+    expect((await readdir(join(root, installed, "data", "columns"))).sort()).toEqual([
+      "RULE.ts",
+      "schema.ts",
     ]);
+    expect((await readdir(join(root, installed))).sort()).toEqual(["data", "style"]);
   });
 
   it("takes several presets, repeated or separated by commas, and refuses an unknown one", async () => {
@@ -250,14 +265,14 @@ describe("cli", () => {
 
   it("never reads a file the config excludes", async () => {
     const root = join(tmpdir(), `adhere-exclude-${Date.now()}`);
-    for (const directory of [".adhere", "src", "gen"]) {
+    for (const directory of [".adhere/rules/named", "src", "gen"]) {
       await mkdir(join(root, directory), { recursive: true });
     }
     const files: Readonly<Record<string, string>> = {
       "src/a.ts": "export const a = 1;\n",
       "gen/b.ts": "export const b = 1;\n",
       "adhere.config.ts": 'export default { exclude: ["gen/**"] };\n',
-      ".adhere/named.md":
+      ".adhere/rules/named/RULE.md":
         "---\ndescription: A constant must be named.\n---\n\nexport const named = 1;\n",
     };
     for (const [file, text] of Object.entries(files)) {
@@ -270,14 +285,14 @@ describe("cli", () => {
 
   it("reads a rule written in TypeScript with the package's defineRule, and not the config beside it", async () => {
     const root = join(tmpdir(), `adhere-ts-rule-${Date.now()}`);
-    for (const directory of [".adhere", "src"]) {
+    for (const directory of [".adhere/rules/ports", "src"]) {
       await mkdir(join(root, directory), { recursive: true });
     }
     const files: Readonly<Record<string, string>> = {
       "src/a.ts": "export const port = 3000;\n",
       ".adhere/config.ts":
         'import { defineConfig } from "@drkmttr/adhere";\n\nexport default defineConfig({});\n',
-      ".adhere/ports.ts": [
+      ".adhere/rules/ports/RULE.ts": [
         'import { defineRule } from "@drkmttr/adhere";',
         "",
         "export default defineRule({",
@@ -298,14 +313,14 @@ describe("cli", () => {
 
   it("judges tests only by a rule about tests", async () => {
     const root = join(tmpdir(), `adhere-tests-${Date.now()}`);
-    for (const directory of [".adhere", "src", "test"]) {
+    for (const directory of [".adhere/rules/named", "src", "test"]) {
       await mkdir(join(root, directory), { recursive: true });
     }
     const files: Readonly<Record<string, string>> = {
       "src/a.ts": "export const a = 1;\n",
       "src/a.test.ts": "export const t = 1;\n",
       "test/helper.ts": "export const h = 1;\n",
-      ".adhere/named.md":
+      ".adhere/rules/named/RULE.md":
         "---\ndescription: A constant must be named.\n---\n\nexport const named = 1;\n",
     };
     for (const [file, text] of Object.entries(files)) {
@@ -320,8 +335,9 @@ describe("cli", () => {
 
     // src/a.ts alone: no rule judges tests.
     expect(await plan()).toBe("1 file and 1 rule: 1 check.");
+    await mkdir(join(root, ".adhere", "rules", "tests"), { recursive: true });
     await writeFile(
-      join(root, ".adhere", "tests.md"),
+      join(root, ".adhere", "rules", "tests", "RULE.md"),
       "---\ndescription: A test must be named.\ntests: only\n---\n\nexport const named = 1;\n",
       "utf8",
     );
@@ -333,8 +349,9 @@ describe("cli", () => {
     const root = join(tmpdir(), `adhere-prune-${Date.now()}`);
     const cache = join(root, ".adhere", "cache");
     await mkdir(join(cache, "files"), { recursive: true });
+    await mkdir(join(root, ".adhere", "rules", "ports"), { recursive: true });
     await writeFile(
-      join(root, ".adhere", "ports.md"),
+      join(root, ".adhere", "rules", "ports", "RULE.md"),
       '---\ndescription: A port must be a branded integer.\n---\n\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\n',
       "utf8",
     );

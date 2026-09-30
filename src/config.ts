@@ -175,8 +175,9 @@ export const AdhereConfig = Schema.Struct({
     Schema.withDecodingDefaultKey(Effect.succeed([])),
   ),
   /**
-   * A record of rules, or a directory path relative to the config file.
-   * Unset: `.adhere/` when that directory exists, otherwise no rules.
+   * A record of rules, or a directory path relative to the config file,
+   * which holds its rules as `.adhere/rules/` does. Unset: the rules in
+   * `.adhere/rules/`, and in any nested `.adhere/rules/`.
    */
   rules: Schema.optionalKey(Schema.Union([Schema.Record(Schema.String, Rule), Schema.String])),
   /**
@@ -199,8 +200,10 @@ export const AdhereConfig = Schema.Struct({
   includeComments: Schema.optionalKey(Schema.Boolean),
 });
 
-/** Where a repo keeps its rule files by default. The cache lives under it. */
+/** Where a repo keeps what adhere reads and writes: its config, its rules, and the cache. */
 export const ADHERE_DIRECTORY = ".adhere";
+/** Where a repo keeps its rules by default, one to a directory: `<id>/RULE.md` or `<id>/RULE.ts`. */
+export const RULES_DIRECTORY = `${ADHERE_DIRECTORY}/rules`;
 export const CACHE_DIRECTORY = `${ADHERE_DIRECTORY}/cache`;
 /** Where a config may live, relative to the working directory. Exactly one may exist. */
 export const CONFIG_FILES = [

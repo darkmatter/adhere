@@ -84,7 +84,7 @@ block of real code from the repo, and one `never` block, ideally a violation
 from the repo or its history.
 
 Write the drafts outside the repo, in a scratch directory such as
-`$(mktemp -d)/<topic>/<slug>.md`, so nothing lands in `.adhere/` before the
+`$(mktemp -d)/<topic>/<slug>/RULE.md`, so nothing lands in `.adhere/` before the
 user picks it.
 
 ## 4. Preview and choose
@@ -115,11 +115,11 @@ the wording of any. Revise drafts the user wants changed and show them again.
 ## 5. Import the chosen rules
 
 - Without a config, run `adhere init`. It also writes two example rules under
-  `.adhere/style/`; delete them unless the user chose them.
-- Copy each chosen draft to `.adhere/<topic>/<slug>.md`.
+  `.adhere/rules/style/`; delete them unless the user chose them.
+- Copy each chosen draft to `.adhere/rules/<topic>/<slug>/RULE.md`.
 - Add chosen presets, or topics, to `presets` in `.adhere/config.ts`.
 - Install chosen shared rules: `adhere install org/repo/<id>` for each, or
-  `adhere install org/repo` for all of them. They land in `.adhere/org/repo/`.
+  `adhere install org/repo` for all of them. They land in `.adhere/rules/org/repo/`.
 - Add `exclude` globs for generated or vendored code the default skips miss.
 
 ## 6. Validate

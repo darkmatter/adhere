@@ -266,7 +266,7 @@ export const lintCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Audit the working directory against the rules in .adhere/ or a preset, judged by Jev.",
+    "Audit the working directory against the rules in .adhere/rules/ or a preset, judged by Jev.",
   ),
   Command.provide((input) =>
     auditLayer(
@@ -382,11 +382,11 @@ const source = Argument.String("source").pipe(
     (spec) => `org/repo, then optionally a topic or rule and #ref, not ${spec}`,
   ),
   Argument.withDescription(
-    "A GitHub repo with rules in .adhere/, as org/repo, optionally followed by a topic or a rule, as in org/repo/data/brand-ports, and by #branch or #tag.",
+    "A GitHub repo with rules in .adhere/rules/, as org/repo, optionally followed by a topic or a rule, as in org/repo/data/brand-ports, and by #branch or #tag.",
   ),
 );
 
-/** `adhere list org/repo`: the rules another repo's `.adhere/` holds. */
+/** `adhere list org/repo`: the rules another repo's `.adhere/rules/` holds. */
 export const listCommand = Command.make("list", { source }, (input) =>
   Effect.gen(function* () {
     const rules = yield* listRules(input.source);
@@ -397,18 +397,18 @@ export const listCommand = Command.make("list", { source }, (input) =>
   }),
 ).pipe(
   Command.withDescription(
-    "List the rules in a GitHub repo's .adhere/, each with its description, for adhere install. Clones with git, so a private repo needs git's credentials for it.",
+    "List the rules in a GitHub repo's .adhere/rules/, each with its description, for adhere install. Clones with git, so a private repo needs git's credentials for it.",
   ),
 );
 
-/** `adhere install org/repo`: another repo's rules, copied into this one's `.adhere/`. */
+/** `adhere install org/repo`: another repo's rules, copied into this one's `.adhere/rules/`. */
 export const installCommand = Command.make(
   "install",
   {
     source,
     force: Flag.Boolean("force").pipe(
       Flag.withDefault(false),
-      Flag.withDescription("Overwrite rule files already in .adhere/."),
+      Flag.withDescription("Replace rules already in .adhere/rules/, directory and all."),
     ),
   },
   (input) =>
@@ -424,7 +424,7 @@ export const installCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Copy the rules in a GitHub repo's .adhere/, or one topic or rule of them, into this repo's .adhere/<org>/<repo>/. They are this repo's own rules from then on, to edit or keep in step by hand. Existing files are skipped unless --force.",
+    "Copy the rules in a GitHub repo's .adhere/rules/, or one topic or rule of them, each its whole directory, into this repo's .adhere/rules/<org>/<repo>/. They are this repo's own rules from then on, to edit or keep in step by hand, and a copied RULE.ts runs whenever lint does. A rule already there is skipped unless --force.",
   ),
 );
 
@@ -506,7 +506,7 @@ export const skillCommand = Command.make("skill", { name: skillName }, ({ name }
 
 /** The whole CLI. Bare `adhere` prints its help. */
 export const cli = Command.make("adhere").pipe(
-  Command.withDescription("Lint a repository against the rules in .adhere/, judged by Jev."),
+  Command.withDescription("Lint a repository against the rules in .adhere/rules/, judged by Jev."),
   Command.withExamples([
     { command: "adhere init", description: "Scaffold .adhere/config.ts and two example rules" },
     {
@@ -517,7 +517,7 @@ export const cli = Command.make("adhere").pipe(
     { command: "adhere lint", description: "Audit the working directory" },
     {
       command: "adhere install org/repo",
-      description: "Copy another repo's .adhere/ rules into this one",
+      description: "Copy another repo's .adhere/rules/ into this one",
     },
     {
       command: "adhere lint --preset effect",

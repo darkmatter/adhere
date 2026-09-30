@@ -1,13 +1,13 @@
 import { spawn } from "node:child_process";
-import { access, copyFile, mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, sep } from "node:path";
-import { ADHERE_DIRECTORY, type RuleId } from "#config.ts";
+import { RULES_DIRECTORY, type RuleId } from "#config.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { Effect } from "effect";
 
 /**
- * A GitHub repo whose `.adhere/` rules another repo copies: `org/repo`, then
+ * A GitHub repo whose `.adhere/rules/` another repo copies: `org/repo`, then
  * optionally a topic or a rule's id, then optionally `#` and a branch or tag,
  * as in `darkmatter/standards/data/brand-ports#v3`.
  */
@@ -63,43 +63,52 @@ const cloned = (source: Source) =>
     (directory) => Effect.promise(() => rm(directory, { recursive: true, force: true })),
   );
 
-/** The repo's root `.adhere/` rule files by id, as lint reads them there: every `*.md` outside `cache/`. */
+/**
+ * The repo's rules in its root `.adhere/rules/`, as lint reads them there:
+ * each directory that holds a RULE.md or a RULE.ts, by its path, with that file.
+ */
 const rulesIn = (source: Source, clone: string) =>
   Effect.tryPromise({
     try: async () => {
-      const directory = join(clone, ADHERE_DIRECTORY);
+      const directory = join(clone, RULES_DIRECTORY);
       const entries = await readdir(directory, { recursive: true }).catch(() => []);
-      const ids = entries
-        .filter((entry) => entry.endsWith(".md") && !entry.startsWith(`cache${sep}`))
-        .map((entry): RuleId => entry.slice(0, -".md".length).split(sep).join("/"))
+      const rules = entries
+        .flatMap((entry) => {
+          const [, id, name] = /^(.+)\/(RULE\.(?:md|ts))$/.exec(entry.split(sep).join("/")) ?? [];
+          return id === undefined || name === undefined ? [] : [{ id: id as RuleId, name }];
+        })
         .filter(
-          (id) => source.rule === "" || id === source.rule || id.startsWith(`${source.rule}/`),
+          ({ id }) => source.rule === "" || id === source.rule || id.startsWith(`${source.rule}/`),
         )
-        .sort();
-      if (ids.length === 0) {
+        .sort((a, b) => a.id.localeCompare(b.id));
+      if (rules.length === 0) {
         throw new Error(
           source.rule === ""
-            ? `it has no rules in ${ADHERE_DIRECTORY}/`
-            : `it has no rule or topic ${source.rule} in ${ADHERE_DIRECTORY}/`,
+            ? `it has no rules in ${RULES_DIRECTORY}/`
+            : `it has no rule or topic ${source.rule} in ${RULES_DIRECTORY}/`,
         );
       }
-      return ids.map((id) => ({ id, file: join(directory, `${id}.md`) }));
+      return rules.map(({ id, name }) => ({ id, name, directory: join(directory, id) }));
     },
     catch: failed(`Nothing to copy from ${source.repo}`),
   });
 
-/** Each rule a source names, with its description. */
+/**
+ * Each rule a source names, with its description. A rule written in
+ * TypeScript is listed without one: reading it would run the repo's code.
+ */
 export const listRules = (source: Source) =>
   Effect.scoped(
     Effect.gen(function* () {
       const rules = yield* rulesIn(source, yield* cloned(source));
-      return yield* Effect.forEach(rules, ({ id, file }) =>
+      return yield* Effect.forEach(rules, ({ id, name, directory }) =>
         Effect.gen(function* () {
+          if (name === "RULE.ts") return { id, description: "(TypeScript, which list does not run)" };
           const text = yield* Effect.tryPromise({
-            try: () => readFile(file, "utf8"),
+            try: () => readFile(join(directory, name), "utf8"),
             catch: failed(`Could not read ${id}`),
           });
-          const rule = yield* parseRuleMarkdown(text, `${source.repo}/${id}.md`);
+          const rule = yield* parseRuleMarkdown(text, `${source.repo}/${id}/${name}`);
           return { id, description: rule.description };
         }),
       );
@@ -112,11 +121,12 @@ export interface InstallResult {
 }
 
 /**
- * Copies the rules a source names into `root`'s `.adhere/` under the source's
- * org and repo, so `data/ports` from acme/rules is the rule
- * `acme/rules/data/ports`, and two sources' rules never collide. They are the
- * project's own rules from then on. As with init, a file already there is
- * skipped unless `force`.
+ * Copies the rules a source names, each its whole directory, helpers and all,
+ * into `root`'s `.adhere/rules/` under the source's org and repo, so
+ * `data/ports` from acme/rules is the rule `acme/rules/data/ports`, and two
+ * sources' rules never collide. They are the project's own rules from then
+ * on, and a copied RULE.ts runs whenever lint does. As with init, a rule
+ * already there is skipped, unless `force` replaces its directory.
  */
 export const installRules = (root: string, source: Source, options: { readonly force?: boolean }) =>
   Effect.scoped(
@@ -124,8 +134,8 @@ export const installRules = (root: string, source: Source, options: { readonly f
       const rules = yield* rulesIn(source, yield* cloned(source));
       const created: Array<string> = [];
       const skipped: Array<string> = [];
-      for (const { id, file } of rules) {
-        const path = `${ADHERE_DIRECTORY}/${source.repo}/${id}.md`;
+      for (const { id, directory } of rules) {
+        const path = `${RULES_DIRECTORY}/${source.repo}/${id}/`;
         const target = join(root, path);
         const copied = yield* Effect.tryPromise({
           try: async () => {
@@ -134,8 +144,9 @@ export const installRules = (root: string, source: Source, options: { readonly f
               () => false,
             );
             if (exists && options.force !== true) return false;
+            await rm(target, { recursive: true, force: true });
             await mkdir(dirname(target), { recursive: true });
-            await copyFile(file, target);
+            await cp(directory, target, { recursive: true });
             return true;
           },
           catch: failed(`Could not write ${path}`),

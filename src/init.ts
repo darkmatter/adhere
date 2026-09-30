@@ -34,7 +34,7 @@ export interface InitOptions {
 
 export type Visibility = "public" | "private";
 
-// adhere-ignore-file rules/import-written-files -- src/index.ts exports initProject, so a Bun text import here breaks loading the package on Node and in Vitest (checked 2026-09-26), and the compiled executable has no files beside it to read.
+// adhere-ignore-file import-written-files -- src/index.ts exports initProject, so a Bun text import here breaks loading the package on Node and in Vitest (checked 2026-09-26), and the compiled executable has no files beside it to read.
 const CONFIG = `import { defineConfig } from "@drkmttr/adhere";
 
 export default defineConfig({
@@ -118,8 +118,9 @@ export const handle = (id: string) =>
 const sharedReadme = (org: string, repo: string) => `# ${repo}
 
 Shared [adhere](https://github.com/darkmatter/adhere) rules for ${org}'s
-repositories. Each rule is a Markdown file in \`.adhere/\`, and a repo that
-copies it in has Jev judge its files against it when it runs \`adhere lint\`.
+repositories. Each rule is a directory in \`.adhere/rules/\` that holds a
+\`RULE.md\`, or a \`RULE.ts\`, and a repo that copies it in has Jev judge its
+files against it when it runs \`adhere lint\`.
 
 ## Use these rules
 
@@ -132,13 +133,14 @@ adhere install ${org}/${repo}/style
 adhere install ${org}/${repo}/style/prefer-small-files
 \`\`\`
 
-The copies land in \`.adhere/${org}/${repo}/\` and are that repo's own from then
+The copies land in \`.adhere/rules/${org}/${repo}/\` and are that repo's own from then
 on, to edit or to start other rules from. To take a later version of a rule,
 install it again with \`--force\`, which overwrites local edits.
 
 ## Add a rule
 
-Add a Markdown file under \`.adhere/<topic>/\`; its path is its id. See
+Add a directory under \`.adhere/rules/<topic>/\` with the rule in a \`RULE.md\`;
+its path is the rule's id. See
 [Rules as Markdown files](https://github.com/darkmatter/adhere#rules-as-markdown-files)
 and the [rule writing tips](https://github.com/darkmatter/adhere#rule-writing-tips).
 \`adhere validate\` checks each rule's wording and asks Jev whether any two
@@ -241,17 +243,17 @@ const SHARED_GITIGNORE = `node_modules/
 
 const CONFIG_PATH = CONFIG_FILES[0];
 
-/** The config's own project, which only a config at `.adhere/config.ts` needs. */
+/** The project of the config at `.adhere/config.ts`, and of the rules written in TypeScript beside it. */
 const CONFIG_PROJECT = ".adhere/tsconfig.json";
 
 const EXAMPLES = [
-  [".adhere/style/prefer-small-files.md", SMALL_FILES],
-  [".adhere/style/name-domain-actions.md", NAME_EFFECTS],
+  [".adhere/rules/style/prefer-small-files/RULE.md", SMALL_FILES],
+  [".adhere/rules/style/name-domain-actions/RULE.md", NAME_EFFECTS],
 ] as const;
 
 /**
- * A shared repo has no config: \`adhere install\` copies only rule files, and
- * \`validate\` reads \`.adhere/\` without one.
+ * A shared repo has no config: \`adhere install\` copies only rules, and
+ * \`validate\` reads \`.adhere/rules/\` without one.
  */
 const filesFor = (
   shared: string | undefined,

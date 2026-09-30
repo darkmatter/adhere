@@ -30,8 +30,8 @@ adhere lint --preset effect      # add a built-in rule set; the config becomes o
 adhere lint --filter 'src/**'    # read only matching files; repeat, and ! to leave out
 adhere lint --threshold 0.9      # report at another threshold from the cache; judges nothing again
 adhere lint --deny-warnings      # fail on warnings too
-adhere list org/repo             # the rules in a GitHub repo's .adhere/
-adhere install org/repo[/topic[/rule]][#ref]   # copy them into .adhere/org/repo/
+adhere list org/repo             # the rules in a GitHub repo's .adhere/rules/
+adhere install org/repo[/topic[/rule]][#ref]   # copy them into .adhere/rules/org/repo/
 adhere skill [docs|setup|fix]    # print a skill
 ```
 
@@ -39,9 +39,12 @@ adhere skill [docs|setup|fix]    # print a skill
 
 ## Rule files
 
-A repo's rules live in `.adhere/`, one Markdown file per rule, or a
-TypeScript file (below). The path without `.md` is the rule id: `.adhere/data/brand-ports.md` is
-`data/brand-ports`. A `.adhere/` in a subdirectory holds rules for that
+A repo's rules live in `.adhere/rules/`, a directory per rule holding a
+`RULE.md`, or a `RULE.ts` (below). The directory's path is the rule id:
+`.adhere/rules/data/brand-ports/RULE.md` is `data/brand-ports`. Other files in
+a rule's directory are not rules. A `*.md` rule elsewhere in `.adhere/`, as
+rules were once written, refuses the run with where it goes to keep its id.
+A `.adhere/rules/` in a subdirectory holds rules for that
 subtree only, and the most specific rule with an id wins. `cache/` and the
 config in `.adhere/` are not rules.
 
@@ -100,8 +103,9 @@ Front matter besides `description`, all optional:
   only when Jev says the code that breaks the rule is as every `appliesTo`
   describes and as no `excludeIf` does.
 
-A rule can instead be a `.ts` file that default-exports `defineRule({...})`
-from `@drkmttr/adhere`, with the fields a config's inline rule takes:
+A rule's directory can hold a `RULE.ts` instead, which default-exports
+`defineRule({...})` from `@drkmttr/adhere`, with the fields a config's inline
+rule takes:
 `description`, `must`, `never`, and the rest. Its `appendState(state, file, Bun)`
 runs right before each request for the rule, and what it returns is spread
 over the request's state, `{ code: { "1": "…", "2": "…" } }`, the file's
@@ -110,8 +114,7 @@ as a schema another file holds, and name the key it adds in the description.
 Nothing it returns is checked, so it can break its own rule. The rule gets
 requests of its own, one more per file judged, and its judgments are not
 redone when what the hook reads changes, only when the file or the rule,
-hook included, does. Every `.ts` file in `.adhere/` but `config.ts` is read
-as a rule, so keep helpers outside it.
+hook included, does. Helpers it imports go beside it in its directory.
 
 A rule a regex, an import check, or the type checker could flag every time
 belongs in that tool, not adhere. `adhere validate` reports rules that look
@@ -119,7 +122,7 @@ like that.
 
 ## Config
 
-A config is optional when `.adhere/` holds rules or `--preset` is given. It
+A config is optional when `.adhere/rules/` holds rules or `--preset` is given. It
 sits at `.adhere/config.ts`, `adhere.config.ts`, or `.adhere.config.ts`; keep
 one.
 
@@ -141,8 +144,8 @@ export default defineConfig({
 
 `overrides` changes any rule by the id the report shows, a preset's with the
 preset first, without copying it; an id no rule has refuses the run. `rules`
-in the config, inline or as a directory path, replaces the `.adhere/` rule
-files entirely. Precedence, highest first: `--threshold`, the config, presets
+in the config, inline or as a directory of rule directories, replaces
+`.adhere/rules/` entirely. Precedence, highest first: `--threshold`, the config, presets
 in order, the default; a rule's own `threshold` beats those, and `overrides`
 beats the rule.
 
@@ -161,13 +164,14 @@ what that ecosystem's linters check exactly. Quiet a preset rule with
 
 ## Shared rules
 
-An organization keeps rules in one repo's `.adhere/`, scaffolded by
+An organization keeps rules in one repo's `.adhere/rules/`, scaffolded by
 `adhere init --shared org/repo`, and other repos copy them in with
 `adhere install org/repo`, or one topic or rule with
-`adhere install org/repo/<topic>[/<rule>]`. Copies land in `.adhere/org/repo/`,
-so `data/brand-ports` becomes the rule `org/repo/data/brand-ports`. They are
-the repo's own rules from then on; a second install skips existing files
-unless `--force`, which overwrites local edits. The source is cloned with git,
+`adhere install org/repo/<topic>[/<rule>]`. Each rule's whole directory lands
+in `.adhere/rules/org/repo/`, so `data/brand-ports` becomes the rule
+`org/repo/data/brand-ports`, and a copied `RULE.ts` runs whenever lint does.
+They are the repo's own rules from then on; a second install skips existing
+rules unless `--force`, which replaces their directories, local edits and all. The source is cloned with git,
 so a private repo needs git's credentials for GitHub.
 
 ## Comments and suppressions

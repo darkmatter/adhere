@@ -1,6 +1,7 @@
 import { access, mkdir, mkdtemp, readdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripVTControlCharacters } from "node:util";
@@ -870,23 +871,31 @@ describe("markdown rules", () => {
     expect(refused.message).toContain("description");
   });
 
-  it("loads a directory: the relative path without .md is the rule id", async () => {
+  it("loads a directory: each rule is a directory holding a RULE.md, and its path is the id", async () => {
     const tree: Record<string, string> = {
-      "/repo/rules/basics/gen.md": "---\ndescription: gen\n---\n```ts\ngen()\n```\n",
-      "/repo/rules/data/brand.md": "---\ndescription: brand\n---\nbrand()\n",
-      "/repo/rules/README.md": "---\ndescription: readme\n---\nnot a rule\n",
-      "/repo/rules/notes.txt": "ignored",
+      "/repo/rules/basics/gen/RULE.md": "---\ndescription: gen\n---\n```ts\ngen()\n```\n",
+      "/repo/rules/data/brand/RULE.md": "---\ndescription: brand\n---\nbrand()\n",
     };
     const fs = FileSystem.layerNoop({
+      // A recursive listing names directories too. A README and a note in a rule's directory are no rules.
       readDirectory: () =>
-        Effect.succeed(["basics/gen.md", "data/brand.md", "README.md", "notes.txt"]),
+        Effect.succeed([
+          "basics",
+          "basics/gen",
+          "basics/gen/RULE.md",
+          "data",
+          "data/brand",
+          "data/brand/RULE.md",
+          "data/brand/why.md",
+          "README.md",
+          "notes.txt",
+        ]),
       readFileString: (file) => Effect.succeed(tree[file] ?? ""),
     });
     const rules = await Effect.runPromise(
       loadRules("/repo/rules").pipe(Effect.provide(Layer.merge(fs, Path.layer))),
     );
     expect(rules).toEqual({
-      README: { description: "readme", must: "not a rule" },
       "basics/gen": { description: "gen", must: "gen()" },
       "data/brand": { description: "brand", must: "brand()" },
     });
@@ -959,10 +968,10 @@ describe("walk", () => {
 describe("nested .adhere rules", () => {
   it("loads every .adhere directory with the containing directory as scope", async () => {
     const root = await onDisk({
-      ".adhere/style/service.md": "---\ndescription: root\n---\nroot()\n",
+      ".adhere/rules/style/service/RULE.md": "---\ndescription: root\n---\nroot()\n",
       ".adhere/cache/ignored.md": "not a rule, so reading it would refuse the load",
-      "packages/api/.adhere/style/service.md": "---\ndescription: api\n---\napi()\n",
-      "packages/api/.adhere/api/schema.md": "---\ndescription: schema\n---\nschema()\n",
+      "packages/api/.adhere/rules/style/service/RULE.md": "---\ndescription: api\n---\napi()\n",
+      "packages/api/.adhere/rules/api/schema/RULE.md": "---\ndescription: schema\n---\nschema()\n",
     });
 
     const entries = await Effect.runPromise(
@@ -972,32 +981,36 @@ describe("nested .adhere rules", () => {
     expect(entries).toEqual([
       {
         id: "style/service",
-        file: `${root}/.adhere/style/service.md`,
+        file: `${root}/.adhere/rules/style/service/RULE.md`,
         scope: root,
         rule: { description: "root", must: "root()" },
       },
       {
         id: "api/schema",
-        file: `${root}/packages/api/.adhere/api/schema.md`,
+        file: `${root}/packages/api/.adhere/rules/api/schema/RULE.md`,
         scope: `${root}/packages/api`,
         rule: { description: "schema", must: "schema()" },
       },
       {
         id: "style/service",
-        file: `${root}/packages/api/.adhere/style/service.md`,
+        file: `${root}/packages/api/.adhere/rules/style/service/RULE.md`,
         scope: `${root}/packages/api`,
         rule: { description: "api", must: "api()" },
       },
     ]);
   });
 
-  it("loads a rule written in TypeScript by its default export, and neither the config nor a declaration file", async () => {
-    // Neither default-exports a rule, so reading either as one would refuse the load.
+  it("loads a RULE.ts by its default export, which can import a helper beside it", async () => {
+    // Neither the config nor the helper default-exports a rule, so reading either as one would refuse the load.
     const root = await onDisk({
       ".adhere/config.ts": "export default {};\n",
-      ".adhere/types.d.ts": "export {};\n",
-      ".adhere/data/ports.ts":
-        'export default { description: "A port must be branded.", must: "Port.make(3000)", appendState: () => ({ ports: [3000] }) };\n',
+      ".adhere/rules/data/ports/RULE.ts": [
+        'import { ports } from "./ports.ts";',
+        "",
+        'export default { description: "A port must be branded.", must: "Port.make(3000)", appendState: () => ({ ports }) };',
+        "",
+      ].join("\n"),
+      ".adhere/rules/data/ports/ports.ts": "export const ports = [3000];\n",
     });
 
     const entries = await Effect.runPromise(
@@ -1007,17 +1020,22 @@ describe("nested .adhere rules", () => {
     expect(entries).toMatchObject([
       {
         id: "data/ports",
-        file: `${root}/.adhere/data/ports.ts`,
+        file: `${root}/.adhere/rules/data/ports/RULE.ts`,
         scope: root,
         rule: { description: "A port must be branded.", must: "Port.make(3000)" },
       },
     ]);
-    expect(typeof entries[0]?.rule.appendState).toBe("function");
+    const added = await entries[0]?.rule.appendState?.(
+      { code: {} },
+      { path: "", contents: "" },
+      undefined as never,
+    );
+    expect(added).toEqual({ ports: [3000] });
   });
 
   it("refuses a TypeScript rule file that default-exports no rule, naming the file", async () => {
     const root = await onDisk({
-      ".adhere/ports.ts": 'export const rule = { description: "d", must: "m()" };\n',
+      ".adhere/rules/ports/RULE.ts": 'export const rule = { description: "d", must: "m()" };\n',
     });
 
     const refused = await Effect.runPromise(
@@ -1025,17 +1043,52 @@ describe("nested .adhere rules", () => {
     );
 
     expect(refused.message).toContain(
-      `${root}/.adhere/ports.ts: a rule file must default-export defineRule({...})`,
+      `${root}/.adhere/rules/ports/RULE.ts: a rule file must default-export defineRule({...})`,
     );
+  });
+
+  it("refuses a Markdown file outside every rule's directory, saying where it goes to keep its id", async () => {
+    const root = await onDisk({
+      ".adhere/rules/data/ports/RULE.md": "---\ndescription: ports\n---\nports()\n",
+      ".adhere/rules/data/ports/why.md": "In a rule's directory, so no rule.\n",
+      ".adhere/rules/README.md": "# The rules\n",
+      ".adhere/rules/secrets.md": "---\ndescription: secrets\n---\nsecrets()\n",
+      ".adhere/style/service.md": "---\ndescription: service\n---\nservice()\n",
+    });
+
+    const refused = await Effect.runPromise(
+      Effect.flip(loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem))),
+    );
+
+    expect(refused.message).toBe(
+      [
+        "Rules now live one to a directory, as .adhere/rules/<id>/RULE.md or RULE.ts. Move each of these to keep its id:",
+        "  .adhere/rules/secrets.md → .adhere/rules/rules/secrets/RULE.md",
+        "  .adhere/style/service.md → .adhere/rules/style/service/RULE.md",
+      ].join("\n"),
+    );
+  });
+
+  it("refuses a rule's directory that holds both a RULE.md and a RULE.ts", async () => {
+    const root = await onDisk({
+      ".adhere/rules/ports/RULE.md": "---\ndescription: ports\n---\nports()\n",
+      ".adhere/rules/ports/RULE.ts": "export default {};\n",
+    });
+
+    const refused = await Effect.runPromise(
+      Effect.flip(loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem))),
+    );
+
+    expect(refused.message).toBe(".adhere/rules/ports: a rule is a RULE.md or a RULE.ts, not both");
   });
 
   it("skips .adhere directories inside dependency and generated trees, and through links", async () => {
     // A skipped file is not a rule, so reading it would refuse the load.
     const root = await onDisk({
-      ".adhere/e2e/isolated.md": "---\ndescription: isolated\n---\nisolated()\n",
-      "node_modules/@drkmttr/adhere/.adhere/rules/refusals-name-the-file.md": "not a rule",
-      "dist/.adhere/style/service.md": "not a rule",
-      ".git/.adhere/leftover.md": "not a rule",
+      ".adhere/rules/e2e/isolated/RULE.md": "---\ndescription: isolated\n---\nisolated()\n",
+      "node_modules/@drkmttr/adhere/.adhere/rules/refusals-name-the-file/RULE.md": "not a rule",
+      "dist/.adhere/rules/style/service/RULE.md": "not a rule",
+      ".git/.adhere/rules/leftover/RULE.md": "not a rule",
     });
     // A workspace package linked into node_modules and back, as pnpm links them.
     await mkdir(join(root, "packages"), { recursive: true });
@@ -1058,25 +1111,25 @@ describe("nested .adhere rules", () => {
     const entries = [
       {
         id: "style/root-only",
-        file: "/repo/.adhere/style/root-only.md",
+        file: "/repo/.adhere/rules/style/root-only/RULE.md",
         scope: "/repo",
         rule: rootOnly,
       },
       {
         id: "style/service",
-        file: "/repo/.adhere/style/service.md",
+        file: "/repo/.adhere/rules/style/service/RULE.md",
         scope: "/repo",
         rule: rootShadowed,
       },
       {
         id: "style/service",
-        file: "/repo/packages/api/.adhere/style/service.md",
+        file: "/repo/packages/api/.adhere/rules/style/service/RULE.md",
         scope: "/repo/packages/api",
         rule: apiShadow,
       },
       {
         id: "api/schema",
-        file: "/repo/packages/api/.adhere/api/schema.md",
+        file: "/repo/packages/api/.adhere/rules/api/schema/RULE.md",
         scope: "/repo/packages/api",
         rule: apiOnly,
       },
@@ -1284,7 +1337,7 @@ describe("contradictions", () => {
   const entry = (id: string, scope: string, description: string): RuleEntry => ({
     id,
     scope,
-    file: `${scope}/.adhere/${id}.md`,
+    file: `${scope}/.adhere/rules/${id}/RULE.md`,
     rule: { description, must: `${id}()` },
   });
   const entries = [
@@ -1359,8 +1412,8 @@ describe("contradictions", () => {
     expect(contradictions).toEqual([{ first: entries[0], second: entries[1], probability: 0.9 }]);
     const report = formatContradictions(contradictions);
     expect(report).toContain("1. No code can follow both (0.90):");
-    expect(report).toContain("/repo/.adhere/style/use-services.md");
-    expect(report).toContain("/repo/packages/api/.adhere/style/plain-functions.md");
+    expect(report).toContain("/repo/.adhere/rules/style/use-services/RULE.md");
+    expect(report).toContain("/repo/packages/api/.adhere/rules/style/plain-functions/RULE.md");
     // A preset's rule names its preset, where the project's own names its file.
     const fromPreset: RuleEntry = {
       id: "services/provide-at-entry",
@@ -1372,7 +1425,7 @@ describe("contradictions", () => {
       { first: entries[0]!, second: fromPreset, probability: 0.8 },
     ]);
     expect(mixed).toContain("   - effect/services/provide-at-entry\n");
-    expect(mixed).toContain("   - style/use-services (/repo/.adhere/style/use-services.md)\n");
+    expect(mixed).toContain("   - style/use-services (/repo/.adhere/rules/style/use-services/RULE.md)\n");
   });
 
   it("asks nothing when no two rules share files", async () => {
@@ -1524,7 +1577,7 @@ describe("wording", () => {
       {
         id: "data/ports",
         scope: "/repo",
-        file: "/repo/.adhere/data/ports.md",
+        file: "/repo/.adhere/rules/data/ports/RULE.md",
         rule: { description: "A port is branded.", must: "a()" },
       },
       {
@@ -1544,7 +1597,7 @@ describe("wording", () => {
     ];
     expect(formatStrays(straysAmong(entries), "/repo")).toEqual([
       "2 rules are not worded as the rule writing tips recommend:",
-      "  data/ports (.adhere/data/ports.md)",
+      "  data/ports (.adhere/rules/data/ports/RULE.md)",
       '    The description does not say "must", though the rule has a must example.',
       "    The rule has no never example. Rules with one example of each kind judge best.",
       "  style/small",
@@ -1576,11 +1629,14 @@ describe("wording", () => {
 });
 
 describe("presets", () => {
-  it("names each preset's topics after its subdirectories", async () => {
+  it("names each preset's topics after its subdirectories that are not rules", async () => {
     for (const name of Object.keys(presets) as ReadonlyArray<keyof typeof presets>) {
-      const entries = await readdir(fileURLToPath(presets[name].rules), { withFileTypes: true });
-      const directories = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
-      expect([...topicsOf(name)].sort()).toEqual(directories.sort());
+      const directory = fileURLToPath(presets[name].rules);
+      const entries = await readdir(directory, { withFileTypes: true });
+      const topics = entries.filter(
+        (entry) => entry.isDirectory() && !existsSync(join(directory, entry.name, "RULE.md")),
+      );
+      expect([...topicsOf(name)].sort()).toEqual(topics.map((entry) => entry.name).sort());
     }
   });
 
@@ -1609,7 +1665,10 @@ describe("init", () => {
     await Effect.runPromise(initProject(root));
     const config = await readFile(join(root, ".adhere", "config.ts"), "utf8");
     const project = JSON.parse(await readFile(join(root, ".adhere", "tsconfig.json"), "utf8"));
-    const rule = await readFile(join(root, ".adhere", "style", "prefer-small-files.md"), "utf8");
+    const rule = await readFile(
+      join(root, ".adhere", "rules", "style", "prefer-small-files", "RULE.md"),
+      "utf8",
+    );
 
     expect(config).toContain('import { defineConfig } from "@drkmttr/adhere";');
     expect(config).toContain("export default defineConfig({");
@@ -1624,7 +1683,7 @@ describe("init", () => {
     expect(second.created).toEqual([]);
     expect(second.skipped).toContain(".adhere/config.ts");
     expect(second.skipped).toContain(".adhere/tsconfig.json");
-    expect(second.skipped).toContain(".adhere/style/prefer-small-files.md");
+    expect(second.skipped).toContain(".adhere/rules/style/prefer-small-files/RULE.md");
   });
 
   it("scaffolds example rules worded as the rule writing tips recommend", async () => {
@@ -1632,7 +1691,7 @@ describe("init", () => {
     await Effect.runPromise(initProject(root));
 
     for (const name of ["prefer-small-files", "name-domain-actions"]) {
-      const file = join(root, ".adhere", "style", `${name}.md`);
+      const file = join(root, ".adhere", "rules", "style", name, "RULE.md");
       const rule = await Effect.runPromise(parseRuleMarkdown(await readFile(file, "utf8"), file));
       expect(strayingOf(rule)).toEqual([]);
     }
@@ -1667,8 +1726,8 @@ describe("init", () => {
       ".github/workflows/adhere.yaml",
       "alchemy.run.ts",
       ".gitignore",
-      ".adhere/style/prefer-small-files.md",
-      ".adhere/style/name-domain-actions.md",
+      ".adhere/rules/style/prefer-small-files/RULE.md",
+      ".adhere/rules/style/name-domain-actions/RULE.md",
     ]);
     expect(result.skipped).toEqual(["package.json"]);
     expect(result.install).toEqual({
@@ -2335,7 +2394,7 @@ describe("linter check", () => {
     expect(
       formatLinterCheck(
         [
-          tallied("data/ports", 10, 9, "/repo/.adhere/data/ports.md"),
+          tallied("data/ports", 10, 9, "/repo/.adhere/rules/data/ports/RULE.md"),
           tallied("style/naming", 10, 5),
           tallied("style/small", 10, 2),
           tallied("style/new", 4, 4),
@@ -2344,7 +2403,7 @@ describe("linter check", () => {
       ),
     ).toEqual([
       "2 rules flagged by the linter check:",
-      "  data/ports (.adhere/data/ports.md)",
+      "  data/ports (.adhere/rules/data/ports/RULE.md)",
       "    Flagged on 9 of 10 files: a regular linter should probably check this rule.",
       "  style/naming",
       "    Flagged on 5 of 10 files: say more precisely what the rule applies to.",

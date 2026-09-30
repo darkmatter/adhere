@@ -60,10 +60,10 @@ const presets = new URL("../../presets/", import.meta.url);
 const repos = process.env.ADHERE_EVAL_REPOS ?? join(homedir(), ".agents/repos");
 
 /** Whether a preset still has a rule; the labels name two that are gone. */
-const exists = (id: string) => existsSync(fileURLToPath(new URL(`${id}.md`, presets)));
+const exists = (id: string) => existsSync(fileURLToPath(new URL(`${id}/RULE.md`, presets)));
 
 const ruleOf = (id: string): Promise<Rule> =>
-  readFile(new URL(`${id}.md`, presets), "utf8").then((text) =>
+  readFile(new URL(`${id}/RULE.md`, presets), "utf8").then((text) =>
     Effect.runPromise(parseRuleMarkdown(text, id)),
   );
 
