@@ -676,6 +676,51 @@ its matchers dropped, with their scores.
 Keeping the scope out of the description keeps the description to what the
 rule asks for, which the report shows, and gives each part a score of its own.
 
+### Workspace packages
+
+A rule can turn on whose package an import is of: the repository's own, or
+one installed from a registry. The file alone does not show that, so a rule
+can ask for the workspace's packages, with `includeWorkspacePackages: true`
+in its front matter, or as a field of a rule in TypeScript or a config:
+
+````md
+---
+description: A function from one of this repository's own packages, which `workspacePackages` names, must be called through the package's namespace, never imported by its own name.
+includeWorkspacePackages: true
+---
+
+## Must
+
+```ts
+import * as Orders from "orders-core";
+```
+
+## Never
+
+```ts
+import { parse } from "orders-core";
+```
+````
+
+Jev then reads, beside the code, `workspacePackages`: each package's name
+with its directory from the working directory, as in
+`{ "orders-core": "packages/orders" }`. The description can name that key in
+backticks, as the questions name `code`. A package that is not in it is an
+installed one.
+
+The packages are read on every run, when a rule asks for them, from the
+working directory's `package.json`, whose `workspaces` npm, Bun, and Yarn
+read, and from `pnpm-workspace.yaml`'s `packages`. In a pattern, `*` is any
+directory and `**` any depth of them, and one that starts with `!` leaves out
+what it matches. Each matched directory's `package.json` gives the name.
+Nothing need be installed, so a run in CI reads the same packages as one on a
+laptop. A working directory that is not a workspace's root has none.
+
+Such a rule goes to Jev in requests of its own, as a rule with `appendState`
+does, so no other rule reads the packages. They are part of what its
+judgments are cached under: when a package is added, renamed, or moved, that
+rule is judged again for every file, and no other rule is.
+
 ### Rule writing tips
 
 We've evaluated different ways of giving Jev a rule, to catch the most

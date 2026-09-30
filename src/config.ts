@@ -68,6 +68,14 @@ const RuleFields = Schema.Struct({
    */
   excludeIf: Schema.optionalKey(Schema.Array(Schema.String)),
   /**
+   * Whether Jev reads, beside the code, the workspace's packages as
+   * `workspacePackages`: each one's name with its directory, so the rule can
+   * tell an import of the repository's own package from an installed one's.
+   * The rule's questions go in requests of their own, and a change to the
+   * packages judges it again.
+   */
+  includeWorkspacePackages: Schema.optionalKey(Schema.Boolean),
+  /**
    * A hook on the state Jev reads for the rule, in a rule written in
    * TypeScript (see `AppendState`). The rule's questions go in requests of
    * their own, so only they read what it adds.
@@ -296,6 +304,12 @@ export interface ResolvedConfig {
   readonly exclude?: ReadonlyArray<string>;
   /** Whether Jev reads every comment; unset, only the `@adhere` notes. */
   readonly includeComments?: boolean;
+  /**
+   * The workspace's packages, each name with its directory from the working
+   * directory, read from its manifests on every run, when a rule asks for
+   * them with `includeWorkspacePackages`.
+   */
+  readonly workspacePackages?: Readonly<Record<string, string>>;
 }
 
 /** Command-line values that apply on top of the config file. */

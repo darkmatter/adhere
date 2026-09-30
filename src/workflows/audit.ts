@@ -112,14 +112,22 @@ const LAYOUT = "sections";
  * judge question, and its matchers' when it has any. An edited rule or
  * matcher re-judges the rule, and a question asked differently re-judges
  * every rule. So does an edited `appendState`, by its source; what the hook
- * reads outside the file is not known until it runs, so a change there does not.
+ * reads outside the file is not known until it runs, so a change there does
+ * not. A rule that reads the workspace's packages depends on them too, so a
+ * package added, renamed, or moved re-judges that rule and no other.
  */
-const fingerprintOf = (model: string, rule: Rule) => {
+const fingerprintOf = (
+  model: string,
+  rule: Rule,
+  workspacePackages: Readonly<Record<string, string>> = {},
+) => {
   const matchers = matcherQuestions("", rule).map(([, question]) => question);
   const scope = matchers.length === 0 ? "" : `\u0000${JSON.stringify(matchers)}`;
   const hook = rule.appendState === undefined ? "" : `\u0000${rule.appendState.toString()}`;
+  const packages =
+    rule.includeWorkspacePackages === true ? `\u0000${JSON.stringify(workspacePackages)}` : "";
   return sha256(
-    `${model}\u0000${LAYOUT}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}${hook}`,
+    `${model}\u0000${LAYOUT}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}${hook}${packages}`,
   );
 };
 
@@ -314,7 +322,7 @@ export const planAudit = (
       const prepared: Record<RuleId, PreparedRule> = yield* Effect.forEach(
         Object.entries(rules),
         ([id, rule]) =>
-          Effect.map(fingerprintOf(config.model, rule), (fingerprint) => {
+          Effect.map(fingerprintOf(config.model, rule, config.workspacePackages), (fingerprint) => {
             const preset = presetOfRule.get(rule);
             return [
               id,

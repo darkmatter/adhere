@@ -477,18 +477,20 @@ export const requestsOf = (body: Body): ReadonlyArray<Body> => {
   return requests.map(({ questions }) => ({ ...body, questions }));
 };
 
+/** Whether a rule reads state of its own: what its `appendState` adds, or the workspace's packages. */
+const readsOwnState = (rule: Rule): boolean =>
+  rule.appendState !== undefined || rule.includeWorkspacePackages === true;
+
 /**
- * The rules as requests carry them: every rule without `appendState` in one
- * body, and each rule with it in a body of its own, so that what its hook
- * puts in the state only its own questions read.
+ * The rules as requests carry them: every rule that reads only the code in
+ * one body, and each rule with state of its own in a body of its own, so
+ * that what is added to the state for it only its own questions read.
  */
 export const requestGroups = (rules: Rules): ReadonlyArray<Rules> => {
-  const shared = Record.filter(rules, (rule) => rule.appendState === undefined);
+  const shared = Record.filter(rules, (rule) => !readsOwnState(rule));
   return [
     ...(Record.isEmptyRecord(shared) ? [] : [shared]),
-    ...Object.entries(rules).flatMap(([id, rule]) =>
-      rule.appendState === undefined ? [] : [{ [id]: rule }],
-    ),
+    ...Object.entries(rules).flatMap(([id, rule]) => (readsOwnState(rule) ? [{ [id]: rule }] : [])),
   ];
 };
 

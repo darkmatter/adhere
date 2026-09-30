@@ -35,6 +35,7 @@ import { type Range, sectionsOf } from "../src/excerpt.ts";
 import { tokenize } from "../src/highlight.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
+import { workspacePackagesOf } from "../src/workspaces.ts";
 import { presetOf, presets, topicsOf, wholePresetOf } from "../src/presets.ts";
 import type { ScannedFile } from "../src/models/Audit.ts";
 import {
@@ -242,6 +243,7 @@ const audit = (options: {
   readonly cache: Layer.Layer<AuditCache>;
   readonly files?: ReadonlyArray<ScannedFile>;
   readonly includeComments?: boolean;
+  readonly workspacePackages?: Readonly<Record<string, string>>;
 }) =>
   Effect.runPromise(
     runAudit.pipe(
@@ -255,6 +257,9 @@ const audit = (options: {
             ...(options.includeComments === undefined
               ? {}
               : { includeComments: options.includeComments }),
+            ...(options.workspacePackages === undefined
+              ? {}
+              : { workspacePackages: options.workspacePackages }),
           }),
           Layer.succeed(SourceWalker, { files: Effect.succeed(options.files ?? [source]) }),
           options.jev,
@@ -472,6 +477,9 @@ describe("jev's context", () => {
     const hooked = { ...b, appendState: () => ({}) };
     expect(requestGroups({ a, hooked, b })).toEqual([{ a, b }, { hooked }]);
     expect(requestGroups({ hooked })).toEqual([{ hooked }]);
+    // A rule that reads the workspace's packages has state of its own too.
+    const packaged = { ...b, includeWorkspacePackages: true };
+    expect(requestGroups({ a, packaged, hooked })).toEqual([{ a }, { packaged }, { hooked }]);
     expect(judgeLoad(code1, { a, b, hooked }).requests).toBe(2);
     expect(locateRequests(code1, { a, hooked })).toBe(2);
   });
@@ -807,6 +815,25 @@ describe("markdown rules", () => {
     expect(refused.message).toContain("rules/a.md");
   });
 
+  it("front matter's includeWorkspacePackages is true or false, and nothing else", async () => {
+    const withValue = (value: string) =>
+      `---\ndescription: d\nincludeWorkspacePackages: ${value}\n---\na()\n`;
+    expect(await parse(withValue("true"))).toEqual({
+      description: "d",
+      includeWorkspacePackages: true,
+      must: "a()",
+    });
+    expect(await parse(withValue("false"))).toEqual({
+      description: "d",
+      includeWorkspacePackages: false,
+      must: "a()",
+    });
+    const refused = await Effect.runPromise(
+      Effect.flip(parseRuleMarkdown(withValue("yes"), "rules/a.md")),
+    );
+    expect(refused.message).toContain("includeWorkspacePackages");
+  });
+
   it("front matter's appliesTo and excludeIf are JSON arrays of strings", async () => {
     expect(
       await parse(
@@ -962,6 +989,59 @@ describe("walk", () => {
     expect(files).toEqual(["packages/api/alias.ts", "src/a.ts", "src/deep/b.ts"]);
     // The root, src/, src/deep/, packages/, and packages/api/ were read, in that many steps.
     expect(progress.at(-1)).toEqual([5, 3]);
+  });
+});
+
+describe("workspace packages", () => {
+  const packagesOf = (root: string) =>
+    Effect.runPromise(workspacePackagesOf(root).pipe(Effect.provide(realFileSystem)));
+  const named = (name: string) => JSON.stringify({ name });
+
+  it("reads a root package.json's workspaces, by name, with each package's directory", async () => {
+    const root = await onDisk({
+      "package.json": JSON.stringify({
+        workspaces: ["packages/*", "apps/**", "!packages/private"],
+      }),
+      "packages/orders/package.json": named("orders-core"),
+      "packages/cache/package.json": named("@acme/cache"),
+      "packages/private/package.json": named("private"),
+      "packages/notes/README.md": "no manifest, so no package",
+      "apps/web/package.json": named("web"),
+      "apps/tools/cli/package.json": named("cli"),
+      "apps/web/node_modules/zod/package.json": named("zod"),
+      "elsewhere/package.json": named("elsewhere"),
+    });
+
+    expect(await packagesOf(root)).toEqual({
+      "@acme/cache": "packages/cache",
+      cli: "apps/tools/cli",
+      "orders-core": "packages/orders",
+      web: "apps/web",
+    });
+  });
+
+  it("reads Yarn's workspaces.packages, and pnpm-workspace.yaml's packages", async () => {
+    const yarn = await onDisk({
+      "package.json": JSON.stringify({ workspaces: { packages: ["libs/*"] } }),
+      "libs/a/package.json": named("a"),
+    });
+    expect(await packagesOf(yarn)).toEqual({ a: "libs/a" });
+
+    const pnpm = await onDisk({
+      "package.json": named("root"),
+      "pnpm-workspace.yaml":
+        "packages:\n  - 'packages/*'\n  - \"tools/cli\"\n  - '!packages/skip'\nallowBuilds:\n  msgpackr-extract: false\n",
+      "packages/b/package.json": named("b"),
+      "packages/skip/package.json": named("skip"),
+      "tools/cli/package.json": named("cli"),
+    });
+    expect(await packagesOf(pnpm)).toEqual({ b: "packages/b", cli: "tools/cli" });
+  });
+
+  it("has no packages without a workspace, or with a manifest it cannot read", async () => {
+    expect(await packagesOf(await onDisk({ "package.json": named("alone") }))).toEqual({});
+    expect(await packagesOf(await onDisk({ "package.json": "{ not json" }))).toEqual({});
+    expect(await packagesOf(await onDisk({ "README.md": "no manifest" }))).toEqual({});
   });
 });
 
@@ -2491,6 +2571,25 @@ describe("pipeline", () => {
     expect(third.calls).toEqual({ judge: [], locate: [] });
   });
 
+  it("re-judges a rule that reads the workspace's packages when they change, and nothing else", async () => {
+    const cache = memoryCache();
+    const packaged = { ...b, includeWorkspacePackages: true };
+    const run = (workspacePackages: Readonly<Record<string, string>>) => {
+      const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+      return audit({ rules: { a, b: packaged }, jev: jev.layer, cache, workspacePackages }).then(
+        () => jev.calls,
+      );
+    };
+    await run({ "orders-core": "packages/orders" });
+    // The same packages: every answer is cached.
+    expect(await run({ "orders-core": "packages/orders" })).toEqual({ judge: [], locate: [] });
+    // A package added: the rule that reads them is judged again, and the other is not.
+    expect(await run({ "orders-core": "packages/orders", billing: "packages/billing" })).toEqual({
+      judge: [{ b: packaged }],
+      locate: [],
+    });
+  });
+
   it("answers a file from the cache wherever its content moves", async () => {
     const cache = memoryCache();
     await audit({
@@ -3465,7 +3564,7 @@ describe("jev over http", () => {
   });
 
   /** Jev over a client that records each request's state and question ids, and says yes to each. */
-  const recordedJev = () => {
+  const recordedJev = (workspacePackages?: Readonly<Record<string, string>>) => {
     const sent: Array<{ readonly state: unknown; readonly ids: ReadonlyArray<string> }> = [];
     const client = HttpClient.make((request) => {
       const body: {
@@ -3489,6 +3588,7 @@ describe("jev over http", () => {
           threshold: 0.7,
           sufficiencyThreshold: 0.7,
           rules: {},
+          ...(workspacePackages === undefined ? {} : { workspacePackages }),
         }),
         Layer.succeed(Credentials, {
           apiKey: Effect.succeed(Redacted.make("tsk_saved")),
@@ -3527,6 +3627,28 @@ describe("jev over http", () => {
       { state: { code: { "1": "const port = 3000;" } }, ids: ["a"] },
       { state: appended, ids: ["hooked"] },
       { state: appended, ids: ["start:hooked:1", "end:hooked:1", "sufficient:hooked"] },
+    ]);
+  });
+
+  it("adds the workspace's packages to the state of a rule that asks for them, and of no other", async () => {
+    const packaged = { ...b, includeWorkspacePackages: true };
+    const { sent, layer } = recordedJev({ "orders-core": "packages/orders" });
+    const asked = Effect.gen(function* () {
+      const jev = yield* Jev;
+      yield* jev.judge(["const port = 3000;"], { a, packaged }, [], judgedFile);
+    });
+
+    await Effect.runPromise(Effect.provide(asked, layer));
+
+    expect(sent).toEqual([
+      { state: { code: { "1": "const port = 3000;" } }, ids: ["a"] },
+      {
+        state: {
+          code: { "1": "const port = 3000;" },
+          workspacePackages: { "orders-core": "packages/orders" },
+        },
+        ids: ["packaged"],
+      },
     ]);
   });
 

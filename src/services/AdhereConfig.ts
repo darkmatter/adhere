@@ -21,6 +21,7 @@ import {
   shownId,
   withOverrides,
 } from "#rules.ts";
+import { workspacePackagesOf } from "#workspaces.ts";
 import { Context, Effect, FileSystem, Layer, Path, Record } from "effect";
 
 export class AdhereConfig extends Context.Service<AdhereConfig, ResolvedConfig>()(
@@ -129,6 +130,17 @@ export const AdhereConfigLive = (flags: Flags) =>
           });
         }
       }
-      return AdhereConfig.of({ ...resolved, scopedRules: withOverrides(entries, overrides) });
+      const scopedRules = withOverrides(entries, overrides);
+      // The manifests are read on every run, so a changed workspace is seen, and only when a rule reads them.
+      const workspacePackages = scopedRules.some(
+        (entry) => entry.rule.includeWorkspacePackages === true,
+      )
+        ? yield* workspacePackagesOf(cwd)
+        : undefined;
+      return AdhereConfig.of({
+        ...resolved,
+        scopedRules,
+        ...(workspacePackages === undefined ? {} : { workspacePackages }),
+      });
     }),
   );

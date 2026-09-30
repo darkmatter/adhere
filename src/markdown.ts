@@ -44,6 +44,7 @@ const FrontMatter = Schema.Struct({
   level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
   appliesTo: Schema.optionalKey(Matchers),
   excludeIf: Schema.optionalKey(Matchers),
+  includeWorkspacePackages: Schema.optionalKey(Schema.Literals(["true", "false"])),
 });
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
@@ -206,5 +207,12 @@ export const parseRuleMarkdown = (
         message: `${file}: the body needs code, in a fence under a Must, Never, Should, or Should not heading, or untagged`,
       });
     }
-    return { ...front, ...code };
+    const { includeWorkspacePackages, ...fields } = front;
+    return {
+      ...fields,
+      ...(includeWorkspacePackages === undefined
+        ? {}
+        : { includeWorkspacePackages: includeWorkspacePackages === "true" }),
+      ...code,
+    };
   });
