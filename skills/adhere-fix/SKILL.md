@@ -32,14 +32,15 @@ rules that changed.
 Each finding shows:
 
 - the rule id, a preset's with its preset first, as in
-  `alchemy/providers/idempotent-delete`, Jev's probability, and the rule's
-  description;
+  `alchemy/providers/idempotent-delete`, then `confidence`, Jev's probability
+  that the file breaks the rule, and `context`, its probability that the file
+  shows enough to decide, and on the next line the rule's description;
 - the section of the file Jev points at, a run of whole statements of about 30
   lines, with the lines it names underlined, or marked with a bar when they
   are several: usually where the violation starts, which may run on past them;
-- sometimes `warning: this file may not show enough to check this rule`: the
-  rule may turn on another file, a library, or a service. Most of these are
-  false; read what the code relies on before fixing it. Its `help:` suggests
+- when `context` is low, `warning: this file may not show enough to check
+  this rule`: the rule may turn on another file, a library, or a service. Most
+  of these are false; read what the code relies on before fixing it. Its `help:` suggests
   an `@adhere` note, which follows the same rule as a suppression (see below);
 - `hint:`, the code the rule wants, or `never:` for a rule that only shows code
   to avoid.

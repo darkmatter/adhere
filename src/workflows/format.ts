@@ -1,3 +1,4 @@
+import { DEFAULT_SUFFICIENCY_THRESHOLD } from "#config.ts";
 import { type Kind, tokenize } from "#highlight.ts";
 import { shownId } from "#rules.ts";
 import type { AuditPlan, AuditResult, FileDone, Finding } from "#workflows/audit.ts";
@@ -11,6 +12,7 @@ type Role =
   | "error"
   | "warning"
   | "probability"
+  | "low"
   | "description"
   | "path"
   | "lineNumber"
@@ -30,8 +32,8 @@ type Line = ReadonlyArray<Span>;
  * palette (`38;5;N`) or truecolor (`38;2;R;G;B`), bold with a trailing `;1`,
  * and a dim line number. Of the header, only the `×` and the rule are red, or
  * a warning's `⚠` and rule amber, since a whole line of red is hard to read:
- * the probability is an accent, and the description a cool near-white, set
- * here since a theme's own white can be gray. The code's are the terminal's
+ * a score is an accent, or amber when it is low, and the description a cool
+ * near-white, set here since a theme's own white can be gray. The code's are the terminal's
  * own colors (`3N`), so the user's theme picks shades that read on its
  * background; none is magenta, which would run into the underline.
  */
@@ -39,6 +41,7 @@ const THEME: Readonly<Record<Role, string>> = {
   error: "38;2;164;20;71;1",
   warning: "38;2;214;154;0;1",
   probability: "38;5;156",
+  low: "38;2;214;154;0",
   description: "38;2;230;230;255",
   path: "38;2;5;125;160;1",
   lineNumber: "2",
@@ -90,15 +93,35 @@ const displayPath = (file: string, root: string | undefined): string =>
 const counted = (count: number, one: string, many: string): string =>
   `${count} ${count === 1 ? one : many}`;
 
-const header = (finding: Finding): Line => [
-  span("  "),
-  span(finding.level === "warning" ? "⚠" : "×", finding.level),
-  span(" "),
-  span(shownId({ id: finding.rule, preset: finding.preset }), finding.level),
-  span(" ("),
-  span(finding.probability.toFixed(2), "probability"),
-  span("): "),
-  span(finding.description, "description"),
+/**
+ * Below this, a finding's confidence is low. On the evals, findings at 0.9
+ * and above were usually real, and those under it mostly were not.
+ */
+const CONFIDENT = 0.9;
+
+const score = (value: number, low: boolean): Span =>
+  span(value.toFixed(2), low ? "low" : "probability");
+
+const lacksContext = (finding: Finding, sufficiencyThreshold: number): boolean =>
+  finding.context !== undefined && finding.context < sufficiencyThreshold;
+
+/**
+ * The rule, then its scores, where they stay in one place whatever the
+ * description's length; the description has the next line to itself.
+ */
+const header = (finding: Finding, sufficiencyThreshold: number): ReadonlyArray<Line> => [
+  [
+    span("  "),
+    span(finding.level === "warning" ? "⚠" : "×", finding.level),
+    span(" "),
+    span(shownId({ id: finding.rule, preset: finding.preset }), finding.level),
+    span("  confidence "),
+    score(finding.probability, finding.probability < CONFIDENT),
+    ...(finding.context === undefined
+      ? []
+      : [span(" · context "), score(finding.context, lacksContext(finding, sufficiencyThreshold))]),
+  ],
+  [span("    "), span(finding.description, "description")],
 ];
 
 /**
@@ -151,19 +174,14 @@ const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line
 
 /**
  * The warning on a finding whose file may not show enough to check its rule,
- * with Jev's probability that it does not, and help: how to add what the
- * code relies on as a note Jev reads, in the form the README asks for.
+ * which its context score in the header says how far, and help: how to add
+ * what the code relies on as a note Jev reads, in the form the README asks for.
  */
-const insufficient = (finding: Finding): ReadonlyArray<Line> =>
-  finding.insufficiency === undefined
+const insufficient = (finding: Finding, sufficiencyThreshold: number): ReadonlyArray<Line> =>
+  !lacksContext(finding, sufficiencyThreshold)
     ? []
     : [
-        [
-          span("  warning: ", "warning"),
-          span(
-            `this file may not show enough to check this rule (Jev: ${finding.insufficiency.toFixed(2)} that it does not)`,
-          ),
-        ],
+        [span("  warning: ", "warning"), span("this file may not show enough to check this rule")],
         ...hanging(span("     help: ", "label"), [
           [span("add what the code relies on outside this file as a note Jev reads:")],
           highlighted("// @adhere <the fact>, and how you know it")[0] ?? [],
@@ -183,16 +201,40 @@ const hint = (finding: Finding): ReadonlyArray<Line> => {
 
 /**
  * One diagnostic, in the frame `vp lint` prints on a terminal: a header with
- * the rule in red, the section of the file Jev points at with the lines it
- * names in pink, a warning when the file may not show enough to decide, and
- * the code to write as the hint.
+ * the rule in red and its scores, the description, the section of the file
+ * Jev points at with the lines it names in pink, a warning when the file may
+ * not show enough to decide, and the code to write as the hint.
  */
-const frame = (finding: Finding, root: string | undefined): ReadonlyArray<Line> => [
-  header(finding),
+const frame = (
+  finding: Finding,
+  root: string | undefined,
+  sufficiencyThreshold: number,
+): ReadonlyArray<Line> => [
+  ...header(finding, sufficiencyThreshold),
   ...excerpt(finding, root),
-  ...insufficient(finding),
+  ...insufficient(finding, sufficiencyThreshold),
   ...hint(finding),
 ];
+
+/** What the scores in a header mean, and when each is low, once under the findings. */
+const legend = (result: AuditResult, sufficiencyThreshold: number): ReadonlyArray<Line> =>
+  result.findings.length === 0
+    ? []
+    : [
+        [
+          span("confidence", "label"),
+          span(": Jev's probability that the file breaks the rule. Low, in amber, below "),
+          span(CONFIDENT.toFixed(2)),
+          span("."),
+        ],
+        [
+          span("context", "label"),
+          span(": its probability that the file shows enough to decide. Low, in amber, below "),
+          span(sufficiencyThreshold.toFixed(2)),
+          span("."),
+        ],
+        [],
+      ];
 
 /** The findings counted by level: `1 error`, or `2 errors and 1 warning` once there are warnings. */
 const found = (findings: ReadonlyArray<Finding>): string => {
@@ -239,19 +281,27 @@ export interface RenderOptions {
   /** Color the frame the way `vp lint` does on a terminal, and highlight the code. */
   readonly color?: boolean;
   readonly root?: string;
+  /** Below this, a finding's context is low and it carries a warning. Defaults to 0.6. */
+  readonly sufficiencyThreshold?: number;
 }
 
 /**
  * The report, in the default `vp lint` layout: each diagnostic followed by a
- * blank line, then the counts. Color is on when the caller is writing to a
- * terminal.
+ * blank line, then the legend for their scores, then the counts. Color is on
+ * when the caller is writing to a terminal.
  */
-export const render = (result: AuditResult, options: RenderOptions = {}): ReadonlyArray<string> =>
-  [
-    ...result.findings.flatMap((finding) => [...frame(finding, options.root), []]),
+export const render = (result: AuditResult, options: RenderOptions = {}): ReadonlyArray<string> => {
+  const sufficiencyThreshold = options.sufficiencyThreshold ?? DEFAULT_SUFFICIENCY_THRESHOLD;
+  return [
+    ...result.findings.flatMap((finding) => [
+      ...frame(finding, options.root, sufficiencyThreshold),
+      [],
+    ]),
+    ...legend(result, sufficiencyThreshold),
     ...summary(result),
     ...blockedFiles(result, options.root),
   ].map((line) => serialize(line, options.color === true));
+};
 
 /**
  * What a run will do, before it asks: the files and rules found, the checks

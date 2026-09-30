@@ -150,8 +150,9 @@ adhere lint --yes
 
 Walk the user through the report:
 
-1. How to read a finding: the rule id, Jev's probability, the description,
-   the underlined line, and the warning when the file may not show enough.
+1. How to read a finding: the rule id, its confidence and context scores, the
+   description, the underlined line, and the warning when the file may not
+   show enough.
 2. Findings grouped by rule, the highest probabilities first. Check a few from
    each rule against the code, and say which look real and which do not.
 3. For each noisy rule, propose one change from the adhere skill's "Tuning a

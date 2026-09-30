@@ -257,7 +257,13 @@ export const lintCommand = Command.make(
       const color = yield* stdio.stdoutIsTerminal;
       const path = yield* Path.Path;
       // One write: separate Console.log calls have interleaved out of order here.
-      yield* Console.log(render(result, { color, root: path.resolve() }).join("\n"));
+      yield* Console.log(
+        render(result, {
+          color,
+          root: path.resolve(),
+          sufficiencyThreshold: plan.sufficiencyThreshold,
+        }).join("\n"),
+      );
       // Only errors fail the run, unless --deny-warnings: a warning is for a nit or a noisy rule.
       const failed = failing(result.findings, input.denyWarnings);
       if (failed.length > 0) {

@@ -273,6 +273,7 @@ const findingA = {
   section: { first: 1, last: 3 },
   lines: { first: 2, last: 2 },
   excerpt: { start: 1, lines: source.lines },
+  context: 0.9,
   probability: 0.9,
   level: "error" as const,
 };
@@ -615,9 +616,7 @@ describe("config", () => {
 
   it("takes a function as a rule's appendState, and refuses anything else", async () => {
     const appendState = () => ({});
-    const decoded = await Effect.runPromise(
-      decodeConfig({ rules: { a: { ...a, appendState } } }),
-    );
+    const decoded = await Effect.runPromise(decodeConfig({ rules: { a: { ...a, appendState } } }));
     expect(decoded.rules).toEqual({ a: { ...a, appendState } });
     const refused = await Effect.runPromise(
       Effect.flip(decodeConfig({ rules: { a: { ...a, appendState: "{}" } } })),
@@ -1425,7 +1424,9 @@ describe("contradictions", () => {
       { first: entries[0]!, second: fromPreset, probability: 0.8 },
     ]);
     expect(mixed).toContain("   - effect/services/provide-at-entry\n");
-    expect(mixed).toContain("   - style/use-services (/repo/.adhere/rules/style/use-services/RULE.md)\n");
+    expect(mixed).toContain(
+      "   - style/use-services (/repo/.adhere/rules/style/use-services/RULE.md)\n",
+    );
   });
 
   it("asks nothing when no two rules share files", async () => {
@@ -1916,7 +1917,7 @@ describe("plan", () => {
     expect(result.findings).toEqual([findingA]);
   });
 
-  it("warns on a finding whose file may not show enough to decide it, and locates again one cached without", async () => {
+  it("gives each finding Jev's probability that the file shows enough to decide it, and locates again one cached without", async () => {
     const located: Array<ReadonlyArray<string>> = [];
     const jev = (sufficiency: Record<string, number>) =>
       Layer.succeed(Jev, {
@@ -1933,9 +1934,9 @@ describe("plan", () => {
         contradicts: () => Effect.die("an audit compares no rules"),
       });
     const result = await audit({ rules, jev: jev({ a: 0.25 }), cache: memoryCache() });
-    expect(result.findings.map(({ rule, insufficiency }) => ({ rule, insufficiency }))).toEqual([
-      { rule: "a", insufficiency: 0.75 },
-      { rule: "b", insufficiency: undefined },
+    expect(result.findings.map(({ rule, context }) => ({ rule, context }))).toEqual([
+      { rule: "a", context: 0.25 },
+      { rule: "b", context: 0.9 },
     ]);
 
     // An answer located before sufficiency was asked has none: its rule is located again,
@@ -2953,10 +2954,11 @@ describe("render", () => {
     suppressed: 0,
   };
 
-  it("prints the vp-lint frame with the code to write as the hint", () => {
+  it("prints the vp-lint frame with the code to write as the hint, then the legend for its scores", () => {
     expect(render(result, { root: "/repo" }).join("\n")).toBe(
       [
-        "  × a (0.90): Ports are branded.",
+        "  × a  confidence 0.90 · context 0.90",
+        "    Ports are branded.",
         "   ╭─[src/server.ts:2:3]",
         " 1 │ const before = 1;",
         " 2 │   const port: number = Number(process.env.PORT);",
@@ -2965,6 +2967,9 @@ describe("render", () => {
         "   ╰────",
         '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
         "        type Port = typeof Port.Type",
+        "",
+        "confidence: Jev's probability that the file breaks the rule. Low, in amber, below 0.90.",
+        "context: its probability that the file shows enough to decide. Low, in amber, below 0.60.",
         "",
         "Found 1 error.",
         "1 file, 1 judged, 0 cached.",
@@ -2980,7 +2985,7 @@ describe("render", () => {
       lines: { first: 10, last: 10 },
       excerpt,
     };
-    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(1, 7)).toEqual([
+    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(2, 8)).toEqual([
       "    ╭─[src/server.ts:10:3]",
       "  9 │ \tif (port) {",
       " 10 │ \t\tlisten(port);",
@@ -2992,7 +2997,7 @@ describe("render", () => {
 
   it("marks the lines of a span of several with a bar beside the code, not an underline each", () => {
     const finding = { ...findingA, lines: { first: 2, last: 3 } };
-    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(1, 6)).toEqual([
+    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(2, 7)).toEqual([
       "   ╭─[src/server.ts:2:3]",
       " 1 │   const before = 1;",
       " 2 │ ┃   const port: number = Number(process.env.PORT);",
@@ -3003,7 +3008,7 @@ describe("render", () => {
 
   it("places a finding without lines at its section's first line, with no underline", () => {
     const { lines: _, ...unlined } = findingA;
-    expect(render({ ...result, findings: [unlined] }, { root: "/repo" }).slice(1, 6)).toEqual([
+    expect(render({ ...result, findings: [unlined] }, { root: "/repo" }).slice(2, 7)).toEqual([
       "   ╭─[src/server.ts:1:1]",
       " 1 │ const before = 1;",
       " 2 │   const port: number = Number(process.env.PORT);",
@@ -3012,15 +3017,22 @@ describe("render", () => {
     ]);
   });
 
-  it("warns under the section when the file may not show enough to decide", () => {
-    const finding = { ...findingA, insufficiency: 0.45 };
+  it("shows a finding's context after its confidence, and warns under the section when it is below the threshold", () => {
+    const finding = { ...findingA, context: 0.45 };
     const lines = render({ ...result, findings: [finding] }, { root: "/repo" });
-    expect(lines.slice(7, 11)).toEqual([
-      "  warning: this file may not show enough to check this rule (Jev: 0.45 that it does not)",
+    expect(lines[0]).toBe("  × a  confidence 0.90 · context 0.45");
+    expect(lines.slice(8, 12)).toEqual([
+      "  warning: this file may not show enough to check this rule",
       "     help: add what the code relies on outside this file as a note Jev reads:",
       "           // @adhere <the fact>, and how you know it",
       '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
     ]);
+    // Above the threshold, which the caller can set, there is no warning.
+    const enough = render({ ...result, findings: [finding] }, { sufficiencyThreshold: 0.4 });
+    expect(enough.some((line) => line.includes("warning:"))).toBe(false);
+    expect(enough).toContain(
+      "context: its probability that the file shows enough to decide. Low, in amber, below 0.40.",
+    );
   });
 
   it("shows the code never to write, labeled with its word, for a rule without code to write", () => {
@@ -3038,8 +3050,8 @@ describe("render", () => {
     const fromPreset = { ...findingA, rule: "basics/ports", preset: "effect" };
     const lines = render({ ...result, findings: [fromPreset, findingA] }, { root: "/repo" });
     expect(lines.filter((line) => line.startsWith("  × "))).toEqual([
-      "  × effect/basics/ports (0.90): Ports are branded.",
-      "  × a (0.90): Ports are branded.",
+      "  × effect/basics/ports  confidence 0.90 · context 0.90",
+      "  × a  confidence 0.90 · context 0.90",
     ]);
   });
 
@@ -3047,8 +3059,8 @@ describe("render", () => {
     const warning = { ...findingA, rule: "b", level: "warning" as const };
     const lines = render({ ...result, findings: [findingA, warning] }, { root: "/repo" });
     expect(lines.filter((line) => /^  [×⚠] /.test(line))).toEqual([
-      "  × a (0.90): Ports are branded.",
-      "  ⚠ b (0.90): Ports are branded.",
+      "  × a  confidence 0.90 · context 0.90",
+      "  ⚠ b  confidence 0.90 · context 0.90",
     ]);
     expect(lines).toContain("Found 1 error and 1 warning.");
     expect(render({ ...result, findings: [warning] }, { root: "/repo" })).toContain(
@@ -3056,7 +3068,7 @@ describe("render", () => {
     );
     const amber = "38;2;214;154;0;1";
     expect(render({ ...result, findings: [warning] }, { color: true }).join("\n")).toContain(
-      `  ${sgr(amber, "⚠")} ${sgr(amber, "b")} (`,
+      `  ${sgr(amber, "⚠")} ${sgr(amber, "b")}  confidence `,
     );
   });
 
@@ -3071,10 +3083,30 @@ describe("render", () => {
     const red = "38;2;164;20;71;1";
     const colored = render({ ...result, skipped: 2 }, { color: true }).join("\n");
     expect(colored).toContain(
-      `  ${sgr(red, "×")} ${sgr(red, "a")} (${sgr("38;5;156", "0.90")}): ${sgr("38;2;230;230;255", "Ports are branded.")}`,
+      `  ${sgr(red, "×")} ${sgr(red, "a")}  confidence ${sgr("38;5;156", "0.90")} · context ${sgr("38;5;156", "0.90")}\n    ${sgr("38;2;230;230;255", "Ports are branded.")}`,
     );
     expect(colored).toContain("\u001b[38;2;5;125;160;1m/repo/src/server.ts");
     expect(colored.endsWith("1 file, 1 judged, 0 cached, 2 skipped.")).toBe(true);
+  });
+
+  it("colors a score amber when it is low: confidence below 0.90, context below the threshold", () => {
+    const amber = "38;2;214;154;0";
+    const green = "38;5;156";
+    const scores = (finding: typeof findingA & { readonly context: number }) =>
+      render({ ...result, findings: [finding] }, { color: true })[0]?.split("  confidence ")[1];
+    expect(scores({ ...findingA, probability: 0.93, context: 0.88 })).toBe(
+      `${sgr(green, "0.93")} · context ${sgr(green, "0.88")}`,
+    );
+    expect(scores({ ...findingA, probability: 0.83, context: 0.45 })).toBe(
+      `${sgr(amber, "0.83")} · context ${sgr(amber, "0.45")}`,
+    );
+  });
+
+  it("leaves the legend out of a report with no findings", () => {
+    expect(render({ ...result, findings: [] })).toEqual([
+      "Found 0 errors.",
+      "1 file, 1 judged, 0 cached.",
+    ]);
   });
 
   it("highlights the section and the hint on a terminal", () => {

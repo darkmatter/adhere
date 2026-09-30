@@ -60,7 +60,8 @@ Without a config or rules, `adhere lint --preset effect` audits against the
 built-in Effect rules. A finding looks like this:
 
 ```text
-  × data/brand-ports (0.93): A port must be a branded, range-checked integer, never a bare number.
+  × data/brand-ports  confidence 0.93 · context 0.88
+    A port must be a branded, range-checked integer, never a bare number.
    ╭─[src/server.ts:6:3]
  1 │ import { Effect } from "effect";
  2 │ import { listen } from "./listen.ts";
@@ -78,12 +79,20 @@ built-in Effect rules. A finding looks like this:
           Schema.brand("Port"),
         );
 
+confidence: Jev's probability that the file breaks the rule. Low, in amber, below 0.90.
+context: its probability that the file shows enough to decide. Low, in amber, below 0.60.
+
 Found 1 error.
 42 files, 3 judged, 39 cached.
 ```
 
-The header is the rule id, Jev's probability, and the rule's description. A
-preset's rule has the preset's name first, as in
+The header is the rule id, then two scores, and the rule's description has
+the next line. `confidence` is Jev's probability that the file breaks the
+rule. `context` is its probability that the file shows enough to decide that
+(see below). On a terminal a score is amber when it is low: a confidence
+below 0.90, under which findings were mostly false on the eval, or a context
+below the sufficiency threshold. A legend under the last finding says the
+same. A preset's rule has the preset's name first, as in
 `effect/basics/gen-for-sequencing`, so a report that mixes presets
 with a repo's own rules says where each came from.
 Under it is the section of the file Jev points at, with the line it names
@@ -99,12 +108,12 @@ names no lines, the section is shown alone, at its first line.
 
 Jev is also asked whether the file shows enough to decide the rule at all:
 whether it turns on something the file does not show, such as what another
-file, a library, or a service does. When Jev's probability that it does is
-below 0.6, the finding gets a warning under its code, with the probability
-that it does not, and help on adding what is missing:
+file, a library, or a service does. Its probability that the file does show
+enough is the finding's `context`. When that is below 0.6, the finding gets a
+warning under its code, and help on adding what is missing:
 
 ```text
-  warning: this file may not show enough to check this rule (Jev: 0.55 that it does not)
+  warning: this file may not show enough to check this rule
      help: add what the code relies on outside this file as a note Jev reads:
            // @adhere <the fact>, and how you know it
 ```

@@ -41,11 +41,11 @@ export interface Finding {
   /** The section's code as written, comments and all, without blank lines at either end. */
   readonly excerpt: Excerpt;
   /**
-   * Jev's probability that the file does not show enough to check the rule,
-   * when its probability that it does is below the sufficiency threshold:
-   * the report warns, and says how to add the context.
+   * Jev's probability that the file shows enough to check the rule. Below the
+   * sufficiency threshold, the report warns, and says how to add the context.
    */
-  readonly insufficiency?: number;
+  readonly context?: number;
+  /** Jev's probability that the file breaks the rule. */
   readonly probability: number;
   /** An error fails the run; a warning does not, unless `--deny-warnings`. */
   readonly level: Level;
@@ -589,10 +589,7 @@ export const executeAudit = (
                   section: judgment.section,
                   ...(judgment.lines === undefined ? {} : { lines: judgment.lines }),
                   excerpt: excerptOf(original, judgment.section),
-                  ...(judgment.sufficiency !== undefined &&
-                  judgment.sufficiency < plan.sufficiencyThreshold
-                    ? { insufficiency: 1 - judgment.sufficiency }
-                    : {}),
+                  ...(judgment.sufficiency === undefined ? {} : { context: judgment.sufficiency }),
                   probability: judgment.probability,
                   level: k.rule.level ?? "error",
                 },

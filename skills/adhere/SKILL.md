@@ -215,18 +215,23 @@ terminal.
 ## Reading a report
 
 ```text
-  × data/brand-ports (0.93): A port must be a branded, range-checked integer, never a bare number.
+  × data/brand-ports  confidence 0.93 · context 0.88
+    A port must be a branded, range-checked integer, never a bare number.
    ╭─[src/server.ts:6:3]
  6 │   const port: number = Number(process.env.PORT ?? 3000);
    ·   ──────────────────────────────────────────────────────
   hint: const Port = Schema.Int.pipe(...)
 ```
 
-The header is the rule id, Jev's probability, and the description; `×` is an
-error, `⚠` a warning. The underline is the line Jev names. A finding with
-`warning: this file may not show enough to check this rule` turns on
-something outside the file, and was usually false in the evals: check that
-before acting on it.
+The header is the rule id and two scores, with the description on the next
+line; `×` is an error, `⚠` a warning. `confidence` is Jev's probability that
+the file breaks the rule; below 0.90 it is low, and such findings were mostly
+false in the evals. `context` is its probability that the file shows enough
+to decide; below the sufficiency threshold, 0.6 by default, the finding also
+carries `warning: this file may not show enough to check this rule`. It turns
+on something outside the file, and was usually false in the evals: check that
+before acting on it. A low score is amber on a terminal. The underline is the
+line Jev names.
 
 ## Tuning a rule
 
