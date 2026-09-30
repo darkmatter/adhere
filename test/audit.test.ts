@@ -2969,8 +2969,8 @@ describe("render", () => {
         '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
         "        type Port = typeof Port.Type",
         "",
-        "confidence: Jev's probability that the file breaks the rule. Low, in amber, below 0.90.",
-        "context: its probability that the file shows enough to decide. Low, in amber, below 0.60.",
+        "confidence: Jev's probability that the file breaks the rule: high from 0.90, low below 0.90, unreported at or below the rule's threshold.",
+        "context: its probability that the file shows enough to decide: enough from 0.60, low below 0.60.",
         "",
         "Found 1 error.",
         "1 file, 1 judged, 0 cached.",
@@ -3032,7 +3032,7 @@ describe("render", () => {
     const enough = render({ ...result, findings: [finding] }, { sufficiencyThreshold: 0.4 });
     expect(enough.some((line) => line.includes("warning:"))).toBe(false);
     expect(enough).toContain(
-      "context: its probability that the file shows enough to decide. Low, in amber, below 0.40.",
+      "context: its probability that the file shows enough to decide: enough from 0.40, low below 0.40.",
     );
   });
 
@@ -3103,7 +3103,7 @@ describe("render", () => {
     );
   });
 
-  it("colors a confidence red at or below its rule's threshold, where lint would not report it, and says so in the legend", () => {
+  it("colors a confidence red at or below its rule's threshold, where lint would not report it", () => {
     const red = "38;2;164;20;71";
     const amber = "38;2;214;154;0";
     const header = (finding: typeof findingA) =>
@@ -3113,23 +3113,19 @@ describe("render", () => {
     expect(header({ ...findingA, probability: 0.71 })).toContain(sgr(amber, "0.71"));
     // A rule whose threshold is above 0.90 has no amber range.
     expect(header({ ...findingA, probability: 0.92, threshold: 0.95 })).toContain(sgr(red, "0.92"));
-
-    const legend = (finding: typeof findingA) =>
-      render({ ...result, findings: [finding] }).find((line) => line.startsWith("confidence"));
-    expect(legend({ ...findingA, probability: 0.65 })).toBe(
-      "confidence: Jev's probability that the file breaks the rule. Low, in amber, below 0.90. In red, at or below its rule's threshold, where lint does not report it.",
-    );
-    expect(legend(findingA)).toBe(
-      "confidence: Jev's probability that the file breaks the rule. Low, in amber, below 0.90.",
-    );
   });
 
-  it("sets the legend's words in bold, not in the hint label's color", () => {
+  it("names each range of a score in the legend in the color a score there has, under bold labels", () => {
+    const green = "38;5;156";
+    const amber = "38;2;214;154;0";
+    const red = "38;2;164;20;71";
     const colored = render(result, { color: true });
     expect(colored).toContain(
-      `${sgr("1", "confidence")}: Jev's probability that the file breaks the rule. Low, in amber, below 0.90.`,
+      `${sgr("1", "confidence")}: Jev's probability that the file breaks the rule: ${sgr(green, "high from 0.90")}, ${sgr(amber, "low below 0.90")}, ${sgr(red, "unreported at or below the rule's threshold")}.`,
     );
-    expect(colored.some((line) => line.startsWith(sgr("1", "context")))).toBe(true);
+    expect(colored).toContain(
+      `${sgr("1", "context")}: its probability that the file shows enough to decide: ${sgr(green, "enough from 0.60")}, ${sgr(amber, "low below 0.60")}.`,
+    );
   });
 
   it("leaves the legend out of a report with no findings", () => {

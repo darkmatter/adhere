@@ -235,29 +235,38 @@ const frame = (
   ...hint(finding),
 ];
 
-/** What the scores in a header mean, and when each is low, once under the findings. */
-const legend = (result: AuditResult, sufficiencyThreshold: number): ReadonlyArray<Line> =>
-  result.findings.length === 0
+/**
+ * What the scores in a header mean, once under the findings, with each range
+ * a score can fall in named in the color a score in it has. The words say
+ * the same without color.
+ */
+const legend = (result: AuditResult, sufficiencyThreshold: number): ReadonlyArray<Line> => {
+  const confident = CONFIDENT.toFixed(2);
+  const sufficient = sufficiencyThreshold.toFixed(2);
+  return result.findings.length === 0
     ? []
     : [
         [
           span("confidence", "legend"),
-          span(": Jev's probability that the file breaks the rule. Low, in amber, below "),
-          span(CONFIDENT.toFixed(2)),
+          span(": Jev's probability that the file breaks the rule: "),
+          span(`high from ${confident}`, "probability"),
+          span(", "),
+          span(`low below ${confident}`, "low"),
+          span(", "),
+          span("unreported at or below the rule's threshold", "unreported"),
           span("."),
-          // Only a run that shows judgments lint does not report has one to explain.
-          ...(result.findings.some(unreported)
-            ? [span(" In red, at or below its rule's threshold, where lint does not report it.")]
-            : []),
         ],
         [
           span("context", "legend"),
-          span(": its probability that the file shows enough to decide. Low, in amber, below "),
-          span(sufficiencyThreshold.toFixed(2)),
+          span(": its probability that the file shows enough to decide: "),
+          span(`enough from ${sufficient}`, "probability"),
+          span(", "),
+          span(`low below ${sufficient}`, "low"),
           span("."),
         ],
         [],
       ];
+};
 
 /** The findings counted by level: `1 error`, or `2 errors and 1 warning` once there are warnings. */
 const found = (findings: ReadonlyArray<Finding>): string => {
