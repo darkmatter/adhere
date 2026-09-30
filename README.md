@@ -79,8 +79,8 @@ built-in Effect rules. A finding looks like this:
           Schema.brand("Port"),
         );
 
-  confidence  0–0.74  0.75–0.84  0.85–1  Jev's probability that the file breaks the rule
-  context     0–0.49  0.50–0.69  0.70–1  its probability that the file shows enough to decide
+  confidence  0–0.74 < 0.8 < 0.85–1  Jev's probability that the file breaks the rule
+  context     0–0.49 < 0.6 < 0.70–1  its probability that the file shows enough to decide
 
 Found 1 error.
 42 files, 3 judged, 39 cached.
@@ -96,9 +96,10 @@ rule whose findings are mostly amber turns on where its threshold sits, which
 may be too low. Below the amber a score is red: lint reports no finding with
 a confidence there. A context is colored the same way around the sufficiency
 threshold, so at 0.60 it is amber from 0.50 to 0.69 and red below 0.50, the
-finding to doubt first. A legend under the last finding gives each range in
-its color, lowest first; confidence's are around the run's threshold, and a
-rule with a threshold of its own has its ranges around that.
+finding to doubt first. A legend under the last finding gives each score's
+threshold between the range in red and the range in green, with each `<` in
+amber for the scores between them. Confidence's threshold there is the run's;
+a rule with a threshold of its own has its ranges around that.
 A preset's rule has the preset's name first, as in
 `effect/basics/gen-for-sequencing`, so a report that mixes presets
 with a repo's own rules says where each came from.

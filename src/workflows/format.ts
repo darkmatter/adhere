@@ -255,32 +255,34 @@ const frame = (
 const bound = (value: number): string =>
   value === 0 ? "0" : value === 100 ? "1" : (value / 100).toFixed(2);
 
-/** The scores from one number of hundredths through another: `0.75–0.84`, or `0.85–1`. */
+/** The scores from one number of hundredths through another: `0–0.74`, or `0.85–1`. */
 const range = (from: number, to: number): string => `${bound(from)}–${bound(to)}`;
 
-/** The roles of a score far below its threshold, near it, and well above it, lowest first. */
-const RANGES = ["below", "low", "probability"] as const;
-
 /**
- * The ranges a score falls in around a threshold, one for each of `RANGES`.
- * A range with no score in it, as the one below a threshold of 0, is empty.
+ * A legend row's cells for a threshold: the scores far below it, the
+ * threshold, and the scores well above it, as in `0–0.74 < 0.8 < 0.85–1`.
+ * The scores between the two ranges are the ones near the threshold, so each
+ * `<` is in their color, and the ranges in theirs. A threshold too low to
+ * have scores far below it has no first range, and no `<` after one.
  */
-const rangesOf = (threshold: number): ReadonlyArray<string> => {
+const cellsOf = (threshold: number): ReadonlyArray<Span> => {
   const { near, clear } = bandsOf(threshold);
   return [
-    [0, near - 1],
-    [near, clear - 1],
-    [clear, 100],
-  ].map(([from = 0, to = 0]) => (from <= to ? range(from, to) : ""));
+    span(near > 0 ? range(0, near - 1) : "", "below"),
+    span(near > 0 ? "<" : "", "low"),
+    span(String(hundredths(threshold) / 100)),
+    span("<", "low"),
+    span(range(clear, 100), "probability"),
+  ];
 };
 
 /**
  * What the scores under a header mean, once under the findings, as a table:
- * a row for each score with its ranges, lowest first, each in the color a
- * score in it has, then what the score is, dim. The ranges stand in columns,
- * so a color lines up down the rows. A confidence's ranges are the run's
- * threshold's; a rule with a threshold of its own has them around that. A
- * context's are the sufficiency threshold's.
+ * a row for each score with its ranges around its threshold, then what the
+ * score is, dim. The cells stand in columns, so a color lines up down the
+ * rows. A confidence's threshold is the run's; a rule with a threshold of
+ * its own has its ranges around that. A context's is the sufficiency
+ * threshold.
  */
 const legend = (
   result: AuditResult,
@@ -288,31 +290,30 @@ const legend = (
   sufficiencyThreshold: number,
 ): ReadonlyArray<Line> => {
   const rows = [
-    ["confidence", rangesOf(threshold), "Jev's probability that the file breaks the rule"],
+    ["confidence", cellsOf(threshold), "Jev's probability that the file breaks the rule"],
     [
       "context",
-      rangesOf(sufficiencyThreshold),
+      cellsOf(sufficiencyThreshold),
       "its probability that the file shows enough to decide",
     ],
   ] as const;
-  const padded = (text: string, width: number): Span => span(" ".repeat(width - text.length));
+  const padding = (text: string, width: number): Span => span(" ".repeat(width - text.length));
   const labels = Math.max(...rows.map(([label]) => label.length));
-  const widths = RANGES.map((_, column) =>
-    Math.max(...rows.map(([, ranges]) => ranges[column]?.length ?? 0)),
-  );
+  const widthOf = (column: number): number =>
+    Math.max(...rows.map(([, cells]) => cells[column]?.text.length ?? 0));
   return result.findings.length === 0
     ? []
     : [
-        ...rows.map(([label, ranges, meaning]) => [
+        ...rows.map(([label, cells, meaning]) => [
           span("  "),
           span(label, "legend"),
-          padded(label, labels),
-          ...RANGES.flatMap((role, column) => {
-            const text = ranges[column] ?? "";
-            const width = widths[column] ?? 0;
-            // A range no row has takes no column.
-            return width === 0 ? [] : [span("  "), span(text, role), padded(text, width)];
-          }),
+          padding(label, labels),
+          span(" "),
+          ...cells.flatMap((cell, column) => [
+            span(" "),
+            cell,
+            padding(cell.text, widthOf(column)),
+          ]),
           span("  "),
           span(meaning, "quiet"),
         ]),

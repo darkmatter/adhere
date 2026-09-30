@@ -2974,8 +2974,8 @@ describe("render", () => {
         '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
         "        type Port = typeof Port.Type",
         "",
-        "  confidence  0–0.74  0.75–0.84  0.85–1  Jev's probability that the file breaks the rule",
-        "  context     0–0.49  0.50–0.69  0.70–1  its probability that the file shows enough to decide",
+        "  confidence  0–0.74 < 0.8 < 0.85–1  Jev's probability that the file breaks the rule",
+        "  context     0–0.49 < 0.6 < 0.70–1  its probability that the file shows enough to decide",
         "",
         "Found 1 error.",
         "1 file, 1 judged, 0 cached.",
@@ -3040,7 +3040,7 @@ describe("render", () => {
     const enough = render({ ...result, findings: [finding] }, { sufficiencyThreshold: 0.4 });
     expect(enough.some((line) => line.includes("warning:"))).toBe(false);
     expect(enough).toContain(
-      "  context     0–0.24  0.25–0.54  0.55–1  its probability that the file shows enough to decide",
+      "  context     0–0.24 < 0.4 < 0.55–1  its probability that the file shows enough to decide",
     );
   });
 
@@ -3138,30 +3138,32 @@ describe("render", () => {
     expect(warns(0.6)).toBe(false);
   });
 
-  it("sets the legend as a table: a bold label, each range in the color a score there has, lowest first, and a dim meaning", () => {
+  it("sets the legend as a table: a bold label, the threshold between the ranges far below and well above it, each in its scores' color, and a dim meaning", () => {
     const colored = render(result, { color: true });
+    const less = sgr(amber, "<");
     expect(colored).toContain(
-      `  ${sgr("1", "confidence")}  ${sgr(rose, "0–0.74")}  ${sgr(amber, "0.75–0.84")}  ${sgr(green, "0.85–1")}  ${sgr(dim, "Jev's probability that the file breaks the rule")}`,
+      `  ${sgr("1", "confidence")}  ${sgr(rose, "0–0.74")} ${less} 0.8 ${less} ${sgr(green, "0.85–1")}  ${sgr(dim, "Jev's probability that the file breaks the rule")}`,
     );
     expect(colored).toContain(
-      `  ${sgr("1", "context")}     ${sgr(rose, "0–0.49")}  ${sgr(amber, "0.50–0.69")}  ${sgr(green, "0.70–1")}  ${sgr(dim, "its probability that the file shows enough to decide")}`,
+      `  ${sgr("1", "context")}     ${sgr(rose, "0–0.49")} ${less} 0.6 ${less} ${sgr(green, "0.70–1")}  ${sgr(dim, "its probability that the file shows enough to decide")}`,
     );
   });
 
-  it("centers the legend's middle range on the run's threshold, and leaves empty a range no score can be in", () => {
+  it("puts the run's threshold in the legend with its ranges either side, and no range below one too low to have it", () => {
     const confidence = (threshold: number) =>
       render(result, { threshold })
         .find((line) => line.startsWith("  confidence"))
-        ?.split(/ {2,}/)
-        .slice(2, -1);
-    expect(confidence(0.7)).toEqual(["0–0.62", "0.63–0.77", "0.78–1"]);
-    expect(confidence(0.9)).toEqual(["0–0.87", "0.88–0.92", "0.93–1"]);
-    expect(confidence(0.5)).toEqual(["0–0.37", "0.38–0.62", "0.63–1"]);
-    expect(confidence(1)).toEqual(["0–0.99", "1–1"]);
-    expect(confidence(0)).toEqual(["0–0.24", "0.25–1"]);
-    // Its ranges stay under context's, whose columns they share.
-    expect(render(result, { threshold: 1 })).toContain(
-      "  confidence  0–0.99             1–1     Jev's probability that the file breaks the rule",
+        ?.replace(/ +/g, " ")
+        .replace(" confidence ", "")
+        .replace(" Jev's probability that the file breaks the rule", "");
+    expect(confidence(0.7)).toBe("0–0.62 < 0.7 < 0.78–1");
+    expect(confidence(0.9)).toBe("0–0.87 < 0.9 < 0.93–1");
+    expect(confidence(0.75)).toBe("0–0.68 < 0.75 < 0.82–1");
+    expect(confidence(1)).toBe("0–0.99 < 1 < 1–1");
+    expect(confidence(0)).toBe("0 < 0.25–1");
+    // Its cells stay under context's, whose columns they share.
+    expect(render(result, { threshold: 0 })).toContain(
+      "  confidence           0   < 0.25–1  Jev's probability that the file breaks the rule",
     );
   });
 
