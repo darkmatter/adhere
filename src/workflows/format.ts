@@ -99,30 +99,37 @@ const displayPath = (file: string, root: string | undefined): string =>
 const counted = (count: number, one: string, many: string): string =>
   `${count} ${count === 1 ? one : many}`;
 
-/**
- * How far from its rule's threshold a confidence is still near it. Scores
- * that gather there, reported or not, turn on where the threshold sits, so
- * they are a sign it may be too low or too high.
- */
-const MARGIN = 0.1;
-
 /** A score as a header shows it, in hundredths, so two compare as they read. */
 const hundredths = (value: number): number => Math.round(value * 100);
+
+/**
+ * Where a confidence stops being far below a threshold and where it starts
+ * being well above it, in hundredths. Between the two it is near the
+ * threshold: within a quarter of the room above it, on either side, so the
+ * band narrows as the threshold rises and leaves room above for scores to be
+ * well clear of it. Scores that gather in the band, reported or not, turn on
+ * where the threshold sits, a sign it may be too low or too high.
+ */
+const bandsOf = (threshold: number): { readonly near: number; readonly clear: number } => {
+  const at = hundredths(threshold);
+  const margin = (100 - at) / 4;
+  return { near: Math.max(0, Math.ceil(at - margin)), clear: Math.ceil(at + margin) };
+};
 
 const score = (value: number, low: boolean): Span =>
   span(value.toFixed(2), low ? "low" : "probability");
 
 /**
  * A confidence in one of three ranges set by the rule's threshold: amber
- * within `MARGIN` of it, on either side; red below that, which only a run
- * that shows every judgment prints; the accent above.
+ * near it; red below that, which only a run that shows every judgment
+ * prints; the accent above.
  */
 const confidence = (finding: Finding): Span => {
-  const distance = hundredths(finding.probability) - hundredths(finding.threshold);
-  const margin = hundredths(MARGIN);
+  const { near, clear } = bandsOf(finding.threshold);
+  const value = hundredths(finding.probability);
   return span(
     finding.probability.toFixed(2),
-    distance < -margin ? "below" : distance < margin ? "low" : "probability",
+    value < near ? "below" : value < clear ? "low" : "probability",
   );
 };
 
@@ -240,51 +247,53 @@ const frame = (
   ...hint(finding),
 ];
 
-/** Scores from one number through another, as a header shows them: `0.81–0.89`. */
-const range = (from: number, to: number): string => `${from.toFixed(2)}–${to.toFixed(2)}`;
-
-/** A header's scores are rounded to this. */
-const STEP = 0.01;
+/** Scores from one number of hundredths through another, as a header shows them: `0.75–0.84`. */
+const range = (from: number, to: number): string =>
+  `${(from / 100).toFixed(2)}–${(to / 100).toFixed(2)}`;
 
 /**
  * What the scores in a header mean, once under the findings, and the ranges
  * a score falls in, lowest first, each in the color a score in it has:
- * confidence below the threshold's margin, within it, and above it; then
+ * confidence far below the threshold, near it, and well above it; then
  * context that is low, and that is enough. The ranges are the run's
  * threshold's; a rule with a threshold of its own has them around that. A
- * range with no score in it, as below a threshold of 0.1, is left out.
+ * range with no score in it, as the one below a threshold of 0, is left out.
  */
 const legend = (
   result: AuditResult,
   threshold: number,
   sufficiencyThreshold: number,
-): ReadonlyArray<Line> =>
-  result.findings.length === 0
+): ReadonlyArray<Line> => {
+  const { near, clear } = bandsOf(threshold);
+  const enough = hundredths(sufficiencyThreshold);
+  const ranges = (
+    [
+      [0, near - 1, "below"],
+      [near, clear - 1, "low"],
+      [clear, 100, "probability"],
+    ] as const
+  ).filter(([from, to]) => from <= to);
+  return result.findings.length === 0
     ? []
     : [
         [
           span("confidence", "legend"),
           span(": Jev's probability that the file breaks the rule: "),
-          ...(threshold - MARGIN > 0
-            ? [span(range(0, threshold - MARGIN - STEP), "below"), span(", ")]
-            : []),
-          span(
-            range(Math.max(0, threshold - MARGIN), Math.min(1, threshold + MARGIN - STEP)),
-            "low",
-          ),
-          ...(threshold + MARGIN <= 1
-            ? [span(", "), span(range(threshold + MARGIN, 1), "probability")]
-            : []),
+          ...ranges.flatMap(([from, to, role], index) => [
+            ...(index === 0 ? [] : [span(", ")]),
+            span(range(from, to), role),
+          ]),
         ],
         [
           span("context", "legend"),
           span(": its probability that the file shows enough to decide: "),
-          span(range(0, sufficiencyThreshold - STEP), "low"),
+          span(range(0, enough - 1), "low"),
           span(", "),
-          span(range(sufficiencyThreshold, 1), "probability"),
+          span(range(enough, 100), "probability"),
         ],
         [],
       ];
+};
 
 /** The findings counted by level: `1 error`, or `2 errors and 1 warning` once there are warnings. */
 const found = (findings: ReadonlyArray<Finding>): string => {

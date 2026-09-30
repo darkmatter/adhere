@@ -79,7 +79,7 @@ built-in Effect rules. A finding looks like this:
           Schema.brand("Port"),
         );
 
-confidence: Jev's probability that the file breaks the rule: 0.00–0.69, 0.70–0.89, 0.90–1.00
+confidence: Jev's probability that the file breaks the rule: 0.00–0.74, 0.75–0.84, 0.85–1.00
 context: its probability that the file shows enough to decide: 0.00–0.59, 0.60–1.00
 
 Found 1 error.
@@ -89,13 +89,15 @@ Found 1 error.
 The header is the rule id, then two scores, and the rule's description has
 the next line. `confidence` is Jev's probability that the file breaks the
 rule. `context` is its probability that the file shows enough to decide that
-(see below). On a terminal a confidence is amber within 0.10 of its rule's
-threshold, and green above that. A rule whose findings are mostly amber turns
-on where its threshold sits, which may be too low. A context is amber below
-the sufficiency threshold. A legend under the last finding gives each range
-in its color, lowest first, around the run's threshold; a rule with a
-threshold of its own has its ranges around that. Confidence has a third, in
-red, more than 0.10 below the threshold: lint reports no finding there.
+(see below). On a terminal a confidence is amber near its rule's threshold,
+and green above that. Near is within a quarter of the room above the
+threshold, on either side: 0.05 at a threshold of 0.80, so 0.75 to 0.84. A
+rule whose findings are mostly amber turns on where its threshold sits, which
+may be too low. A context is amber below the sufficiency threshold. A legend
+under the last finding gives each range in its color, lowest first, around
+the run's threshold; a rule with a threshold of its own has its ranges around
+that. Confidence has a third, in red, below the amber: lint reports no
+finding there.
 A preset's rule has the preset's name first, as in
 `effect/basics/gen-for-sequencing`, so a report that mixes presets
 with a repo's own rules says where each came from.

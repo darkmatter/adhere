@@ -2974,7 +2974,7 @@ describe("render", () => {
         '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
         "        type Port = typeof Port.Type",
         "",
-        "confidence: Jev's probability that the file breaks the rule: 0.00–0.69, 0.70–0.89, 0.90–1.00",
+        "confidence: Jev's probability that the file breaks the rule: 0.00–0.74, 0.75–0.84, 0.85–1.00",
         "context: its probability that the file shows enough to decide: 0.00–0.59, 0.60–1.00",
         "",
         "Found 1 error.",
@@ -3095,23 +3095,24 @@ describe("render", () => {
     expect(colored.endsWith("1 file, 1 judged, 0 cached, 2 skipped.")).toBe(true);
   });
 
-  it("colors a confidence by how far it is from its rule's threshold: amber within 0.10 either side, red below, green above", () => {
+  it("colors a confidence by how far it is from its rule's threshold: amber within a quarter of the room above it, either side, red below, green above", () => {
     const green = "38;5;156";
     const amber = "38;2;214;154;0";
     const red = "38;2;164;20;71";
-    const confidence = (probability: number, threshold = 0.7) =>
+    const confidence = (probability: number, threshold: number) =>
       render({ ...result, findings: [{ ...findingA, probability, threshold }] }, { color: true })[0]
         ?.split("  confidence ")[1]
         ?.split(" · ")[0];
-    expect(confidence(0.59)).toBe(sgr(red, "0.59"));
-    expect(confidence(0.6)).toBe(sgr(amber, "0.60"));
-    expect(confidence(0.7)).toBe(sgr(amber, "0.70"));
-    expect(confidence(0.79)).toBe(sgr(amber, "0.79"));
-    expect(confidence(0.8)).toBe(sgr(green, "0.80"));
-    // The band moves with the rule's own threshold.
-    expect(confidence(0.92, 0.95)).toBe(sgr(amber, "0.92"));
-    expect(confidence(0.84, 0.95)).toBe(sgr(red, "0.84"));
-    expect(confidence(0.9, 0.8)).toBe(sgr(green, "0.90"));
+    // At 0.80 the room above is 0.20, so the band is 0.05 either side.
+    expect(confidence(0.74, 0.8)).toBe(sgr(red, "0.74"));
+    expect(confidence(0.75, 0.8)).toBe(sgr(amber, "0.75"));
+    expect(confidence(0.8, 0.8)).toBe(sgr(amber, "0.80"));
+    expect(confidence(0.84, 0.8)).toBe(sgr(amber, "0.84"));
+    expect(confidence(0.85, 0.8)).toBe(sgr(green, "0.85"));
+    // The band narrows as the threshold rises, which leaves a range above it.
+    expect(confidence(0.87, 0.9)).toBe(sgr(red, "0.87"));
+    expect(confidence(0.92, 0.9)).toBe(sgr(amber, "0.92"));
+    expect(confidence(0.93, 0.9)).toBe(sgr(green, "0.93"));
   });
 
   it("colors a context amber below the sufficiency threshold", () => {
@@ -3129,7 +3130,7 @@ describe("render", () => {
     const red = "38;2;164;20;71";
     const colored = render(result, { color: true });
     expect(colored).toContain(
-      `${sgr("1", "confidence")}: Jev's probability that the file breaks the rule: ${sgr(red, "0.00–0.69")}, ${sgr(amber, "0.70–0.89")}, ${sgr(green, "0.90–1.00")}`,
+      `${sgr("1", "confidence")}: Jev's probability that the file breaks the rule: ${sgr(red, "0.00–0.74")}, ${sgr(amber, "0.75–0.84")}, ${sgr(green, "0.85–1.00")}`,
     );
     expect(colored).toContain(
       `${sgr("1", "context")}: its probability that the file shows enough to decide: ${sgr(amber, "0.00–0.59")}, ${sgr(green, "0.60–1.00")}`,
@@ -3141,9 +3142,11 @@ describe("render", () => {
       render(result, { threshold })
         .find((line) => line.startsWith("confidence"))
         ?.split("rule: ")[1];
-    expect(confidence(0.7)).toBe("0.00–0.59, 0.60–0.79, 0.80–1.00");
-    expect(confidence(0.95)).toBe("0.00–0.84, 0.85–1.00");
-    expect(confidence(0.05)).toBe("0.00–0.14, 0.15–1.00");
+    expect(confidence(0.7)).toBe("0.00–0.62, 0.63–0.77, 0.78–1.00");
+    expect(confidence(0.9)).toBe("0.00–0.87, 0.88–0.92, 0.93–1.00");
+    expect(confidence(0.5)).toBe("0.00–0.37, 0.38–0.62, 0.63–1.00");
+    expect(confidence(1)).toBe("0.00–0.99, 1.00–1.00");
+    expect(confidence(0)).toBe("0.00–0.24, 0.25–1.00");
   });
 
   it("leaves the legend out of a report with no findings", () => {
