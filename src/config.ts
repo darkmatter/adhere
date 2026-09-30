@@ -4,6 +4,34 @@ import { Effect, Schema, SchemaTransformation } from "effect";
 
 export type RuleId = string;
 
+/** The state a request to Jev carries: the file's code as numbered sections, which every question reads. */
+export interface JevState {
+  readonly code: Readonly<Record<string, string>>;
+}
+
+/** The file a request is about, as a rule's hook gets it: its absolute path, and its text as written. */
+export interface JudgedFile {
+  readonly path: string;
+  readonly contents: string;
+}
+
+/**
+ * Bun's API, typed when the project has Bun's types. Read off `globalThis`,
+ * so this package's source type-checks in a project without them.
+ */
+type BunApi = typeof globalThis extends { Bun: infer B } ? B : unknown;
+
+/**
+ * A rule's hook on what Jev reads for it, run right before each request for
+ * the rule goes out: what it returns is spread over the request's state.
+ * Nothing it returns is checked, so it can replace `code` itself.
+ */
+export type AppendState = (
+  state: JevState,
+  file: JudgedFile,
+  bun: BunApi,
+) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
+
 /**
  * A rule's examples, named in RFC 2119's words, which Jev reads as written. A
  * requirement shows code that `must` be written and code that must `never`
@@ -39,6 +67,16 @@ const RuleFields = Schema.Struct({
    * that breaks the rule is as it describes, and a yes to any drops the finding.
    */
   excludeIf: Schema.optionalKey(Schema.Array(Schema.String)),
+  /**
+   * A hook on the state Jev reads for the rule, in a rule written in
+   * TypeScript (see `AppendState`). The rule's questions go in requests of
+   * their own, so only they read what it adds.
+   */
+  appendState: Schema.optionalKey(
+    Schema.declare((value: unknown): value is AppendState => typeof value === "function", {
+      expected: "a function",
+    }),
+  ),
 });
 
 /** Before 0.7, a rule's examples were `reference` and `avoid`: read as `must` and `never`. */
@@ -209,6 +247,12 @@ export const TEST_DIRECTORIES: ReadonlySet<string> = new Set([
 export type Config = typeof AdhereConfig.Encoded;
 
 export const defineConfig = (config: Config) => config;
+
+/**
+ * Types a rule written in TypeScript, which a `.adhere/` file default-exports,
+ * and returns it as it is. It takes what a config's inline rule does.
+ */
+export const defineRule = (rule: typeof Rule.Encoded) => rule;
 
 /** A built-in rule set. Same shape as a config, minus `presets`. */
 export interface Preset {

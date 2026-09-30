@@ -109,12 +109,16 @@ const LAYOUT = "sections";
  * laid out, and the questions asked for the rule, which carry the rule: its
  * judge question, and its matchers' when it has any. An edited rule or
  * matcher re-judges the rule, and a question asked differently re-judges
- * every rule.
+ * every rule. So does an edited `appendState`, by its source; what the hook
+ * reads outside the file is not known until it runs, so a change there does not.
  */
 const fingerprintOf = (model: string, rule: Rule) => {
   const matchers = matcherQuestions("", rule).map(([, question]) => question);
   const scope = matchers.length === 0 ? "" : `\u0000${JSON.stringify(matchers)}`;
-  return sha256(`${model}\u0000${LAYOUT}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}`);
+  const hook = rule.appendState === undefined ? "" : `\u0000${rule.appendState.toString()}`;
+  return sha256(
+    `${model}\u0000${LAYOUT}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}${hook}`,
+  );
 };
 
 /** A section's lines as written, without the blank lines at either end. */
@@ -509,9 +513,13 @@ export const executeAudit = (
       deferred,
       sampled,
     }: FilePlan) {
+      // What a rule's appendState gets: the file as written, not as Jev reads it.
+      const asWritten = { path: file.path, contents: original.join("\n") };
       const { probabilities, linter, matchers }: Judged = isEmpty(pending)
         ? { probabilities: {}, linter: {} }
-        : yield* jev.judge(file.lines, rulesOf(pending), Object.keys(sampled)).pipe(inFile(file));
+        : yield* jev
+            .judge(file.lines, rulesOf(pending), Object.keys(sampled), asWritten)
+            .pipe(inFile(file));
       if (!isEmpty(linter)) yield* record(file.path, sampled, linter);
       const judged: Record<RuleId, Judgment> = { ...kept };
       for (const [id, probability] of Object.entries(probabilities)) {
@@ -549,7 +557,7 @@ export const executeAudit = (
         readonly blocked: Blocked | undefined;
       } = isEmpty(flagged)
         ? { places: {}, blocked: undefined }
-        : yield* jev.locate(file.lines, rulesOf(flagged)).pipe(
+        : yield* jev.locate(file.lines, rulesOf(flagged), asWritten).pipe(
             Effect.map((places) => ({ places, blocked: undefined })),
             Effect.catchTag("JevBlocked", ({ ray }) =>
               Effect.succeed({ places: {}, blocked: { file: file.path, ray } }),

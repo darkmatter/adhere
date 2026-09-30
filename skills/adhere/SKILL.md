@@ -39,8 +39,8 @@ adhere skill [docs|setup|fix]    # print a skill
 
 ## Rule files
 
-A repo's rules live in `.adhere/`, one Markdown file per rule. The path
-without `.md` is the rule id: `.adhere/data/brand-ports.md` is
+A repo's rules live in `.adhere/`, one Markdown file per rule, or a
+TypeScript file (below). The path without `.md` is the rule id: `.adhere/data/brand-ports.md` is
 `data/brand-ports`. A `.adhere/` in a subdirectory holds rules for that
 subtree only, and the most specific rule with an id wins. `cache/` and the
 config in `.adhere/` are not rules.
@@ -99,6 +99,19 @@ Front matter besides `description`, all optional:
   one line, scope a rule without widening its description: a finding stands
   only when Jev says the code that breaks the rule is as every `appliesTo`
   describes and as no `excludeIf` does.
+
+A rule can instead be a `.ts` file that default-exports `defineRule({...})`
+from `@drkmttr/adhere`, with the fields a config's inline rule takes:
+`description`, `must`, `never`, and the rest. Its `appendState(state, file, Bun)`
+runs right before each request for the rule, and what it returns is spread
+over the request's state, `{ code: { "1": "…", "2": "…" } }`, the file's
+sections as Jev reads them. Use it to give Jev what the file cannot show, such
+as a schema another file holds, and name the key it adds in the description.
+Nothing it returns is checked, so it can break its own rule. The rule gets
+requests of its own, one more per file judged, and its judgments are not
+redone when what the hook reads changes, only when the file or the rule,
+hook included, does. Every `.ts` file in `.adhere/` but `config.ts` is read
+as a rule, so keep helpers outside it.
 
 A rule a regex, an import check, or the type checker could flag every time
 belongs in that tool, not adhere. `adhere validate` reports rules that look

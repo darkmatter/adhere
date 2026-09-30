@@ -1,7 +1,7 @@
 import {
   ConfigUnavailable,
   type Override,
-  type Rule,
+  Rule,
   type RuleId,
   type RuleSource,
   SKIPPED_DIRECTORIES,
@@ -9,7 +9,7 @@ import {
 import { parseRuleMarkdown } from "#markdown.ts";
 import { walkFiles } from "#walk.ts";
 import { clearingStatus, countOf, Status } from "#services/Status.ts";
-import { Effect, FileSystem, Path, Record } from "effect";
+import { Effect, FileSystem, Path, Record, Schema } from "effect";
 
 const refused = (directory: string) => (problem: { readonly message: string }) =>
   ConfigUnavailable.make({
@@ -48,7 +48,16 @@ const segmentsOf = (relative: string): ReadonlyArray<string> =>
     .split("/")
     .filter((segment) => segment.length > 0);
 
-const isMarkdown = (path: string): boolean => path.endsWith(".md");
+/**
+ * A rule file, by its path in its rules directory: Markdown, or TypeScript
+ * that default-exports `defineRule({...})`. Neither a declaration file nor
+ * the directory's own `config.ts`, which is a config.
+ */
+const isRuleFile = (leaf: string): boolean =>
+  (leaf.endsWith(".md") || (leaf.endsWith(".ts") && !leaf.endsWith(".d.ts"))) &&
+  leaf !== "config.ts";
+
+const withoutExtension = (leaf: string): string => leaf.replace(/\.(?:md|ts)$/, "");
 
 /**
  * Whether the rule walk reads into a directory: on the way to a `.adhere/`,
@@ -71,7 +80,7 @@ const isNestedRuleFile = (relative: string): boolean => {
   return (
     adhere >= 0 &&
     segments[adhere + 1] !== CACHE_SEGMENT &&
-    isMarkdown(relative) &&
+    isRuleFile(segments.slice(adhere + 1).join("/")) &&
     // Only the path to the `.adhere/`: `.adhere/e2e/` is a rule topic, not a skip.
     !segments.slice(0, adhere).some((segment) => SKIPPED_DIRECTORIES.has(segment))
   );
@@ -87,11 +96,8 @@ const scopePathOf = (segments: ReadonlyArray<string>): ReadonlyArray<string> => 
   return adhere < 0 ? [] : segments.slice(0, adhere);
 };
 
-const ruleIdOf = (relative: string): RuleId => {
-  const rulePath = rulePathOf(segmentsOf(relative));
-  const leaf = rulePath.join("/");
-  return leaf.slice(0, -".md".length);
-};
+const ruleIdOf = (relative: string): RuleId =>
+  withoutExtension(rulePathOf(segmentsOf(relative)).join("/"));
 
 const joinPath = (path: Path.Path, root: string, parts: ReadonlyArray<string>): string =>
   parts.reduce((current, part) => path.join(current, part), root);
@@ -111,9 +117,41 @@ const moreSpecific = (a: RuleEntry, b: RuleEntry): RuleEntry =>
   normalized(a.scope).length >= normalized(b.scope).length ? a : b;
 
 /**
- * Every `*.md` file under `directory`, validated and keyed by its path
- * relative to the directory without the extension: `basics/gen.md` is the
- * rule `basics/gen`.
+ * A rule written in TypeScript: the file's default export, decoded as a
+ * config's inline rule is, so a hook such as `appendState` comes with it.
+ * Like a config, the file is imported, so its code runs.
+ */
+const importRule = Effect.fn("importRule")(function* (file: string) {
+  const path = yield* Path.Path;
+  const url = yield* path.toFileUrl(file).pipe(Effect.orDie);
+  const loaded = yield* Effect.tryPromise({
+    try: () => import(url.href) as Promise<{ readonly default?: unknown }>,
+    catch: (cause) =>
+      ConfigUnavailable.make({
+        message: `Could not load ${file}: ${cause instanceof Error ? cause.message : String(cause)}`,
+      }),
+  });
+  return yield* Schema.decodeUnknownEffect(Rule)(loaded.default).pipe(
+    Effect.mapError((problem) =>
+      ConfigUnavailable.make({
+        message: `${file}: a rule file must default-export defineRule({...}): ${problem.message}`,
+      }),
+    ),
+  );
+});
+
+/** A rule file's rule. A file that cannot be read refuses with the directory it was read from. */
+const readRule = Effect.fn("readRule")(function* (file: string, directory: string) {
+  if (file.endsWith(".ts")) return yield* importRule(file);
+  const fs = yield* FileSystem.FileSystem;
+  const text = yield* fs.readFileString(file).pipe(Effect.mapError(refused(directory)));
+  return yield* parseRuleMarkdown(text, file);
+});
+
+/**
+ * Every rule file under `directory`, Markdown or TypeScript, validated and
+ * keyed by its path relative to the directory without the extension:
+ * `basics/gen.md` is the rule `basics/gen`.
  */
 export const loadRules = Effect.fn("loadRules")(function* (directory: string) {
   const fs = yield* FileSystem.FileSystem;
@@ -121,13 +159,11 @@ export const loadRules = Effect.fn("loadRules")(function* (directory: string) {
   const entries = yield* fs
     .readDirectory(directory, { recursive: true })
     .pipe(Effect.mapError(refused(directory)));
-  const files = entries.filter((entry) => entry.endsWith(".md")).sort();
+  const files = entries.filter(isRuleFile).sort();
   const rules = yield* Effect.forEach(files, (relative) =>
     Effect.gen(function* () {
-      const file = path.join(directory, relative);
-      const text = yield* fs.readFileString(file).pipe(Effect.mapError(refused(directory)));
-      const id: RuleId = relative.slice(0, -".md".length).split(path.sep).join("/");
-      return [id, yield* parseRuleMarkdown(text, file)] as const;
+      const id: RuleId = withoutExtension(relative).split(path.sep).join("/");
+      return [id, yield* readRule(path.join(directory, relative), directory)] as const;
     }),
   );
   return Record.fromEntries(rules) as Readonly<Record<RuleId, Rule>>;
@@ -147,11 +183,9 @@ export const loadAdhereRuleSet = Effect.fn("loadAdhereRuleSet")(function* (root:
   ).pipe(Effect.mapError(refused(root)));
   const files = entries.filter(isNestedRuleFile);
   return yield* Effect.forEach(files, (relative) =>
-    Effect.gen(function* () {
-      const file = joinPath(path, root, segmentsOf(relative));
-      const text = yield* fs.readFileString(file).pipe(Effect.mapError(refused(root)));
-      return scopedRule(path, root, relative, yield* parseRuleMarkdown(text, file));
-    }),
+    Effect.map(readRule(joinPath(path, root, segmentsOf(relative)), root), (rule) =>
+      scopedRule(path, root, relative, rule),
+    ),
   );
 });
 

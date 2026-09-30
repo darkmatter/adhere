@@ -43,10 +43,11 @@ export default defineConfig({
 `;
 
 /**
- * A project for the config alone. A tsconfig's globs skip dot directories, so
- * without it the editor opens `.adhere/config.ts` outside any project, where
- * it cannot resolve `@drkmttr/adhere`, whose types only `bundler`, `node16`,
- * and `nodenext` resolution reach.
+ * A project for the config and any rules written in TypeScript. A tsconfig's
+ * globs skip dot directories, so without it the editor opens
+ * `.adhere/config.ts` outside any project, where it cannot resolve
+ * `@drkmttr/adhere`, whose types only `bundler`, `node16`, and `nodenext`
+ * resolution reach.
  */
 const TSCONFIG = `{
   "compilerOptions": {
@@ -58,7 +59,7 @@ const TSCONFIG = `{
     "skipLibCheck": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["config.ts"]
+  "include": ["**/*.ts"]
 }
 `;
 

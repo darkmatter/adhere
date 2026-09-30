@@ -349,7 +349,7 @@ The copies are the repo's own rules from then on: commit them, edit them, or
 start new rules from them. Nothing tracks where they came from, so a later
 install skips a file already there, as init does, and `--force` overwrites it,
 edits and all. Only Markdown rule files are copied; the source's config, its
-inline rules, and its cache are not. A config with inline `rules` replaces
+inline rules, its rules written in TypeScript, and its cache are not. A config with inline `rules` replaces
 the `.adhere/` rule files, so it replaces copied ones too.
 
 The source is cloned with `git` from `https://github.com/org/repo.git`, so a
@@ -458,16 +458,20 @@ not resolve `node_modules`.
 A tsconfig's globs skip dot directories, so the editor opens
 `.adhere/config.ts` outside any project, where it cannot resolve the package's
 types: they are reached only by `bundler`, `node16`, or `nodenext` resolution.
-`adhere init` writes `.adhere/tsconfig.json`, a project for the config alone
-with `bundler` resolution. For a config written by hand, add that file, or
-include `.adhere/config.ts` in a tsconfig that resolves the same way.
+`adhere init` writes `.adhere/tsconfig.json`, a project for the config and any
+[rules written in TypeScript](#rules-as-typescript-files), with `bundler`
+resolution. For a config written by hand, add that file, or include
+`.adhere/config.ts` in a tsconfig that resolves the same way. One written
+before rules could be TypeScript includes only `config.ts`; make its `include`
+`["**/*.ts"]` to give rule files their types.
 
 `rules` in the config, inline as above or as a directory (below), replaces the
 `.adhere/` rule files: none of them, root or nested, is read then.
 
 ### Rules as Markdown files
 
-A repo's own rules live in `.adhere/`, one `*.md` file per rule, next to the
+A repo's own rules live in `.adhere/`, one `*.md` file per rule, or a `*.ts`
+file (see [Rules as TypeScript files](#rules-as-typescript-files)), next to the
 config and the cache (neither is read as a rule). The path without `.md` is the
 rule id, so `.adhere/data/brand-ports.md` is `data/brand-ports`. When that
 directory exists, it is read without any config.
@@ -561,6 +565,58 @@ export default defineConfig({ presets: ["effect"], rules: "./docs/adhere" });
 ```
 
 Rules read through `rules` apply project-wide.
+
+### Rules as TypeScript files
+
+A rule can also be a `.ts` file in `.adhere/` that default-exports
+`defineRule({...})`, which takes the fields a config's inline rule does. The
+path without `.ts` is the rule id, as for Markdown. What TypeScript adds is
+`appendState`, a hook on what Jev reads for the rule:
+
+```ts
+import { defineRule } from "@drkmttr/adhere";
+
+export default defineRule({
+  description:
+    "A query must name only columns its table has in `schema`, and never a column it lacks.",
+  must: 'db.select("id", "email").from("users")',
+  never: 'db.select("mail").from("users")',
+  appendState: async (state, file, Bun) => ({
+    schema: await Bun.file("db/schema.sql").text(),
+  }),
+});
+```
+
+Right before each request about the rule goes out, `appendState` gets the
+request's state, the file it is about, and Bun's API, and what it returns is
+spread over the state. The state is what Jev reads beside each question:
+`code`, the file's sections as Jev reads them, under their numbers from 1, as
+in `{ code: { "1": "import …", "2": "export const …" } }`. `file` is the file's
+absolute `path`, and its `contents` as written, comments and all. The
+description can name a key the hook adds, in backticks, as the questions name
+`code`. Nothing the hook returns is checked, so it can change `code` too, or
+replace it: a hook can break its own rule's answers, and adhere does not stop
+it. It can be async, and one that throws refuses the run, naming the rule.
+
+A rule with a hook goes to Jev in requests of its own, to judge a file and to
+locate a finding, so only that rule reads what its hook adds, and no other
+rule's answer depends on it. Each of those requests sends the file again. The
+plan counts them, but not the tokens a hook adds, which are not known until it
+runs; a request over Jev's context skips the file, as a file too long does.
+
+The cache keys a judgment by the file's content and the rule, and the hook is
+part of the rule by its source: editing the hook judges the rule again. What
+the hook reads outside the file is not, so when `db/schema.sql` changes, a file
+already judged is not judged again until it or the rule changes.
+
+A rule file is imported, as a config is, so its code runs on every lint. It can
+import other files by relative path, but the executable resolves no packages
+besides `@drkmttr/adhere`. `Bun` is typed when `@types/bun` is installed and
+`.adhere/tsconfig.json` lists it, as `"types": ["bun"]`, and is `unknown`
+otherwise. Every `.ts` file in a `.adhere/`, or in a directory a config's
+`rules` names, is read as a rule, but `config.ts` and declaration files; one
+that default-exports no rule refuses the run, so keep a helper a rule imports
+elsewhere. A config's inline rules can have `appendState` too.
 
 ### Scoping a rule
 
@@ -776,7 +832,10 @@ config's `sufficiencyThreshold`, which beats the default, `0.6`.
    file and that rule, not on which other rules share the request. Every
    question shares the state cost of the request. On up to 10 files per
    project rule, the rule's question has a second one beside it, the linter
-   check (see [Validate](#validate)), with the same fields.
+   check (see [Validate](#validate)), with the same fields. A rule with
+   `appendState` has requests of its own, here and below, whose state is what
+   its hook makes of this one (see
+   [Rules as TypeScript files](#rules-as-typescript-files)).
 2. A second request only when at least one rule's probability is above its
    threshold. Per flagged rule, when the file has more than one section, one
    `choice` question among the sections' numbers, which yields the section to
@@ -810,7 +869,7 @@ named for the hash of a source file's content as Jev reads it, without its
 comments, so a moved or copied file keeps its judgments, identical files share
 them, and a change to comments alone re-judges nothing. Each answer sits under a
 fingerprint of the model and the question asked for the rule, which carries
-the rule's text. A changed file re-judges every rule for that file. An edited
+the rule's text, and of the source of the rule's `appendState`, if it has one. A changed file re-judges every rule for that file. An edited
 rule re-judges only that rule, and an adhere that asks its questions
 differently re-judges every rule once. A lowered threshold locates cached
 judgments that are newly above it without judging again. `tallies/` keeps the

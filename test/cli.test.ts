@@ -268,6 +268,34 @@ describe("cli", () => {
     expect(stderr.split("\n")[0]).toBe("1 file and 1 rule: 1 check.");
   });
 
+  it("reads a rule written in TypeScript with the package's defineRule, and not the config beside it", async () => {
+    const root = join(tmpdir(), `adhere-ts-rule-${Date.now()}`);
+    for (const directory of [".adhere", "src"]) {
+      await mkdir(join(root, directory), { recursive: true });
+    }
+    const files: Readonly<Record<string, string>> = {
+      "src/a.ts": "export const port = 3000;\n",
+      ".adhere/config.ts":
+        'import { defineConfig } from "@drkmttr/adhere";\n\nexport default defineConfig({});\n',
+      ".adhere/ports.ts": [
+        'import { defineRule } from "@drkmttr/adhere";',
+        "",
+        "export default defineRule({",
+        '  description: "A port must be a branded integer.",',
+        '  must: "const port = Port.make(3000);",',
+        "  appendState: (state) => ({ sections: Object.keys(state.code).length }),",
+        "});",
+        "",
+      ].join("\n"),
+    };
+    for (const [file, text] of Object.entries(files)) {
+      await writeFile(join(root, file), text, "utf8");
+    }
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    const { stderr } = await execFileAsync("bun", [main, "lint", "--limit", "0"], { cwd: root });
+    expect(stderr.split("\n")[0]).toBe("1 file and 1 rule: 1 check.");
+  });
+
   it("judges tests only by a rule about tests", async () => {
     const root = join(tmpdir(), `adhere-tests-${Date.now()}`);
     for (const directory of [".adhere", "src", "test"]) {

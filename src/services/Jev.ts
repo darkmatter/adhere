@@ -1,4 +1,11 @@
-import { type Example, examplesOf, type Rule, type RuleId, type Rules } from "#config.ts";
+import {
+  type Example,
+  examplesOf,
+  type JudgedFile,
+  type Rule,
+  type RuleId,
+  type Rules,
+} from "#config.ts";
 import { type Range, sectionsOf } from "#excerpt.ts";
 import { Context, type Effect, Record, Schema } from "effect";
 
@@ -47,12 +54,13 @@ export class Jev extends Context.Service<
     /**
      * Each rule's probability that the file breaks it. A rule in `sampled`
      * also carries the linter check's question, whose answer comes back
-     * under `linter`.
+     * under `linter`. `file` is what a rule's `appendState` gets.
      */
     readonly judge: (
       lines: Lines,
       rules: Rules,
-      sampled?: ReadonlyArray<RuleId>,
+      sampled: ReadonlyArray<RuleId>,
+      file: JudgedFile,
     ) => Effect.Effect<Judged, JevUnavailable | JevOverflow | JevBlocked>;
     /**
      * Per rule, the section of the file that most clearly breaks it, and
@@ -62,6 +70,7 @@ export class Jev extends Context.Service<
     readonly locate: (
       lines: Lines,
       rules: Rules,
+      file: JudgedFile,
     ) => Effect.Effect<Record<RuleId, Located>, JevUnavailable | JevOverflow | JevBlocked>;
     /**
      * Per rule, the partner Jev names as impossible to follow in the same code,
@@ -469,32 +478,52 @@ export const requestsOf = (body: Body): ReadonlyArray<Body> => {
 };
 
 /**
+ * The rules as requests carry them: every rule without `appendState` in one
+ * body, and each rule with it in a body of its own, so that what its hook
+ * puts in the state only its own questions read.
+ */
+export const requestGroups = (rules: Rules): ReadonlyArray<Rules> => {
+  const shared = Record.filter(rules, (rule) => rule.appendState === undefined);
+  return [
+    ...(Record.isEmptyRecord(shared) ? [] : [shared]),
+    ...Object.entries(rules).flatMap(([id, rule]) =>
+      rule.appendState === undefined ? [] : [{ [id]: rule }],
+    ),
+  ];
+};
+
+/** The judge requests for `rules` over a file: a body per group, split to fit, as `judge` sends them. */
+const judgeRequestsOf = (lines: Lines, rules: Rules, sampled: ReadonlyArray<RuleId>) =>
+  requestGroups(rules).flatMap((group) => requestsOf(judgeBody("", lines, group, sampled)));
+
+/**
  * The requests judging `rules` over a file takes, and about how many input
- * tokens they carry, by `tokensOf`: the judge body, split to fit, as `judge`
- * sends it, each request with the file again.
+ * tokens they carry, by `tokensOf`: the judge bodies, split to fit, as
+ * `judge` sends them, each request with the file again. What a rule's
+ * `appendState` adds is not known before it runs, so it is not counted.
  */
 export const judgeLoad = (
   lines: Lines,
   rules: Rules,
   sampled: ReadonlyArray<RuleId> = [],
 ): { readonly requests: number; readonly tokens: number } => {
-  const requests = requestsOf(judgeBody("", lines, rules, sampled));
+  const requests = judgeRequestsOf(lines, rules, sampled);
   return {
     requests: requests.length,
     tokens: requests.reduce((sum, request) => sum + tokensOf(request), 0),
   };
 };
 
-/** The requests judging `rules` over a file takes: the judge body, split to fit, as `judge` sends it. */
+/** The requests judging `rules` over a file takes: the judge bodies, split to fit, as `judge` sends them. */
 export const judgeRequests = (
   lines: Lines,
   rules: Rules,
   sampled: ReadonlyArray<RuleId> = [],
-): number => requestsOf(judgeBody("", lines, rules, sampled)).length;
+): number => judgeRequestsOf(lines, rules, sampled).length;
 
-/** The requests locating `rules` in a file takes, split to fit as `locate` sends them. */
+/** The requests locating `rules` in a file takes, a body per group split to fit, as `locate` sends them. */
 export const locateRequests = (lines: Lines, rules: Rules): number =>
-  requestsOf(locateBody("", lines, rules)).length;
+  requestGroups(rules).flatMap((group) => requestsOf(locateBody("", lines, group))).length;
 
 /** A choice keeps one criterion for "none", which leaves this many for partners. */
 const PARTNERS_PER_QUESTION = CHOICE_LIMIT - 1;

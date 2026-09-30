@@ -23,6 +23,7 @@ import { NO_SUPPRESSIONS, suppresses, suppressionsOf } from "../src/suppress.ts"
 import { findContradictions, formatContradictions } from "../src/contradictions.ts";
 import {
   AdhereConfig as AdhereConfigSchema,
+  type AppendState,
   decodeConfig,
   type Loaded,
   type Preset,
@@ -72,9 +73,11 @@ import {
   linterKey,
   linterQuestion,
   locateBody,
+  locateRequests,
   namedPairs,
   type Pair,
   pairProbability,
+  requestGroups,
   requestsOf,
   type Rules,
   tokensOf,
@@ -462,6 +465,14 @@ describe("jev's context", () => {
     }
   });
 
+  it("gives each rule with appendState requests of its own, to judge and to locate", () => {
+    const hooked = { ...b, appendState: () => ({}) };
+    expect(requestGroups({ a, hooked, b })).toEqual([{ a, b }, { hooked }]);
+    expect(requestGroups({ hooked })).toEqual([{ hooked }]);
+    expect(judgeLoad(code1, { a, b, hooked }).requests).toBe(2);
+    expect(locateRequests(code1, { a, hooked })).toBe(2);
+  });
+
   it("keeps a body that fits as one request", () => {
     const body = judgeBody("jev-latest", code1, rules);
     expect(requestsOf(body)).toEqual([body]);
@@ -599,6 +610,18 @@ describe("config", () => {
     const guideline = { description: "A file should be small.", should: "export const one = 1;" };
     const config = await Effect.runPromise(decodeConfig({ rules: { never, guideline } }));
     expect(config.rules).toEqual({ never, guideline });
+  });
+
+  it("takes a function as a rule's appendState, and refuses anything else", async () => {
+    const appendState = () => ({});
+    const decoded = await Effect.runPromise(
+      decodeConfig({ rules: { a: { ...a, appendState } } }),
+    );
+    expect(decoded.rules).toEqual({ a: { ...a, appendState } });
+    const refused = await Effect.runPromise(
+      Effect.flip(decodeConfig({ rules: { a: { ...a, appendState: "{}" } } })),
+    );
+    expect(refused.message).toContain("Expected a function");
   });
 
   it("reads reference and avoid, the names before 0.7, as must and never", async () => {
@@ -966,6 +989,44 @@ describe("nested .adhere rules", () => {
         rule: { description: "api", must: "api()" },
       },
     ]);
+  });
+
+  it("loads a rule written in TypeScript by its default export, and neither the config nor a declaration file", async () => {
+    // Neither default-exports a rule, so reading either as one would refuse the load.
+    const root = await onDisk({
+      ".adhere/config.ts": "export default {};\n",
+      ".adhere/types.d.ts": "export {};\n",
+      ".adhere/data/ports.ts":
+        'export default { description: "A port must be branded.", must: "Port.make(3000)", appendState: () => ({ ports: [3000] }) };\n',
+    });
+
+    const entries = await Effect.runPromise(
+      loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem)),
+    );
+
+    expect(entries).toMatchObject([
+      {
+        id: "data/ports",
+        file: `${root}/.adhere/data/ports.ts`,
+        scope: root,
+        rule: { description: "A port must be branded.", must: "Port.make(3000)" },
+      },
+    ]);
+    expect(typeof entries[0]?.rule.appendState).toBe("function");
+  });
+
+  it("refuses a TypeScript rule file that default-exports no rule, naming the file", async () => {
+    const root = await onDisk({
+      ".adhere/ports.ts": 'export const rule = { description: "d", must: "m()" };\n',
+    });
+
+    const refused = await Effect.runPromise(
+      Effect.flip(loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem))),
+    );
+
+    expect(refused.message).toContain(
+      `${root}/.adhere/ports.ts: a rule file must default-export defineRule({...})`,
+    );
   });
 
   it("skips .adhere directories inside dependency and generated trees, and through links", async () => {
@@ -1552,10 +1613,10 @@ describe("init", () => {
 
     expect(config).toContain('import { defineConfig } from "@drkmttr/adhere";');
     expect(config).toContain("export default defineConfig({");
-    // A tsconfig's globs skip .adhere/, so the config gets a project of its own that resolves the package.
+    // A tsconfig's globs skip .adhere/, so the config and TypeScript rules get a project that resolves the package.
     expect(project).toMatchObject({
       compilerOptions: { moduleResolution: "bundler" },
-      include: ["config.ts"],
+      include: ["**/*.ts"],
     });
     expect(rule).toContain("description:");
 
@@ -2341,6 +2402,29 @@ describe("pipeline", () => {
     expect(edited.judged).toBe(1);
   });
 
+  it("re-judges a rule whose appendState is edited, by its source, and nothing else", async () => {
+    const cache = memoryCache();
+    const hooked = (version: number) => ({
+      ...b,
+      appendState: version === 1 ? () => ({ version: 1 }) : () => ({ version: 2 }),
+    });
+    await audit({
+      rules: { a, b: hooked(1) },
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
+      cache,
+    });
+
+    const edited = hooked(2);
+    const second = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    await audit({ rules: { a, b: edited }, jev: second.layer, cache });
+    expect(second.calls).toEqual({ judge: [{ b: edited }], locate: [] });
+
+    // A run imports the rule again: a new function, with the same source.
+    const third = recordingJev({ judge: {}, locate: {} });
+    await audit({ rules: { a, b: hooked(2) }, jev: third.layer, cache });
+    expect(third.calls).toEqual({ judge: [], locate: [] });
+  });
+
   it("answers a file from the cache wherever its content moves", async () => {
     const cache = memoryCache();
     await audit({
@@ -3076,6 +3160,9 @@ describe("credentials", () => {
 });
 
 describe("jev over http", () => {
+  /** The file a rule's appendState gets, beside the lines Jev reads. */
+  const judgedFile = { path: "/repo/src/server.ts", contents: "const port = 3000;" };
+
   it("sends at most --rpm requests a minute, evenly spaced", async () => {
     const sent: Array<number> = [];
     const client = HttpClient.make((request) => {
@@ -3105,7 +3192,9 @@ describe("jev over http", () => {
     );
     const four = Effect.gen(function* () {
       const jev = yield* Jev;
-      for (let request = 0; request < 4; request++) yield* jev.judge(["const port = 3000;"], { a });
+      for (let request = 0; request < 4; request++) {
+        yield* jev.judge(["const port = 3000;"], { a }, [], judgedFile);
+      }
     });
     await Effect.runPromise(Effect.provide(four, layer));
     const first = sent[0] ?? 0;
@@ -3156,7 +3245,7 @@ describe("jev over http", () => {
       ]),
     );
     const judged = Effect.gen(function* () {
-      return yield* (yield* Jev).judge(["const port = 3000;"], judgedRules);
+      return yield* (yield* Jev).judge(["const port = 3000;"], judgedRules, [], judgedFile);
     });
     const result = Effect.runPromise(Effect.result(Effect.provide(judged, layer)));
     return { authorizations, asked, judged: result };
@@ -3203,7 +3292,10 @@ describe("jev over http", () => {
     const long = Array.from({ length: 70 }, (_, index) => `const v${index + 1} = ${index + 1};`);
     const located = Effect.gen(function* () {
       const jev = yield* Jev;
-      return [yield* jev.locate(long, { a, b }), yield* jev.locate(["const x = 1;"], { a })];
+      return [
+        yield* jev.locate(long, { a, b }, judgedFile),
+        yield* jev.locate(["const x = 1;"], { a }, judgedFile),
+      ];
     });
     const [three, one] = await Effect.runPromise(Effect.provide(located, layer));
     expect(three).toEqual({
@@ -3214,6 +3306,89 @@ describe("jev over http", () => {
     });
     expect(sent[0]).toContain("start:b:3");
     expect(sent[1]).toEqual(["start:a:1", "end:a:1", "sufficient:a"]);
+  });
+
+  /** Jev over a client that records each request's state and question ids, and says yes to each. */
+  const recordedJev = () => {
+    const sent: Array<{ readonly state: unknown; readonly ids: ReadonlyArray<string> }> = [];
+    const client = HttpClient.make((request) => {
+      const body: {
+        readonly state: unknown;
+        readonly questions: Readonly<Record<string, { readonly type: string }>>;
+      } =
+        request.body._tag === "Uint8Array"
+          ? JSON.parse(new TextDecoder().decode(request.body.body))
+          : { state: undefined, questions: {} };
+      sent.push({ state: body.state, ids: Object.keys(body.questions) });
+      const answers = Record.map(body.questions, ({ type }) =>
+        type === "noul" ? { noul: 0.9 } : { choice: "1" },
+      );
+      return Effect.succeed(HttpClientResponse.fromWeb(request, Response.json({ answers })));
+    });
+    const layer = JevLive.pipe(
+      Layer.provide([
+        Layer.succeed(HttpClient.HttpClient, client),
+        Layer.succeed(AdhereConfig, {
+          model: "jev-latest",
+          threshold: 0.7,
+          sufficiencyThreshold: 0.7,
+          rules: {},
+        }),
+        Layer.succeed(Credentials, {
+          apiKey: Effect.succeed(Redacted.make("tsk_saved")),
+          file: Effect.succeed("/config/adhere/credentials.json"),
+          save: () => Effect.void,
+          remove: Effect.succeed(false),
+        }),
+      ]),
+    );
+    return { sent, layer };
+  };
+
+  it("runs a rule's appendState right before its own requests, over their state alone", async () => {
+    // It adds a key and replaces the code, and nothing stops it.
+    const appendState: AppendState = (state, file) => ({
+      code: { "1": "const replaced = true;" },
+      seen: { sections: Object.keys(state.code), path: file.path, contents: file.contents },
+    });
+    const hooked = { ...b, appendState };
+    const { sent, layer } = recordedJev();
+    const asked = Effect.gen(function* () {
+      const jev = yield* Jev;
+      const judged = yield* jev.judge(["const port = 3000;"], { a, hooked }, [], judgedFile);
+      yield* jev.locate(["const port = 3000;"], { hooked }, judgedFile);
+      return judged;
+    });
+
+    const judged = await Effect.runPromise(Effect.provide(asked, layer));
+
+    expect(judged.probabilities).toEqual({ a: 0.9, hooked: 0.9 });
+    const appended = {
+      code: { "1": "const replaced = true;" },
+      seen: { sections: ["1"], path: "/repo/src/server.ts", contents: "const port = 3000;" },
+    };
+    expect(sent).toEqual([
+      { state: { code: { "1": "const port = 3000;" } }, ids: ["a"] },
+      { state: appended, ids: ["hooked"] },
+      { state: appended, ids: ["start:hooked:1", "end:hooked:1", "sufficient:hooked"] },
+    ]);
+  });
+
+  it("refuses when a rule's appendState fails, naming the rule, and sends nothing for it", async () => {
+    const hooked = {
+      ...b,
+      appendState: () => Promise.reject(new Error("db/schema.sql is missing")),
+    };
+    const { sent, layer } = recordedJev();
+
+    const judged = Effect.gen(function* () {
+      return yield* (yield* Jev).judge(["const port = 3000;"], { hooked }, [], judgedFile);
+    });
+
+    const refused = await Effect.runPromise(Effect.flip(Effect.provide(judged, layer)));
+
+    expect(refused.message).toBe("the appendState of hooked failed: db/schema.sql is missing");
+    expect(sent).toEqual([]);
   });
 
   it("sends the key from Credentials as a bearer token", async () => {

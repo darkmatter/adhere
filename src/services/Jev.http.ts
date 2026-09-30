@@ -1,4 +1,4 @@
-import type { RuleId } from "#config.ts";
+import type { AppendState, JevState, JudgedFile, RuleId } from "#config.ts";
 import { sectionsOf } from "#excerpt.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { Credentials } from "#services/Credentials.ts";
@@ -22,6 +22,7 @@ import {
   namedPairs,
   type Pair,
   pairProbability,
+  requestGroups,
   requestsOf,
   type Rules,
   sufficiencyKey,
@@ -62,6 +63,35 @@ const LocateAnswers = Schema.Struct({
 });
 
 const refused = (message: string) => JevUnavailable.make({ message });
+
+/** Bun's API, for a rule's hook. Read off `globalThis`, as presets.ts reads it: Vitest runs this on Node. */
+const bun = (globalThis as { readonly Bun?: unknown }).Bun as Parameters<AppendState>[2];
+
+/**
+ * A body as it goes out: when its rule has `appendState`, with what the hook
+ * returns spread over the body's state. A hook that fails refuses the run.
+ */
+const hooked = (
+  body: Body & { readonly state: JevState },
+  group: Rules,
+  file: JudgedFile,
+): Effect.Effect<Body, JevUnavailable> => {
+  const [hook] = Object.entries(group).flatMap(([id, rule]) =>
+    rule.appendState === undefined ? [] : [[id, rule.appendState] as const],
+  );
+  if (hook === undefined) return Effect.succeed(body);
+  const [id, appendState] = hook;
+  return Effect.tryPromise({
+    try: async () => ({
+      ...body,
+      state: { ...body.state, ...(await appendState(body.state, file, bun)) },
+    }),
+    catch: (cause) =>
+      refused(
+        `the appendState of ${id} failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+      ),
+  });
+};
 
 /** A failed attempt, for the log: the status and Ray ID when Jev's side answered, the cause otherwise. */
 const attemptFailure = (
@@ -224,14 +254,44 @@ export const JevLive = Layer.effect(Jev)(
           ),
       );
 
+    /**
+     * Every answer about a file's rules: a body for each group that
+     * `requestGroups` makes of them, each with its rule's hook run right
+     * before it goes out.
+     */
+    const answersAbout = <A>(
+      kind: string,
+      rules: Rules,
+      bodyOf: (group: Rules) => Body & { readonly state: JevState },
+      file: JudgedFile,
+      Answers: Schema.Codec<
+        { readonly answers: Readonly<Record<string, A>> },
+        unknown,
+        never,
+        never
+      >,
+    ) =>
+      Effect.map(
+        Effect.forEach(requestGroups(rules), (group) =>
+          Effect.flatMap(hooked(bodyOf(group), group, file), (body) =>
+            answersTo(kind, body, Answers),
+          ),
+        ),
+        (groups) =>
+          groups.reduce<Record<string, A>>((answers, some) => ({ ...answers, ...some }), {}),
+      );
+
     const judge = Effect.fn("Jev.judge")(function* (
       lines: Lines,
       rules: Rules,
-      sampled: ReadonlyArray<RuleId> = [],
+      sampled: ReadonlyArray<RuleId>,
+      file: JudgedFile,
     ) {
-      const answers = yield* answersTo(
+      const answers = yield* answersAbout(
         "judge",
-        judgeBody(config.model, lines, rules, sampled),
+        rules,
+        (group) => judgeBody(config.model, lines, group, sampled),
+        file,
         NoulAnswers,
       );
       /** Each rule's answer, read from the question it rode under. */
@@ -270,11 +330,17 @@ export const JevLive = Layer.effect(Jev)(
       } satisfies Judged;
     });
 
-    const locate = Effect.fn("Jev.locate")(function* (lines: Lines, rules: Rules) {
+    const locate = Effect.fn("Jev.locate")(function* (
+      lines: Lines,
+      rules: Rules,
+      file: JudgedFile,
+    ) {
       const sections = sectionsOf(lines);
-      const answers = yield* answersTo(
+      const answers = yield* answersAbout(
         "locate",
-        locateBody(config.model, lines, rules),
+        rules,
+        (group) => locateBody(config.model, lines, group),
+        file,
         LocateAnswers,
       );
       // A file of one section has every finding in it. An answer that names no section,

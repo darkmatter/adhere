@@ -1,8 +1,10 @@
 export {
   type AdhereConfig,
+  type AppendState,
   type Config,
   ConfigUnavailable,
   defineConfig,
+  defineRule,
   type Preset,
   type Rule,
   type RuleId,
