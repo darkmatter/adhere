@@ -198,6 +198,8 @@ export interface AuditPlan {
   readonly tokens: number;
   /** The model's price per million input tokens, in dollars, when adhere knows it. */
   readonly price?: number;
+  /** The run's threshold, which a rule's own, or an override's, replaces for that rule. */
+  readonly threshold: number;
   /** Below this, a finding's sufficiency adds a warning to it. */
   readonly sufficiencyThreshold: number;
 }
@@ -465,6 +467,7 @@ export const planAudit = (
       requests: loads.reduce((sum, load) => sum + load.requests, 0),
       tokens: loads.reduce((sum, load) => sum + load.tokens, 0),
       ...(price === undefined ? {} : { price }),
+      threshold: config.threshold,
       sufficiencyThreshold: config.sufficiencyThreshold,
     };
   });

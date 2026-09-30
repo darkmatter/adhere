@@ -261,6 +261,7 @@ export const lintCommand = Command.make(
         render(result, {
           color,
           root: path.resolve(),
+          threshold: plan.threshold,
           sufficiencyThreshold: plan.sufficiencyThreshold,
         }).join("\n"),
       );

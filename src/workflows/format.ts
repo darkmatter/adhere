@@ -1,4 +1,4 @@
-import { DEFAULT_SUFFICIENCY_THRESHOLD } from "#config.ts";
+import { DEFAULT_SUFFICIENCY_THRESHOLD, DEFAULT_THRESHOLD } from "#config.ts";
 import { type Kind, tokenize } from "#highlight.ts";
 import { shownId } from "#rules.ts";
 import type { AuditPlan, AuditResult, FileDone, Finding } from "#workflows/audit.ts";
@@ -235,38 +235,47 @@ const frame = (
   ...hint(finding),
 ];
 
+/** Scores from one number through another, as a header shows them: `0.81–0.89`. */
+const range = (from: number, to: number): string => `${from.toFixed(2)}–${to.toFixed(2)}`;
+
+/** A header's scores are rounded to this. */
+const STEP = 0.01;
+
 /**
- * What the scores in a header mean, once under the findings, with each range
- * a score can fall in named in the color a score in it has. The words say
- * the same without color.
+ * What the scores in a header mean, once under the findings, and the ranges
+ * a score falls in, lowest first, each in the color a score in it has:
+ * confidence that lint does not report, that is low, and that is high; then
+ * context that is low, and that is enough. The run's threshold bounds the
+ * first; a rule with a threshold of its own is reported from there instead.
+ * At a threshold of 0.89 or more no confidence is low.
  */
-const legend = (result: AuditResult, sufficiencyThreshold: number): ReadonlyArray<Line> => {
-  const confident = CONFIDENT.toFixed(2);
-  const sufficient = sufficiencyThreshold.toFixed(2);
-  return result.findings.length === 0
+const legend = (
+  result: AuditResult,
+  threshold: number,
+  sufficiencyThreshold: number,
+): ReadonlyArray<Line> =>
+  result.findings.length === 0
     ? []
     : [
         [
           span("confidence", "legend"),
           span(": Jev's probability that the file breaks the rule: "),
-          span(`high from ${confident}`, "probability"),
+          span(range(0, threshold), "unreported"),
           span(", "),
-          span(`low below ${confident}`, "low"),
-          span(", "),
-          span("unreported at or below the rule's threshold", "unreported"),
-          span("."),
+          ...(threshold + STEP < CONFIDENT
+            ? [span(range(threshold + STEP, CONFIDENT - STEP), "low"), span(", ")]
+            : []),
+          span(range(Math.max(CONFIDENT, threshold + STEP), 1), "probability"),
         ],
         [
           span("context", "legend"),
           span(": its probability that the file shows enough to decide: "),
-          span(`enough from ${sufficient}`, "probability"),
+          span(range(0, sufficiencyThreshold - STEP), "low"),
           span(", "),
-          span(`low below ${sufficient}`, "low"),
-          span("."),
+          span(range(sufficiencyThreshold, 1), "probability"),
         ],
         [],
       ];
-};
 
 /** The findings counted by level: `1 error`, or `2 errors and 1 warning` once there are warnings. */
 const found = (findings: ReadonlyArray<Finding>): string => {
@@ -313,6 +322,8 @@ export interface RenderOptions {
   /** Color the frame the way `vp lint` does on a terminal, and highlight the code. */
   readonly color?: boolean;
   readonly root?: string;
+  /** The run's threshold, for the legend: lint reports no finding at or below it. Defaults to 0.8. */
+  readonly threshold?: number;
   /** Below this, a finding's context is low and it carries a warning. Defaults to 0.6. */
   readonly sufficiencyThreshold?: number;
 }
@@ -329,7 +340,7 @@ export const render = (result: AuditResult, options: RenderOptions = {}): Readon
       ...frame(finding, options.root, sufficiencyThreshold),
       [],
     ]),
-    ...legend(result, sufficiencyThreshold),
+    ...legend(result, options.threshold ?? DEFAULT_THRESHOLD, sufficiencyThreshold),
     ...summary(result),
     ...blockedFiles(result, options.root),
   ].map((line) => serialize(line, options.color === true));

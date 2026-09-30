@@ -1854,6 +1854,7 @@ describe("plan", () => {
       requests: 1,
       tokens: expect.any(Number),
       price: 0.042,
+      threshold: 0.7,
       sufficiencyThreshold: 0.7,
     });
   });
@@ -2053,7 +2054,10 @@ describe("plan", () => {
     original: [],
   });
   const summary = (
-    fields: Omit<AuditPlan, "files" | "tokens" | "unjudged" | "sufficiencyThreshold"> & {
+    fields: Omit<
+      AuditPlan,
+      "files" | "tokens" | "unjudged" | "threshold" | "sufficiencyThreshold"
+    > & {
       readonly tokens?: number;
     },
     files = 200,
@@ -2061,6 +2065,7 @@ describe("plan", () => {
     files: Array.from({ length: files }, (_, index) => filePlan(`/repo/${index}.ts`)),
     unjudged: [],
     tokens: 0,
+    threshold: 0.7,
     sufficiencyThreshold: 0.7,
     ...fields,
   });
@@ -2969,8 +2974,8 @@ describe("render", () => {
         '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
         "        type Port = typeof Port.Type",
         "",
-        "confidence: Jev's probability that the file breaks the rule: high from 0.90, low below 0.90, unreported at or below the rule's threshold.",
-        "context: its probability that the file shows enough to decide: enough from 0.60, low below 0.60.",
+        "confidence: Jev's probability that the file breaks the rule: 0.00–0.80, 0.81–0.89, 0.90–1.00",
+        "context: its probability that the file shows enough to decide: 0.00–0.59, 0.60–1.00",
         "",
         "Found 1 error.",
         "1 file, 1 judged, 0 cached.",
@@ -3032,7 +3037,7 @@ describe("render", () => {
     const enough = render({ ...result, findings: [finding] }, { sufficiencyThreshold: 0.4 });
     expect(enough.some((line) => line.includes("warning:"))).toBe(false);
     expect(enough).toContain(
-      "context: its probability that the file shows enough to decide: enough from 0.40, low below 0.40.",
+      "context: its probability that the file shows enough to decide: 0.00–0.39, 0.40–1.00",
     );
   });
 
@@ -3115,17 +3120,27 @@ describe("render", () => {
     expect(header({ ...findingA, probability: 0.92, threshold: 0.95 })).toContain(sgr(red, "0.92"));
   });
 
-  it("names each range of a score in the legend in the color a score there has, under bold labels", () => {
+  it("gives each range of a score in the legend, lowest first, in the color a score there has, under bold labels", () => {
     const green = "38;5;156";
     const amber = "38;2;214;154;0";
     const red = "38;2;164;20;71";
     const colored = render(result, { color: true });
     expect(colored).toContain(
-      `${sgr("1", "confidence")}: Jev's probability that the file breaks the rule: ${sgr(green, "high from 0.90")}, ${sgr(amber, "low below 0.90")}, ${sgr(red, "unreported at or below the rule's threshold")}.`,
+      `${sgr("1", "confidence")}: Jev's probability that the file breaks the rule: ${sgr(red, "0.00–0.80")}, ${sgr(amber, "0.81–0.89")}, ${sgr(green, "0.90–1.00")}`,
     );
     expect(colored).toContain(
-      `${sgr("1", "context")}: its probability that the file shows enough to decide: ${sgr(green, "enough from 0.60")}, ${sgr(amber, "low below 0.60")}.`,
+      `${sgr("1", "context")}: its probability that the file shows enough to decide: ${sgr(amber, "0.00–0.59")}, ${sgr(green, "0.60–1.00")}`,
     );
+  });
+
+  it("bounds the legend's unreported range by the run's threshold, and has no low range at 0.89 or above", () => {
+    const confidence = (threshold: number) =>
+      render(result, { threshold })
+        .find((line) => line.startsWith("confidence"))
+        ?.split("rule: ")[1];
+    expect(confidence(0.7)).toBe("0.00–0.70, 0.71–0.89, 0.90–1.00");
+    expect(confidence(0.89)).toBe("0.00–0.89, 0.90–1.00");
+    expect(confidence(0.95)).toBe("0.00–0.95, 0.96–1.00");
   });
 
   it("leaves the legend out of a report with no findings", () => {
