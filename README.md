@@ -11,7 +11,7 @@ description: A third party API going offline should not also take our app down.
 ---
 
 Our APIs should never be coupled to some third party API on a critical path. The user facing
-side be unaffected if it goes offline, and ingestion should happen in a separate asynchronous process.
+side should be unaffected if it goes offline, and ingestion should happen in a separate asynchronous process.
 
 ## Should
 
