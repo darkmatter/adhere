@@ -13,7 +13,7 @@ type Role =
   | "warning"
   | "probability"
   | "low"
-  | "unreported"
+  | "below"
   | "description"
   | "path"
   | "lineNumber"
@@ -46,7 +46,7 @@ const THEME: Readonly<Record<Role, string>> = {
   warning: "38;2;214;154;0;1",
   probability: "38;5;156",
   low: "38;2;214;154;0",
-  unreported: "38;2;164;20;71",
+  below: "38;2;164;20;71",
   description: "38;2;230;230;255",
   path: "38;2;5;125;160;1",
   lineNumber: "2",
@@ -100,26 +100,31 @@ const counted = (count: number, one: string, many: string): string =>
   `${count} ${count === 1 ? one : many}`;
 
 /**
- * Below this, a finding's confidence is low. On the evals, findings at 0.9
- * and above were usually real, and those under it mostly were not.
+ * How far from its rule's threshold a confidence is still near it. Scores
+ * that gather there, reported or not, turn on where the threshold sits, so
+ * they are a sign it may be too low or too high.
  */
-const CONFIDENT = 0.9;
+const MARGIN = 0.1;
+
+/** A score as a header shows it, in hundredths, so two compare as they read. */
+const hundredths = (value: number): number => Math.round(value * 100);
 
 const score = (value: number, low: boolean): Span =>
   span(value.toFixed(2), low ? "low" : "probability");
 
-/** Whether lint leaves the finding out of a report: its probability is not above its rule's threshold. */
-const unreported = (finding: Finding): boolean => finding.probability <= finding.threshold;
-
 /**
- * A confidence in one of three ranges: red where lint does not report the
- * finding, which only a run that shows every judgment prints; amber from
- * there up to `CONFIDENT`; the accent above.
+ * A confidence in one of three ranges set by the rule's threshold: amber
+ * within `MARGIN` of it, on either side; red below that, which only a run
+ * that shows every judgment prints; the accent above.
  */
-const confidence = (finding: Finding): Span =>
-  unreported(finding)
-    ? span(finding.probability.toFixed(2), "unreported")
-    : score(finding.probability, finding.probability < CONFIDENT);
+const confidence = (finding: Finding): Span => {
+  const distance = hundredths(finding.probability) - hundredths(finding.threshold);
+  const margin = hundredths(MARGIN);
+  return span(
+    finding.probability.toFixed(2),
+    distance < -margin ? "below" : distance < margin ? "low" : "probability",
+  );
+};
 
 const lacksContext = (finding: Finding, sufficiencyThreshold: number): boolean =>
   finding.context !== undefined && finding.context < sufficiencyThreshold;
@@ -244,10 +249,10 @@ const STEP = 0.01;
 /**
  * What the scores in a header mean, once under the findings, and the ranges
  * a score falls in, lowest first, each in the color a score in it has:
- * confidence that lint does not report, that is low, and that is high; then
- * context that is low, and that is enough. The run's threshold bounds the
- * first; a rule with a threshold of its own is reported from there instead.
- * At a threshold of 0.89 or more no confidence is low.
+ * confidence below the threshold's margin, within it, and above it; then
+ * context that is low, and that is enough. The ranges are the run's
+ * threshold's; a rule with a threshold of its own has them around that. A
+ * range with no score in it, as below a threshold of 0.1, is left out.
  */
 const legend = (
   result: AuditResult,
@@ -260,12 +265,16 @@ const legend = (
         [
           span("confidence", "legend"),
           span(": Jev's probability that the file breaks the rule: "),
-          span(range(0, threshold), "unreported"),
-          span(", "),
-          ...(threshold + STEP < CONFIDENT
-            ? [span(range(threshold + STEP, CONFIDENT - STEP), "low"), span(", ")]
+          ...(threshold - MARGIN > 0
+            ? [span(range(0, threshold - MARGIN - STEP), "below"), span(", ")]
             : []),
-          span(range(Math.max(CONFIDENT, threshold + STEP), 1), "probability"),
+          span(
+            range(Math.max(0, threshold - MARGIN), Math.min(1, threshold + MARGIN - STEP)),
+            "low",
+          ),
+          ...(threshold + MARGIN <= 1
+            ? [span(", "), span(range(threshold + MARGIN, 1), "probability")]
+            : []),
         ],
         [
           span("context", "legend"),

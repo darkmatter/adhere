@@ -2974,7 +2974,7 @@ describe("render", () => {
         '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
         "        type Port = typeof Port.Type",
         "",
-        "confidence: Jev's probability that the file breaks the rule: 0.00–0.80, 0.81–0.89, 0.90–1.00",
+        "confidence: Jev's probability that the file breaks the rule: 0.00–0.69, 0.70–0.89, 0.90–1.00",
         "context: its probability that the file shows enough to decide: 0.00–0.59, 0.60–1.00",
         "",
         "Found 1 error.",
@@ -3095,29 +3095,32 @@ describe("render", () => {
     expect(colored.endsWith("1 file, 1 judged, 0 cached, 2 skipped.")).toBe(true);
   });
 
-  it("colors a score amber when it is low: confidence below 0.90, context below the threshold", () => {
-    const amber = "38;2;214;154;0";
+  it("colors a confidence by how far it is from its rule's threshold: amber within 0.10 either side, red below, green above", () => {
     const green = "38;5;156";
-    const scores = (finding: typeof findingA & { readonly context: number }) =>
-      render({ ...result, findings: [finding] }, { color: true })[0]?.split("  confidence ")[1];
-    expect(scores({ ...findingA, probability: 0.93, context: 0.88 })).toBe(
-      `${sgr(green, "0.93")} · context ${sgr(green, "0.88")}`,
-    );
-    expect(scores({ ...findingA, probability: 0.83, context: 0.45 })).toBe(
-      `${sgr(amber, "0.83")} · context ${sgr(amber, "0.45")}`,
-    );
+    const amber = "38;2;214;154;0";
+    const red = "38;2;164;20;71";
+    const confidence = (probability: number, threshold = 0.7) =>
+      render({ ...result, findings: [{ ...findingA, probability, threshold }] }, { color: true })[0]
+        ?.split("  confidence ")[1]
+        ?.split(" · ")[0];
+    expect(confidence(0.59)).toBe(sgr(red, "0.59"));
+    expect(confidence(0.6)).toBe(sgr(amber, "0.60"));
+    expect(confidence(0.7)).toBe(sgr(amber, "0.70"));
+    expect(confidence(0.79)).toBe(sgr(amber, "0.79"));
+    expect(confidence(0.8)).toBe(sgr(green, "0.80"));
+    // The band moves with the rule's own threshold.
+    expect(confidence(0.92, 0.95)).toBe(sgr(amber, "0.92"));
+    expect(confidence(0.84, 0.95)).toBe(sgr(red, "0.84"));
+    expect(confidence(0.9, 0.8)).toBe(sgr(green, "0.90"));
   });
 
-  it("colors a confidence red at or below its rule's threshold, where lint would not report it", () => {
-    const red = "38;2;164;20;71";
-    const amber = "38;2;214;154;0";
-    const header = (finding: typeof findingA) =>
-      render({ ...result, findings: [finding] }, { color: true })[0]?.split("  confidence ")[1];
-    expect(header({ ...findingA, probability: 0.65 })).toContain(sgr(red, "0.65"));
-    expect(header({ ...findingA, probability: 0.7 })).toContain(sgr(red, "0.70"));
-    expect(header({ ...findingA, probability: 0.71 })).toContain(sgr(amber, "0.71"));
-    // A rule whose threshold is above 0.90 has no amber range.
-    expect(header({ ...findingA, probability: 0.92, threshold: 0.95 })).toContain(sgr(red, "0.92"));
+  it("colors a context amber below the sufficiency threshold", () => {
+    const context = (value: number) =>
+      render({ ...result, findings: [{ ...findingA, context: value }] }, { color: true })[0]?.split(
+        " · context ",
+      )[1];
+    expect(context(0.88)).toBe(sgr("38;5;156", "0.88"));
+    expect(context(0.45)).toBe(sgr("38;2;214;154;0", "0.45"));
   });
 
   it("gives each range of a score in the legend, lowest first, in the color a score there has, under bold labels", () => {
@@ -3126,21 +3129,21 @@ describe("render", () => {
     const red = "38;2;164;20;71";
     const colored = render(result, { color: true });
     expect(colored).toContain(
-      `${sgr("1", "confidence")}: Jev's probability that the file breaks the rule: ${sgr(red, "0.00–0.80")}, ${sgr(amber, "0.81–0.89")}, ${sgr(green, "0.90–1.00")}`,
+      `${sgr("1", "confidence")}: Jev's probability that the file breaks the rule: ${sgr(red, "0.00–0.69")}, ${sgr(amber, "0.70–0.89")}, ${sgr(green, "0.90–1.00")}`,
     );
     expect(colored).toContain(
       `${sgr("1", "context")}: its probability that the file shows enough to decide: ${sgr(amber, "0.00–0.59")}, ${sgr(green, "0.60–1.00")}`,
     );
   });
 
-  it("bounds the legend's unreported range by the run's threshold, and has no low range at 0.89 or above", () => {
+  it("centers the legend's middle range on the run's threshold, and leaves out a range no score can be in", () => {
     const confidence = (threshold: number) =>
       render(result, { threshold })
         .find((line) => line.startsWith("confidence"))
         ?.split("rule: ")[1];
-    expect(confidence(0.7)).toBe("0.00–0.70, 0.71–0.89, 0.90–1.00");
-    expect(confidence(0.89)).toBe("0.00–0.89, 0.90–1.00");
-    expect(confidence(0.95)).toBe("0.00–0.95, 0.96–1.00");
+    expect(confidence(0.7)).toBe("0.00–0.59, 0.60–0.79, 0.80–1.00");
+    expect(confidence(0.95)).toBe("0.00–0.84, 0.85–1.00");
+    expect(confidence(0.05)).toBe("0.00–0.14, 0.15–1.00");
   });
 
   it("leaves the legend out of a report with no findings", () => {

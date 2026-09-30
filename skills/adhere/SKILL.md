@@ -225,13 +225,14 @@ terminal.
 
 The header is the rule id and two scores, with the description on the next
 line; `×` is an error, `⚠` a warning. `confidence` is Jev's probability that
-the file breaks the rule; below 0.90 it is low, and such findings were mostly
-false in the evals. `context` is its probability that the file shows enough
-to decide; below the sufficiency threshold, 0.6 by default, the finding also
-carries `warning: this file may not show enough to check this rule`. It turns
-on something outside the file, and was usually false in the evals: check that
-before acting on it. A low score is amber on a terminal. The underline is the
-line Jev names.
+the file breaks the rule. On a terminal it is amber within 0.10 of its rule's
+threshold and green above that: a rule whose findings are mostly amber turns
+on where its threshold sits. `context` is its probability that the file shows
+enough to decide; below the sufficiency threshold, 0.6 by default, it is
+amber and the finding also carries `warning: this file may not show enough to
+check this rule`. It turns on something outside the file, and was usually
+false in the evals: check that before acting on it. The underline is the line
+Jev names.
 
 ## Tuning a rule
 
