@@ -2975,7 +2975,7 @@ describe("render", () => {
         "        type Port = typeof Port.Type",
         "",
         "confidence: Jev's probability that the file breaks the rule: 0.00–0.74, 0.75–0.84, 0.85–1.00",
-        "context: its probability that the file shows enough to decide: 0.00–0.59, 0.60–1.00",
+        "context: its probability that the file shows enough to decide: 0.00–0.49, 0.50–0.69, 0.70–1.00",
         "",
         "Found 1 error.",
         "1 file, 1 judged, 0 cached.",
@@ -3037,7 +3037,7 @@ describe("render", () => {
     const enough = render({ ...result, findings: [finding] }, { sufficiencyThreshold: 0.4 });
     expect(enough.some((line) => line.includes("warning:"))).toBe(false);
     expect(enough).toContain(
-      "context: its probability that the file shows enough to decide: 0.00–0.39, 0.40–1.00",
+      "context: its probability that the file shows enough to decide: 0.00–0.24, 0.25–0.54, 0.55–1.00",
     );
   });
 
@@ -3115,13 +3115,19 @@ describe("render", () => {
     expect(confidence(0.93, 0.9)).toBe(sgr(green, "0.93"));
   });
 
-  it("colors a context amber below the sufficiency threshold", () => {
-    const context = (value: number) =>
-      render({ ...result, findings: [{ ...findingA, context: value }] }, { color: true })[0]?.split(
-        " · context ",
-      )[1];
-    expect(context(0.88)).toBe(sgr("38;5;156", "0.88"));
-    expect(context(0.45)).toBe(sgr("38;2;214;154;0", "0.45"));
+  it("colors a context the same way around the sufficiency threshold, and warns below the threshold itself", () => {
+    const lines = (value: number) =>
+      render({ ...result, findings: [{ ...findingA, context: value }] }, { color: true });
+    const context = (value: number) => lines(value)[0]?.split(" · context ")[1];
+    const warns = (value: number) => lines(value).some((line) => line.includes("warning: "));
+    // At 0.60 the room above is 0.40, so the band is 0.10 either side.
+    expect(context(0.49)).toBe(sgr("38;2;164;20;71", "0.49"));
+    expect(context(0.5)).toBe(sgr("38;2;214;154;0", "0.50"));
+    expect(context(0.69)).toBe(sgr("38;2;214;154;0", "0.69"));
+    expect(context(0.7)).toBe(sgr("38;5;156", "0.70"));
+    // The warning keeps its own cutoff, inside the amber range.
+    expect(warns(0.59)).toBe(true);
+    expect(warns(0.6)).toBe(false);
   });
 
   it("gives each range of a score in the legend, lowest first, in the color a score there has, under bold labels", () => {
@@ -3133,7 +3139,7 @@ describe("render", () => {
       `${sgr("1", "confidence")}: Jev's probability that the file breaks the rule: ${sgr(red, "0.00–0.74")}, ${sgr(amber, "0.75–0.84")}, ${sgr(green, "0.85–1.00")}`,
     );
     expect(colored).toContain(
-      `${sgr("1", "context")}: its probability that the file shows enough to decide: ${sgr(amber, "0.00–0.59")}, ${sgr(green, "0.60–1.00")}`,
+      `${sgr("1", "context")}: its probability that the file shows enough to decide: ${sgr(red, "0.00–0.49")}, ${sgr(amber, "0.50–0.69")}, ${sgr(green, "0.70–1.00")}`,
     );
   });
 

@@ -116,21 +116,16 @@ const bandsOf = (threshold: number): { readonly near: number; readonly clear: nu
   return { near: Math.max(0, Math.ceil(at - margin)), clear: Math.ceil(at + margin) };
 };
 
-const score = (value: number, low: boolean): Span =>
-  span(value.toFixed(2), low ? "low" : "probability");
-
 /**
- * A confidence in one of three ranges set by the rule's threshold: amber
- * near it; red below that, which only a run that shows every judgment
- * prints; the accent above.
+ * A score in one of three ranges set by its threshold: amber near it, red
+ * below that, the accent above. A confidence's threshold is its rule's, and
+ * a red one shows only in a run that prints every judgment. A context's is
+ * the sufficiency threshold, and a red one marks the finding to doubt first.
  */
-const confidence = (finding: Finding): Span => {
-  const { near, clear } = bandsOf(finding.threshold);
-  const value = hundredths(finding.probability);
-  return span(
-    finding.probability.toFixed(2),
-    value < near ? "below" : value < clear ? "low" : "probability",
-  );
+const score = (value: number, threshold: number): Span => {
+  const { near, clear } = bandsOf(threshold);
+  const shown = hundredths(value);
+  return span(value.toFixed(2), shown < near ? "below" : shown < clear ? "low" : "probability");
 };
 
 const lacksContext = (finding: Finding, sufficiencyThreshold: number): boolean =>
@@ -147,10 +142,10 @@ const header = (finding: Finding, sufficiencyThreshold: number): ReadonlyArray<L
     span(" "),
     span(shownId({ id: finding.rule, preset: finding.preset }), finding.level),
     span("  confidence "),
-    confidence(finding),
+    score(finding.probability, finding.threshold),
     ...(finding.context === undefined
       ? []
-      : [span(" · context "), score(finding.context, lacksContext(finding, sufficiencyThreshold))]),
+      : [span(" · context "), score(finding.context, sufficiencyThreshold)]),
   ],
   [span("    "), span(finding.description, "description")],
 ];
@@ -254,9 +249,9 @@ const range = (from: number, to: number): string =>
 /**
  * What the scores in a header mean, once under the findings, and the ranges
  * a score falls in, lowest first, each in the color a score in it has:
- * confidence far below the threshold, near it, and well above it; then
- * context that is low, and that is enough. The ranges are the run's
- * threshold's; a rule with a threshold of its own has them around that. A
+ * far below its threshold, near it, and well above it. A confidence's
+ * ranges are the run's threshold's; a rule with a threshold of its own has
+ * them around that. A context's are the sufficiency threshold's. A
  * range with no score in it, as the one below a threshold of 0, is left out.
  */
 const legend = (
@@ -264,32 +259,33 @@ const legend = (
   threshold: number,
   sufficiencyThreshold: number,
 ): ReadonlyArray<Line> => {
-  const { near, clear } = bandsOf(threshold);
-  const enough = hundredths(sufficiencyThreshold);
-  const ranges = (
-    [
-      [0, near - 1, "below"],
-      [near, clear - 1, "low"],
-      [clear, 100, "probability"],
-    ] as const
-  ).filter(([from, to]) => from <= to);
+  const ranges = (of: number): Line => {
+    const { near, clear } = bandsOf(of);
+    return (
+      [
+        [0, near - 1, "below"],
+        [near, clear - 1, "low"],
+        [clear, 100, "probability"],
+      ] as const
+    )
+      .filter(([from, to]) => from <= to)
+      .flatMap(([from, to, role], index) => [
+        ...(index === 0 ? [] : [span(", ")]),
+        span(range(from, to), role),
+      ]);
+  };
   return result.findings.length === 0
     ? []
     : [
         [
           span("confidence", "legend"),
           span(": Jev's probability that the file breaks the rule: "),
-          ...ranges.flatMap(([from, to, role], index) => [
-            ...(index === 0 ? [] : [span(", ")]),
-            span(range(from, to), role),
-          ]),
+          ...ranges(threshold),
         ],
         [
           span("context", "legend"),
           span(": its probability that the file shows enough to decide: "),
-          span(range(0, enough - 1), "low"),
-          span(", "),
-          span(range(enough, 100), "probability"),
+          ...ranges(sufficiencyThreshold),
         ],
         [],
       ];

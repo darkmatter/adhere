@@ -229,11 +229,11 @@ the file breaks the rule. On a terminal it is amber near its rule's
 threshold, within a quarter of the room above it (0.80 to 0.84 at a threshold
 of 0.80), and green above that: a rule whose findings are mostly amber turns
 on where its threshold sits. `context` is its probability that the file shows
-enough to decide; below the sufficiency threshold, 0.6 by default, it is
-amber and the finding also carries `warning: this file may not show enough to
-check this rule`. It turns on something outside the file, and was usually
-false in the evals: check that before acting on it. The underline is the line
-Jev names.
+enough to decide, colored the same way around the sufficiency threshold, 0.6
+by default: amber from 0.50 to 0.69, red below. Below 0.6 the finding also
+carries `warning: this file may not show enough to check this rule`. It turns
+on something outside the file, and was usually false in the evals: check that
+before acting on it. The underline is the line Jev names.
 
 ## Tuning a rule
 
