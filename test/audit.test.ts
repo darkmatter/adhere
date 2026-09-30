@@ -3102,6 +3102,14 @@ describe("render", () => {
     );
   });
 
+  it("sets the legend's words in bold, not in the hint label's color", () => {
+    const colored = render(result, { color: true });
+    expect(colored).toContain(
+      `${sgr("1", "confidence")}: Jev's probability that the file breaks the rule. Low, in amber, below 0.90.`,
+    );
+    expect(colored.some((line) => line.startsWith(sgr("1", "context")))).toBe(true);
+  });
+
   it("leaves the legend out of a report with no findings", () => {
     expect(render({ ...result, findings: [] })).toEqual([
       "Found 0 errors.",

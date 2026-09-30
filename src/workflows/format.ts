@@ -18,6 +18,7 @@ type Role =
   | "lineNumber"
   | "underline"
   | "label"
+  | "legend"
   | Kind;
 
 interface Span {
@@ -33,9 +34,11 @@ type Line = ReadonlyArray<Span>;
  * and a dim line number. Of the header, only the `×` and the rule are red, or
  * a warning's `⚠` and rule amber, since a whole line of red is hard to read:
  * a score is an accent, or amber when it is low, and the description a cool
- * near-white, set here since a theme's own white can be gray. The code's are the terminal's
- * own colors (`3N`), so the user's theme picks shades that read on its
- * background; none is magenta, which would run into the underline.
+ * near-white, set here since a theme's own white can be gray. The legend's
+ * words are bold in the terminal's own color, so they do not read as the
+ * hint's label. The code's are the terminal's own colors (`3N`), so the
+ * user's theme picks shades that read on its background; none is magenta,
+ * which would run into the underline.
  */
 const THEME: Readonly<Record<Role, string>> = {
   error: "38;2;164;20;71;1",
@@ -47,6 +50,7 @@ const THEME: Readonly<Record<Role, string>> = {
   lineNumber: "2",
   underline: "38;2;255;0;175",
   label: "38;2;242;205;205",
+  legend: "1",
   comment: "2",
   string: "32",
   constant: "33",
@@ -222,13 +226,13 @@ const legend = (result: AuditResult, sufficiencyThreshold: number): ReadonlyArra
     ? []
     : [
         [
-          span("confidence", "label"),
+          span("confidence", "legend"),
           span(": Jev's probability that the file breaks the rule. Low, in amber, below "),
           span(CONFIDENT.toFixed(2)),
           span("."),
         ],
         [
-          span("context", "label"),
+          span("context", "legend"),
           span(": its probability that the file shows enough to decide. Low, in amber, below "),
           span(sufficiencyThreshold.toFixed(2)),
           span("."),
