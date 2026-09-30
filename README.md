@@ -3,13 +3,57 @@
   <sup>A linter for non-deterministic rules. Powered by Typesafe</sup>
 </div>
 
-A linter for rules a normal linter cannot check. Describe rules using RFC 2119
-language, like "business logic MUST live in services", or "A 3rd-party API going
-down SHOULD NOT also take us down". A rule also includes a good example, a bad
-example, or both, which [our studies](eval/studies/example-count.md) highly
-recommend.
+A linter for rules a normal linter cannot check, such as "Business logic should live in services", or "modules should expose lots of functionality behind a small API". Define rules as formatted markdown:
 
-For each source file, adhere asks [Jev](https://typesafe.ai) (TypeSafe AI's
+````md
+---
+description: A third party API going offline should not also take our app down.
+---
+
+Our APIs should never solely rely on some third party for some critical data. It should
+cache it and optionally have some fallback.
+
+## Should
+
+```ts
+import googleMaps from "./lib/maps"
+import db from "./lib/db"
+import redis from "redis"
+import cron from "node-cron"
+
+// asume this is called by /api/restaurants/:zipcode
+export async function findRestaurants(zipCode: number) {
+  const results = db.restaurants.find({ where: { zipCode }})
+  return results
+}
+
+export async startWorker() {
+  cron("0 0 * * *", async () => {
+    const since = Number(await redis.get("maps:sync:timestamp"))
+    const items = await googlemaps.findAll({ since, limit: 100 })
+    const syncItem = item => db.restaurants.upsert(item)
+
+    return Promise.all(items.map(item => syncItem(item)))
+  })
+}
+```
+
+## Never
+
+```ts
+import googleMaps from "./lib/maps";
+import db from "./lib/db";
+
+// asume this is called by /api/restaurants/:zipcode
+export async function findRestaurants(zipCode: number) {
+  // what happens when google maps goes down? how about latency? how about costs?
+  const results = await googleMaps.findAll({ where: { zipCode }, limit: 100 });
+  return results;
+}
+```
+````
+
+Your rules are parsed, then adhere asks [Jev](https://typesafe.ai) (TypeSafe AI's
 System One model) whether the file breaks each rule, gets a calibrated
 probability per rule, and reports the ones above a threshold with the section of
 the file Jev points at. The report uses the same frame as `vp lint`.
@@ -40,43 +84,18 @@ your rules.
 ## Contents
 
 - [Install](#install)
-  - [Login](#login)
 - [Quick start](#quick-start)
-  - [Init](#init)
 - [Commands](#commands)
-- [Reading the report](#reading-the-report)
 - [Writing rules](#writing-rules)
-  - [Rules as Markdown files](#rules-as-markdown-files)
-  - [Rule writing tips](#rule-writing-tips)
-  - [Scoping a rule](#scoping-a-rule)
-  - [What a rule reads](#what-a-rule-reads)
-  - [Rules as TypeScript files](#rules-as-typescript-files)
-  - [Where rules live](#where-rules-live)
-  - [Validate](#validate)
 - [Config](#config)
-  - [Presets](#presets)
-  - [Overrides](#overrides)
-  - [Precedence](#precedence)
 - [Running lint](#running-lint)
-  - [Flags](#flags)
-  - [What gets read](#what-gets-read)
-  - [Before and during a run](#before-and-during-a-run)
-  - [Limiting a run](#limiting-a-run)
-  - [Logging a run](#logging-a-run)
-  - [Exit codes](#exit-codes)
 - [Comments and suppressions](#comments-and-suppressions)
-  - [Comments](#comments)
-  - [Suppressing a finding](#suppressing-a-finding)
 - [Cache](#cache)
 - [Sharing rules](#sharing-rules)
-  - [Creating a shared repo](#creating-a-shared-repo)
 - [Agent skills](#agent-skills)
-  - [In CI](#in-ci)
 - [How a file is judged](#how-a-file-is-judged)
 - [Upgrading](#upgrading)
 - [Development](#development)
-  - [Native executable](#native-executable)
-  - [Release](#release)
 - [License](#license)
 
 ## Install
