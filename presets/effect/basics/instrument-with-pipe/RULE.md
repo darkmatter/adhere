@@ -7,7 +7,7 @@ description: Timeouts, retries, logging, and spans must be attached with .pipe, 
 ```ts
 const program = fetchData.pipe(
   Effect.timeout("5 seconds"),
-  Effect.retry(Schedule.exponential("100 millis").pipe(Schedule.both(Schedule.recurs(3)))),
+  Effect.retry(Schedule.max([Schedule.exponential("100 millis"), Schedule.recurs(3)])),
   Effect.tap((data) => Effect.logInfo(`Fetched: ${data}`)),
   Effect.withSpan("fetchData"),
 );

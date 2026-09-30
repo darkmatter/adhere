@@ -1,5 +1,5 @@
 ---
-description: A config value with constraints must be validated as it is read, with Config.schema or Config.mapOrFail, never checked by hand after reading.
+description: A config value with constraints must be validated as it is read, with Config.schema or Config.mapEffect, never checked by hand after reading.
 ---
 
 ## Must
@@ -14,8 +14,8 @@ const Environment = Schema.Literals(["development", "staging", "production"]);
 const program = Effect.gen(function* () {
   const port = yield* Config.schema(Port, "PORT");
   const env = yield* Config.schema(Environment, "ENV");
-  const timeoutMs = yield* Config.int("TIMEOUT_MS").pipe(
-    Config.mapOrFail((ms) =>
+  const timeoutMs = yield* Config.Int("TIMEOUT_MS").pipe(
+    Config.mapEffect((ms) =>
       ms > 0 && ms <= 60_000
         ? Effect.succeed(ms)
         : Effect.fail(
@@ -33,7 +33,7 @@ const program = Effect.gen(function* () {
 ## Never
 
 ```ts
-const timeoutMs = yield* Config.number("TIMEOUT_MS");
+const timeoutMs = yield* Config.Number("TIMEOUT_MS");
 if (timeoutMs <= 0 || timeoutMs > 60_000) {
   return yield* Effect.die("TIMEOUT_MS out of range");
 }

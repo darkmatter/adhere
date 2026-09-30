@@ -748,7 +748,7 @@ A preset rule says "must" only where its source makes a requirement, and
 "should" where the source gives advice. In `effect`, two rules are
 guidelines: test layers are in memory, outside integration tests, and tests
 provide config through a layer. Config validation accepts
-`Config.mapOrFail` as well as `Config.schema`, and the variants rule does not
+`Config.mapEffect` as well as `Config.schema`, and the variants rule does not
 rule out a `switch`. The rule that a command handler only parses input is
 gone: the docs show that pattern but do not ask for it.
 

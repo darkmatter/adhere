@@ -15,8 +15,8 @@ class ApiConfig extends Context.Service<
   static readonly layer = Layer.effect(
     ApiConfig,
     Effect.gen(function* () {
-      const apiKey = yield* Config.redacted("API_KEY");
-      const baseUrl = yield* Config.string("API_BASE_URL");
+      const apiKey = yield* Config.Redacted("API_KEY");
+      const baseUrl = yield* Config.String("API_BASE_URL");
       return { apiKey, baseUrl };
     }),
   );
@@ -27,7 +27,7 @@ class ApiConfig extends Context.Service<
 
 ```ts
 const sendInvoice = Effect.fn("sendInvoice")(function* (invoice: Invoice) {
-  const apiUrl = yield* Config.string("BILLING_API_URL");
+  const apiUrl = yield* Config.String("BILLING_API_URL");
   return yield* post(apiUrl, invoice);
 });
 ```
