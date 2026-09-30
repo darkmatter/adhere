@@ -15,7 +15,13 @@ points at. The report uses the same frame as `vp lint`.
 
 Here's a demo of what the output looks like:
 
-<a href="https://asciinema.org/a/1266511" target="_blank"><img width="400" src="https://asciinema.org/a/1266511.svg" /></a>
+<details>
+  <summary>
+    <h3>Demo 🎬</h3>
+  </summary>
+  <img alt="demo" align="center"  src="https://github.com/darkmatter/adhere/raw/main/eval/demo.gif" />
+</details>
+
 
 
 Rules a normal linter can check exactly, such as a banned import or a type
