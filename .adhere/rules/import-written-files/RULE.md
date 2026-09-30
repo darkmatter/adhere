@@ -13,7 +13,7 @@ Contents of a line or two, like `export default {};\n`, read fine inline.
 ```ts
 import smallFiles from "./scaffold/prefer-small-files.md" with { type: "text" };
 
-const files = [[".adhere/style/prefer-small-files.md", smallFiles]] as const;
+const files = [[".adhere/rules/style/prefer-small-files/RULE.md", smallFiles]] as const;
 ```
 
 ## Should not
@@ -28,5 +28,5 @@ export const parsePort = (value: string) => Port.make(Number.parseInt(value, 10)
 \`\`\`
 `;
 
-const files = [[".adhere/style/prefer-small-files.md", SMALL_FILES]] as const;
+const files = [[".adhere/rules/style/prefer-small-files/RULE.md", SMALL_FILES]] as const;
 ```
