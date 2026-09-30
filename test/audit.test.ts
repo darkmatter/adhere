@@ -275,6 +275,7 @@ const findingA = {
   excerpt: { start: 1, lines: source.lines },
   context: 0.9,
   probability: 0.9,
+  threshold: 0.7,
   level: "error" as const,
 };
 
@@ -3099,6 +3100,27 @@ describe("render", () => {
     );
     expect(scores({ ...findingA, probability: 0.83, context: 0.45 })).toBe(
       `${sgr(amber, "0.83")} · context ${sgr(amber, "0.45")}`,
+    );
+  });
+
+  it("colors a confidence red at or below its rule's threshold, where lint would not report it, and says so in the legend", () => {
+    const red = "38;2;164;20;71";
+    const amber = "38;2;214;154;0";
+    const header = (finding: typeof findingA) =>
+      render({ ...result, findings: [finding] }, { color: true })[0]?.split("  confidence ")[1];
+    expect(header({ ...findingA, probability: 0.65 })).toContain(sgr(red, "0.65"));
+    expect(header({ ...findingA, probability: 0.7 })).toContain(sgr(red, "0.70"));
+    expect(header({ ...findingA, probability: 0.71 })).toContain(sgr(amber, "0.71"));
+    // A rule whose threshold is above 0.90 has no amber range.
+    expect(header({ ...findingA, probability: 0.92, threshold: 0.95 })).toContain(sgr(red, "0.92"));
+
+    const legend = (finding: typeof findingA) =>
+      render({ ...result, findings: [finding] }).find((line) => line.startsWith("confidence"));
+    expect(legend({ ...findingA, probability: 0.65 })).toBe(
+      "confidence: Jev's probability that the file breaks the rule. Low, in amber, below 0.90. In red, at or below its rule's threshold, where lint does not report it.",
+    );
+    expect(legend(findingA)).toBe(
+      "confidence: Jev's probability that the file breaks the rule. Low, in amber, below 0.90.",
     );
   });
 

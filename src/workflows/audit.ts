@@ -47,6 +47,8 @@ export interface Finding {
   readonly context?: number;
   /** Jev's probability that the file breaks the rule. */
   readonly probability: number;
+  /** The rule's threshold: lint reports the finding only when its probability is above it. */
+  readonly threshold: number;
   /** An error fails the run; a warning does not, unless `--deny-warnings`. */
   readonly level: Level;
 }
@@ -591,6 +593,7 @@ export const executeAudit = (
                   excerpt: excerptOf(original, judgment.section),
                   ...(judgment.sufficiency === undefined ? {} : { context: judgment.sufficiency }),
                   probability: judgment.probability,
+                  threshold: k.threshold,
                   level: k.rule.level ?? "error",
                 },
               ]

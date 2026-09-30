@@ -13,6 +13,7 @@ type Role =
   | "warning"
   | "probability"
   | "low"
+  | "unreported"
   | "description"
   | "path"
   | "lineNumber"
@@ -45,6 +46,7 @@ const THEME: Readonly<Record<Role, string>> = {
   warning: "38;2;214;154;0;1",
   probability: "38;5;156",
   low: "38;2;214;154;0",
+  unreported: "38;2;164;20;71",
   description: "38;2;230;230;255",
   path: "38;2;5;125;160;1",
   lineNumber: "2",
@@ -106,6 +108,19 @@ const CONFIDENT = 0.9;
 const score = (value: number, low: boolean): Span =>
   span(value.toFixed(2), low ? "low" : "probability");
 
+/** Whether lint leaves the finding out of a report: its probability is not above its rule's threshold. */
+const unreported = (finding: Finding): boolean => finding.probability <= finding.threshold;
+
+/**
+ * A confidence in one of three ranges: red where lint does not report the
+ * finding, which only a run that shows every judgment prints; amber from
+ * there up to `CONFIDENT`; the accent above.
+ */
+const confidence = (finding: Finding): Span =>
+  unreported(finding)
+    ? span(finding.probability.toFixed(2), "unreported")
+    : score(finding.probability, finding.probability < CONFIDENT);
+
 const lacksContext = (finding: Finding, sufficiencyThreshold: number): boolean =>
   finding.context !== undefined && finding.context < sufficiencyThreshold;
 
@@ -120,7 +135,7 @@ const header = (finding: Finding, sufficiencyThreshold: number): ReadonlyArray<L
     span(" "),
     span(shownId({ id: finding.rule, preset: finding.preset }), finding.level),
     span("  confidence "),
-    score(finding.probability, finding.probability < CONFIDENT),
+    confidence(finding),
     ...(finding.context === undefined
       ? []
       : [span(" · context "), score(finding.context, lacksContext(finding, sufficiencyThreshold))]),
@@ -230,6 +245,10 @@ const legend = (result: AuditResult, sufficiencyThreshold: number): ReadonlyArra
           span(": Jev's probability that the file breaks the rule. Low, in amber, below "),
           span(CONFIDENT.toFixed(2)),
           span("."),
+          // Only a run that shows judgments lint does not report has one to explain.
+          ...(result.findings.some(unreported)
+            ? [span(" In red, at or below its rule's threshold, where lint does not report it.")]
+            : []),
         ],
         [
           span("context", "legend"),
