@@ -10,8 +10,8 @@ A linter for rules a normal linter cannot check, such as "Business logic should 
 description: A third party API going offline should not also take our app down.
 ---
 
-Our APIs should never solely rely on some third party for some critical data. It should
-cache it and optionally have some fallback.
+Our APIs should never be coupled to some third party API on a critical path. The user facing
+side be unaffected if it goes offline, and ingestion should happen in a separate asynchronous process.
 
 ## Should
 
