@@ -32,8 +32,10 @@ export async startWorker() {
     const since = Number(await redis.get("maps:sync:timestamp"))
     const items = await googlemaps.findAll({ since, limit: 100 })
     const syncItem = item => db.restaurants.upsert(item)
+    const next = items.sort((a, b) => b.id < a.id).at(-1)?.timestamp
+    const touch = () => redis.set("maps:sync:timestamp", next ?? Date.now())
 
-    return Promise.all(items.map(item => syncItem(item)))
+    return Promise.all(items.map(item => syncItem(item))).then(touch)
   })
 }
 ```
