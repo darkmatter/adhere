@@ -20,6 +20,7 @@ type Role =
   | "underline"
   | "label"
   | "legend"
+  | "quiet"
   | Kind;
 
 interface Span {
@@ -34,25 +35,28 @@ type Line = ReadonlyArray<Span>;
  * palette (`38;5;N`) or truecolor (`38;2;R;G;B`), bold with a trailing `;1`,
  * and a dim line number. Of the header, only the `×` and the rule are red, or
  * a warning's `⚠` and rule amber, since a whole line of red is hard to read:
- * a score is an accent, or amber when it is low, and the description a cool
- * near-white, set here since a theme's own white can be gray. The legend's
- * words are bold in the terminal's own color, so they do not read as the
- * hint's label. The code's are the terminal's own colors (`3N`), so the
+ * the description is a cool near-white, set here since a theme's own white
+ * can be gray. A score's three colors are one set, of like lightness, so
+ * they read as a scale, and none is the red of the `×`. Its labels, and the
+ * legend's meanings, are dim. The legend's words are bold in the terminal's
+ * own color, so they do not read as the hint's label. The code's are the
+ * terminal's own colors (`3N`), so the
  * user's theme picks shades that read on its background; none is magenta,
  * which would run into the underline.
  */
 const THEME: Readonly<Record<Role, string>> = {
   error: "38;2;164;20;71;1",
   warning: "38;2;214;154;0;1",
-  probability: "38;5;156",
-  low: "38;2;214;154;0",
-  below: "38;2;164;20;71",
+  probability: "38;2;152;195;121",
+  low: "38;2;229;192;123",
+  below: "38;2;224;108;117",
   description: "38;2;230;230;255",
   path: "38;2;5;125;160;1",
   lineNumber: "2",
   underline: "38;2;255;0;175",
   label: "38;2;242;205;205",
   legend: "1",
+  quiet: "2",
   comment: "2",
   string: "32",
   constant: "33",
@@ -132,8 +136,9 @@ const lacksContext = (finding: Finding, sufficiencyThreshold: number): boolean =
   finding.context !== undefined && finding.context < sufficiencyThreshold;
 
 /**
- * The rule, then its scores, where they stay in one place whatever the
- * description's length; the description has the next line to itself.
+ * The rule and its description, as `vp lint` heads a diagnostic, then the
+ * scores on a line of their own, where they start in one place whatever the
+ * rule's length. Their labels are dim, so only the numbers carry color.
  */
 const header = (finding: Finding, sufficiencyThreshold: number): ReadonlyArray<Line> => [
   [
@@ -141,13 +146,17 @@ const header = (finding: Finding, sufficiencyThreshold: number): ReadonlyArray<L
     span(finding.level === "warning" ? "⚠" : "×", finding.level),
     span(" "),
     span(shownId({ id: finding.rule, preset: finding.preset }), finding.level),
-    span("  confidence "),
+    span(": "),
+    span(finding.description, "description"),
+  ],
+  [
+    span("    "),
+    span("confidence ", "quiet"),
     score(finding.probability, finding.threshold),
     ...(finding.context === undefined
       ? []
-      : [span(" · context "), score(finding.context, sufficiencyThreshold)]),
+      : [span(" · context ", "quiet"), score(finding.context, sufficiencyThreshold)]),
   ],
-  [span("    "), span(finding.description, "description")],
 ];
 
 /**
@@ -242,51 +251,71 @@ const frame = (
   ...hint(finding),
 ];
 
-/** Scores from one number of hundredths through another, as a header shows them: `0.75–0.84`. */
-const range = (from: number, to: number): string =>
-  `${(from / 100).toFixed(2)}–${(to / 100).toFixed(2)}`;
+/** A bound of a range: hundredths as a score shows them, and 0 and 1 without decimals. */
+const bound = (value: number): string =>
+  value === 0 ? "0" : value === 100 ? "1" : (value / 100).toFixed(2);
+
+/** The scores from one number of hundredths through another: `0.75–0.84`, or `0.85–1`. */
+const range = (from: number, to: number): string => `${bound(from)}–${bound(to)}`;
+
+/** The roles of a score far below its threshold, near it, and well above it, lowest first. */
+const RANGES = ["below", "low", "probability"] as const;
 
 /**
- * What the scores in a header mean, once under the findings, and the ranges
- * a score falls in, lowest first, each in the color a score in it has:
- * far below its threshold, near it, and well above it. A confidence's
- * ranges are the run's threshold's; a rule with a threshold of its own has
- * them around that. A context's are the sufficiency threshold's. A
- * range with no score in it, as the one below a threshold of 0, is left out.
+ * The ranges a score falls in around a threshold, one for each of `RANGES`.
+ * A range with no score in it, as the one below a threshold of 0, is empty.
+ */
+const rangesOf = (threshold: number): ReadonlyArray<string> => {
+  const { near, clear } = bandsOf(threshold);
+  return [
+    [0, near - 1],
+    [near, clear - 1],
+    [clear, 100],
+  ].map(([from = 0, to = 0]) => (from <= to ? range(from, to) : ""));
+};
+
+/**
+ * What the scores under a header mean, once under the findings, as a table:
+ * a row for each score with its ranges, lowest first, each in the color a
+ * score in it has, then what the score is, dim. The ranges stand in columns,
+ * so a color lines up down the rows. A confidence's ranges are the run's
+ * threshold's; a rule with a threshold of its own has them around that. A
+ * context's are the sufficiency threshold's.
  */
 const legend = (
   result: AuditResult,
   threshold: number,
   sufficiencyThreshold: number,
 ): ReadonlyArray<Line> => {
-  const ranges = (of: number): Line => {
-    const { near, clear } = bandsOf(of);
-    return (
-      [
-        [0, near - 1, "below"],
-        [near, clear - 1, "low"],
-        [clear, 100, "probability"],
-      ] as const
-    )
-      .filter(([from, to]) => from <= to)
-      .flatMap(([from, to, role], index) => [
-        ...(index === 0 ? [] : [span(", ")]),
-        span(range(from, to), role),
-      ]);
-  };
+  const rows = [
+    ["confidence", rangesOf(threshold), "Jev's probability that the file breaks the rule"],
+    [
+      "context",
+      rangesOf(sufficiencyThreshold),
+      "its probability that the file shows enough to decide",
+    ],
+  ] as const;
+  const padded = (text: string, width: number): Span => span(" ".repeat(width - text.length));
+  const labels = Math.max(...rows.map(([label]) => label.length));
+  const widths = RANGES.map((_, column) =>
+    Math.max(...rows.map(([, ranges]) => ranges[column]?.length ?? 0)),
+  );
   return result.findings.length === 0
     ? []
     : [
-        [
-          span("confidence", "legend"),
-          span(": Jev's probability that the file breaks the rule: "),
-          ...ranges(threshold),
-        ],
-        [
-          span("context", "legend"),
-          span(": its probability that the file shows enough to decide: "),
-          ...ranges(sufficiencyThreshold),
-        ],
+        ...rows.map(([label, ranges, meaning]) => [
+          span("  "),
+          span(label, "legend"),
+          padded(label, labels),
+          ...RANGES.flatMap((role, column) => {
+            const text = ranges[column] ?? "";
+            const width = widths[column] ?? 0;
+            // A range no row has takes no column.
+            return width === 0 ? [] : [span("  "), span(text, role), padded(text, width)];
+          }),
+          span("  "),
+          span(meaning, "quiet"),
+        ]),
         [],
       ];
 };

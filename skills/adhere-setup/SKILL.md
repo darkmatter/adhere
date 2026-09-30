@@ -150,8 +150,8 @@ adhere lint --yes
 
 Walk the user through the report:
 
-1. How to read a finding: the rule id, its confidence and context scores, the
-   description, the underlined line, and the warning when the file may not
+1. How to read a finding: the rule id, the description, its confidence and
+   context scores, the underlined line, and the warning when the file may not
    show enough.
 2. Findings grouped by rule, the highest probabilities first. Check a few from
    each rule against the code, and say which look real and which do not.

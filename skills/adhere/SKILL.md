@@ -215,15 +215,15 @@ terminal.
 ## Reading a report
 
 ```text
-  × data/brand-ports  confidence 0.93 · context 0.88
-    A port must be a branded, range-checked integer, never a bare number.
+  × data/brand-ports: A port must be a branded, range-checked integer, never a bare number.
+    confidence 0.93 · context 0.88
    ╭─[src/server.ts:6:3]
  6 │   const port: number = Number(process.env.PORT ?? 3000);
    ·   ──────────────────────────────────────────────────────
   hint: const Port = Schema.Int.pipe(...)
 ```
 
-The header is the rule id and two scores, with the description on the next
+The header is the rule id and the description, with two scores on the next
 line; `×` is an error, `⚠` a warning. `confidence` is Jev's probability that
 the file breaks the rule. On a terminal it is amber near its rule's
 threshold, within a quarter of the room above it (0.80 to 0.84 at a threshold

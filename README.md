@@ -60,8 +60,8 @@ Without a config or rules, `adhere lint --preset effect` audits against the
 built-in Effect rules. A finding looks like this:
 
 ```text
-  × data/brand-ports  confidence 0.93 · context 0.88
-    A port must be a branded, range-checked integer, never a bare number.
+  × data/brand-ports: A port must be a branded, range-checked integer, never a bare number.
+    confidence 0.93 · context 0.88
    ╭─[src/server.ts:6:3]
  1 │ import { Effect } from "effect";
  2 │ import { listen } from "./listen.ts";
@@ -79,14 +79,14 @@ built-in Effect rules. A finding looks like this:
           Schema.brand("Port"),
         );
 
-confidence: Jev's probability that the file breaks the rule: 0.00–0.74, 0.75–0.84, 0.85–1.00
-context: its probability that the file shows enough to decide: 0.00–0.49, 0.50–0.69, 0.70–1.00
+  confidence  0–0.74  0.75–0.84  0.85–1  Jev's probability that the file breaks the rule
+  context     0–0.49  0.50–0.69  0.70–1  its probability that the file shows enough to decide
 
 Found 1 error.
 42 files, 3 judged, 39 cached.
 ```
 
-The header is the rule id, then two scores, and the rule's description has
+The header is the rule id and the rule's description, and two scores have
 the next line. `confidence` is Jev's probability that the file breaks the
 rule. `context` is its probability that the file shows enough to decide that
 (see below). On a terminal a confidence is amber near its rule's threshold,

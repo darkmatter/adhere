@@ -32,9 +32,9 @@ rules that changed.
 Each finding shows:
 
 - the rule id, a preset's with its preset first, as in
-  `alchemy/providers/idempotent-delete`, then `confidence`, Jev's probability
-  that the file breaks the rule, and `context`, its probability that the file
-  shows enough to decide, and on the next line the rule's description;
+  `alchemy/providers/idempotent-delete`, and the rule's description, and on
+  the next line `confidence`, Jev's probability that the file breaks the
+  rule, and `context`, its probability that the file shows enough to decide;
 - the section of the file Jev points at, a run of whole statements of about 30
   lines, with the lines it names underlined, or marked with a bar when they
   are several: usually where the violation starts, which may run on past them;
