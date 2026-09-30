@@ -97,8 +97,8 @@ may be too low. Below the amber a score is red: lint reports no finding with
 a confidence there. A context is colored the same way around the sufficiency
 threshold, so at 0.60 it is amber from 0.50 to 0.69 and red below 0.50, the
 finding to doubt first. A legend under the last finding gives each score's
-threshold between the range in red and the range in green, with each `<` in
-amber for the scores between them. Confidence's threshold there is the run's;
+threshold between the range in red and the range in green. The threshold and
+each `<` are amber, for the scores between them. Confidence's threshold there is the run's;
 a rule with a threshold of its own has its ranges around that.
 A preset's rule has the preset's name first, as in
 `effect/basics/gen-for-sequencing`, so a report that mixes presets

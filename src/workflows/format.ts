@@ -261,8 +261,8 @@ const range = (from: number, to: number): string => `${bound(from)}–${bound(to
 /**
  * A legend row's cells for a threshold: the scores far below it, the
  * threshold, and the scores well above it, as in `0–0.74 < 0.8 < 0.85–1`.
- * The scores between the two ranges are the ones near the threshold, so each
- * `<` is in their color, and the ranges in theirs. A threshold too low to
+ * The scores between the two ranges are the ones near the threshold, so it
+ * and each `<` are in their color, and the ranges in theirs. A threshold too low to
  * have scores far below it has no first range, and no `<` after one.
  */
 const cellsOf = (threshold: number): ReadonlyArray<Span> => {
@@ -270,7 +270,7 @@ const cellsOf = (threshold: number): ReadonlyArray<Span> => {
   return [
     span(near > 0 ? range(0, near - 1) : "", "below"),
     span(near > 0 ? "<" : "", "low"),
-    span(String(hundredths(threshold) / 100)),
+    span(String(hundredths(threshold) / 100), "low"),
     span("<", "low"),
     span(range(clear, 100), "probability"),
   ];

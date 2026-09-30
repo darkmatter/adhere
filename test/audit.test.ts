@@ -3138,14 +3138,14 @@ describe("render", () => {
     expect(warns(0.6)).toBe(false);
   });
 
-  it("sets the legend as a table: a bold label, the threshold between the ranges far below and well above it, each in its scores' color, and a dim meaning", () => {
+  it("sets the legend as a table: a bold label, the threshold in amber between the ranges far below and well above it, each in its scores' color, and a dim meaning", () => {
     const colored = render(result, { color: true });
     const less = sgr(amber, "<");
     expect(colored).toContain(
-      `  ${sgr("1", "confidence")}  ${sgr(rose, "0–0.74")} ${less} 0.8 ${less} ${sgr(green, "0.85–1")}  ${sgr(dim, "Jev's probability that the file breaks the rule")}`,
+      `  ${sgr("1", "confidence")}  ${sgr(rose, "0–0.74")} ${less} ${sgr(amber, "0.8")} ${less} ${sgr(green, "0.85–1")}  ${sgr(dim, "Jev's probability that the file breaks the rule")}`,
     );
     expect(colored).toContain(
-      `  ${sgr("1", "context")}     ${sgr(rose, "0–0.49")} ${less} 0.6 ${less} ${sgr(green, "0.70–1")}  ${sgr(dim, "its probability that the file shows enough to decide")}`,
+      `  ${sgr("1", "context")}     ${sgr(rose, "0–0.49")} ${less} ${sgr(amber, "0.6")} ${less} ${sgr(green, "0.70–1")}  ${sgr(dim, "its probability that the file shows enough to decide")}`,
     );
   });
 
