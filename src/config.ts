@@ -33,6 +33,15 @@ export type AppendState = (
 ) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
 
 /**
+ * What a rule can have Jev read beside the code, each by the name of the key
+ * the state carries it under, which the rule's description can name in
+ * backticks. `workspacePackages` is the workspace's packages: each one's name
+ * with its directory, so a rule can tell an import of the repository's own
+ * package from an installed one's.
+ */
+export const Reads = Schema.Array(Schema.Literals(["workspacePackages"]));
+
+/**
  * A rule's examples, named in RFC 2119's words, which Jev reads as written. A
  * requirement shows code that `must` be written and code that must `never`
  * be. A guideline, which asks for less, shows code that `should` be written
@@ -68,13 +77,11 @@ const RuleFields = Schema.Struct({
    */
   excludeIf: Schema.optionalKey(Schema.Array(Schema.String)),
   /**
-   * Whether Jev reads, beside the code, the workspace's packages as
-   * `workspacePackages`: each one's name with its directory, so the rule can
-   * tell an import of the repository's own package from an installed one's.
-   * The rule's questions go in requests of their own, and a change to the
-   * packages judges it again.
+   * What Jev reads for the rule beside the code, by name (see `Reads`). The
+   * rule's questions go in requests of their own, so only they read it, and
+   * a change to what is read judges the rule again.
    */
-  includeWorkspacePackages: Schema.optionalKey(Schema.Boolean),
+  reads: Schema.optionalKey(Reads),
   /**
    * A hook on the state Jev reads for the rule, in a rule written in
    * TypeScript (see `AppendState`). The rule's questions go in requests of
@@ -306,8 +313,8 @@ export interface ResolvedConfig {
   readonly includeComments?: boolean;
   /**
    * The workspace's packages, each name with its directory from the working
-   * directory, read from its manifests on every run, when a rule asks for
-   * them with `includeWorkspacePackages`.
+   * directory, read from its manifests on every run, when a rule's `reads`
+   * names them.
    */
   readonly workspacePackages?: Readonly<Record<string, string>>;
 }

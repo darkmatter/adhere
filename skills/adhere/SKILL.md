@@ -102,12 +102,14 @@ Front matter besides `description`, all optional:
   one line, scope a rule without widening its description: a finding stands
   only when Jev says the code that breaks the rule is as every `appliesTo`
   describes and as no `excludeIf` does.
-- `includeWorkspacePackages: true` gives Jev `workspacePackages` beside the
-  code: each of the repository's own packages, by name, with its directory,
-  read from the root `package.json`'s `workspaces` or `pnpm-workspace.yaml`.
-  Use it for a rule that turns on whether an import is of the repository's
-  own package or an installed one, and name `workspacePackages` in the
-  description. The rule costs a request of its own per file, and a changed
+- `reads: ["workspacePackages"]`, a JSON array on one line, names what Jev
+  reads for the rule beside the code, each under that name. There is one so
+  far, `workspacePackages`: each of the repository's own packages, by name,
+  with its directory, read from the root `package.json`'s `workspaces` or
+  `pnpm-workspace.yaml`. Use it for a rule that turns on whether an import is
+  of the repository's own package or an installed one, and name
+  `workspacePackages` in the description. A name adhere does not have refuses
+  the run. The rule costs a request of its own per file, and a changed
   workspace judges it again.
 
 A rule's directory can hold a `RULE.ts` instead, which default-exports

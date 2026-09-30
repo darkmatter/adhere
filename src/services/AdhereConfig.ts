@@ -133,7 +133,7 @@ export const AdhereConfigLive = (flags: Flags) =>
       const scopedRules = withOverrides(entries, overrides);
       // The manifests are read on every run, so a changed workspace is seen, and only when a rule reads them.
       const workspacePackages = scopedRules.some(
-        (entry) => entry.rule.includeWorkspacePackages === true,
+        (entry) => entry.rule.reads?.includes("workspacePackages") === true,
       )
         ? yield* workspacePackagesOf(cwd)
         : undefined;

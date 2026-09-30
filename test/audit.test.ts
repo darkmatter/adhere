@@ -478,7 +478,7 @@ describe("jev's context", () => {
     expect(requestGroups({ a, hooked, b })).toEqual([{ a, b }, { hooked }]);
     expect(requestGroups({ hooked })).toEqual([{ hooked }]);
     // A rule that reads the workspace's packages has state of its own too.
-    const packaged = { ...b, includeWorkspacePackages: true };
+    const packaged = { ...b, reads: ["workspacePackages"] as const };
     expect(requestGroups({ a, packaged, hooked })).toEqual([{ a }, { packaged }, { hooked }]);
     expect(judgeLoad(code1, { a, b, hooked }).requests).toBe(2);
     expect(locateRequests(code1, { a, hooked })).toBe(2);
@@ -631,6 +631,18 @@ describe("config", () => {
       Effect.flip(decodeConfig({ rules: { a: { ...a, appendState: "{}" } } })),
     );
     expect(refused.message).toContain("Expected a function");
+  });
+
+  it("takes the names of what a rule reads beside the code, and refuses one it does not have", async () => {
+    const reading = { ...a, reads: ["workspacePackages"] };
+    const decoded = await Effect.runPromise(decodeConfig({ rules: { a: reading } }));
+    expect(decoded.rules).toEqual({ a: reading });
+    const refused = await Effect.runPromise(
+      Effect.flip(decodeConfig({ rules: { a: { ...a, reads: ["comments"] } } })),
+    );
+    expect(refused.message).toContain(
+      'Expected "workspacePackages"\n  at ["rules"]["a"]["reads"][0]',
+    );
   });
 
   it("reads reference and avoid, the names before 0.7, as must and never", async () => {
@@ -815,23 +827,18 @@ describe("markdown rules", () => {
     expect(refused.message).toContain("rules/a.md");
   });
 
-  it("front matter's includeWorkspacePackages is true or false, and nothing else", async () => {
-    const withValue = (value: string) =>
-      `---\ndescription: d\nincludeWorkspacePackages: ${value}\n---\na()\n`;
-    expect(await parse(withValue("true"))).toEqual({
+  it("front matter's reads is a JSON array of the names of what Jev reads beside the code", async () => {
+    const reading = (names: string) => `---\ndescription: d\nreads: ${names}\n---\na()\n`;
+    expect(await parse(reading('["workspacePackages"]'))).toEqual({
       description: "d",
-      includeWorkspacePackages: true,
+      reads: ["workspacePackages"],
       must: "a()",
     });
-    expect(await parse(withValue("false"))).toEqual({
-      description: "d",
-      includeWorkspacePackages: false,
-      must: "a()",
-    });
+    // A name adhere does not have refuses the rule, so a misspelled one is not passed over.
     const refused = await Effect.runPromise(
-      Effect.flip(parseRuleMarkdown(withValue("yes"), "rules/a.md")),
+      Effect.flip(parseRuleMarkdown(reading('["workspacePackagez"]'), "rules/a.md")),
     );
-    expect(refused.message).toContain("includeWorkspacePackages");
+    expect(refused.message).toBe('rules/a.md: Expected "workspacePackages"\n  at ["reads"][0]');
   });
 
   it("front matter's appliesTo and excludeIf are JSON arrays of strings", async () => {
@@ -2573,7 +2580,7 @@ describe("pipeline", () => {
 
   it("re-judges a rule that reads the workspace's packages when they change, and nothing else", async () => {
     const cache = memoryCache();
-    const packaged = { ...b, includeWorkspacePackages: true };
+    const packaged = { ...b, reads: ["workspacePackages"] as const };
     const run = (workspacePackages: Readonly<Record<string, string>>) => {
       const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
       return audit({ rules: { a, b: packaged }, jev: jev.layer, cache, workspacePackages }).then(
@@ -3631,7 +3638,7 @@ describe("jev over http", () => {
   });
 
   it("adds the workspace's packages to the state of a rule that asks for them, and of no other", async () => {
-    const packaged = { ...b, includeWorkspacePackages: true };
+    const packaged = { ...b, reads: ["workspacePackages"] as const };
     const { sent, layer } = recordedJev({ "orders-core": "packages/orders" });
     const asked = Effect.gen(function* () {
       const jev = yield* Jev;

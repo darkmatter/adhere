@@ -125,7 +125,9 @@ const fingerprintOf = (
   const scope = matchers.length === 0 ? "" : `\u0000${JSON.stringify(matchers)}`;
   const hook = rule.appendState === undefined ? "" : `\u0000${rule.appendState.toString()}`;
   const packages =
-    rule.includeWorkspacePackages === true ? `\u0000${JSON.stringify(workspacePackages)}` : "";
+    rule.reads?.includes("workspacePackages") === true
+      ? `\u0000${JSON.stringify(workspacePackages)}`
+      : "";
   return sha256(
     `${model}\u0000${LAYOUT}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}${hook}${packages}`,
   );

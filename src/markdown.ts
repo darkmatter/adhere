@@ -1,4 +1,4 @@
-import { ConfigUnavailable, type Example, type Rule } from "#config.ts";
+import { ConfigUnavailable, type Example, Reads, type Rule } from "#config.ts";
 import { Effect, Schema } from "effect";
 
 /**
@@ -34,6 +34,8 @@ import { Effect, Schema } from "effect";
  * `warning` reports the rule's findings as warnings, which do not fail a run.
  * `appliesTo` and `excludeIf`, the rule's scope, are JSON arrays of strings on
  * one line, as in `excludeIf: ["a type that mirrors a third-party format"]`.
+ * So is `reads`, of the names of what Jev reads for the rule beside the code,
+ * as in `reads: ["workspacePackages"]`.
  */
 const Matchers = Schema.fromJsonString(Schema.Array(Schema.String));
 
@@ -44,7 +46,7 @@ const FrontMatter = Schema.Struct({
   level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
   appliesTo: Schema.optionalKey(Matchers),
   excludeIf: Schema.optionalKey(Matchers),
-  includeWorkspacePackages: Schema.optionalKey(Schema.Literals(["true", "false"])),
+  reads: Schema.optionalKey(Schema.fromJsonString(Reads)),
 });
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
@@ -207,12 +209,5 @@ export const parseRuleMarkdown = (
         message: `${file}: the body needs code, in a fence under a Must, Never, Should, or Should not heading, or untagged`,
       });
     }
-    const { includeWorkspacePackages, ...fields } = front;
-    return {
-      ...fields,
-      ...(includeWorkspacePackages === undefined
-        ? {}
-        : { includeWorkspacePackages: includeWorkspacePackages === "true" }),
-      ...code,
-    };
+    return { ...front, ...code };
   });

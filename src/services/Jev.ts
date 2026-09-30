@@ -477,9 +477,9 @@ export const requestsOf = (body: Body): ReadonlyArray<Body> => {
   return requests.map(({ questions }) => ({ ...body, questions }));
 };
 
-/** Whether a rule reads state of its own: what its `appendState` adds, or the workspace's packages. */
+/** Whether a rule reads state of its own: what its `appendState` adds, or what its `reads` names. */
 const readsOwnState = (rule: Rule): boolean =>
-  rule.appendState !== undefined || rule.includeWorkspacePackages === true;
+  rule.appendState !== undefined || (rule.reads ?? []).length > 0;
 
 /**
  * The rules as requests carry them: every rule that reads only the code in

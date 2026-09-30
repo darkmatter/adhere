@@ -68,9 +68,9 @@ const refused = (message: string) => JevUnavailable.make({ message });
 const bun = (globalThis as { readonly Bun?: unknown }).Bun as Parameters<AppendState>[2];
 
 /**
- * A body as it goes out: when its rule has `includeWorkspacePackages`, with
- * the workspace's packages in its state, and when it has `appendState`, with
- * what the hook returns spread over that. A hook that fails refuses the run.
+ * A body as it goes out: when its rule's `reads` names the workspace's
+ * packages, with them in its state, and when it has `appendState`, with what
+ * the hook returns spread over that. A hook that fails refuses the run.
  */
 const hooked = (
   sent: Body & { readonly state: JevState },
@@ -78,7 +78,9 @@ const hooked = (
   file: JudgedFile,
   workspacePackages: Readonly<Record<string, string>>,
 ): Effect.Effect<Body, JevUnavailable> => {
-  const body = Object.values(group).some((rule) => rule.includeWorkspacePackages === true)
+  const body = Object.values(group).some(
+    (rule) => rule.reads?.includes("workspacePackages") === true,
+  )
     ? { ...sent, state: { ...sent.state, workspacePackages } }
     : sent;
   const [hook] = Object.entries(group).flatMap(([id, rule]) =>

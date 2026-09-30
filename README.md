@@ -676,17 +676,26 @@ its matchers dropped, with their scores.
 Keeping the scope out of the description keeps the description to what the
 rule asks for, which the report shows, and gives each part a score of its own.
 
-### Workspace packages
+### What a rule reads
 
-A rule can turn on whose package an import is of: the repository's own, or
-one installed from a registry. The file alone does not show that, so a rule
-can ask for the workspace's packages, with `includeWorkspacePackages: true`
-in its front matter, or as a field of a rule in TypeScript or a config:
+Jev judges a file by its code alone. A rule that turns on something the file
+does not show can name it in `reads`: a list of what adhere gives Jev beside
+the code for that rule, written in front matter as a JSON array on one line,
+or as an array in a rule in TypeScript or a config. Each name is the key Jev
+reads it under, so the description can name it in backticks, as the questions
+name `code`. A name adhere does not have refuses the run, so a misspelled one
+does not go unnoticed. There is one so far:
+
+- `workspacePackages`: the workspace's packages, each one's name with its
+  directory from the working directory, as in
+  `{ "orders-core": "packages/orders" }`. It is for a rule about whose
+  package an import is of: the repository's own, or one installed from a
+  registry. A package that is not in it is an installed one.
 
 ````md
 ---
 description: A function from one of this repository's own packages, which `workspacePackages` names, must be called through the package's namespace, never imported by its own name.
-includeWorkspacePackages: true
+reads: ["workspacePackages"]
 ---
 
 ## Must
@@ -702,24 +711,26 @@ import { parse } from "orders-core";
 ```
 ````
 
-Jev then reads, beside the code, `workspacePackages`: each package's name
-with its directory from the working directory, as in
-`{ "orders-core": "packages/orders" }`. The description can name that key in
-backticks, as the questions name `code`. A package that is not in it is an
-installed one.
+The packages are read on every run, when a rule reads them, from the working
+directory's `package.json`, whose `workspaces` npm, Bun, and Yarn read, and
+from `pnpm-workspace.yaml`'s `packages`. In a pattern, `*` is any directory
+and `**` any depth of them, and one that starts with `!` leaves out what it
+matches. Each matched directory's `package.json` gives the name. Nothing need
+be installed, so a run in CI reads the same packages as one on a laptop. A
+working directory that is not a workspace's root has none.
 
-The packages are read on every run, when a rule asks for them, from the
-working directory's `package.json`, whose `workspaces` npm, Bun, and Yarn
-read, and from `pnpm-workspace.yaml`'s `packages`. In a pattern, `*` is any
-directory and `**` any depth of them, and one that starts with `!` leaves out
-what it matches. Each matched directory's `package.json` gives the name.
-Nothing need be installed, so a run in CI reads the same packages as one on a
-laptop. A working directory that is not a workspace's root has none.
+A rule that reads anything goes to Jev in requests of its own, as a rule with
+`appendState` does, so no other rule reads what it does. What it reads is
+part of what its judgments are cached under: when a package is added,
+renamed, or moved, the rule is judged again for every file, and no other rule
+is.
 
-Such a rule goes to Jev in requests of its own, as a rule with `appendState`
-does, so no other rule reads the packages. They are part of what its
-judgments are cached under: when a package is added, renamed, or moved, that
-rule is judged again for every file, and no other rule is.
+What adhere has no name for, such as a file of the repository's, a rule in
+TypeScript adds with [`appendState`](#rules-as-typescript-files).
+
+In 0.13.1 the packages had a key of their own, `includeWorkspacePackages:
+true`. adhere no longer reads it, and a rule that still has it gets no
+packages: write `reads: ["workspacePackages"]` in its place.
 
 ### Rule writing tips
 
