@@ -107,13 +107,21 @@ your rules.
 ## Install
 
 ```sh
-bun add --global @drkmttr/adhere   # or: npm install --global @drkmttr/adhere
+curl -fsSL --create-dirs -o ~/.local/bin/adhere \
+  https://github.com/darkmatter/adhere/releases/latest/download/adhere-$(uname -s)-$(uname -m)
+chmod +x ~/.local/bin/adhere
 ```
 
-- `adhere` is a prebuilt executable for macOS and Linux (arm64 and x64) and for
-  Windows (x64).
-- To pin the version in a repo, for CI or scripts, add it as a dev dependency
-  and run `npx adhere`.
+- `adhere` is a single executable for macOS and Linux (arm64 and x64) and for
+  Windows (x64), and needs nothing else installed, Node included. Any directory
+  on your `PATH` works in place of `~/.local/bin`. On Windows, download
+  `adhere-Windows-x86_64.exe` from the
+  [latest release](https://github.com/darkmatter/adhere/releases/latest).
+- Run the command again to update. `download/v0.14.0` in place of
+  `latest/download` fetches that version.
+- To pin the version in a JavaScript repo, for CI or scripts, add
+  `@drkmttr/adhere` as a dev dependency and run `npx adhere`. That `adhere`
+  starts through Node, or through Bun under `bunx`.
 - adhere sends each file it judges to Jev at `api.typesafe.ai`, authenticated
   with a TypeSafe AI API key.
 

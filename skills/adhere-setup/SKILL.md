@@ -38,8 +38,15 @@ wherever this skill says `adhere`, run it the manager's way, as in
 With pnpm, at a workspace root, add `--ignore-workspace-root-check`.
 
 In a repo without a `package.json`, use the `adhere` on PATH (`adhere
---version`), or **Ask** before installing it globally with the manager the
-user has, such as `bun add --global @drkmttr/adhere`.
+--version`), or **Ask** before installing the executable from the latest
+release (`adhere-Windows-x86_64.exe` on Windows), which needs no Node or
+package manager:
+
+```sh
+curl -fsSL --create-dirs -o ~/.local/bin/adhere \
+  https://github.com/darkmatter/adhere/releases/latest/download/adhere-$(uname -s)-$(uname -m)
+chmod +x ~/.local/bin/adhere
+```
 
 Validate and lint need a TypeSafe AI API key: `TYPESAFE_API_KEY`, or one saved
 by `adhere login`, which the user runs; never ask for the key in chat or print
@@ -205,9 +212,18 @@ jobs:
 
 Pin the versions the repo already uses: bun's `bun-version`, Node's
 `node-version` from `.nvmrc` or `engines`, and pnpm's from `packageManager`,
-which `pnpm/action-setup` reads. In a repo without a `package.json`, set up
-the manager the user has and run adhere at the version they ran locally, as
-in `bunx @drkmttr/adhere@0.11.0 lint --yes`.
+which `pnpm/action-setup` reads. In a repo without a `package.json`, skip the
+setup and install, and fetch the executable at the version the user ran
+locally:
+
+```yaml
+- run: |
+    curl -fsSL -o "$RUNNER_TEMP/adhere" https://github.com/darkmatter/adhere/releases/download/v0.14.0/adhere-$(uname -s)-$(uname -m)
+    chmod +x "$RUNNER_TEMP/adhere"
+    "$RUNNER_TEMP/adhere" lint --yes
+  env:
+    TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+```
 
 Add `--deny-warnings` if the user wants warnings to fail the job too. Match
 the branch to the repo's default branch. For another CI system, write the
