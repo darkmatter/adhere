@@ -1321,12 +1321,15 @@ adhere lint --preset effect
 | Command             | What it builds                                                                                                                                                                                                                                                                                     |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bun run build`     | `dist/adhere`, a single binary with Bun and the presets inside it, through Bun's [`--compile`](https://bun.sh/docs/bundler/executables) with `--asset ./presets`. It runs without Bun or `node_modules` on the target machine and still loads the repo's `config.ts` and Markdown rules from disk. |
-| `bun run build:npm` | The same for every published platform, each into its package under `dist/npm/` ([`scripts/npm-packages.ts`](./scripts/npm-packages.ts)).                                                                                                                                                           |
+| `bun run build:npm` | The same for every published platform, each into its package under `dist/npm/`, with a copy for the GitHub release in `dist/release/` ([`scripts/npm-packages.ts`](./scripts/npm-packages.ts)).                                                                                                    |
 
 Each platform's executable is its own npm package,
 `@drkmttr/adhere-<platform>-<arch>`, limited by `os` and `cpu`, and an optional
 dependency of `@drkmttr/adhere`, so an install fetches only its own machine's.
-The package's `bin/adhere.js` finds it and runs it with Node.
+The package's `bin/adhere.js` finds it and runs it with Node. The same
+executables are attached to each GitHub release, named for `uname -s` and
+`uname -m` as in `adhere-Linux-x86_64`, so [installing](#install) one needs no
+Node.
 
 `adhere --version` tells the builds apart:
 
@@ -1356,9 +1359,9 @@ git push origin v0.3.0
    `.github/workflows/publish.yaml`, directly, avoiding a chained GitHub Release
    event created by `GITHUB_TOKEN`.
 4. The publish workflow verifies that `package.json` matches the release tag,
-   builds the platform packages, and publishes each of them before
-   `@drkmttr/adhere`, which it first lists them in as `optionalDependencies` at
-   the same version.
+   builds the platform packages, attaches their executables to the GitHub
+   Release, and publishes each package before `@drkmttr/adhere`, which it first
+   lists them in as `optionalDependencies` at the same version.
 
 <details>
 <summary>More on publishing</summary>
@@ -1371,7 +1374,8 @@ git push origin v0.3.0
   and `publish.yaml`, for manual runs.
 - The publish workflow can be run manually for an already-created release tag if
   a publish needs to be retried. It skips every package whose version is already
-  on npm.
+  on npm, and replaces the executables on the release with ones it builds from
+  `main`.
 - The main package's `files` list keeps it to `bin/`, `src/`, `presets/`, and
   `skills/`.
 
