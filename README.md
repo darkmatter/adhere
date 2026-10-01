@@ -60,7 +60,7 @@ System One model) whether the file breaks each rule, gets a calibrated
 probability per rule, and reports the ones above a threshold with the section of
 the file Jev points at. The report uses the same frame as `vp lint`.
 
-Here's a demo of what the output looks like:
+Here's a demo of what the output looks like.
 
 <details>
   <summary>
@@ -143,29 +143,11 @@ built-in Effect rules.
 
 ### Init
 
-`adhere init` writes `.adhere/config.ts`, two example rules, and the
-`.adhere/tsconfig.json` that gives the editor its types. When there is a
-`package.json`, it also adds `@drkmttr/adhere` as a dev dependency, with the
-repo's own package manager.
+`adhere init` creates a config file, some example rules, and adds adhere as a 
+dev dependency.
 
 It is safe to rerun: existing files are reported as skipped, and only `--force`
 overwrites them.
-
-<details>
-<summary>More on what init does</summary>
-
-- A config already at another accepted path (see [Config](#config)) is kept, and
-  no second one is added, even with `--force`.
-- The dev dependency gives the config's `defineConfig` its types in the editor.
-  Init runs `<manager> add -D @drkmttr/adhere` with the package manager whose
-  lockfile (`bun.lock`, `bun.lockb`, `pnpm-lock.yaml`, `yarn.lock`,
-  `package-lock.json`) sits beside the `package.json`, or npm when there is
-  none.
-- With pnpm it adds `--ignore-workspace-root-check`, so the install also works
-  at a workspace root.
-- It skips the install when `package.json` already lists adhere.
-
-</details>
 
 `adhere init --shared org/repo` scaffolds a repo of rules for other repos to
 install instead. See [Creating a shared repo](#creating-a-shared-repo).
@@ -230,22 +212,14 @@ Found 1 error.
 **Score colors.** On a terminal, each score is colored by where it sits around
 its threshold:
 
-| Color | Meaning                  | `confidence`, at a threshold of 0.80 | `context`, at a threshold of 0.60 |
-| ----- | ------------------------ | ------------------------------------ | --------------------------------- |
-| green | well above the threshold | 0.85 and up                          | 0.70 and up                       |
-| amber | near the threshold       | 0.75 to 0.84                         | 0.50 to 0.69                      |
-| red   | far below it             | under 0.75                           | under 0.50                        |
+- If you're near the threshold (orange), consider adjustments.
+- Red is in the range where you won't see it and is useful for evals. Pass
+`--log-level debug` to see them and compare Jev's judgments.
 
-- A rule whose findings are mostly amber turns on where its threshold sits,
-  which may be too low.
-- A red `context` marks the finding to doubt first.
-- Lint reports a finding only above its rule's threshold, so a red `confidence`
-  shows only in the legend.
-
-**Low context.** Jev is also asked whether the file shows enough to decide the
-rule at all, or whether it turns on something the file does not show, such as
-what another file, a library, or a service does. When `context` is below 0.6,
-the finding gets a warning under its code, and help on adding what is missing:
+**Low context.** Jev sees one file at a time. So we also ask whether the file 
+shows enough to decide the rule at all. When `context` is below 0.6, it means
+Jev thinks it needs more info, which you can add with an `@adhere` comment.
+You may also see a hint:
 
 ```text
   warning: this file may not show enough to check this rule
@@ -258,30 +232,13 @@ the finding gets a warning under its code, and help on adding what is missing:
   the code relies on outside the file before acting on it.
 - What you find can go in an `@adhere` note, which Jev reads (see
   [Comments](#comments)).
-- `sufficiencyThreshold` in the config, or `--sufficiency-threshold`, sets the
-  cutoff. The warning changes neither the finding's level nor the exit code.
+- If you feel the threshold is too low/high, override it using `sufficiencyThreshold`
+  in the config.
 
-<details>
-<summary>More on the scores and the excerpt</summary>
-
-- Near the threshold is within a quarter of the room above it, on either side:
-  0.05 at a threshold of 0.80.
-- The legend's `confidence` ranges are around the run's threshold. A rule with a
-  threshold of its own has its ranges around that. The threshold and each `<` in
-  the legend are amber, for the scores between the two ranges.
-- A report that mixes presets with a repo's own rules says where each rule came
-  from, since a preset's rule has the preset's name first.
-- When Jev names no lines, the section is shown alone, at its first line.
-  [How a file is judged](#how-a-file-is-judged) says how a file is split into
-  sections.
-- On a terminal, the report is in color and the code in it is highlighted.
-
-</details>
 
 ## Writing rules
 
-A repo's own rules live in `.adhere/rules/`, a directory per rule. When that
-directory exists, it is read without any config.
+A repo's own rules live in `.adhere/rules/`, organized just like skills:
 
 ```text
 .adhere/
@@ -298,10 +255,9 @@ directory exists, it is read without any config.
 
 - The directory's path is the rule id: `.adhere/rules/data/brand-ports/RULE.md`
   is `data/brand-ports`.
-- A rule is a `RULE.md`, or a [`RULE.ts`](#rules-as-typescript-files). A
+- A rule can be markdown `RULE.md`, or typescript [`RULE.ts`](#rules-as-typescript-files). A
   directory with both refuses the run.
-- Nothing else in a rule's directory, such as notes or a helper its `RULE.ts`
-  imports, is read as a rule.
+- Files not named `RULE` are ignored.
 
 ### Rules as Markdown files
 
@@ -365,15 +321,12 @@ const port: number = Number(process.env.PORT);
   without a colon: `## Never:` does, `## Never do this` does not.
 - A fence can instead name its code after its language, as in `ts never`, which
   GitHub does not show. A fence's own word wins over its heading's.
-- An untagged fence outside those sections is code that must be written, and
-  without a fence the whole body is.
 - Prose around the code renders on GitHub and is ignored.
 - Jev reads the code under the same words, `must` and `never`, or a guideline's
   `should` and `should_not`. It is asked whether the file diverges from the
   pattern `must` shows, with `never` as an example of diverging.
 - A rule inline in a config takes the same keys, with its code under `must`,
   `never`, `should`, and `shouldNot`.
-- A file that fails validation refuses the run, with its path in the message.
 - `loadRules(directory)` from the package root does the same load for your own
   tooling.
 
