@@ -69,7 +69,6 @@ Here's a demo of what the output looks like.
   <img alt="demo" align="center"  src="https://github.com/darkmatter/adhere/raw/main/eval/demo.gif" />
 </details>
 
-
 Presets for TypeScript, React, security, Effect, and alchemy are included, and
 run without setup:
 
@@ -79,7 +78,7 @@ TYPESAFE_API_KEY=xxx npx @drkmttr/adhere lint --preset typescript
 
 Rules a normal linter can check exactly, such as a banned import or a type
 error, belong in that linter. While it lints, adhere asks Jev whether a normal
-linter could check each of your rules. [`adhere validate`](#validate) lists the
+linter could check each of your rules. [`adhere validate`](#check-for-contradictions) lists the
 ones it thinks belong in a regular linter, and detects contradictions between
 your rules.
 
@@ -87,13 +86,18 @@ your rules.
 
 - [Install](#install)
 - [Quick start](#quick-start)
+- [Generate rules from your repo](#generate-rules-from-your-repo)
+- [Install rules from other repos](#install-rules-from-other-repos)
+- [Check for contradictions](#check-for-contradictions)
+- [Live evals](#live-evals)
+- [Writing good rules](#writing-good-rules)
 - [Commands](#commands)
-- [Writing rules](#writing-rules)
+- [Reading the report](#reading-the-report)
+- [Rule format](#rule-format)
 - [Config](#config)
 - [Running lint](#running-lint)
 - [Comments and suppressions](#comments-and-suppressions)
 - [Cache](#cache)
-- [Sharing rules](#sharing-rules)
 - [Agent skills](#agent-skills)
 - [How a file is judged](#how-a-file-is-judged)
 - [Upgrading](#upgrading)
@@ -152,18 +156,258 @@ overwrites them.
 `adhere init --shared org/repo` scaffolds a repo of rules for other repos to
 install instead. See [Creating a shared repo](#creating-a-shared-repo).
 
+## Generate rules from your repo
+
+Let an agent write your first rules with you. The
+[`adhere-setup`](./skills/adhere-setup/SKILL.md) skill walks it through setting
+adhere up in your repo:
+
+1. It reads where your conventions live: `AGENTS.md`, `CONTRIBUTING.md`, docs
+   and ADRs, your lint config, recent review comments, and the code others copy
+   from.
+2. It drafts the conventions a normal linter cannot check as rules, each with
+   real code from your repo, and sets aside the ones a linter could check.
+3. It adds the presets that fit your stack, and rules from your organization's
+   [shared repo](#install-rules-from-other-repos), if you have one.
+4. It shows every candidate in one list, with its evidence, and imports the ones
+   you choose.
+5. It validates them, walks you through the first lint and what it costs, and
+   adds adhere to CI.
+
+It stops to ask you at each of those decisions, and never asks for your API key.
+
+```sh
+skills add darkmatter/adhere                               # install adhere's skills for your agent
+adhere skill setup > .agents/skills/adhere-setup/SKILL.md  # or write this one from the binary
+```
+
+Then ask your agent to set adhere up.
+
+## Install rules from other repos
+
+An organization's rules can live in one repo's `.adhere/rules/`, and other repos
+copy them in with `adhere install`:
+
+```sh
+adhere list darkmatter/standards                        # each rule there, with its description
+adhere install darkmatter/standards                     # every rule
+adhere install darkmatter/standards/data                # the data topic
+adhere install darkmatter/standards/data/brand-ports    # one rule
+adhere install darkmatter/standards#v3                  # every rule, as tagged v3
+```
+
+- Copies land in this repo's `.adhere/rules/org/repo/`. So `data/brand-ports`
+  from darkmatter/standards is
+  `.adhere/rules/darkmatter/standards/data/brand-ports/`, the rule
+  `darkmatter/standards/data/brand-ports`, and two repos' rules never collide.
+- The copies are the repo's own rules from then on: commit them, edit them, or
+  start new rules from them. Nothing tracks where they came from.
+- A later install skips a rule already there, as init does. `--force` replaces
+  its directory, edits and all.
+- A rule's whole directory is copied. The source's config, its inline rules, and
+  its cache are not.
+
+> **Read what you install.** A `RULE.ts` is copied with the helpers beside it,
+> and runs whenever lint does, in CI too. `adhere list` names a `RULE.ts`
+> without its description, since reading it would run it.
+
+<details>
+<summary>More on refs, inline rules, and private repos</summary>
+
+- A topic or a rule after the repo copies only that part, and `#` picks a branch
+  or tag.
+- A config with inline `rules` replaces `.adhere/rules/`, so it replaces copied
+  rules too.
+- The source is cloned with `git` from `https://github.com/org/repo.git`, so a
+  private repo needs git's credentials for GitHub, as `gh auth setup-git` sets
+  up. To clone over SSH instead, let git rewrite the URL:
+  `git config --global url.git@github.com:.insteadOf https://github.com/`.
+
+</details>
+
+### Creating a shared repo
+
+`adhere init --shared org/repo` scaffolds a repo whose rules other repos copy in
+with `adhere install`, instead of one that lints itself. It writes the two
+example rules and no config, since install copies only rule files, and with
+them:
+
+| File                            | What it is for                                                                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`                     | Says what the repo is for, how to install its rules, and how to add one.                                                                                                        |
+| `.github/workflows/adhere.yaml` | Runs `adhere validate` on every push to main and every pull request, with the `TYPESAFE_API_KEY` secret. A pull request from a fork gets no secrets, so validate refuses there. |
+| `alchemy.run.ts`                | An [alchemy](https://alchemy.run) stack that creates the GitHub repo, or adopts it, and sets that secret from `TYPESAFE_API_KEY` when deployed with `npx alchemy deploy`.       |
+| `package.json`, `.gitignore`    | alchemy and effect, pinned to versions that work together, which init installs, and a `.gitignore` for them and alchemy's state.                                                |
+
+The repo is public unless you answer yes when init asks, at a terminal, whether
+to make it private. Other repos then need git's credentials for it to list and
+install its rules. Without a terminal it is public: change `visibility` in the
+stack to make it private.
+
+## Check for contradictions
+
+Two rules contradict when no code can follow both, such as one that says errors
+must be thrown and one that says they must be returned. Each rule reads fine on
+its own, so a contradiction shows up only as code that breaks one rule or the
+other whatever you do. `adhere validate` finds them before lint does:
+
+```sh
+adhere validate                  # your rules
+adhere validate --preset effect  # your rules beside a preset's
+```
+
+```text
+Found 1 contradiction among configured rules:
+
+1. No code can follow both (0.91):
+   - errors/throw-tagged-errors (/repo/.adhere/rules/errors/throw-tagged-errors/RULE.md)
+     A function that fails must throw a tagged error, never return an error value.
+   - errors/return-results (/repo/packages/api/.adhere/rules/errors/return-results/RULE.md)
+     A function that fails must return a Result, never throw.
+
+Resolve by editing one rule, narrowing a nested rule's scope, or using the same rule id when the nested rule is meant to shadow the root rule.
+```
+
+It asks Jev about each pair of rules that apply to the same files, so it needs
+the API key, as `lint` does. A contradiction fails it, with exit code 1, so it
+can gate a pull request that adds a rule, as the workflow
+[`adhere init --shared`](#creating-a-shared-repo) writes does.
+
+`validate` loads the config, rules, and presets the way `lint` does, prints how
+many rules it loaded, and runs two more checks, which are advice and never fail
+it:
+
+| Check            | Asks Jev | What it prints                                                                                                |
+| ---------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| Wording          | no       | Each rule worded otherwise than the [rule writing tips](#rule-writing-tips) recommend, with its file and how. |
+| The linter check | no       | Each rule a regular linter should probably check, from answers `lint` collected.                              |
+
+**Wording** flags a rule when:
+
+- its description does not say a word its code is under, such as "never" beside
+  a `never` block;
+- it has code to write but no example of code that breaks it;
+- its description says the other kind of rule's words: "should" in a
+  requirement, or "must" or "never" in a guideline.
+
+**The linter check.** While `lint` judges a file against one of the project's
+own rules, it asks Jev a second question beside it: could a linter or type
+checker have decided exactly whether this file follows the rule? It asks on 10
+files per rule, and `validate` reports the tally:
+
+| The rule was flagged on      | It is printed as                                                                                                |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 7 or more of its 10 files    | one a regular linter should probably check                                                                      |
+| 3 to 6                       | a rule that reads differently from file to file, whose description should say more precisely what it applies to |
+| fewer than 10 answers so far | waiting                                                                                                         |
+
+<details>
+<summary>More on the three checks</summary>
+
+- A file that fails to decode refuses `validate`, as it refuses `lint`.
+  `--preset` adds a built-in rule set, as for `lint`.
+- A rule with only code that must never be written needs no `must` example.
+- The linter check's 10 files are spread over the files `lint` judges, and its
+  answers stay in the cache until the rule's text changes. `lint` collects them
+  as it judges files, so a repo whose files are all cached collects them as its
+  files change. Preset rules are left out: they are not the project's to change.
+- For contradictions, one request names, per rule, the rule it conflicts with,
+  if any. Each named pair then gets a probability from a request of its own,
+  holding only those two rules, since other rules beside them dilute the
+  judgment. A pair above the threshold is printed with both rule files.
+- Two rules with the same id are not compared: a nested rule that shares an id
+  shadows the other on purpose.
+- When no two rules share files, nothing is sent. Otherwise `validate` needs the
+  API key, as `lint` does.
+
+</details>
+
+## Live evals
+
+Try a change to a rule on your own code before you rely on it: run the current
+rule and the changed one side by side, and compare what each flags.
+
+1. Copy the rule's directory under a new id:
+
+   ```sh
+   cp -r .adhere/rules/data/brand-ports .adhere/rules/data/brand-ports-next
+   ```
+
+2. Give the copy `level: warning` in its front matter. Its findings show in
+   amber and never fail the run, so the experiment can sit in the repo, and in
+   CI, while you watch it.
+3. Change the copy: its description, its examples, its `appliesTo` or
+   `excludeIf`, or what it [`reads`](#what-a-rule-reads). To try giving Jev more
+   to read, make the copy a `RULE.ts` with an
+   [`appendState`](#rules-as-typescript-files) hook.
+4. Run `adhere lint`, or `adhere lint --filter '<glob>'` to try it on part of
+   the repo first, and compare the two rules' findings on the same files.
+
+Judge the two by recall, the share of real violations each catches, and
+precision, the share of its flags that are real. Check the findings by hand, or
+with the [`adhere-fix`](./skills/adhere-fix/SKILL.md) skill, which verifies each
+one against its rule and the code. Then keep the better version under the
+original id, and delete the other.
+
+- **The copy costs nothing until you change it.** Judgments are cached by the
+  rule's text, not by its id, its level, or its threshold, so a copy that reads
+  the same as the original answers from the original's cache. Each change after
+  that judges the copy, and only the copy, once per file.
+- **Keeping the winner is free.** Moving the winning text to the original id
+  reuses its cached judgments.
+- **Read the scores, not only the findings.** A finding's confidence shows how
+  close the call was. A version whose findings sit in the amber band, just above
+  the threshold, turns on where the threshold sits.
+- **Counting each rule's findings** takes a pipe:
+  `adhere lint --yes | grep -c 'data/brand-ports-next:'`.
+
+## Writing good rules
+
+We've evaluated how Jev reads a rule, on the presets and on other repos, to
+catch the most violations with the fewest false positives. The
+[eval](eval/README.md#studies) has every study; these are the lessons for
+writing a rule.
+
+### Rule writing tips
+
+The short version:
+
+- Say "must" for what code must do and "never" for what it must not, in the
+  description and in the headings over the code.
+- Give one example of each: one `must` block and one `never` block. Three of
+  each did no better, and several of one kind alone did worse.
+- For a guideline rather than a requirement, say "should" and "should not" the
+  same way.
+
+On the Effect preset, rules written this way cut the findings Jev got wrong at
+the default threshold from 6 to 1, and caught as many violations.
+`adhere validate` lists each rule worded otherwise.
+
+### What the studies found
+
+| Lesson                                                 | What the study found                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A bad example helps every wording.                     | With the current wording, adding a `never` block halved the findings Jev got wrong at 0.7, and at 0.9 caught 24 violations with none wrong, where it had caught 17 ([study](eval/studies/rule-vocabulary.md)).                                                                                                                                                                                                                                                                                                                                              |
+| Say "must" and "never" in the description too.         | Rewording the descriptions to match their examples, with a bad example per rule, was the largest gain of any study: at 0.8, as many caught, and 1 wrong where there had been 5 or 6 ([study](eval/studies/must-never.md)).                                                                                                                                                                                                                                                                                                                                  |
+| One example of each kind beats more of one.            | Either kind alone, even three of it, ranked lower. Three examples of code to write widened what Jev took the pattern to be: 3 more caught at 0.8, but 5 wrong instead of 2. A `never` block alone is cautious: Jev flags only what resembles it, 23 caught at 0.8 where one of each caught 32. Three of each tied one of each, for 1.58 times the tokens ([study](eval/studies/example-count.md)).                                                                                                                                                          |
+| "Should" is for people, not a weaker check.            | Rules written with "should" and with "must" scored nearly the same ([study](eval/studies/rule-vocabulary.md)).                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| A wrong finding is usually the rule's fault.           | Above 0.8, 31 of 35 wrong findings repeated within a rule: a scope its words reach past, or the same misreading again. Fixing the wording fixes them together. Below 0.8, one-off misreads grow, to about one finding in six at 0.6 to 0.7 ([study](eval/studies/presets.md)).                                                                                                                                                                                                                                                                              |
+| Narrow a rule in its description.                      | Jev scores an `excludeIf` near 0.5 for real and false findings alike, so it thins a rule's findings about as much as a higher threshold ([study](eval/studies/presets.md)). Narrowing the description moves the judgment itself: scoping alchemy's idempotent-delete rule to providers' delete handlers dropped its findings elsewhere from 0.67–0.88 to 0.08–0.21, with nothing real lost ([study](eval/studies/idempotent-delete.md)).                                                                                                                    |
+| Beware rules that turn on what the file does not show. | The weakest preset rules hinged on facts outside the file: whether a client has a default timeout, whether a script is an entry point, whether a key is public ([study](eval/studies/presets.md)). Warning below a context of 0.7 marked one finding in five, and those were real about half the time, where the rest were real three times in four ([study](eval/studies/sufficiency.md)). Make such a rule a warning, or give Jev the fact with [`reads`](#what-a-rule-reads), an [`appendState`](#rules-as-typescript-files) hook, or an `@adhere` note. |
+| Jev believes comments.                                 | Eight of nine real violations of the idempotent-delete rule carried a comment wrongly saying they were fine, and scored 0.31 to 0.62; without comments, all nine scored 0.81 or more ([study](eval/studies/idempotent-delete.md)). That is why adhere takes comments out. A fact Jev needs, such as an exemption, goes in an `@adhere` note, which stays ([study](eval/studies/comments.md)).                                                                                                                                                               |
+
 ## Commands
 
-| Command                           | What it does                                                                                         |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `adhere lint`                     | Audit the working directory. See [Running lint](#running-lint).                                      |
-| `adhere validate`                 | Check the rules' wording, and ask Jev whether any contradict. See [Validate](#validate).             |
-| `adhere init [--force]`           | Scaffold `.adhere/config.ts` and two example rules. See [Init](#init).                               |
-| `adhere init --shared org/repo`   | Scaffold a repo of rules other repos install. See [Creating a shared repo](#creating-a-shared-repo). |
-| `adhere list org/repo`            | List the rules in another repo's `.adhere/rules/`. See [Sharing rules](#sharing-rules).              |
-| `adhere install org/repo`         | Copy them into this repo's `.adhere/rules/org/repo/`.                                                |
-| `adhere login`, `adhere logout`   | Save or delete a TypeSafe AI API key. See [Login](#login).                                           |
-| `adhere skill [docs\|setup\|fix]` | Print an agent skill. See [Agent skills](#agent-skills).                                             |
+| Command                           | What it does                                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `adhere lint`                     | Audit the working directory. See [Running lint](#running-lint).                                                           |
+| `adhere validate`                 | Check the rules' wording, and ask Jev whether any contradict. See [Check for contradictions](#check-for-contradictions).  |
+| `adhere init [--force]`           | Scaffold `.adhere/config.ts` and two example rules. See [Init](#init).                                                    |
+| `adhere init --shared org/repo`   | Scaffold a repo of rules other repos install. See [Creating a shared repo](#creating-a-shared-repo).                      |
+| `adhere list org/repo`            | List the rules in another repo's `.adhere/rules/`. See [Install rules from other repos](#install-rules-from-other-repos). |
+| `adhere install org/repo`         | Copy them into this repo's `.adhere/rules/org/repo/`.                                                                     |
+| `adhere login`, `adhere logout`   | Save or delete a TypeSafe AI API key. See [Login](#login).                                                                |
+| `adhere skill [docs\|setup\|fix]` | Print an agent skill. See [Agent skills](#agent-skills).                                                                  |
 
 Bare `adhere` prints the help. `adhere <command> --help` lists a command's
 flags, and `adhere --completions <shell>` prints a completion script.
@@ -236,7 +480,7 @@ You may also see a hint:
   in the config.
 
 
-## Writing rules
+## Rule format
 
 A repo's own rules live in `.adhere/rules/`, organized just like skills:
 
@@ -332,23 +576,6 @@ const port: number = Number(process.env.PORT);
 
 </details>
 
-### Rule writing tips
-
-We've evaluated different ways of giving Jev a rule, to catch the most
-violations with the fewest false positives. In general:
-
-- Say "must" for what code must do and "never" for what it must not, in the
-  description and in the headings over the code.
-- Give one example of each: one `must` block and one `never` block. Three of
-  each did no better, and several of one kind alone did worse.
-- For a guideline rather than a requirement, say "should" and "should not" the
-  same way.
-
-On the Effect preset, rules written this way cut the findings Jev got wrong at
-the default threshold from 6 to 1, and caught as many violations. For more about
-the evaluations, see [the eval](eval/README.md). `adhere validate` lists each
-rule worded otherwise.
-
 ### Scoping a rule
 
 `appliesTo` and `excludeIf` say where a rule applies, apart from what it asks
@@ -372,6 +599,10 @@ excludeIf: ["a type that mirrors a third-party format whose tag key that format 
 The questions are about the code that breaks the rule, not the whole file, so a
 file with a real violation beside code an `excludeIf` describes keeps its
 finding.
+
+> **Narrowing the description often works better.** In the preset study, Jev
+> scored an `excludeIf` near 0.5 for real and false findings alike. See
+> [Writing good rules](#writing-good-rules).
 
 <details>
 <summary>More on how the scope is asked</summary>
@@ -534,58 +765,6 @@ and they apply project-wide. `.adhere/rules/` is the default because it keeps
 everything adhere owns in `.adhere/`, where the config and the cache stay
 anyway. The cost is visibility: a dot directory is hidden from `ls`, and from
 `rg` without `--hidden`.
-
-### Validate
-
-`adhere validate` loads the config, rules, and presets the way `lint` does,
-prints how many rules it loaded, and runs three checks. Only a contradiction
-fails it, with exit code 1. The other two are advice.
-
-| Check            | Asks Jev | What it prints                                                                                                |
-| ---------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| Wording          | no       | Each rule worded otherwise than the [rule writing tips](#rule-writing-tips) recommend, with its file and how. |
-| The linter check | no       | Each rule a regular linter should probably check, from answers `lint` collected.                              |
-| Contradictions   | yes      | Each pair of rules that apply to the same files and contradict, so that no code can follow both.              |
-
-**Wording** flags a rule when:
-
-- its description does not say a word its code is under, such as "never" beside
-  a `never` block;
-- it has code to write but no example of code that breaks it;
-- its description says the other kind of rule's words: "should" in a
-  requirement, or "must" or "never" in a guideline.
-
-**The linter check.** While `lint` judges a file against one of the project's
-own rules, it asks Jev a second question beside it: could a linter or type
-checker have decided exactly whether this file follows the rule? It asks on 10
-files per rule, and `validate` reports the tally:
-
-| The rule was flagged on      | It is printed as                                                                                                |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 7 or more of its 10 files    | one a regular linter should probably check                                                                      |
-| 3 to 6                       | a rule that reads differently from file to file, whose description should say more precisely what it applies to |
-| fewer than 10 answers so far | waiting                                                                                                         |
-
-<details>
-<summary>More on the three checks</summary>
-
-- A file that fails to decode refuses `validate`, as it refuses `lint`.
-  `--preset` adds a built-in rule set, as for `lint`.
-- A rule with only code that must never be written needs no `must` example.
-- The linter check's 10 files are spread over the files `lint` judges, and its
-  answers stay in the cache until the rule's text changes. `lint` collects them
-  as it judges files, so a repo whose files are all cached collects them as its
-  files change. Preset rules are left out: they are not the project's to change.
-- For contradictions, one request names, per rule, the rule it conflicts with,
-  if any. Each named pair then gets a probability from a request of its own,
-  holding only those two rules, since other rules beside them dilute the
-  judgment. A pair above the threshold is printed with both rule files.
-- Two rules with the same id are not compared: a nested rule that shares an id
-  shadows the other on purpose.
-- When no two rules share files, nothing is sent. Otherwise `validate` needs the
-  API key, as `lint` does.
-
-</details>
 
 ## Config
 
@@ -1106,67 +1285,6 @@ To keep the cache out of diffs, mark it as generated in `.gitattributes`:
 
 </details>
 
-## Sharing rules
-
-An organization's rules can live in one repo's `.adhere/rules/`, and other repos
-copy them in:
-
-```sh
-adhere list darkmatter/standards                        # each rule there, with its description
-adhere install darkmatter/standards                     # every rule
-adhere install darkmatter/standards/data                # the data topic
-adhere install darkmatter/standards/data/brand-ports    # one rule
-adhere install darkmatter/standards#v3                  # every rule, as tagged v3
-```
-
-- Copies land in this repo's `.adhere/rules/org/repo/`. So `data/brand-ports`
-  from darkmatter/standards is
-  `.adhere/rules/darkmatter/standards/data/brand-ports/`, the rule
-  `darkmatter/standards/data/brand-ports`, and two repos' rules never collide.
-- The copies are the repo's own rules from then on: commit them, edit them, or
-  start new rules from them. Nothing tracks where they came from.
-- A later install skips a rule already there, as init does. `--force` replaces
-  its directory, edits and all.
-- A rule's whole directory is copied. The source's config, its inline rules, and
-  its cache are not.
-
-> **Read what you install.** A `RULE.ts` is copied with the helpers beside it,
-> and runs whenever lint does, in CI too. `adhere list` names a `RULE.ts`
-> without its description, since reading it would run it.
-
-<details>
-<summary>More on refs, inline rules, and private repos</summary>
-
-- A topic or a rule after the repo copies only that part, and `#` picks a branch
-  or tag.
-- A config with inline `rules` replaces `.adhere/rules/`, so it replaces copied
-  rules too.
-- The source is cloned with `git` from `https://github.com/org/repo.git`, so a
-  private repo needs git's credentials for GitHub, as `gh auth setup-git` sets
-  up. To clone over SSH instead, let git rewrite the URL:
-  `git config --global url.git@github.com:.insteadOf https://github.com/`.
-
-</details>
-
-### Creating a shared repo
-
-`adhere init --shared org/repo` scaffolds a repo whose rules other repos copy in
-with `adhere install`, instead of one that lints itself. It writes the two
-example rules and no config, since install copies only rule files, and with
-them:
-
-| File                            | What it is for                                                                                                                                                                  |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `README.md`                     | Says what the repo is for, how to install its rules, and how to add one.                                                                                                        |
-| `.github/workflows/adhere.yaml` | Runs `adhere validate` on every push to main and every pull request, with the `TYPESAFE_API_KEY` secret. A pull request from a fork gets no secrets, so validate refuses there. |
-| `alchemy.run.ts`                | An [alchemy](https://alchemy.run) stack that creates the GitHub repo, or adopts it, and sets that secret from `TYPESAFE_API_KEY` when deployed with `npx alchemy deploy`.       |
-| `package.json`, `.gitignore`    | alchemy and effect, pinned to versions that work together, which init installs, and a `.gitignore` for them and alchemy's state.                                                |
-
-The repo is public unless you answer yes when init asks, at a terminal, whether
-to make it private. Other repos then need git's credentials for it to list and
-install its rules. Without a terminal it is public: change `visibility` in the
-stack to make it private.
-
 ## Agent skills
 
 Three skills teach an agent to work with adhere:
@@ -1253,7 +1371,8 @@ statements of its body. Jev reads the file as these sections.
   file and that rule, not on which other rules share the request. Every question
   shares the state cost of the request.
 - On up to 10 files per project rule, the rule's question has a second one
-  beside it, the linter check (see [Validate](#validate)), with the same fields.
+  beside it, the linter check (see
+  [Check for contradictions](#check-for-contradictions)), with the same fields.
 - A rule with `appendState` or `reads` has requests of its own, here and below,
   whose state adds to this one.
 
