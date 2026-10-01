@@ -3,9 +3,8 @@ description: A file should be small and focused, with one primary responsibility
 threshold: 0.8
 ---
 
-A guideline, so its description and its headings say should and should not. A
-rule that must hold says must and never instead, as name-domain-actions does.
-Use this rule as a template for repository-specific conventions.
+Why: a file that does one thing is easier to find, read, and change. A helper
+that serves only that thing belongs in the same file.
 
 ## Should
 

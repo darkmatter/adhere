@@ -53,7 +53,8 @@ config in `.adhere/` are not rules.
 description: A port must be a branded, range-checked integer, never a bare number.
 ---
 
-Prose here renders on GitHub and is ignored.
+Prose here is the rule's details: Jev reads it after the description. Say why
+the rule holds, or where it does not apply.
 
 ## Must
 
@@ -88,6 +89,9 @@ How to word a rule, from adhere's evals:
 - One pattern per rule. Two in one block blur the probability.
 - A heading names its code only when it is the word alone: `## Never`, not
   `## Never do this`. A fence tagged `ts never` names its code itself.
+- Prose outside the code is sent to Jev with the description, so keep it about
+  the rule: why it holds, or where it does not apply. A note for the people who
+  maintain the rule, rather than for judging code, belongs elsewhere.
 
 Front matter besides `description`, all optional:
 

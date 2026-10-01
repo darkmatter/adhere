@@ -160,11 +160,15 @@ const exampleFields = (rule: Rule): Record<string, string> => {
   };
 };
 
-/** The rule as its questions carry it: the description, and its examples under their words. */
-const ruleFields = (rule: Rule) => ({ rule: rule.description, ...exampleFields(rule) });
+/** The rule in words, as Jev reads it: its description, then its details when it has any. */
+const ruleText = (rule: Rule): string =>
+  rule.details === undefined ? rule.description : `${rule.description}\n\n${rule.details}`;
+
+/** The rule as its questions carry it: its text, and its examples under their words. */
+const ruleFields = (rule: Rule) => ({ rule: ruleText(rule), ...exampleFields(rule) });
 
 /** A rule's text as a comparison of rules reads it. */
-const ruleState = (rule: Rule) => ({ description: rule.description, ...exampleFields(rule) });
+const ruleState = (rule: Rule) => ({ description: ruleText(rule), ...exampleFields(rule) });
 
 /**
  * The compared rules a question mentions, keyed by index: ids alone would

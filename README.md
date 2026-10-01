@@ -142,19 +142,13 @@ adhere lint        # audit the working directory
 git add .adhere    # commit the rules, and the judgments they cost
 ```
 
-Without a config or rules, `adhere lint --preset effect` audits against the
-built-in Effect rules.
-
 ### Init
 
-`adhere init` creates a config file, some example rules, and adds adhere as a 
+`adhere init` creates a config file, some example rules, and adds adhere as a
 dev dependency.
 
 It is safe to rerun: existing files are reported as skipped, and only `--force`
 overwrites them.
-
-`adhere init --shared org/repo` scaffolds a repo of rules for other repos to
-install instead. See [Creating a shared repo](#creating-a-shared-repo).
 
 ## Generate rules from your repo
 
@@ -177,8 +171,7 @@ adhere up in your repo:
 It stops to ask you at each of those decisions, and never asks for your API key.
 
 ```sh
-skills add darkmatter/adhere                               # install adhere's skills for your agent
-adhere skill setup > .agents/skills/adhere-setup/SKILL.md  # or write this one from the binary
+skills add darkmatter/adhere   # install adhere's skills for your agent
 ```
 
 Then ask your agent to set adhere up.
@@ -211,19 +204,10 @@ adhere install darkmatter/standards#v3                  # every rule, as tagged 
 > and runs whenever lint does, in CI too. `adhere list` names a `RULE.ts`
 > without its description, since reading it would run it.
 
-<details>
-<summary>More on refs, inline rules, and private repos</summary>
-
-- A topic or a rule after the repo copies only that part, and `#` picks a branch
-  or tag.
-- A config with inline `rules` replaces `.adhere/rules/`, so it replaces copied
-  rules too.
-- The source is cloned with `git` from `https://github.com/org/repo.git`, so a
-  private repo needs git's credentials for GitHub, as `gh auth setup-git` sets
-  up. To clone over SSH instead, let git rewrite the URL:
-  `git config --global url.git@github.com:.insteadOf https://github.com/`.
-
-</details>
+The source is cloned with `git` from `https://github.com/org/repo.git`, so a
+private repo needs git's credentials for GitHub, as `gh auth setup-git` sets up.
+To clone over SSH instead, let git rewrite the URL:
+`git config --global url.git@github.com:.insteadOf https://github.com/`.
 
 ### Creating a shared repo
 
@@ -273,54 +257,19 @@ the API key, as `lint` does. A contradiction fails it, with exit code 1, so it
 can gate a pull request that adds a rule, as the workflow
 [`adhere init --shared`](#creating-a-shared-repo) writes does.
 
-`validate` loads the config, rules, and presets the way `lint` does, prints how
-many rules it loaded, and runs two more checks, which are advice and never fail
-it:
+It also runs two checks that are advice and never fail it:
 
-| Check            | Asks Jev | What it prints                                                                                                |
-| ---------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| Wording          | no       | Each rule worded otherwise than the [rule writing tips](#rule-writing-tips) recommend, with its file and how. |
-| The linter check | no       | Each rule a regular linter should probably check, from answers `lint` collected.                              |
+- **Wording**: each rule worded otherwise than the
+  [rule writing tips](#rule-writing-tips) recommend, with its file and how.
+- **The linter check**: while `lint` judges a file against one of your rules, it
+  also asks Jev whether a linter or type checker could decide the rule exactly,
+  on 10 files per rule. A rule flagged on 7 or more of them probably belongs in
+  a regular linter. One flagged on 3 to 6 reads differently from file to file,
+  so its description should say more precisely what it applies to. Preset rules
+  are left out.
 
-**Wording** flags a rule when:
-
-- its description does not say a word its code is under, such as "never" beside
-  a `never` block;
-- it has code to write but no example of code that breaks it;
-- its description says the other kind of rule's words: "should" in a
-  requirement, or "must" or "never" in a guideline.
-
-**The linter check.** While `lint` judges a file against one of the project's
-own rules, it asks Jev a second question beside it: could a linter or type
-checker have decided exactly whether this file follows the rule? It asks on 10
-files per rule, and `validate` reports the tally:
-
-| The rule was flagged on      | It is printed as                                                                                                |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 7 or more of its 10 files    | one a regular linter should probably check                                                                      |
-| 3 to 6                       | a rule that reads differently from file to file, whose description should say more precisely what it applies to |
-| fewer than 10 answers so far | waiting                                                                                                         |
-
-<details>
-<summary>More on the three checks</summary>
-
-- A file that fails to decode refuses `validate`, as it refuses `lint`.
-  `--preset` adds a built-in rule set, as for `lint`.
-- A rule with only code that must never be written needs no `must` example.
-- The linter check's 10 files are spread over the files `lint` judges, and its
-  answers stay in the cache until the rule's text changes. `lint` collects them
-  as it judges files, so a repo whose files are all cached collects them as its
-  files change. Preset rules are left out: they are not the project's to change.
-- For contradictions, one request names, per rule, the rule it conflicts with,
-  if any. Each named pair then gets a probability from a request of its own,
-  holding only those two rules, since other rules beside them dilute the
-  judgment. A pair above the threshold is printed with both rule files.
-- Two rules with the same id are not compared: a nested rule that shares an id
-  shadows the other on purpose.
-- When no two rules share files, nothing is sent. Otherwise `validate` needs the
-  API key, as `lint` does.
-
-</details>
+Two rules with the same id are never compared: a nested rule that shares an id
+shadows the other on purpose.
 
 ## Live evals
 
@@ -355,9 +304,6 @@ original id, and delete the other.
   that judges the copy, and only the copy, once per file.
 - **Keeping the winner is free.** Moving the winning text to the original id
   reuses its cached judgments.
-- **Read the scores, not only the findings.** A finding's confidence shows how
-  close the call was. A version whose findings sit in the amber band, just above
-  the threshold, turns on where the threshold sits.
 - **Counting each rule's findings** takes a pipe:
   `adhere lint --yes | grep -c 'data/brand-ports-next:'`.
 
@@ -370,26 +316,24 @@ writing a rule.
 
 ### Rule writing tips
 
-The short version:
+- **Say "must" and "never"**, in the description and in the headings over the
+  code, or "should" and "should not" for a guideline. Rewording the presets'
+  descriptions this way, with a bad example per rule, was the largest gain of
+  any study: at 0.8, as many caught, and 1 wrong where there had been 5 or 6
+  ([study](eval/studies/must-never.md)).
+- **Give one example of each kind**: one `must` block and one `never` block. A
+  bad example helped every wording, and at 0.9 caught 24 violations with none
+  wrong, where there had been 17
+  ([study](eval/studies/rule-vocabulary.md)). Either kind alone did worse, and
+  three of each did no better, for 1.58 times the tokens
+  ([study](eval/studies/example-count.md)).
 
-- Say "must" for what code must do and "never" for what it must not, in the
-  description and in the headings over the code.
-- Give one example of each: one `must` block and one `never` block. Three of
-  each did no better, and several of one kind alone did worse.
-- For a guideline rather than a requirement, say "should" and "should not" the
-  same way.
-
-On the Effect preset, rules written this way cut the findings Jev got wrong at
-the default threshold from 6 to 1, and caught as many violations.
 `adhere validate` lists each rule worded otherwise.
 
-### What the studies found
+### What else the studies found
 
 | Lesson                                                 | What the study found                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A bad example helps every wording.                     | With the current wording, adding a `never` block halved the findings Jev got wrong at 0.7, and at 0.9 caught 24 violations with none wrong, where it had caught 17 ([study](eval/studies/rule-vocabulary.md)).                                                                                                                                                                                                                                                                                                                                              |
-| Say "must" and "never" in the description too.         | Rewording the descriptions to match their examples, with a bad example per rule, was the largest gain of any study: at 0.8, as many caught, and 1 wrong where there had been 5 or 6 ([study](eval/studies/must-never.md)).                                                                                                                                                                                                                                                                                                                                  |
-| One example of each kind beats more of one.            | Either kind alone, even three of it, ranked lower. Three examples of code to write widened what Jev took the pattern to be: 3 more caught at 0.8, but 5 wrong instead of 2. A `never` block alone is cautious: Jev flags only what resembles it, 23 caught at 0.8 where one of each caught 32. Three of each tied one of each, for 1.58 times the tokens ([study](eval/studies/example-count.md)).                                                                                                                                                          |
 | "Should" is for people, not a weaker check.            | Rules written with "should" and with "must" scored nearly the same ([study](eval/studies/rule-vocabulary.md)).                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | A wrong finding is usually the rule's fault.           | Above 0.8, 31 of 35 wrong findings repeated within a rule: a scope its words reach past, or the same misreading again. Fixing the wording fixes them together. Below 0.8, one-off misreads grow, to about one finding in six at 0.6 to 0.7 ([study](eval/studies/presets.md)).                                                                                                                                                                                                                                                                              |
 | Narrow a rule in its description.                      | Jev scores an `excludeIf` near 0.5 for real and false findings alike, so it thins a rule's findings about as much as a higher threshold ([study](eval/studies/presets.md)). Narrowing the description moves the judgment itself: scoping alchemy's idempotent-delete rule to providers' delete handlers dropped its findings elsewhere from 0.67–0.88 to 0.08–0.21, with nothing real lost ([study](eval/studies/idempotent-delete.md)).                                                                                                                    |
@@ -457,10 +401,10 @@ Found 1 error.
 its threshold:
 
 - If you're near the threshold (orange), consider adjustments.
-- Red is in the range where you won't see it and is useful for evals. Pass
-`--log-level debug` to see them and compare Jev's judgments.
+- Red is below the threshold, so lint never reports it: only the legend shows
+  that range.
 
-**Low context.** Jev sees one file at a time. So we also ask whether the file 
+**Low context.** Jev sees one file at a time. So we also ask whether the file
 shows enough to decide the rule at all. When `context` is below 0.6, it means
 Jev thinks it needs more info, which you can add with an `@adhere` comment.
 You may also see a hint:
@@ -474,11 +418,8 @@ You may also see a hint:
 - On the eval, most findings with this warning were false, where about one in
   five of all findings was ([study](eval/studies/sufficiency.md)). Check what
   the code relies on outside the file before acting on it.
-- What you find can go in an `@adhere` note, which Jev reads (see
-  [Comments](#comments)).
 - If you feel the threshold is too low/high, override it using `sufficiencyThreshold`
   in the config.
-
 
 ## Rule format
 
@@ -548,12 +489,14 @@ const port: number = Number(process.env.PORT);
 
 - A rule needs code under at least one heading.
 - A rule is a requirement ("must", "never") or a guideline ("should", "should
-  not"), and cannot mix the two. Write the description in the same words, so the
-  rule and its code agree.
+  not"), and cannot mix the two.
 - A rule with only a `never` block suits a rule with no single correct form to
   show, such as a hand-rolled retry loop or an error caught and dropped.
 - Neither goes in the other's place: code that must never be written, under
   `must`, reads to Jev as the pattern to follow.
+- Prose around the code is the rule's details: Jev reads it after the
+  description, so use it to say why the rule holds or where it does not apply.
+  The report shows the description alone.
 
 <details>
 <summary>More on headings, fences, and loading</summary>
@@ -565,12 +508,8 @@ const port: number = Number(process.env.PORT);
   without a colon: `## Never:` does, `## Never do this` does not.
 - A fence can instead name its code after its language, as in `ts never`, which
   GitHub does not show. A fence's own word wins over its heading's.
-- Prose around the code renders on GitHub and is ignored.
-- Jev reads the code under the same words, `must` and `never`, or a guideline's
-  `should` and `should_not`. It is asked whether the file diverges from the
-  pattern `must` shows, with `never` as an example of diverging.
 - A rule inline in a config takes the same keys, with its code under `must`,
-  `never`, `should`, and `shouldNot`.
+  `never`, `should`, and `shouldNot`, and its prose under `details`.
 - `loadRules(directory)` from the package root does the same load for your own
   tooling.
 
@@ -600,23 +539,12 @@ The questions are about the code that breaks the rule, not the whole file, so a
 file with a real violation beside code an `excludeIf` describes keeps its
 finding.
 
+A yes is a probability above 0.5. At `--log-level debug`, lint logs each
+finding its matchers dropped, with their scores.
+
 > **Narrowing the description often works better.** In the preset study, Jev
 > scored an `excludeIf` near 0.5 for real and false findings alike. See
 > [Writing good rules](#writing-good-rules).
-
-<details>
-<summary>More on how the scope is asked</summary>
-
-- Each description goes to Jev as a question of its own, in the same request as
-  the rule. A yes is a probability above 0.5.
-- The scores are cached with the rule's judgment, and editing a matcher judges
-  the rule again, as editing its description does.
-- At `--log-level debug`, lint logs each finding its matchers dropped, with
-  their scores.
-- Keeping the scope out of the description keeps the description to what the
-  rule asks for, which the report shows, and gives each part a score of its own.
-
-</details>
 
 ### What a rule reads
 
@@ -654,16 +582,12 @@ There is one name so far:
   backticks, as the questions name `code`.
 - A name adhere does not have refuses the run, so a misspelled one does not go
   unnoticed.
-- When what a rule reads changes, such as a package added, renamed, or moved,
-  that rule is judged again for every file, and no other rule is.
 - What adhere has no name for, such as a file of the repository's, a rule in
   TypeScript adds with [`appendState`](#rules-as-typescript-files).
 
 <details>
 <summary>More on requests and where the packages come from</summary>
 
-- A rule that reads anything goes to Jev in requests of its own, as a rule with
-  `appendState` does, so no other rule reads what it does.
 - The packages are read on every run, when a rule reads them, from the working
   directory's `package.json`, whose `workspaces` npm, Bun, and Yarn read, and
   from `pnpm-workspace.yaml`'s `packages`.
@@ -706,9 +630,9 @@ export default defineRule({
 - A `RULE.ts` is imported, as a config is, so its code runs on every lint.
 - A rule with a hook goes to Jev in requests of its own, so only that rule reads
   what its hook adds. Each of those requests sends the file again.
-- Editing the hook judges the rule again. A change to what the hook reads
-  outside the file does not: when `db/schema.sql` changes, a file already judged
-  is not judged again until it or the rule changes.
+- What the hook reads outside the file is not part of the cache: when
+  `db/schema.sql` changes, a file already judged is not judged again until it or
+  the rule changes.
 
 <details>
 <summary>More on the hook</summary>
@@ -722,12 +646,9 @@ export default defineRule({
   it: a hook can break its own rule's answers, and adhere does not stop it.
 - It can be async, and one that throws refuses the run, naming the rule. A
   `RULE.ts` that default-exports no rule refuses the run too.
-- The rule has requests of its own both to judge a file and to locate a finding,
-  so no other rule's answer depends on the hook. The plan counts them, but not
-  the tokens a hook adds, which are not known until it runs. A request over
-  Jev's context skips the file, as a file too long does.
-- The cache keys a judgment by the file's content and the rule, and the hook is
-  part of the rule by its source.
+- The plan counts the rule's requests, but not the tokens a hook adds, which
+  are not known until it runs. A request over Jev's context skips the file, as a
+  file too long does.
 - A `RULE.ts` can import other files by relative path, such as a helper beside
   it in its directory, but the executable resolves no packages besides
   `@drkmttr/adhere`.
@@ -749,10 +670,6 @@ export default defineRule({
 - Nested `.adhere/` directories are not discovered under `node_modules/`,
   `dist/`, and the other [skipped directories](#what-gets-read).
 
-There is no broader priority system: presets are global, project rules override
-preset rules with the same id, and nested project rules override less-specific
-project rules with the same id for files in their subtree.
-
 A repo that would rather keep its rules with the rest of its documentation can
 point `rules` at a directory such as `docs/adhere/`:
 
@@ -761,10 +678,7 @@ export default defineConfig({ presets: ["effect"], rules: "./docs/adhere" });
 ```
 
 That directory holds its rules as `.adhere/rules/` does, a directory per rule,
-and they apply project-wide. `.adhere/rules/` is the default because it keeps
-everything adhere owns in `.adhere/`, where the config and the cache stay
-anyway. The cost is visibility: a dot directory is hidden from `ls`, and from
-`rg` without `--hidden`.
+and they apply project-wide.
 
 ## Config
 
@@ -781,12 +695,12 @@ being audited, at one of these paths (keep one):
 import { defineConfig } from "@drkmttr/adhere";
 
 export default defineConfig({
-  model: "jev-latest", // optional, default "jev-latest"
-  threshold: 0.8, // optional, default 0.8
-  sufficiencyThreshold: 0.6, // optional, default 0.6: below it, a finding warns to check outside the file
-  presets: ["effect"], // optional, built-in rule sets
-  exclude: ["**/generated/**"], // optional, files no rule judges
-  overrides: { "effect/basics/instrument-with-pipe": "off" }, // optional, see Overrides
+  model: "jev-latest",
+  threshold: 0.8,
+  sufficiencyThreshold: 0.6,
+  presets: ["effect"],
+  exclude: ["**/generated/**"],
+  overrides: { "effect/basics/instrument-with-pipe": "off" },
   rules: {
     "data/brand-meaningful-primitives": {
       description:
@@ -795,8 +709,8 @@ export default defineConfig({
 const UserId = Schema.String.pipe(Schema.brand("UserId"))
 type UserId = typeof UserId.Type
 `,
-      never: "type UserId = string", // optional: what a violation looks like
-      threshold: 0.8, // optional per-rule override
+      never: "type UserId = string",
+      threshold: 0.8,
     },
   },
 });
@@ -820,7 +734,6 @@ type UserId = typeof UserId.Type
 <details>
 <summary>More on types in the editor</summary>
 
-- The default export is decoded with Effect `Schema`.
 - `defineConfig` types the config for the editor and returns it as it is.
   `satisfies Config`, with `import type { Config }`, does the same.
 - The executable supplies `@drkmttr/adhere` to the config whether or not the
@@ -842,7 +755,7 @@ type UserId = typeof UserId.Type
 | ------------------------------------- | ----- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`typescript`](./presets/typescript/) | 11    | any TypeScript project                                | Data from outside checked at runtime, invalid states unrepresentable, errors never swallowed, resources released on every path, arguments not mutated, and tests that assert outcomes and stand alone.                                                                                          |
 | [`react`](./presets/react/)           | 10    | components and hooks                                  | Logic for an event in its handler rather than an effect, effects that clean up and ignore stale fetches, `useSyncExternalStore` for outside stores, state that neither copies props nor contradicts itself, and Server Functions and Server Components that guard what crosses to the client.   |
-| [`security`](./presets/security/)     | 4     | any project                                           | Secrets kept out of logs, error messages, and responses; parameterized SQL; no untrusted input in shell commands, `eval`, or file paths; and secrets compared in constant time.                                                                                                                 |
+| [`security`](./presets/security/)     | 4     | any project                                           | Secrets kept out of logs, error messages, and responses; parameterized SQL; no untrusted input in shell commands, `eval`, or file paths; and secrets compared in constant time. From OWASP's cheat sheets.                                                                                      |
 | [`effect`](./presets/effect/)         | 18    | code written with Effect                              | Steps sequenced with `Effect.gen`, instrumentation attached with `.pipe`, config read through a service and validated, secrets redacted, branded primitives and tagged unions, defects kept apart from typed errors, services built by layers, and tests with their own layers and `TestClock`. |
 | [`alchemy`](./presets/alchemy/)       | 41    | code that deploys with [alchemy](https://alchemy.run) | Where Config and bindings are read, which resources keep their data, how secrets stay out of bundles and logs, authorization on public URLs, migrations, durable workflows, and custom providers.                                                                                               |
 
@@ -854,8 +767,7 @@ type UserId = typeof UserId.Type
   `--preset effect/basics` applies only the rules under
   `presets/effect/basics/`, and `alchemy/secrets` only alchemy's secrets rules.
   `security` has no topics.
-- Reports name a preset's rule with the preset first, as in `alchemy/secrets/…`.
-  To change one, use [Overrides](#overrides).
+- To change a preset's rule without copying it, use [Overrides](#overrides).
 
 <details>
 <summary>What every preset does</summary>
@@ -864,12 +776,8 @@ type UserId = typeof UserId.Type
   say which linter checks them.
 - A preset rule says "must" only where its source makes a requirement, and
   "should" where the source gives advice.
-- Its rules skip tests, but for six that are about tests and say `tests: only`:
-  four in `effect` and two in `typescript`.
 - A topic's rules keep the ids they have in the whole preset, so a topic and its
   preset share cached judgments, and naming both applies each rule once.
-- A preset has the shape of a config without `presets`: `rules`, and optionally
-  `model` and `threshold`.
 - Where effect or alchemy had a rule that `typescript` or `security` has, that
   one is kept and the other is gone. typescript's
   `async/network-calls-have-timeouts` replaced effect's
@@ -924,14 +832,6 @@ type UserId = typeof UserId.Type
   not show whether the component it passes a record to is a Client Component. So
   does `state/store-ids-not-copies`, which also flags state that copies a string
   or an option from a fixed list, where a copy cannot go stale.
-
-</details>
-
-<details>
-<summary>Notes on <code>security</code></summary>
-
-- **Source.** OWASP's cheat sheets.
-- **Topics.** It has none.
 
 </details>
 
@@ -1043,13 +943,6 @@ the default, `0.6`.
 
 ## Running lint
 
-```sh
-adhere lint                    # audit the working directory
-adhere lint --preset effect    # add a built-in rule set; the config becomes optional
-adhere lint --threshold 0.9    # replace the config's threshold
-adhere lint --yes              # send the requests without asking first
-```
-
 ### Flags
 
 | Flag                               | What it does                                                                                   |
@@ -1118,14 +1011,9 @@ Those carry about 1.9 million input tokens: about $0.08 at $0.042 per million, a
   so running again continues from there.
 
 <details>
-<summary>More on the status line, unknown prices, and blocked files</summary>
+<summary>More on unknown prices and blocked files</summary>
 
 - For a model adhere has no price for, the plan gives the tokens alone.
-- Until it knows what judging takes, a status line on stderr says what `lint` is
-  doing: looking for `.adhere/` rules, listing and reading the files, then
-  planning, each with a count, such as `Planning: 5,120 of 10,333 files`. The
-  line is drawn only on a terminal, and not at `--log-level debug` or below,
-  whose log lines would land in it.
 - The firewall in front of Jev's API can refuse a request whose code reads to it
   as an attack, with a 403 and an HTML page rather than Jev's JSON. It refuses
   the same request every run, so that file is skipped, the run goes on, and the
@@ -1157,7 +1045,6 @@ adhere lint --filter 'packages/api/**' --filter '!**/generated/**' --limit 200 -
 | `--log-level debug` | The config it loaded, how many paths it listed and how many of them it reads, and each request to Jev, with the file it is for, about how many tokens it carries, the HTTP status, how long it took, and Cloudflare's Ray ID. A failed attempt is logged even when a retry hides it. |
 | `--log-level trace` | Also each file as it is read, planned, and answered from the cache, and the first 4000 characters of any error Jev's API answers with.                                                                                                                                               |
 
-The counter stays off at these levels, since its redraws would garble the lines.
 stdout still carries only the report, so the log can go to a file of its own:
 
 ```sh
@@ -1180,11 +1067,8 @@ Jev reads a file's code, not its comments. adhere takes every comment out before
 it hashes or sends a file, blanking it so every line keeps its number. The
 report's excerpts still show them.
 
-> **Why.** A comment changes nothing the code does, so it should not change the
-> report, yet Jev takes what comments claim at their word. In
-> [a study of one alchemy rule](eval/studies/comments.md), comments saying a
-> delete succeeds on a missing resource hid 8 of its 9 real violations, and
-> taking comments out found all nine.
+Jev takes what comments claim at their word, which hid real violations in the
+studies: see [Writing good rules](#writing-good-rules).
 
 A comment that says `@adhere` anywhere in it is a note for Jev, and stays. Write
 one for a fact the code relies on that the file cannot show, once you have
@@ -1219,8 +1103,7 @@ delete: Effect.fn(function* ({ output }) {
 | `adhere-ignore`, at the end of a line of code | The statement that starts on that line.                                                                                                                      |
 | `adhere-ignore-file`, anywhere in a file      | The whole file. The rules it names are not judged there at all.                                                                                              |
 
-- A comment names rules as a report does, a preset's with its preset first,
-  separated by commas.
+- A comment names rules as a report does, separated by commas.
 - What follows `--` is the reason, for whoever reads the code next.
 - A finding without lines is covered when its section overlaps the statement.
 - Jev never reads these comments, even with `includeComments: true`.
@@ -1263,11 +1146,9 @@ To keep the cache out of diffs, mark it as generated in `.gitattributes`:
 
 - `files/` holds Jev's answers by the content they are about. Each cache file is
   named for the hash of a source file's content as Jev reads it, without its
-  comments. That is why a moved or copied file keeps its judgments, identical
-  files share them, and a change to comments alone re-judges nothing.
-- Each answer sits under a fingerprint of the model and the question asked for
-  the rule, which carries the rule's text, and of the source of the rule's
-  `appendState`, if it has one.
+  comments.
+- Each answer sits under a fingerprint of the model and everything the rule
+  sends: its text, its matchers, what it reads, and its `appendState`'s source.
 - `tallies/` keeps the linter check's answers, one tally per rule, under a key
   that changes with the rule's text and the model.
 - A cache file is written once and never changed: it is also named for the hash
@@ -1289,11 +1170,11 @@ To keep the cache out of diffs, mark it as generated in `.gitattributes`:
 
 Three skills teach an agent to work with adhere:
 
-| Skill                                            | Print it with        | What it does                                                                                                                                                                                                                                                                       |
-| ------------------------------------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`adhere`](./skills/adhere/SKILL.md)             | `adhere skill`       | The reference: the commands, how to write and word a rule, the config, presets, shared rules, comments and suppressions, the cache, reading a report, and tuning a rule.                                                                                                           |
-| [`adhere-setup`](./skills/adhere-setup/SKILL.md) | `adhere skill setup` | Sets adhere up in a repo with the user. It drafts rules from the repo's conventions, offers fitting presets and a shared org repo's rules, shows them all in one list to choose from, imports and validates the chosen ones, walks through the first lint, and adds a CI workflow. |
-| [`adhere-fix`](./skills/adhere-fix/SKILL.md)     | `adhere skill fix`   | Verifies and fixes the findings `lint` reports: it checks each against its rule and the code, fixes the real ones, reports the false ones with the evidence, and says when a rule is wrong more often than right.                                                                  |
+| Skill                                            | Print it with        | What it does                                                                                                                                                                                                      |
+| ------------------------------------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`adhere`](./skills/adhere/SKILL.md)             | `adhere skill`       | The reference: the commands, how to write and word a rule, the config, presets, shared rules, comments and suppressions, the cache, reading a report, and tuning a rule.                                          |
+| [`adhere-setup`](./skills/adhere-setup/SKILL.md) | `adhere skill setup` | Sets adhere up in a repo with you. See [Generate rules from your repo](#generate-rules-from-your-repo).                                                                                                           |
+| [`adhere-fix`](./skills/adhere-fix/SKILL.md)     | `adhere skill fix`   | Verifies and fixes the findings `lint` reports: it checks each against its rule and the code, fixes the real ones, reports the false ones with the evidence, and says when a rule is wrong more often than right. |
 
 Install them with the [skills](https://github.com/vercel-labs/skills) CLI:
 `skills add darkmatter/adhere`. The binary carries all three, so
@@ -1361,7 +1242,7 @@ statements of its body. Jev reads the file as these sections.
   `{ "1": "…", "2": "…" }`, without their comments (see [Comments](#comments)),
   and nothing else.
 - Each rule is one `noul` (yes/no probability) question that carries the rule's
-  description and its code under its words, `must` and `never`, or a guideline's
+  description and details, and its code under its words, `must` and `never`, or a guideline's
   `should` and `should_not`. It asks whether the file diverges from the pattern
   `must` shows, with `never` as an example of diverging, or, for a rule with
   only code that must never be written, whether the file contains that code.
@@ -1411,13 +1292,14 @@ about three bytes a token.
 
 Names and layouts from older versions:
 
-| Version     | What it had                                                                                      | What happens now                                                                                                                                                                                        |
-| ----------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| before 0.7  | A rule's examples were `reference` and `avoid` in a config, and a fence could be tagged `avoid`. | They still read as `must` and `never`.                                                                                                                                                                  |
-| through 0.7 | The `effect` preset checked seven conventions a linter checks exactly.                           | They are left to `@effect/tsgo`. The notes on `effect` under [Presets](#presets) say how to turn them on.                                                                                               |
-| before 0.13 | A rule was any `*.md` file in `.adhere/`, as `.adhere/data/brand-ports.md`.                      | A `*.md` file outside every rule's directory, but a `README.md`, refuses the run. The refusal says where each such file goes to keep its id, so `adhere-ignore` comments and `overrides` still name it. |
-| before 0.13 | `.adhere/tsconfig.json` included only `config.ts`.                                               | Make its `include` `["**/*.ts"]` to give rules written in TypeScript their types.                                                                                                                       |
-| 0.13.1      | The workspace's packages had a key of their own, `includeWorkspacePackages: true`.               | adhere no longer reads it, and a rule that still has it gets no packages. Write `reads: ["workspacePackages"]` in its place.                                                                            |
+| Version           | What it had                                                                                      | What happens now                                                                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| before 0.7        | A rule's examples were `reference` and `avoid` in a config, and a fence could be tagged `avoid`. | They still read as `must` and `never`.                                                                                                                                                                  |
+| through 0.7       | The `effect` preset checked seven conventions a linter checks exactly.                           | They are left to `@effect/tsgo`. The notes on `effect` under [Presets](#presets) say how to turn them on.                                                                                               |
+| before 0.13       | A rule was any `*.md` file in `.adhere/`, as `.adhere/data/brand-ports.md`.                      | A `*.md` file outside every rule's directory, but a `README.md`, refuses the run. The refusal says where each such file goes to keep its id, so `adhere-ignore` comments and `overrides` still name it. |
+| before 0.13       | `.adhere/tsconfig.json` included only `config.ts`.                                               | Make its `include` `["**/*.ts"]` to give rules written in TypeScript their types.                                                                                                                       |
+| 0.13.1            | The workspace's packages had a key of their own, `includeWorkspacePackages: true`.               | adhere no longer reads it, and a rule that still has it gets no packages. Write `reads: ["workspacePackages"]` in its place.                                                                            |
+| 0.13.1 and before | Prose around a `RULE.md`'s code was ignored.                                                     | Jev reads it after the description, as the rule's details, so a rule with prose is judged again once. Keep prose about the rule: why it holds, or where it does not apply.                              |
 
 ## Development
 

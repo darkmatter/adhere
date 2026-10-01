@@ -49,6 +49,13 @@ export const Reads = Schema.Array(Schema.Literals(["workspacePackages"]));
  */
 const RuleFields = Schema.Struct({
   description: Schema.String,
+  /**
+   * What the description leaves out, such as why the rule holds or where it
+   * does not: in a `RULE.md`, the prose around its code. Jev reads it after
+   * the description, as part of the rule; the report shows the description
+   * alone.
+   */
+  details: Schema.optionalKey(Schema.String),
   must: Schema.optionalKey(Schema.String),
   never: Schema.optionalKey(Schema.String),
   should: Schema.optionalKey(Schema.String),

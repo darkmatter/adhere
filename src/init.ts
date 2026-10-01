@@ -68,9 +68,8 @@ description: A file should be small and focused, with one primary responsibility
 threshold: 0.8
 ---
 
-A guideline, so its description and its headings say should and should not. A
-rule that must hold says must and never instead, as name-domain-actions does.
-Use this rule as a template for repository-specific conventions.
+Why: a file that does one thing is easier to find, read, and change. A helper
+that serves only that thing belongs in the same file.
 
 ## Should
 
@@ -93,6 +92,9 @@ description: A function must be named after the domain action it performs, never
 threshold: 0.8
 ---
 
+Why: a name like \`handle\` or \`process\` says nothing about what the function
+does, so every caller has to open it to find out.
+
 ## Must
 
 \`\`\`ts
@@ -103,9 +105,6 @@ export const loadCustomerProfile = (customerId: CustomerId) =>
 \`\`\`
 
 ## Never
-
-The code under Never shows what a violation looks like. It is optional, and a
-rule can have it without the code under Must.
 
 \`\`\`ts
 export const handle = (id: string) =>

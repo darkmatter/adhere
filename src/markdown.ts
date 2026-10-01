@@ -8,7 +8,7 @@ import { Effect, Schema } from "effect";
  *     description: One sentence saying what code must be, or never be.
  *     threshold: 0.8
  *     ---
- *     Any prose, rendered on GitHub and ignored by adhere.
+ *     Any prose, which Jev reads after the description, as the rule's details.
  *
  *     ## Must
  *
@@ -151,6 +151,24 @@ const fencesOf = (body: string): ReadonlyArray<Fence> => {
 const nonEmpty = (code: string | undefined): string | undefined =>
   code === undefined || code.length === 0 ? undefined : code;
 
+/**
+ * The body's prose: what is left outside its fences and the headings that
+ * name their code, which Jev reads after the description. A body without a
+ * fence is all code, so it has none.
+ */
+const detailsOf = (body: string): string | undefined =>
+  fencesOf(body).length === 0
+    ? undefined
+    : nonEmpty(
+        body
+          .replace(FENCE, "")
+          .replace(HEADING, (line, _level, text: string | undefined) =>
+            headingWordOf(text ?? "") === undefined ? line : "",
+          )
+          .replace(/\n{3,}/g, "\n\n")
+          .trim(),
+      );
+
 type Code = Pick<Rule, "must" | "never" | "should" | "shouldNot">;
 
 /**
@@ -209,5 +227,6 @@ export const parseRuleMarkdown = (
         message: `${file}: the body needs code, in a fence under a Must, Never, Should, or Should not heading, or untagged`,
       });
     }
-    return { ...front, ...code };
+    const details = detailsOf(match[2]);
+    return { ...front, ...(details === undefined ? {} : { details }), ...code };
   });

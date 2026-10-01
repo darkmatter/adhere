@@ -76,12 +76,14 @@ import {
   linterQuestion,
   locateBody,
   locateRequests,
+  matcherQuestion,
   namedPairs,
   type Pair,
   pairProbability,
   requestGroups,
   requestsOf,
   type Rules,
+  sufficiencyQuestion,
   tokensOf,
 } from "../src/services/Jev.ts";
 import {
@@ -310,6 +312,32 @@ describe("request bodies", () => {
           criteria: scoped,
         },
       },
+    });
+  });
+
+  it("carries a rule's details after its description, in every question and comparison", () => {
+    const detailed = { ...a, details: "Why: a bare number accepts 70000 and -1." };
+    const text = `${a.description}\n\nWhy: a bare number accepts 70000 and -1.`;
+    const judged = judgeBody("jev-latest", code, { a: detailed, b }).questions;
+    expect(judged.a?.instructions).toMatchObject({ rule: text, must: a.must });
+    // A rule without details sends its description alone, as before.
+    expect(judged.b?.instructions).toMatchObject({ rule: b.description });
+    expect(linterQuestion(detailed).instructions).toMatchObject({ rule: text });
+    expect(matcherQuestion(detailed, "appliesTo", "a port").instructions).toMatchObject({
+      rule: text,
+    });
+    expect(sufficiencyQuestion(detailed).instructions).toMatchObject({ rule: text });
+    expect(locateBody("jev-latest", code, { a: detailed }).questions).toMatchObject({
+      "start:a:1": { instructions: { rule: text } },
+      "end:a:1": { instructions: { rule: text } },
+      "sufficient:a": { instructions: { rule: text } },
+    });
+    const compared = [
+      { id: "a", rule: detailed },
+      { id: "b", rule: b },
+    ];
+    expect(contradictBody("jev-latest", compared, [0, 1]).state.rules["0"]).toMatchObject({
+      description: text,
     });
   });
 
@@ -664,7 +692,7 @@ describe("markdown rules", () => {
         "threshold: 0.8",
         "---",
         "",
-        "Prose for GitHub, ignored by adhere.",
+        "Why: a bare number accepts 70000.",
         "",
         "```ts",
         'const Port = Schema.Int.pipe(Schema.brand("Port"))',
@@ -676,8 +704,58 @@ describe("markdown rules", () => {
     expect(rule).toEqual({
       description: "Ports are branded.",
       threshold: 0.8,
+      details: "Why: a bare number accepts 70000.",
       must: 'const Port = Schema.Int.pipe(Schema.brand("Port"))\ntype Port = typeof Port.Type',
     });
+  });
+
+  it("prose around the code is the rule's details, without the fences and the headings that name code", async () => {
+    const rule = await parse(
+      [
+        "---",
+        "description: Ports are branded.",
+        "---",
+        "",
+        "Why: a bare number accepts 70000 and -1.",
+        "",
+        "## Must",
+        "",
+        "A port read from the environment is parsed once, at the edge.",
+        "",
+        "```ts",
+        'const Port = Schema.Int.pipe(Schema.brand("Port"))',
+        "```",
+        "",
+        "## Never",
+        "",
+        "```ts",
+        "const port: number = Number(process.env.PORT)",
+        "```",
+        "",
+        "",
+        "",
+        "## Where it does not apply",
+        "",
+        "A port in a test fixture.",
+        "",
+      ].join("\n"),
+    );
+    expect(rule.details).toBe(
+      [
+        "Why: a bare number accepts 70000 and -1.",
+        "",
+        "A port read from the environment is parsed once, at the edge.",
+        "",
+        "## Where it does not apply",
+        "",
+        "A port in a test fixture.",
+      ].join("\n"),
+    );
+    // A body that is all code, or code and its headings alone, has none.
+    expect(await parse("---\ndescription: d\n---\nconst x = 1\n")).not.toHaveProperty("details");
+    expect(
+      await parse("---\ndescription: d\n---\n\n## Must\n\n```ts\na()\n```\n"),
+    ).not.toHaveProperty("details");
   });
 
   it("without a fence, the whole body is code to write", async () => {
@@ -732,6 +810,7 @@ describe("markdown rules", () => {
     );
     expect(rule).toEqual({
       description: "A domain failure is a tagged error.",
+      details: "Not this:\n\nThis:",
       must: 'class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {}) {}',
       never: 'throw new Error("not found")',
     });
@@ -788,7 +867,13 @@ describe("markdown rules", () => {
       "a()",
       "```",
     );
-    expect(rule).toEqual({ description: "d", must: "a()", never: "b()" });
+    // Headings that name no code are prose, so they stay in the details.
+    expect(rule).toEqual({
+      description: "d",
+      details: "### A bare number\n\n## Notes",
+      must: "a()",
+      never: "b()",
+    });
   });
 
   it("a fence's own word wins over its heading's", async () => {
@@ -799,6 +884,7 @@ describe("markdown rules", () => {
   it("names a word only in a heading that is the word alone, outside any fence", async () => {
     expect(await body("## Why never", "", "```ts", "a()", "```")).toEqual({
       description: "d",
+      details: "## Why never",
       must: "a()",
     });
     // A `#` line in a fence is code, so the fence after it is still under Never.
