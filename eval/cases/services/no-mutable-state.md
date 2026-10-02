@@ -50,3 +50,35 @@ export class RateLimiter extends Context.Service<
   );
 }
 ```
+
+A readonly property does not make its Map's contents readonly to consumers.
+
+```ts breaks
+import { Context, type Effect } from "effect";
+
+export class Counter extends Context.Service<
+  Counter,
+  {
+    readonly counts: Map<string, number>;
+    readonly increment: (key: string) => Effect.Effect<void>;
+  }
+>()("@app/Counter") {}
+```
+
+A fixture's controls beside the layer it provides are not the service's
+interface.
+
+```ts follows
+import { Context, Effect, Layer } from "effect";
+
+class Counter extends Context.Service<
+  Counter,
+  { readonly read: () => Effect.Effect<number> }
+>()("@app/Counter") {}
+
+export const counterFixture = () => {
+  const state = { value: 0 };
+  const layer = Layer.succeed(Counter, { read: () => Effect.sync(() => state.value) });
+  return { state, layer };
+};
+```

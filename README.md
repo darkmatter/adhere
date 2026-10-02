@@ -764,7 +764,7 @@ type UserId = typeof UserId.Type
 | [`typescript`](./presets/typescript/) | 11    | any TypeScript project                                | Data from outside checked at runtime, invalid states unrepresentable, errors never swallowed, resources released on every path, arguments not mutated, and tests that assert outcomes and stand alone.                                                                                          |
 | [`react`](./presets/react/)           | 10    | components and hooks                                  | Logic for an event in its handler rather than an effect, effects that clean up and ignore stale fetches, `useSyncExternalStore` for outside stores, state that neither copies props nor contradicts itself, and Server Functions and Server Components that guard what crosses to the client.   |
 | [`security`](./presets/security/)     | 4     | any project                                           | Secrets kept out of logs, error messages, and responses; parameterized SQL; no untrusted input in shell commands, `eval`, or file paths; and secrets compared in constant time. From OWASP's cheat sheets.                                                                                      |
-| [`effect`](./presets/effect/)         | 18    | code written with Effect                              | Steps sequenced with `Effect.gen`, instrumentation attached with `.pipe`, config read through a service and validated, secrets redacted, branded primitives and tagged unions, defects kept apart from typed errors, services built by layers, and tests with their own layers and `TestClock`. |
+| [`effect`](./presets/effect/)         | 16    | code written with Effect                              | Steps sequenced with `Effect.gen`, instrumentation attached with `.pipe`, config read through a service and validated, secrets redacted, branded primitives and tagged unions, defects kept apart from typed errors, services built by layers, and tests with their own layers and `TestClock`. |
 | [`alchemy`](./presets/alchemy/)       | 41    | code that deploys with [alchemy](https://alchemy.run) | Where Config and bindings are read, which resources keep their data, how secrets stay out of bundles and logs, authorization on public URLs, migrations, durable workflows, and custom providers.                                                                                               |
 
 - Name presets in the config's `presets`, or on the command line with
@@ -850,16 +850,21 @@ type UserId = typeof UserId.Type
   [effect-solutions](https://github.com/kitlangton/effect-solutions) docs and
   the [effect/platform](https://effect.website/docs/platform/introduction/)
   docs.
-- **Tests.** Four rules say `tests: only`, so they judge tests and nothing else:
-  `testing/test-clock-for-time`, `services/fresh-layer-per-test`,
-  `services/test-layers-are-in-memory`, and
+- **Tests.** Three rules say `tests: only`, so they judge tests and nothing else:
+  `testing/test-clock-for-time`, `services/fresh-layer-per-test`, and
   `config/tests-provide-values-directly`.
-- **Guidelines.** Two rules say "should": test layers are in memory, outside
-  integration tests, and tests provide config through a layer.
+- **Guidelines.** One rule says "should": a test of code that consumes config
+  provides it through a layer.
+- **Domain types.** The data rules judge the types services exchange, return,
+  or store. A shape that mirrors a payload until it is mapped, and a view's
+  props or state, are out of their scope.
 - **What the rules allow.** Config validation accepts `Config.mapEffect` as well
   as `Config.schema`, and the variants rule does not rule out a `switch`.
 - **Gone.** The rule that a command handler only parses input: the docs show
-  that pattern but do not ask for it.
+  that pattern but do not ask for it. The rule that test layers are in memory,
+  which flagged tests of real services: none of its findings labeled on the eval
+  or on darkmatter/agents was real. And the rule that service operations have no
+  requirements, which `leakingRequirements` below checks exactly.
 - **Left to a linter.** Effect's language service,
   [`@effect/tsgo`](https://github.com/Effect-TS/tsgo) on TypeScript 7, checks
   seven conventions exactly, which the preset checked through 0.7. Most are off
@@ -891,8 +896,7 @@ type UserId = typeof UserId.Type
 - **What the linter misses.** `leakingRequirements` sees a requirement in an
   operation's type, but not a service built by a factory function that takes its
   dependencies as arguments, whose types have no requirements to find. The
-  preset's `services/dependencies-through-layers` asks for that, and
-  `services/operations-have-no-requirements` for the style it goes with.
+  preset's `services/dependencies-through-layers` asks for that.
 
 </details>
 
@@ -1300,14 +1304,15 @@ about three bytes a token.
 
 Names and layouts from older versions:
 
-| Version           | What it had                                                                                      | What happens now                                                                                                                                                                                        |
-| ----------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| before 0.7        | A rule's examples were `reference` and `avoid` in a config, and a fence could be tagged `avoid`. | They still read as `must` and `never`.                                                                                                                                                                  |
-| through 0.7       | The `effect` preset checked seven conventions a linter checks exactly.                           | They are left to `@effect/tsgo`. The notes on `effect` under [Presets](#presets) say how to turn them on.                                                                                               |
-| before 0.13       | A rule was any `*.md` file in `.adhere/`, as `.adhere/data/brand-ports.md`.                      | A `*.md` file outside every rule's directory, but a `README.md`, refuses the run. The refusal says where each such file goes to keep its id, so `adhere-ignore` comments and `overrides` still name it. |
-| before 0.13       | `.adhere/tsconfig.json` included only `config.ts`.                                               | Make its `include` `["**/*.ts"]` to give rules written in TypeScript their types.                                                                                                                       |
-| 0.13.1            | The workspace's packages had a key of their own, `includeWorkspacePackages: true`.               | adhere no longer reads it, and a rule that still has it gets no packages. Write `reads: ["workspacePackages"]` in its place.                                                                            |
-| 0.13.1 and before | Prose around a `RULE.md`'s code was ignored.                                                     | Jev reads it after the description, as the rule's details, so a rule with prose is judged again once. Keep prose about the rule: why it holds, or where it does not apply.                              |
+| Version           | What it had                                                                                                  | What happens now                                                                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| before 0.7        | A rule's examples were `reference` and `avoid` in a config, and a fence could be tagged `avoid`.             | They still read as `must` and `never`.                                                                                                                                                                  |
+| through 0.7       | The `effect` preset checked seven conventions a linter checks exactly.                                       | They are left to `@effect/tsgo`. The notes on `effect` under [Presets](#presets) say how to turn them on.                                                                                               |
+| before 0.13       | A rule was any `*.md` file in `.adhere/`, as `.adhere/data/brand-ports.md`.                                  | A `*.md` file outside every rule's directory, but a `README.md`, refuses the run. The refusal says where each such file goes to keep its id, so `adhere-ignore` comments and `overrides` still name it. |
+| before 0.13       | `.adhere/tsconfig.json` included only `config.ts`.                                                           | Make its `include` `["**/*.ts"]` to give rules written in TypeScript their types.                                                                                                                       |
+| 0.13.1            | The workspace's packages had a key of their own, `includeWorkspacePackages: true`.                           | adhere no longer reads it, and a rule that still has it gets no packages. Write `reads: ["workspacePackages"]` in its place.                                                                            |
+| 0.13.1 and before | Prose around a `RULE.md`'s code was ignored.                                                                 | Jev reads it after the description, as the rule's details, so a rule with prose is judged again once. Keep prose about the rule: why it holds, or where it does not apply.                              |
+| 0.14.0 and before | The `effect` preset had `services/test-layers-are-in-memory` and `services/operations-have-no-requirements`. | They are gone, and an `overrides` entry naming either refuses the run: remove it. `@effect/tsgo`'s `leakingRequirements` checks the second. `adhere-ignore` comments naming them suppress nothing.      |
 
 ## Development
 

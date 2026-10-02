@@ -1,6 +1,10 @@
 ---
-description: A service must expose only readonly members, never mutable state.
+description: The interface a service exposes must hold only readonly members, never writable fields or mutable state, such as a Map, Set, or array, that its consumers could change, even through a readonly property.
 ---
+
+State the service's implementation keeps behind its operations is not part of
+its interface, and neither are a fixture's controls kept beside the service it
+provides.
 
 ## Must
 

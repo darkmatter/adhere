@@ -11,7 +11,7 @@ adhere asks Jev since 0.6 was decided here; `studies/` has the write-ups.
 - **Planted files:** `cases/` has one Markdown file per preset rule. Each fence
   tagged `ts breaks` is a file written to break that rule, and each tagged
   `ts follows` is one written to follow it, including cases the rule itself
-  exempts. 21 break a rule and 23 follow one.
+  exempts. 21 break a rule and 28 follow one.
 - **Real code:** every `.ts` file of adhere's own `src/`.
 - **Arms:** each arm is a way of building adhere's request. Every arm asks
   every rule of every file, one request per file, as a cold `adhere lint`
@@ -108,3 +108,4 @@ the key from `TYPESAFE_API_KEY` alone.
 | [Sufficiency](studies/sufficiency.md)                         | Whether asking if the file shows enough to decide tells real findings from false                            | No better than a higher threshold as a filter. Asked directly, as a warning below 0.6 it marks one finding in ten, most of them false.                                |
 | [Sections](studies/sections.md)                               | The file as numbered lines, or as sections of whole statements, keyed, marked, or in an array               | The same judgment every way. Keyed sections locate as well as lines, in one request, with options that need no text; an array's index is off by one.                  |
 | [Lines within a section](studies/pinpoint.md)                 | Once in a section, can Jev name the lines: by tenths, choices, halving, or a noul per line                  | A noul per line spans the violation; a choice names its first line; tenths miss a third of the time; halving adds requests for nothing.                               |
+| [Domain scope](studies/domain-scope.md)                       | The Effect preset's data and service rules scoped to domain types, on agents                                | False findings fell from 107 to 23, real ones from 25 to 19. A payload exemption needed a sentence keeping domain references in scope.                                |
