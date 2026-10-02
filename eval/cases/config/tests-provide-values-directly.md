@@ -60,3 +60,36 @@ describe("ReportService", () => {
   );
 });
 ```
+
+A configuration decoder must be given undecoded inputs to verify rejection and fallback.
+
+```ts follows
+import { Config, ConfigProvider, Effect } from "effect";
+import { expect, test } from "vitest";
+const port = Config.Int("PORT");
+test("rejects a non-integer port", async () => {
+  const config = ConfigProvider.fromUnknown({ PORT: "invalid" });
+  await expect(Effect.runPromise(port.pipe(
+    Effect.provideService(ConfigProvider.ConfigProvider, config),
+  ))).rejects.toThrow();
+});
+```
+
+A consumer test must supply the config service rather than configuring its production loader.
+
+```ts breaks
+import { Context, Effect, Layer, Config } from "effect";
+import { beforeEach, test, expect } from "vitest";
+class ApiConfig extends Context.Service<ApiConfig, { readonly url: string }>()("ApiConfig") {}
+const ApiConfigLive = Layer.effect(ApiConfig, Effect.gen(function* () {
+  return { url: yield* Config.String("DATABASE_URL") };
+}));
+const fetchInvoice = Effect.gen(function* () {
+  const config = yield* ApiConfig;
+  return config.url + "/invoice";
+});
+beforeEach(() => { process.env.DATABASE_URL = "postgres://localhost/test"; });
+test("loads the invoice", async () => {
+  expect(await Effect.runPromise(fetchInvoice.pipe(Effect.provide(ApiConfigLive)))).toContain("invoice");
+});
+```
