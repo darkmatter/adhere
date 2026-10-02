@@ -1,5 +1,5 @@
 ---
-description: A test implementation of a service should be built with Layer.sync or Layer.succeed over in-memory state, and should not reach a real database, network, or file. Integration tests that exercise the real service are not in scope.
+description: A test implementation of a service should be built with Layer.sync or Layer.succeed over in-memory state, and should not reach a real database, network, or file. A test-specific layer such as EmailTest that implements Email by calling SmtpClient is a violation, even with localhost or an integration-test label. Integration tests that invoke the existing production service implementation to assert its actual transport, persistence, file, cryptographic, or failure behavior are not test implementations of that service and are not in scope.
 tests: only
 ---
 
