@@ -43,42 +43,45 @@ and 49 debatable, which count on neither side.
   - `config/tests-provide-values-directly`: a test of code that consumes
     configuration. A test of how configuration is read, planted leak values,
     and a deployed Worker's bindings are out of scope.
-  - `services/no-mutable-state`: the interface the service exposes, including
-    a mutable Map behind a readonly property. State behind its operations, and
-    a fixture's controls beside it, are not that interface.
+  - `services/no-mutable-state`: the interface a Context.Service exposes,
+    including a mutable Map behind a readonly property. State behind its
+    operations, a fixture's controls beside it, and a plain interface no
+    Context.Service declares are not that interface.
   - `services/test-layers-are-in-memory` and
     `services/operations-have-no-requirements` are gone.
 
 ## Results
 
-| arm                 | AUC   | real / false at 0.7 | at 0.8         | at 0.9        | as lint reports |
-| ------------------- | ----- | ------------------- | -------------- | ------------- | --------------- |
-| 0.14.0              | 0.676 | 26 / 121 (18%)      | 26 / 107 (20%) | 10 / 16 (38%) | 26 / 107 (20%)  |
-| 0.14.0, again       | 0.646 | 26 / 121 (18%)      | 24 / 108 (18%) | 8 / 22 (27%)  | 24 / 108 (18%)  |
-| domain scope        | 0.884 | 25 / 43 (37%)       | 20 / 22 (48%)  | 5 / 2 (71%)   | 20 / 22 (48%)   |
-| domain scope, again | 0.859 | 24 / 42 (36%)       | 18 / 24 (43%)  | 6 / 2 (75%)   | 18 / 24 (43%)   |
+| arm                 | AUC   | real / false at 0.7 | at 0.8         | at 0.9       | as lint reports |
+| ------------------- | ----- | ------------------- | -------------- | ------------ | --------------- |
+| 0.14.0              | 0.621 | 26 / 121 (18%)      | 24 / 104 (19%) | 9 / 22 (29%) | 24 / 104 (19%)  |
+| 0.14.0, again       | 0.616 | 26 / 120 (18%)      | 23 / 111 (17%) | 7 / 21 (25%) | 23 / 111 (17%)  |
+| domain scope        | 0.885 | 25 / 39 (39%)       | 19 / 19 (50%)  | 6 / 1 (86%)  | 19 / 19 (50%)   |
+| domain scope, again | 0.881 | 25 / 41 (38%)       | 19 / 19 (50%)  | 6 / 1 (86%)  | 19 / 19 (50%)   |
+
+Two earlier runs of 0.14.0 ranked its findings at an AUC of 0.65 and 0.68,
+with 24 to 26 real and 107 to 108 false.
 
 Per rule, real / false / debatable as lint reports them, in the first run of
 each:
 
 | rule                                       | 0.14.0       | domain scope |
 | ------------------------------------------ | ------------ | ------------ |
-| `data/brand-meaningful-primitives`         | 16 / 53 / 23 | 14 / 14 / 10 |
-| `services/dependencies-through-layers`     | 1 / 30 / 7   | 1 / 2 / 2    |
-| `data/variants-are-tagged-unions`          | 4 / 5 / 13   | 3 / 2 / 1    |
-| `config/tests-provide-values-directly`     | 3 / 8 / 0    | 0 / 0 / 0    |
-| `services/test-layers-are-in-memory`       | 0 / 6 / 0    | gone         |
+| `data/brand-meaningful-primitives`         | 15 / 51 / 21 | 13 / 14 / 10 |
+| `services/dependencies-through-layers`     | 1 / 29 / 7   | 1 / 2 / 1    |
+| `data/variants-are-tagged-unions`          | 3 / 6 / 14   | 3 / 2 / 1    |
+| `config/tests-provide-values-directly`     | 3 / 7 / 0    | 0 / 0 / 0    |
+| `services/test-layers-are-in-memory`       | 0 / 5 / 0    | gone         |
 | `services/operations-have-no-requirements` | 0 / 2 / 0    | gone         |
-| `services/no-mutable-state`                | 0 / 1 / 0    | 0 / 2 / 0    |
-| the other three labeled rules              | 2 / 2 / 2    | 2 / 2 / 2    |
+| `services/no-mutable-state`                | 0 / 2 / 0    | 0 / 0 / 0    |
+| the other three labeled rules              | 2 / 2 / 2    | 2 / 1 / 2    |
 
-Real findings either domain-scope run lost: three brand findings at 0.72 to
-0.83 (a sandbox job's id, an email sender's addresses, a guest's port), Slack's
-thread reference at 0.78 to 0.79, a JSON value union of Linear's at 0.61 to
-0.66, and all three of the config rule's, at 0.69 to 0.77. False
-findings both kept include Linear's wire schemas and chat's view models under
-the data rules, and a private registry and a socket's state under the
-mutable-state rule.
+Real findings either domain-scope run lost: all three of the config rule's, at
+0.71 to 0.73; two brand findings, a sandbox job's id and Slack's thread
+reference, at 0.74 to 0.79; and a JSON value union of Linear's, at 0.58 to
+0.63. False findings either kept are mostly Linear's and Braintrust's wire
+schemas and chat's view models under the data rules, two helpers under the
+dependency rule, and one finding each under the gen and instrument rules.
 
 On the standing eval, `judge.ts`, the rules separated every planted file, and
 no compliant file scored above 0.8. Of the planted violations, a test that
@@ -96,6 +99,12 @@ its own rule's labeled files and planted files alone:
   0.67 to 0.89. A threshold of 0.7 for the rule caught them, with one false
   finding, but they sat within noise of it. The rule keeps 0.8: fewer false
   findings, at the cost of these real ones.
+- **A note did not move a plain interface out of a service rule.** The
+  mutable-state rule flagged a pool's private registry and a socket's state,
+  both plain interfaces that no Context.Service declares. On agents' main,
+  `@adhere` notes saying who reads them left both at 0.83, still reported;
+  saying the rule judges a Context.Service's interface dropped both, and its
+  planted violations still scored 0.85 and 0.94.
 - **An exemption for payloads excused the domain types beside them.** The
   brand rule's first scope excused shapes that mirror a payload, and with them
   the thread references in files of payload types, at 0.46 to 0.66. A sentence
@@ -106,10 +115,10 @@ its own rule's labeled files and planted files alone:
 
 ## What we learned
 
-- **Scoping the data and service rules to domain code removed about four
-  false findings in five.** As lint reports, false findings fell from 107–108
-  to 22–24, and real ones from 24–26 to 18–20. Precision went from 19% to
-  45%, and the ranking from an AUC of 0.66 to 0.87.
+- **Scoping the data and service rules to domain code removed more than four
+  false findings in five.** As lint reports, false findings fell from 104–111
+  to 19, and real ones from 23–24 to 19. Precision went from 17–19% to 50%,
+  and the ranking from an AUC of 0.62 to 0.88.
 - **The rules a team calls noisy were too broad, not misread.** Of 0.14.0's
   false findings, most were code the rule's words reached but its purpose did
   not: payload mirrors, view props, SDK adapters, tests of real services.
