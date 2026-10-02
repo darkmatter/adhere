@@ -1,0 +1,1388 @@
+[
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/inference/adapters/GatewayCompletions.ts",
+    "rule": "effect/basics/gen-for-sequencing",
+    "label": "false",
+    "note": "The pipe holds two flat flatMaps whose callbacks each return one effect, which the description puts out of scope."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/slack/adapters/ScoutSlack.ts",
+    "rule": "effect/basics/gen-for-sequencing",
+    "label": "debatable",
+    "note": "A single flatMap whose callback branches and recurses into scanPage is a pagination loop that would read better as an Effect.gen loop but is not a nested chain of distinct steps."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/upstream/excerpt.ts",
+    "rule": "effect/basics/gen-for-sequencing",
+    "label": "debatable",
+    "note": "A single flatMap whose callback branches and recurses into readOnce is a read loop that would read better as an Effect.gen loop but is not a nested chain of distinct steps."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/hooks/usePolled.ts",
+    "rule": "effect/basics/instrument-with-pipe",
+    "label": "false",
+    "note": "The flagged Effect.sleep paces the poll loop and is not a timeout, retry, log, or span."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/server/runtime/github-app-env.ts",
+    "rule": "effect/config/secrets-are-redacted",
+    "label": "real",
+    "note": "GITHUB_APP_PRIVATE_KEY is read with Config.String and only afterwards wrapped in Redacted.make, where Config.Redacted would do."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/evals/src/adapters/EvalModelSource.ts",
+    "rule": "effect/config/secrets-are-redacted",
+    "label": "real",
+    "note": "EVAL_API_KEY is read with Config.String and returned as a plain string."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform-runtime/test/fixtures/postgres.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "real",
+    "note": "The fixture points the runtime under test at its database by setting process DATABASE_URL, since the runtime reads it from the environment."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform-runtime/test/omp-config.test.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "false",
+    "note": "Tests materializeRuntimeOmpConfig's fallback to the process environment when options are omitted; verified in DARK-191."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform-runtime/test/reviewer-http-fixture.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "real",
+    "note": "Stubs PLATFORM_AUTH_TOKEN in the environment so the coordinator runtime it builds reads it, beside config it passes directly."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform-runtime/test/runner-proxy.test.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "false",
+    "note": "The credentials are planted to check they never reach runner requests, not configuration; verified in DARK-191."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform-runtime/test/spans-ingest-env.test.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "false",
+    "note": "A regression test that runtimeSpansIngest reads the container environment; the reading of config is the subject."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform/src/rpc/deployed.test.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "false",
+    "note": "Cloudflare.Worker env is a binding of a separately deployed Worker, not the test process; verified in DARK-191."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/config/github-token.test.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "false",
+    "note": "Tests the token's precedence over, and fallback to, the process environment."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/config/secrets.test.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "false",
+    "note": "The config loader itself is under test: environment decoding and absence handling."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/spans/services/SpanPartitions.postgres.test.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "real",
+    "note": "Sets DATABASE_URL to arm the session migrator in the code under test, a consumer configured through the environment."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/evals/src/scorers/model-policy.test.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "false",
+    "note": "Tests that invalid EVAL_MODEL values are rejected when decoded."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/queue/recorder.test.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "false",
+    "note": "The case omits apiKey and env to test resolveApiKey's fallback to process.env; verified in DARK-191."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/runners/src/installer/RunnerService.test.ts",
+    "rule": "effect/config/tests-provide-values-directly",
+    "label": "false",
+    "note": "The renderer receives settings directly and the assertions read the generated text; verified in DARK-191."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/architecture/src/models/Scenarios.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "Scenario id is a static display key in the architecture site's scenario data and never crosses a domain boundary."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/architecture/src/scene/edges.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "EdgeSpec id is a 3D scene edge key used for hover filtering, a view-only value."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/agents/mappers/agent-options.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "AgentOption id is a sidebar picker option in a UI roster, not a domain contract."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/components/CaptureViewer.tsx",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "CaptureViewerCapture id is a React component prop for a screenshot viewer."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/components/MessageItem.tsx",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "MessageGroup id is a render-group key for consecutive messages in the chat UI."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/components/ScreenshotTiming.tsx",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "ScreenshotTime artifactId is a key in a React context map that only feeds the screenshot timing display."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/hooks/threadAgentState.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "PendingSend submissionId is client hook state but carries a submission id that effect-agent already brands as SubmissionId."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/mappers/composer/text.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "TextAttachment id is a locally generated composer chip id in the UI."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/models/ConversationMessage.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "The chat view model's id, submissionId and turnId are bare strings; effect-agent brands SubmissionId and TurnId, but the type only feeds the UI."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/models/RecordedActivity.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "RecordedActivity id is a list key for the chat activity view."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/models/SessionPresentation.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "PresentedTreeNode id is a presentation-only accessibility tree node key."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/models/UncapturedSession.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "The file says its shapes are frontend mocks read from fixtures and not a transport contract yet, so toolCallId never crosses a boundary."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/policies/desktop-output.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "retainedArtifact is a file-private schema that decodes tool output for display in the chat UI."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/state/SessionReplay.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "selectedId is UI selection state typed by a local Selection alias, not a domain id."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/monitor/models/SessionLogArchive.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "threadId in SessionLogArchiveInput only names a downloaded zip file in the UI."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/sidebar/models/SessionRow.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "SessionRow id is a merged sidebar row key that only feeds the view."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/console/src/lib/turn/types.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "TurnState conversationId and submissionId are reducer state in the console app, though effect-agent brands both ids."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform/src/deployment/retired-resources.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "The props belong to an Alchemy stub kept only so retired resource rows can be deleted, with no live code path."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/coder/job/index.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "CoderJob id is the job UUID that names the sandbox and identifies the run, exported in a package contract as a bare string."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/inference/adapters/GatewayCatalog.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "ModelInfoRow mirrors LiteLLM's /model/info wire row in a file-private decoder before it is mapped."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/inference/adapters/GatewayCatalogCapture.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "max_input_tokens mirrors a LiteLLM wire field and is a numeric measurement, not an identity."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/inference/models/GatewayModels.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "ModelInfo id is a provider model name; a ModelId brand could help but the string is free-form."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/repository-profile/schema.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "scannedAt is an epoch timestamp, a measurement this rule does not target."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/repository-profile/service.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "RepositoryProfileRequest carries repository and revision as adjacent bare strings that could be swapped, but it is one service's request type."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/adapters/ReviewWorkspace.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "ReviewWorkspace headRevision is a SHA in a service shape, but its only neighbour is a host path."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/adapters/ReviewerModel.proxy.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "ModelProxy url is a single config URL where swap risk is low."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/config.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "maxDiffBytes is a numeric config limit, not an identity that could be confused."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/models/ReviewOperation.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "ReviewOperationRecord holds operationKey, headSha and deliveryId as bare strings although its own comment warns the delivery id is never an operation key."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/purpose/feature-classification.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "featureId is an LLM structured-output field that must match a RepositoryProfile feature, so a brand could help, but it is model I/O."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/services/ReviewDeliveryLedger.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "ReviewDeliveryMarker's operationKey and headSha form the durable idempotency anchor for review POSTs yet are bare strings."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/triage/services/TriageLinear.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "TriageLinearIssue's port contract has a UUID id and a human identifier as interchangeable bare strings."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/approvals/src/models/ApprovalSignal.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "GateApprovalRecord declares subject and requestId as bare strings even though a pattern-checked SubjectSchema is defined just below it."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/approvals/src/services/ApprovalSignalDelivery.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "conversationId is a TaggedError diagnostic field, though the same id is branded upstream as ThreadId."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/approvals/src/services/ApprovalStore.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "The string member is a JSON-value arm of an untrusted stored-row union, not a semantic primitive."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/channels/src/email/models/EmailErrors.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "recipient is an email address but appears only as a TaggedError diagnostic field."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/channels/src/email/models/types.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "ParsedInboundEmail has envelope addresses and an idempotency key as bare strings at the inbound channel boundary."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/channels/src/github/models/types.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "GitHubEventContext carries deliveryId and its derived idempotencyKey as adjacent bare strings that are easy to swap."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/channels/src/linear/models/types.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "LinearConversationRef derives conversation instance ids from organizationId, issueId and threadCommentId, all bare strings."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/channels/src/mappers/delivery-facts.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "The flag is on a function parameter whose type is declared elsewhere, which the description puts out of scope."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/channels/src/slack/models/types.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "SlackThreadRef is the canonical thread destination with teamId, channelId and threadTs as swappable bare strings."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/computers/src/cua/diagnostic.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "Summary is the printed JSON output of a one-off diagnostic script, mostly byte counts and durations."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/computers/src/cua/internal/fakeDriverMcp.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "The JSON-RPC request id in this test fake mirrors the wire spec's string-or-number id."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/computers/src/vnc/VncStreamer.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "GuestVncEndpoint port is range-checked but unbranded, exactly the rule's own Port example."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/connectors/src/config/proxy.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "IronProxyConfig url is a single config URL where swap risk is low."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/native-sql/SqlGatewaySocket.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "socketId is an in-process socket counter held in runtime state and does not cross a boundary."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/runtime/agent-logs/model.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "StoredAgentLogBatch id widens the row's pattern-checked Digest to a bare string in the stored domain type."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/runtime/agent-logs/store.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "threadId is a bare string in the store's private operation inputs; its exported contract is declared in model.ts."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/runtime/reviewer/migrations.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "The flag is on a Kysely addColumn DDL call, not a type declaration."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/runtime/reviewer/model.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "ReviewerTables is a Kysely table interface mirroring SQL columns, and the repo brands ids when mapping rows."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/runtime/runners/claims.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "ClaimRow is a file-private row decoder, and the same file brands on mapping (row.job_id as JobId)."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/spans/adapters/SpanStore.pg.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "The flag is on a literal value in a return object whose type is declared elsewhere, which the description puts out of scope."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/spans/models/database.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "SpanEventTable is a Kysely table interface mirroring SQL columns."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/spans/models/types.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "SpanCall callId is a telemetry read-model field; ToolCallId exists upstream but the type is query output."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/decisions/src/models/NormalizedCase.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "NormalizedDecisionEvidence id is a locally assigned ref within one case that sits beside other ref kinds."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/evals/src/models/AgentEval.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "LocalCaseResult id is an eval-tooling case id for a local results table."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/evals/src/models/EvalTarget.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "EvalTargetInput conversationId reaches the agent HTTP API from eval tooling, where ThreadId is branded upstream."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/evals/src/reviewer-purpose/capture.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "PullSchema is a local decoder of gh api output in an eval capture script."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/evals/src/reviewer-purpose/cases.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "PurposeCaseSpec id is an authored eval fixture name."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/example/src/brand/services/BrandService.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "BrandPost id belongs to an in-memory store in the example package."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/example/src/brand/tools/brand-tools.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "The id is in an LLM tool success schema that is serialized to the model, so a brand adds no safety."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/example/src/capabilities/memory-recall.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "NoteSource has several confusable ids (id, sourceId, originId), but it lives in the example package."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/braintrust/effect/schemas.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "ProjectSchema decodes Braintrust's BTQL wire JSON at the boundary before use."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/braintrust/types.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "BraintrustProject mirrors Braintrust's snake_case API shape."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/email/models/EmailSender.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "MimeMessageInput declares from and to email addresses as bare strings in the integration's send input."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/email/services/CampaignEmailSender.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "The CampaignEmailSender service contract takes from and to email addresses as bare strings."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/adapters/octokit/Workflows.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "RawWorkflowRun is a file-private Octokit payload mirror."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/adapters/octokit/mappers/map-pull.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "RawPull is the Octokit payload before it is mapped to GithubPullRequest."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/models/GitHubIssueWorkflowTypes.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "perPage and page are pagination quantities, not identities."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/models/GitHubPullTypes.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "GitHubPullRequest mirrors GitHub's snake_case response shape."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/models/GitHubWorkflowResponseSchemas.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "GitHubIssueCommentResponse is a loose wire response schema mapped elsewhere."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/models/GithubPull.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "GithubIssue number is a third-party read-model field; issue and PR numbers can be confused, but it mirrors GitHub."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/models/GithubWorkflow.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "GithubRelease id is a camelCase third-party read-model field with a single numeric id."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/services/GitHubAppModels.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "expiresAt is an epoch timestamp, a measurement rather than an identity."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/tools/github-tools.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "The number is in an LLM tool success schema serialized to the model."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/adapters/LinearResponseMapping.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "IssueNode is a Linear GraphQL node shape mapped into the public read model."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/adapters/LinearSdk.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "CapturedComment is a loose wire capture schema of the Linear SDK response."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearDocumentSchemas.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "DocumentNode is a Linear GraphQL response schema."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearDomainTypes.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "LinearIssueRef, an exported read model, has a UUID id and an ENG-42 identifier as interchangeable bare strings."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearIssueSchemas.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "IdNode is a Linear GraphQL response schema."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearJson.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "LinearIssueReference is a discriminated union whose kind tag already separates id from identifier."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearPlanningIssueSchemas.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "PlanningIssueReference is a Linear GraphQL response schema."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearPlanningNodes.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "LinearPlanningIssueReference, an exported read model, has id and identifier as interchangeable bare strings."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearPlanningSchemas.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "NamedEntityNode is a Linear GraphQL response schema."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearPlanningSnapshotTypes.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "The snapshot input's teamId is a bare string in a codebase that also carries teamKey, but it is a query input."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearResponse.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "The organization node is a Linear GraphQL response schema."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearSchemaPrimitives.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "UserNode is a Linear GraphQL response schema."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/tools/linear-read-tools.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "IssueDetail is an LLM tool success schema serialized to the model."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/attribution/types.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "AttributionTokenUsage holds presentation-only token counts, as its own doc comment says."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/instrumentation/spans/config.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "SpanIngestConfig url is a single env-sourced config URL."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/omp/events/schema.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "stageId is a bounded-string wire schema field beside runKey and activeStageId."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/omp/events/types.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "OmpPresentationEvent stageId is in a presentation event union."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/omp/harness.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "OmpPromptModel id is a free-form provider-reported model name."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/terminal/types.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "TerminalEnvironment id names a host, worker or container, so a single brand is a poor fit."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/utils/schedule.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "ScheduleWindow id is a static config label used as a dedupe key."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/runners/src/jobs/ClaimScope.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "Thread id bare string though the package already imports the branded Identifiers.ThreadId."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/sessions/src/inbound/adapters/Rows.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "ConversationIdSchema is a file-private lenient decoder whose result is immediately String()'d."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/telemetry/src/models/SpanLabels.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "debatable",
+    "note": "SpanLabels conversationId is a telemetry attribute, though the id is branded upstream as ThreadId."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/ui/src/components/SeekRail.tsx",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "SeekFrame id is a UI component frame key."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/ui/src/session/components/ReplayTimeline.tsx",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "false",
+    "note": "ReplayTimelineCapture id is a UI component prop."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/workflows/src/triage/dispatch-triage.ts",
+    "rule": "effect/data/brand-meaningful-primitives",
+    "label": "real",
+    "note": "TriageWebhookEvent carries deliveryId (the idempotency key), issueId and identifier as interchangeable bare strings."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/components/RecordedNetworkDetails.tsx",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "NetworkBody is a section-local React presentation type, documented as implying no transport contract, that is never decoded or sent."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/models/ConversationMessage.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "false",
+    "note": "ConversationPart mirrors the AI SDK UIMessage part format (type text/reasoning/file/dynamic-tool, data-${string}, input-available/output-available states), which the rule's third-party-format exclusion covers."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/models/RecordedActivity.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "RecordedActivity is a UI row model, a shared base intersected with a part/log kind, built by a mapper and only rendered."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/models/SessionPresentation.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "false",
+    "note": "Presented<T> is generic over its value type, so the prescribed Schema.TaggedClass members cannot express it, and it is a frontend presentation type that is not a transport contract."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/policies/desktop-output.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "false",
+    "note": "testSummary is not a tagged union but a Schema.Union of two legacy record shapes keyed by different field names (status vs outcome) for decoding historical tool output."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/policies/plan-presentation.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "PlanNavigationTarget is a UI-local navigation type whose two variants share id and stepId and differ only in stepId's optionality."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/sidebar/models/SessionScope.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "SessionScope is a sidebar view preference with one payload variant, cookie-encoded by hand, so a schema could help but it is app-local UI state."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/test-runs/policies/runner-availability.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "RunnerAvailability is computed by a UI policy and only rendered as a notice, never decoded or sent."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/console/src/hooks/useListSelection.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "The finding anchors on movementForKey's object literals, which are out of scope, while the hand-written SelectionMovement union it returns is a hook-local cursor type."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/console/src/lib/dev-process.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "ProcessAction is a Redux-style action union keyed by type and dispatched through React useReducer in RuntimePanel."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/console/src/lib/turn/types.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "TurnAction is a Redux-style action union keyed by type and consumed by turnReducer through React useReducer."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/tui/src/features/run/input-form.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "FieldKind is TUI-local form state, already _tag-keyed and mostly payload-free, that is never decoded or sent."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/tui/src/features/run/outcome.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "RunOutcome is a TUI-local, already _tag-keyed projection of an Exit for the view, never decoded or sent."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/purpose/feature-classification.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "FeatureClassification is already a Schema.Union of Schema.Structs keyed by a kind literal and serves as model output, so a TaggedClass would only change the encoded key to _tag."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/triage/models/TriageFindings.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "ParsedFindings is an ok:true/false parse result that re-wraps a Schema decode Result, a real smell whose fix is Effect's Result rather than a TaggedClass union."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/native-sql/SqlWire.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "false",
+    "note": "WireResponseSchema is already a Schema.Union of Structs in a versioned wire protocol (v2) whose kind key is fixed on the wire, so switching to TaggedClass would break the protocol for no gain."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/decisions/src/mappers/decision-case-from-text.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "TextDecisionSource is a mapper parameter type whose mode discriminant only toggles whether proposal is optional on an intersected base."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/evals/src/scorers/structured.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "ParsedReplyJson is an ok:true/false parse result whose idiomatic fix is Effect's Result rather than a TaggedClass union."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/email/relay.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "false",
+    "note": "EmailRelayRequestSchema is already a Schema.Union of Structs in an oRPC contract between the runtime and the edge, whose kind key is fixed on the wire, and the finding marks one member struct rather than a union."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/models/LinearJson.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "real",
+    "note": "LinearIssueReference is a hand-written kind-keyed union with payloads, parsed from a string by parseLinearIssueReference."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/omp/events/types.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "real",
+    "note": "OmpPresentationEvent is a ten-variant hand-written kind-keyed event union, emitted by OmpService and folded with a switch, exactly the rule's Never example."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/omp/src/adapters/omp/OmpSdkSession.prompt.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "debatable",
+    "note": "OmpSdkPromptResult is an adapter-internal Promise result, already _tag-keyed, that is never decoded or sent."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/runners/src/jobs/RunnerVerification.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "real",
+    "note": "VerificationVerdict, returned by and recorded through the RunnerVerification service's operations, is a hand-written union joined by an outcome field."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/ui/src/session/components/SessionBrief.tsx",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "false",
+    "note": "BriefValue<T> is a generic React presentation type that the prescribed Schema.TaggedClass members cannot express."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/workflows/src/operator/OperatorSidecar.ts",
+    "rule": "effect/data/variants-are-tagged-unions",
+    "label": "real",
+    "note": "DiagnosisVerdict is a hand-written kind-keyed union returned by the diagnose service operation, and it is duplicated in OmpDiagnosis.ts."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/chat/src/features/chat/hooks/useThreadAgent.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "useThreadAgent is a React hook taking a client option, not an Effect service."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform-runtime/src/runtime/computers-facade.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "createRoutesPort is a Promise facade over a managed runtime for Hono routes, not a service construction."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform-runtime/src/runtime/reviewer-runtime.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "debatable",
+    "note": "platformReviewerRuntime is a per-review factory that takes a GithubService value and target data and returns a scoped ReviewRuntime, a host-boundary pattern that a parameterized Layer could replace."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/adapters/ReviewRepository.github.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "debatable",
+    "note": "githubRepository builds a per-review ReviewRepository from a hand-passed IGithubService value plus request SHAs and is then provided with provideService, so whether it needs a Layer is a design choice."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/adapters/ReviewRuntime.docker.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "real",
+    "note": "reviewRuntimeFrom takes Sandbox and ReviewWorkspace implementations and returns ReviewRuntime's, wired by hand at three call sites via Layer.build plus Context.get."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/adapters/ReviewerModel.diagnostics.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "observeModelResponses decorates an OpenAiClient.Service and returns the same service, applied inside the GatewayModel Layer via mapClient."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/adapters/ReviewerModel.refusal.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "preserveModelRefusals is a same-interface decorator of OpenAiClient.Service applied through the Layer's mapClient hook."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/workflows/dry-run-review.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "The flag is a call in a CLI script to reviewerDurableModel, which takes plain config values (baseUrl, apiKey, model)."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/reviewer/workflows/scoped-review.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "debatable",
+    "note": "The flagged code is the ReviewerRuntimeFactory type alias, a per-request contract that takes a GithubService value, not a factory implementation."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/tester/adapters/Observer.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeObserver builds a private per-run Observer (not a Context.Service) from lazily acquired resources inside TestEvidence's Layer.effect body."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/channels/src/github/adapters/GithubEffectIngress.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "The function bridges Effect handlers to the Promise GitHub ingress through a runtime, a Promise-boundary adapter rather than a service."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/channels/src/slack/adapters/SlackEffectIngress.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "The function bridges Effect handlers to the Promise Slack ingress through a runtime, a Promise-boundary adapter rather than a service."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/computers/src/cua/CuaStaging.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeGuestStaging builds a per-run handle field of ScopedComputer from CuaHost settings data and a run function, with no service inputs."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/native-sql/SqlGateway.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "createRunnerStorageGateway constructs a non-Effect WebSocket gateway class from options."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/runtime/agent-logs/store.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "debatable",
+    "note": "makeRuntimeAgentLogStore yields SqlClient as the rule asks but is not a Context.Service, and consumers re-yield it in their own bodies."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/runtime/effect-postgres.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "effectPostgresQueries is a generic Kysely compile-and-execute helper over a SqlClient that callers yield in their own bodies, not a service."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/braintrust/effect/compat.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "debatable",
+    "note": "BraintrustReadFromClient is already a Layer, parameterized by a legacy Promise client that is passed in rather than yielded."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/adapters/GitHubClient.http.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "createGitHubClient builds the legacy Promise GitHub client from config options."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/adapters/GitHubEffectServices.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeReadService takes only GitHubLayerOptions config and is called solely from the GitHubReadLive and GitHubWriteLive Layer.effect."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/adapters/GitHubIssueReads.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeGitHubIssueReads is a group of operations over an internal transport value, assembled into the Promise GitHub client."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/adapters/GitHubMutations.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeGitHubMutations is a group of operations over an internal transport value, assembled into the Promise GitHub client."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/adapters/GitHubMutationsPr.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeGitHubPrMutations is a group of operations over an internal transport value, assembled into the Promise GitHub client."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/adapters/GitHubReads.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeGitHubReads is a group of operations over an internal transport value, assembled into the Promise GitHub client."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/adapters/GitHubTransport.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeGitHubTransport builds an HTTP transport from config (baseUrl, token, fetchImpl), with no service inputs."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/adapters/GithubReviewer.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "createReviewerGithubAdapter maps a Promise GitHubClient onto a Promise reviewer interface, a boundary adapter."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/services/GitHubAppSession.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "session is a single-Effect helper over a deps bag built inside GitHubApp's Layer body after yielding HttpClient."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/github/services/GithubService.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeGithubService adapts an Octokit SDK built from token config and is wrapped by the GithubServiceLive Layer.succeed."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/adapters/LinearClient.http.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "createLinearClient builds the Promise Linear client from config options."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/adapters/LinearEffectServices.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeReadService takes only LinearLayerOptions config and is called solely from the LinearClient.effect Layer."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/adapters/LinearSdk.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeLinearSdk constructs the third-party LinearSdk over an injected GraphQL transport and an AbortSignal."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/adapters/LinearSdkDiscussion.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "makeDiscussionAuthors is a per-capture memoized lookup helper over the third-party SDK, not a service."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/linear/adapters/ScoutLinear.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "createScoutLinearAdapter is a Promise-contract adapter over a Promise Linear client."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/integrations/src/slack/adapters/ScoutSlack.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "createScoutSlackAdapter is a Promise-contract adapter over a Promise Slack client."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/lib/src/instrumentation/spans/observer.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "createSpanObserver is an imperative Promise-based span buffer built from options with a send callback."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/runners/src/jobs/ClaimScope.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "ClaimScope.make takes a SubmissionFacts function port and is called only from ClaimScopeLive's Layer.effect (after yielding SubmissionLedger) and memoryLayer."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/runners/src/jobs/internal/claimAuthority.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "claimAuthority is an internal helper called inside RunnerJobs' Layer.effect body after yield* RunnerJobStore, and it returns a private bundle rather than a service."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/sandbox/src/adapters/docker/DockerSandbox.execute.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "false",
+    "note": "executeWith returns a single execute operation and is called only inside DockerSandbox's Layer.effect body after yielding ChildProcessSpawner."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/sessions/src/inbound/adapters/Postgres.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "debatable",
+    "note": "InboundEventStorePostgresLive is a Layer.succeed parameterized by a host-owned Promise query function rather than a yielded SQL service."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/sessions/src/snapshots/adapters/Postgres.ts",
+    "rule": "effect/services/dependencies-through-layers",
+    "label": "debatable",
+    "note": "makePostgresOmpSnapshotStore is a private constructor called only by OmpSnapshotStorePostgresLive's Layer.succeed, taking a host-owned Promise query function."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/computers/src/cua/CuaHostFixture.ts",
+    "rule": "effect/services/no-mutable-state",
+    "label": "false",
+    "note": "Mutable fixture controls sit beside the layer; the layer exposes only ChildProcessSpawner operations; verified in DARK-194."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/native-sql/SqlGatewaySocket.ts",
+    "rule": "effect/services/no-mutable-state",
+    "label": "false",
+    "note": "Per-connection WebSocket state handed to Bun's socket data, not a service's interface."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/omp/src/internal/sessionPoolRegistry.ts",
+    "rule": "effect/services/no-mutable-state",
+    "label": "false",
+    "note": "A registry private to createOmpSessionPool, whose pool exposes only operations; verified in DARK-194."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/omp/src/testing/fake-session.ts",
+    "rule": "effect/services/no-mutable-state",
+    "label": "false",
+    "note": "Test controls live on the fixture; its session implements the readonly operation interface; verified in DARK-194."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform/src/ingress/effect/programs.ts",
+    "rule": "effect/services/operations-have-no-requirements",
+    "label": "false",
+    "note": "dispatchInbound is an exported program run by a runtime, not a service operation; verified in DARK-196."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/agents/src/pipeline/services/DurableExecution.ts",
+    "rule": "effect/services/operations-have-no-requirements",
+    "label": "false",
+    "note": "run is a generic combinator whose R is passed through from the caller-supplied operation, not a dependency of the service itself."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/runners/src/jobs/HintReconciler.ts",
+    "rule": "effect/services/operations-have-no-requirements",
+    "label": "false",
+    "note": "reconcileOnce is a program its host provides for, not a service operation; verified in DARK-196."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "apps/platform-runtime/test/fixtures/storage-harness.ts",
+    "rule": "effect/services/test-layers-are-in-memory",
+    "label": "false",
+    "note": "An integration fixture over the production storage transport; verified in DARK-192."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/artifacts/src/http.test.ts",
+    "rule": "effect/services/test-layers-are-in-memory",
+    "label": "false",
+    "note": "Tests the production HTTP artifact layer's deferred configuration failures, not a test double."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/config/secrets.test.ts",
+    "rule": "effect/services/test-layers-are-in-memory",
+    "label": "false",
+    "note": "Validates the actual encrypted document and its SOPS decryption, not a secret-service double; verified in DARK-192."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/runtime/memory/store.test.ts",
+    "rule": "effect/services/test-layers-are-in-memory",
+    "label": "false",
+    "note": "Real Postgres is the persistence adapter under test; verified in DARK-192."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/spans/adapters/SpanStorePostgresFixtures.ts",
+    "rule": "effect/services/test-layers-are-in-memory",
+    "label": "false",
+    "note": "A real-Postgres harness that builds the production SpanRepositoryLive and SpanPartitionsLive."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/database/src/testing/internal/session.ts",
+    "rule": "effect/services/test-layers-are-in-memory",
+    "label": "false",
+    "note": "Opens admin sessions to a test Postgres server for the harness's own statements; no service double."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/evals/src/scorers/judge-timeout.test.ts",
+    "rule": "effect/services/test-layers-are-in-memory",
+    "label": "false",
+    "note": "A loopback server observes the real judge's request cancellation; verified in DARK-192."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/omp/src/services/OmpWorkspace.test.ts",
+    "rule": "effect/services/test-layers-are-in-memory",
+    "label": "false",
+    "note": "Verifies the production workspace hash through host Crypto; verified in DARK-192."
+  },
+  {
+    "repo": "darkmatter/agents",
+    "file": "packages/runners/src/installer/RunnerReleaseFiles.test.ts",
+    "rule": "effect/services/test-layers-are-in-memory",
+    "label": "false",
+    "note": "Real files exercise the production release-file adapter, whose bytes are the assertion."
+  }
+]

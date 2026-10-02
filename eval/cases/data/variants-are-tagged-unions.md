@@ -44,3 +44,23 @@ export const describeMethod = (method: PaymentMethod) =>
     Match.exhaustive,
   );
 ```
+
+A reducer's actions are used only inside the component that dispatches them.
+
+```ts follows
+import { useReducer } from "react";
+
+type Action = { type: "select"; index: number } | { type: "clear" };
+
+const reduce = (selected: number | null, action: Action) =>
+  action.type === "select" ? action.index : null;
+
+export const useSelection = () => {
+  const [selected, dispatch] = useReducer(reduce, null);
+  return {
+    selected,
+    select: (index: number) => dispatch({ type: "select", index }),
+    clear: () => dispatch({ type: "clear" }),
+  };
+};
+```

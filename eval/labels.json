@@ -139,12 +139,6 @@
   },
   {
     "rule": "data/brand-meaningful-primitives",
-    "file": "services/test-layers-are-in-memory#1",
-    "label": "debatable",
-    "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
-  },
-  {
-    "rule": "data/brand-meaningful-primitives",
     "file": "src/cli.ts",
     "label": "debatable",
     "note": "Literal values, such as URLs, counts, and config values, where branding is arguable."
@@ -277,51 +271,9 @@
   },
   {
     "rule": "services/no-mutable-state",
-    "file": "services/test-layers-are-in-memory#1",
-    "label": "false",
-    "note": "The layer exposes readonly methods and no state."
-  },
-  {
-    "rule": "services/no-mutable-state",
     "file": "src/services/Jev.ts",
     "label": "false",
     "note": "The Jev service exposes readonly methods; the arrays in the file are local to functions."
-  },
-  {
-    "rule": "services/test-layers-are-in-memory",
-    "file": "config/tests-provide-values-directly#1",
-    "label": "debatable",
-    "note": "A test using the real layer rather than building a test implementation."
-  },
-  {
-    "rule": "services/test-layers-are-in-memory",
-    "file": "config/tests-provide-values-directly#2",
-    "label": "debatable",
-    "note": "A test using the real layer rather than building a test implementation."
-  },
-  {
-    "rule": "services/test-layers-are-in-memory",
-    "file": "services/fresh-layer-per-test#3",
-    "label": "false",
-    "note": "An integration test that shares a real Postgres container on purpose."
-  },
-  {
-    "rule": "services/test-layers-are-in-memory",
-    "file": "testing/test-clock-for-time#1",
-    "label": "debatable",
-    "note": "A test using the real layer rather than building a test implementation."
-  },
-  {
-    "rule": "services/test-layers-are-in-memory",
-    "file": "testing/test-clock-for-time#2",
-    "label": "debatable",
-    "note": "A test using the real layer rather than building a test implementation."
-  },
-  {
-    "rule": "services/test-layers-are-in-memory",
-    "file": "testing/test-clock-for-time#3",
-    "label": "debatable",
-    "note": "A test using the real layer rather than building a test implementation."
   },
   {
     "rule": "testing/test-clock-for-time",
