@@ -45,7 +45,7 @@
     "@types/node": "^24.13.6",
     "release-it": "^21.1.0",
     "typescript": "7.0.2",
-    "vite-plus": "0.3.2",
+    "vite-plus": "0.3.3",
     "vitest": "4.1.11"
   },
   "overrides": {
