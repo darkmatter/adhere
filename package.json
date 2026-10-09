@@ -37,7 +37,7 @@
     "release": "release-it"
   },
   "dependencies": {
-    "effect": "4.0.0-rc.118"
+    "effect": "4.0.2"
   },
   "devDependencies": {
     "@effect/platform-bun": "4.0.0-rc.118",
