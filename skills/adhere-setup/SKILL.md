@@ -37,10 +37,23 @@ wherever this skill says `adhere`, run it the manager's way, as in
 
 With pnpm, at a workspace root, add `--ignore-workspace-root-check`.
 
-In a repo without a `package.json`, use the `adhere` on PATH (`adhere
---version`), or **Ask** before installing the executable from the latest
-release (`adhere-Windows-x86_64.exe` on Windows), which needs no Node or
-package manager:
+Default lint enables `workspacePackages`, `symbols`, and `references`, and
+starts native TypeScript only during execution, after confirmation, when
+pending judgments or cached findings needing location require context. It discovers each
+file's configured project, including package projects under solution roots,
+and falls back to inferred context for unconfigured or excluded files. No root
+`tsconfig.json` or literal root file-list membership is required; do not block
+setup on either. `.adhere/tsconfig.json` only types the config and rules.
+Planning, `--limit 0`, version, help, skills, and validate do not start the
+compiler.
+
+In a repo without a `package.json`, inspect any `adhere` on PATH with
+`adhere --version`, then **Ask** whether to use the npm/Bun package launcher
+for the full default or a raw executable with deliberately reduced context.
+The raw release (`adhere-Windows-x86_64.exe` on Windows) needs no Node or
+package manager, but its lint requires explicit config `reads: []` or
+`reads: ["workspacePackages"]`. Do not silently disable readers to make it
+work. Only fetch it after the user chooses that alternative:
 
 ```sh
 curl -fsSL --create-dirs -o ~/.local/bin/adhere \
@@ -48,9 +61,9 @@ curl -fsSL --create-dirs -o ~/.local/bin/adhere \
 chmod +x ~/.local/bin/adhere
 ```
 
-Validate and lint need a TypeSafe AI API key: `TYPESAFE_API_KEY`, or one saved
-by `adhere login`, which the user runs; never ask for the key in chat or print
-it.
+Validate and lint's paid requests need a TypeSafe AI API key: `TYPESAFE_API_KEY`,
+or one saved by `adhere login`, which the user runs; never ask for the key in
+chat or print it. Compiler-free planning with `--limit 0` needs no key.
 
 ## 2. Find candidates
 
@@ -124,7 +137,12 @@ the wording of any. Revise drafts the user wants changed and show them again.
 - Without a config, run `adhere init`. It also writes two example rules under
   `.adhere/rules/style/`; delete them unless the user chose them.
 - Copy each chosen draft to `.adhere/rules/<topic>/<slug>/RULE.md`.
-- Add chosen presets, or topics, to `presets` in `.adhere/config.ts`.
+- Add chosen presets, or topics, to `presets` in `.adhere/config.ts`. Presets
+  use the audit-wide readers; they do not own or override `reads`.
+- Leave `reads` omitted for the full default. Do not add `reads: []` to the
+  normal setup recommendation or as a workaround for missing compiler
+  resources. Only set an explicit replacement array if the user chooses to
+  disable or limit readers.
 - Install chosen shared rules: `adhere install org/repo/<id>` for each, or
   `adhere install org/repo` for all of them. They land in `.adhere/rules/org/repo/`.
 - Add `exclude` globs for generated or vendored code the default skips miss.
@@ -146,14 +164,114 @@ which to keep, and apply it. Run it again until it reports no contradictions.
 adhere lint --limit 0
 ```
 
-This shows the plan and judges nothing: files, rules, requests, and the
-estimated cost. Tell the user those numbers. On a large repo, offer to start
-with a subtree, such as `--filter 'src/**'`, or a `--limit`. **Ask** before
-sending, then run it:
+This shows a compiler-free plan and judges nothing: overall files/rules/cache
+check metrics, and files deferred for a later run. Planning reads/counts/hashes
+own code and checks cached answers; `--limit 0` skips budgeting, native reads,
+and HTTP execution. A positive limit counts files needing requests, not rule
+checks. Only selected files' pending rules and cached-location work are budgeted;
+deferred/waiting counts are files, which can later be found too large. Planning never calls
+`SourceReads` or resolves native symbols/references. Explain the output/prompt
+caveat: estimates omit native context and hook-added data, so actual tokens,
+cost, and request splits may be higher. Source reload/hash work is bounded to
+8 files; plans retain compact metadata, not all source text. Files are reloaded
+for execution; if normalized code or ignore
+directives changed since planning, rerun rather than using the old plan.
+
+Tell the user that compiler type/docs strings and outgoing declaration snippets add
+source/documentation sharing and token cost by default, including complete
+scopes from files outside the audit filter. Whole declaration bodies can use more
+tokens than fixed-line excerpts; budget overflow skips the file instead of
+capping bodies to seven lines or silently truncating them. Compiler-provided
+documentation and JSDoc tags can remain even when ordinary code comments are
+stripped; omitting `symbols` disables type/docs context and omitting
+`references` disables snippets. The global workspace catalog is not sent: only
+this file's matched literal imports appear under canonical package keys.
+Offer an explicit reader subset or code-only opt-out if they want less context;
+never apply one silently. Neither reader selection nor dependency/shared-context
+changes invalidate cached judgments. If they want fresh answers under changed
+context, **Ask** before clearing `.adhere/cache/`; do not clear it automatically.
+
+On a large repo, offer a subtree such as `--filter 'src/**'`, or a file cap
+such as `--limit 100`: the first 100 files needing requests in path order, with
+all pending rules per selected file. Judging plus cached-unlocated work in one
+file uses one slot; a cached-locate-only file also counts. Fully cached and
+already-located files report without using slots. After the cap, both judge and
+locate work wait. Known cheap-budget skips refill from later files, but native
+or HTTP-size skips after selection consume a slot without runtime refill.
+
+Explain that a file cap is not an HTTP-request or token/cost cap: each file can
+produce judge, locate, split-batch, and private hook requests. **Ask** before
+sending, then run the command below with only the user's chosen filter/file cap:
 
 ```sh
 adhere lint --yes
 ```
+
+`SourceReads.prepare(paths)` registers eligible-path metadata only, with no
+file I/O, compiler/SDK import, spawn, snapshot, or semantic query, even for a large list.
+Only after confirmation do pending judgments or cached findings still needing
+location trigger actual per-file native reads just before judge/locate. Native
+transactions are serial through one permit; HTTP execution remains concurrent
+at 8. Returned context is reused locally and full budgets are enforced before
+HTTP, with oversized files skipped and no silent truncation. Shared state plus
+one question must fit 32k tokens and state plus all questions must fit 64k per
+request, with 1k reserved for overhead. The SDK may still parse a full selected
+project, and additional monorepo programs may increase startup time and memory.
+
+`symbols` remains `Record<string, string>`: compiler-rendered distinct type
+blocks for same-name binding/narrowing contexts, with compiler documentation
+and JSDoc tags once per canonical symbol per file. It does not promise literal
+IDE labels or selected-call overload presentation. Symbol/type queries are
+batched, and independent SDK requests are chunked to at most 8 within the single
+active native document/snapshot; HTTP work remains concurrent at 8. `references` maps used names to canonical outgoing declarations
+by pathname, selecting the smallest complete AST scope without extra surrounding
+lines. Functions include full bodies; arrow/object initializer variables include
+whole variable statements with `export const` and semicolons. Methods, getters,
+and setters include their whole member, not the entire class; classes,
+interfaces, and type aliases include the whole declaration. Repeated/overlapping
+scopes merge and disjoint scopes join with `…`. This is syntactic scope selection,
+not recursive helper-call expansion: helpers called by an imported function are
+not automatically expanded. Scopes preserve indentation and the comment/directive
+policy, including associated JSDoc when `includeComments` is true; compiler
+docs/tags in `symbols` remain available regardless. Current-file, declaration-file, `node_modules`, and
+outside-root exclusions are unchanged. There are no incoming callers, counts, structured locations,
+unresolved lists, full-file collection, or completeness markers.
+
+The first actual read lazily starts one native TypeScript LSP process with its
+public SDK API pipe; both are pinned to exactly `7.1.0-dev.20261009.1` and must
+match. This prerelease contains the tuple-reference serialization fix from
+[microsoft/TypeScript#64080](https://github.com/microsoft/TypeScript/issues/64080). `NativeLsp` owns lifecycle only and makes
+no `textDocument/hover` calls. Each read uses the passed as-written text after
+normalized-code/ignore active-plan validation, opens only that document at
+version 1, uses `textDocument/documentSymbol` as its readiness barrier, and calls
+the public, parameterless `API.getCurrentLanguageServerSnapshot()`.
+Success closes the document, disposes that snapshot under a guarded phase, and
+clears AST caches; native failure closes the session under the watchdog.
+
+Keep dependencies/configs stable: only current-read text is pinned, not every
+registered file or an immutable global audit snapshot. Warm compiler project
+graphs can still be large and slow to load; neither total memory nor payload
+size is constant, and contexts may still exceed model budgets.
+
+SDK/write phases and LSP requests have 30-second deadlines and reject on compiler
+exit. Queued readers can be interrupted; the active owner is uninterruptible
+for resource safety. A stalled phase is bounded and cleanup adds a 2-second
+`SIGKILL` watchdog. These are phase/cleanup bounds, not a whole-audit timeout.
+
+If the user explicitly chose a cache refresh, run from the audited working
+directory, using the repo's package launcher as above:
+
+```sh
+rm -rf .adhere/cache
+adhere lint --limit 0
+```
+
+Show the fresh counts/cache plan; `--limit 0` skips budgeting. For selected
+execution work, explain that its estimate omits native context and may understate
+cost/splits, then **Ask** before paid execution. Deleting the cache removes judgments and linter tallies; it can cause
+new paid requests. Use this explicitly if the user wants to compare fresh
+compiler type/docs and declaration payloads with older cached answers. A change in `B.ts` does not
+otherwise invalidate cached judgments for an unchanged importing `A.ts`.
 
 Walk the user through the report:
 
@@ -165,7 +283,8 @@ Walk the user through the report:
 3. For each noisy rule, propose one change from the adhere skill's "Tuning a
    rule": narrow the wording, scope it, raise its threshold, make it a
    warning, or turn it off. **Ask**, apply what the user accepts, and run
-   lint again. Only the edited rules are judged again.
+   lint again. With unchanged own code and model, only the edited rules are
+   judged again; dependency/context changes alone are not tracked.
 
 CI fails on any error finding, so lint must exit 0 before step 8. **Ask** how
 to get there: fix the real findings now with the adhere-fix skill
@@ -212,9 +331,16 @@ jobs:
 
 Pin the versions the repo already uses: bun's `bun-version`, Node's
 `node-version` from `.nvmrc` or `engines`, and pnpm's from `packageManager`,
-which `pnpm/action-setup` reads. In a repo without a `package.json`, skip the
-setup and install, and fetch the executable at the version the user ran
-locally:
+which `pnpm/action-setup` reads. Keep optional dependencies enabled so adhere's
+platform package and its compiler dependency are installed. Existing project
+configs and dependencies supply configured context when available; files with
+no configured project or excluded from one use inferred context. Do not require
+or generate a root `tsconfig.json` merely to make default lint run. In a repo
+without a `package.json`, use the package launcher for the full default.
+Only skip setup/install and fetch the raw executable if the user explicitly
+chose and committed `reads: []` or `reads: ["workspacePackages"]` locally.
+That is a reduced-context alternative, not an equivalent default installation.
+Fetch the executable at the version the user ran:
 
 ```yaml
 - run: |

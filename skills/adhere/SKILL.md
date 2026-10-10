@@ -24,7 +24,8 @@ adhere init --shared org/repo    # a repo of rules other repos install, with CI 
 adhere login                     # save a TypeSafe AI API key; TYPESAFE_API_KEY takes precedence
 adhere validate                  # rule wording, rules a linter could check, contradictions
 adhere lint                      # judge the working directory; exit 1 on an error finding
-adhere lint --limit 0            # show the plan and its cost, judge nothing
+adhere lint --limit 0            # compiler-free counts/cache plan; no budgeting
+adhere lint --limit 100          # first 100 files needing requests; all pending rules per file
 adhere lint --yes                # send without asking, as in CI
 adhere lint --preset effect      # add a built-in rule set; the config becomes optional
 adhere lint --filter 'src/**'    # read only matching files; repeat, and ! to leave out
@@ -35,7 +36,20 @@ adhere install org/repo[/topic[/rule]][#ref]   # copy them into .adhere/rules/or
 adhere skill [docs|setup|fix]    # print a skill
 ```
 
-`adhere <command> --help` lists every flag.
+`adhere <command> --help` lists every flag. Version, help, skills, `validate`,
+and planning with `--limit 0` do not start the native compiler. Default `lint`
+starts it only during execution, after confirmation, for pending judgments or
+cached findings still needing location.
+
+`--limit` now counts files, not rule checks; use the same flag without an extra
+unit selector. Each request-bearing file consumes one slot for all its pending
+rules and cached-location work. Cached-locate-only files count; fully cached and
+already-located files report without consuming slots. After the cap, both judge
+and locate work wait. Known cheap-budget skips refill from later paths; native
+or HTTP-size skips after selection consume a slot without runtime refill.
+A file can generate judge, locate, split-batch, and private hook requests, so
+this is not an HTTP-request or cost cap. Confirm the estimated cost and its
+native-context caveat before execution.
 
 ## Rule files
 
@@ -106,28 +120,21 @@ Front matter besides `description`, all optional:
   one line, scope a rule without widening its description: a finding stands
   only when Jev says the code that breaks the rule is as every `appliesTo`
   describes and as no `excludeIf` does.
-- `reads: ["workspacePackages"]`, a JSON array on one line, names what Jev
-  reads for the rule beside the code, each under that name. There is one so
-  far, `workspacePackages`: each of the repository's own packages, by name,
-  with its directory, read from the root `package.json`'s `workspaces` or
-  `pnpm-workspace.yaml`. Use it for a rule that turns on whether an import is
-  of the repository's own package or an installed one, and name
-  `workspacePackages` in the description. A name adhere does not have refuses
-  the run. The rule costs a request of its own per file, and a changed
-  workspace judges it again.
 
 A rule's directory can hold a `RULE.ts` instead, which default-exports
 `defineRule({...})` from `@drkmttr/adhere`, with the fields a config's inline
 rule takes:
 `description`, `must`, `never`, and the rest. Its `appendState(state, file, Bun)`
 runs right before each request for the rule, and what it returns is spread
-over the request's state, `{ code: { "1": "…", "2": "…" } }`, the file's
-sections as Jev reads them. Use it to give Jev what the file cannot show, such
+over the request's state: `code`, the file's sections as Jev reads them,
+plus the shared context selected by the config's `reads`. Use it to give Jev what the file cannot show, such
 as a schema another file holds, and name the key it adds in the description.
 Nothing it returns is checked, so it can break its own rule. The rule gets
-requests of its own, one more per file judged, and its judgments are not
-redone when what the hook reads changes, only when the file or the rule,
-hook included, does. Helpers it imports go beside it in its directory.
+requests of its own, repeating the shared context. Hook-owned external data
+changes are not tracked by the cache; neither are built-in read-context contents
+or reader selection. Judgments are redone when own code, model, rule, matcher,
+or hook source changes, or the user clears the cache. Helpers it imports go
+beside it in its directory.
 
 A rule a regex, an import check, or the type checker could flag every time
 belongs in that tool, not adhere. `adhere validate` reports rules that look
@@ -145,7 +152,8 @@ import { defineConfig } from "@drkmttr/adhere";
 export default defineConfig({
   presets: ["typescript", "security"], // built-in rule sets, or topics such as "effect/basics"
   threshold: 0.8, // default 0.8
-  sufficiencyThreshold: 0.6, // below it, a finding warns the file may not show enough
+  sufficiencyThreshold: 0.6, // below it, a finding warns the file and shared context may not show enough
+  reads: ["workspacePackages", "symbols", "references"], // default; omitting this field keeps all three
   exclude: ["**/generated/**"], // files no rule judges
   includeComments: false, // true only for rules about comments
   overrides: {
@@ -154,6 +162,108 @@ export default defineConfig({
   },
 });
 ```
+
+Top-level `reads` selects shared context for every audited file and all its
+rules, including presets. `resolveConfig` defaults to
+`["workspacePackages", "symbols", "references"]` when the field is omitted,
+even without a config file. An explicit array replaces the default: `reads: []`
+is the code-only opt-out, and a subset limits context to those readers. Presets
+do not own or override this selection. Rule-level `reads`, in Markdown front
+matter, `defineRule`, or inline rules, is rejected with guidance to move it to
+the config. The available names are:
+
+- `workspacePackages`: only packages matched by this file's literal imports,
+  as `{ canonicalPackageName: directory }`. Subpaths match the owning package;
+  the discovered workspace catalog is internal and never sent. The cheap lexer
+  recognizes static/type imports, re-exports, dynamic import and require calls,
+  including plain literal templates in calls. Computed modules/template
+  substitutions are skipped and `require` binding is not resolved: this is
+  cheap filtering, not semantic module resolution. No matches yields `{}`.
+- `symbols`: `Record<string, string>`, mapping names to compiler-rendered type
+  blocks plus compiler documentation and JSDoc tags. Distinct same-name binding
+  and narrowing types stay distinct; docs/tags appear once per canonical symbol
+  per file. This is not literal IDE hover text: there are no IDE labels or
+  selected-call overload presentation. Unused local declarations may have type
+  blocks too. Library types/docs can appear even when their source is excluded
+  from snippets.
+- `references`: `{ Name: { pathname: declarationSnippet } }` for used symbols'
+  canonical outgoing alias-target declarations. Each snippet is the smallest
+  complete AST declaration scope, with no extra surrounding lines: full function
+  bodies; whole arrow/object initializer variable statements, including
+  `export const` and semicolons; whole methods/getters/setters, not their classes;
+  and whole class/interface/type-alias declarations. Repeated/overlapping scopes
+  merge; disjoint scopes join with `…`. This is syntactic selection, not recursive
+  helper-call expansion: an imported function's called helpers are not added
+  automatically. Indentation and comment/directive policy remain; associated
+  JSDoc stays when `includeComments` is true; compiler docs/tags in `symbols`
+  remain available regardless.
+  Current-file, `.d.ts`, `.d.mts`, `.d.cts`, `node_modules`, and outside-root
+  exclusions remain. There are no counts, incoming callers, structured locations,
+  unresolved lists, full-file collection, or completeness metadata.
+
+Default npm-installed lint uses `symbols` and `references` with adhere's pinned
+native TypeScript compiler through the npm/Bun launcher. No root `tsconfig.json`
+or root file-list membership is required. During execution, native TypeScript
+opens files with pending judgments or cached findings needing location and
+discovers each file's configured project, including package
+projects under solution roots. Unconfigured or excluded files fall back to
+best-effort inferred context, not a refusal. These are complete outgoing AST
+declaration scopes and compiler type/docs strings, not a complete
+workspace-reference graph.
+
+`SourceReads.prepare(paths)` registers metadata only: no file I/O, compiler/SDK
+import, spawn, snapshot, or semantic query, regardless of how many paths are registered.
+The first real read lazily starts one TypeScript `--lsp --stdio` process,
+pinned with its SDK to exactly `7.1.0-dev.20261009.1`. This prerelease contains
+the tuple-reference serialization fix from [microsoft/TypeScript#64080](https://github.com/microsoft/TypeScript/issues/64080);
+the SDK and native executable must match that exact version. `NativeLsp` owns lifecycle only; it makes no `textDocument/hover` calls.
+Types and documentation come directly from the compiler SDK through the public
+API attached with `API.fromLSPConnection` to that process's API pipe. Symbol/type
+queries are batched; independent SDK requests run in chunks of at most 8 within
+the current document transaction.
+
+Only one native transaction owns a permit at a time. It receives the as-written
+text after normalized-code/ignore active-plan validation, opens the current
+document with `didOpen` version 1, uses `textDocument/documentSymbol` as the
+readiness barrier, and calls
+the public, parameterless `API.getCurrentLanguageServerSnapshot()` per read. Success sends `didClose`, performs
+guarded snapshot disposal, and clears the AST cache; native failure closes the
+session under a watchdog. There is no audit-wide immutable snapshot and no
+preload/freeze of registered files. Only current-read text is pinned; keep live
+dependencies/configs stable during the audit.
+
+SDK/write phases and LSP requests have 30-second deadlines and reject on compiler
+exit. Waiting readers are interruptible; the active owner is uninterruptible
+for resource safety. A stalled phase is bounded, with a further 2-second cleanup
+watchdog escalating to `SIGKILL`; this is not a total audit-duration guarantee.
+Native context is serial, but HTTP execution retains concurrency 8.
+
+Even one pending file may require parsing its selected project; warm monorepo
+program graphs can still consume substantial time/memory. Bounding active
+documents/snapshots does not make total memory or model payload size constant,
+and oversized contexts are still possible. Context is queried just
+before judge/locate and reused locally. Planning never calls `SourceReads`.
+Source checkouts use their development compiler dependency. Raw GitHub
+binaries still have no compiler resources: their lint requires explicit config
+`reads: []` or `reads: ["workspacePackages"]` for execution; use the package
+launcher for the full default. Plan-only `--limit 0` needs no compiler or API key.
+
+Rules without `appendState` share requests and pay for shared input context
+once per request, not once per rule. Context repeats on request splitting,
+locating findings, and hook requests. Compiler documentation and complete declaration
+scopes add default token/privacy cost, including source from files not judged.
+Complete scopes may contain substantially more source/tokens than fixed-line
+excerpts; function bodies are not peeked or capped to seven lines.
+Compiler-provided docs and JSDoc tags can remain present with ordinary comments
+stripped. Omit `symbols` to disable type/docs context, `references` to disable
+snippets, or use `reads: []` for code-only built-in context.
+Plan token/cost estimates include code and cheap workspace metadata only, not
+native context or hook-added data. Actual cost and request splits may therefore
+be higher. Shared state plus any one question must fit 32k tokens, and state
+plus all questions in a request must fit 64k, with 1k reserved for overhead.
+Execution splits question batches, checks full budgets before HTTP, and skips
+oversized files instead of silently truncating type/docs strings or complete scopes. Only
+`appendState` forces a private rule request group.
 
 `overrides` changes any rule by the id the report shows, a preset's with the
 preset first, without copying it; an id no rule has refuses the run. `rules`
@@ -189,10 +299,12 @@ so a private repo needs git's credentials for GitHub.
 
 ## Comments and suppressions
 
-Jev never sees comments: adhere blanks them before judging, since comments
-claiming code is safe hid real violations in the evals. A comment containing
-`@adhere` is a note Jev does read: use it for a checked fact the code relies
-on that the file cannot show, with how you know.
+adhere blanks ordinary comments in judged code and declaration snippets, since
+comments claiming code is safe hid real violations in the evals. Compiler
+documentation and JSDoc tags in `symbols` are separate and can remain even with
+`includeComments: false`. A comment containing `@adhere` is a note Jev does read:
+use it for a checked fact the code relies on that the file cannot show, with
+how you know.
 
 ```ts
 // @adhere DeleteActivity succeeds on a missing activity; probed 2026-09-25.
@@ -210,20 +322,56 @@ file. Name several rules with commas.
 
 ## Cache and API key
 
-Judgments are cached in `.adhere/cache/`, keyed by each file's content without
-comments and by the rule's text. Commit it: every judgment is a paid request,
-and a committed cache gives the team and CI the same findings without paying
-again. A changed file re-judges every rule for it; an edited rule re-judges
-only that rule; a threshold change re-judges nothing. A run where everything
-is cached needs no key or network. Mark it generated to keep it out of diffs:
+Judgments are cached in `.adhere/cache/`, keyed by each file's normalized own code and
+model/rule/matcher/hook-source fingerprints. Commit it: judging uses paid
+requests, and a committed cache gives the team and CI the same findings without
+paying again. Changed own code re-judges every rule for that file; an edited rule
+re-judges that rule; a threshold change re-judges nothing.
+
+Dependencies, related source, reader selection, shared read-context contents,
+and hook-owned external data are deliberately not fingerprinted. If `A.ts` imports
+`B.ts`, changing `B.ts` does not invalidate `A.ts`. Changing config `reads` does
+not refresh its cached answers either. This keeps planning cheap but accepts
+stale dependency/context judgments.
+
+`planAudit` reads/counts/hashes code, checks the cache, and makes code plus cheap
+workspace estimates without compiler or `SourceReads` calls. It applies `--limit`
+to request-bearing files in path order before budgeting all pending rules and
+cached-location work for each selected file. Rule/cache check totals remain
+overall metrics; deferred/waiting counts are files. Deferred files remain
+unbudgeted until selected and can later be found too large. `--limit 0` skips
+budgeting, native reads, and HTTP execution.
+Source reload/hash work is bounded to 8 files; plans retain compact metadata and
+estimates, not all file contents. Only sampled-linter files need a planning
+reread. After confirmation, execution reloads request-bearing files and cached
+finding excerpts, preparing full native context only for pending or
+cached-unlocated files just before judge/locate. Every reload validates normalized
+code and ignore directives against the active plan; changes refuse with rerun
+guidance, without adding persistent-cache keys. A fully cached and located run
+starts no compiler and needs no API key or Jev requests.
+
+For an explicit refresh, from the audited working directory:
+
+```sh
+rm -rf .adhere/cache
+adhere lint --limit 0  # compiler-free counts/cache plan; budgeting is skipped
+adhere lint           # confirm fresh execution; actual context costs may be higher
+```
+
+This removes judgments and linter tallies and can cause new paid requests. Do
+not clear it automatically when dependencies or readers change. Clear explicitly
+if the user wants to compare fresh compiler type/docs and declaration payloads rather than cached
+answers from an older format. Mark it generated to keep it out of diffs:
 
 ```text
 .adhere/cache/** linguist-generated -diff
 ```
 
 The key comes from `TYPESAFE_API_KEY` or from `adhere login`. lint prints a
-plan with the request count and estimated cost before sending, and asks at a
-terminal.
+compiler-free plan with estimated requests/cost before sending and asks at a
+terminal. Output and prompt warn that native context is omitted and may increase
+actual tokens, cost, and request splits. Only confirmed execution prepares context
+and enforces full budgets before HTTP.
 
 ## Reading a report
 
@@ -241,8 +389,9 @@ line; `×` is an error, `⚠` a warning. `confidence` is Jev's probability that
 the file breaks the rule. On a terminal it is amber near its rule's
 threshold, within a quarter of the room above it (0.80 to 0.84 at a threshold
 of 0.80), and green above that: a rule whose findings are mostly amber turns
-on where its threshold sits. `context` is its probability that the file shows
-enough to decide, colored the same way around the sufficiency threshold, 0.6
+on where its threshold sits. `context` is its probability that the file and
+shared context show enough to decide; all three readers are included by default.
+It is colored the same way around the sufficiency threshold, 0.6
 by default: amber from 0.50 to 0.69, red below. Below 0.6 the finding also
 carries `warning: this file may not show enough to check this rule`. It turns
 on something outside the file, and was usually false in the evals: check that

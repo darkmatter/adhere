@@ -69,11 +69,13 @@ Here's a demo of what the output looks like.
   <img alt="demo" align="center"  src="https://github.com/darkmatter/adhere/raw/main/eval/demo.gif" />
 </details>
 
-Presets for TypeScript, React, security, Effect, and alchemy are included, and
-run without setup:
+Presets for TypeScript, React, security, Effect, and alchemy are included.
+Run them to quickly adhere your agent to recommended rules.
 
 ```sh
-TYPESAFE_API_KEY=xxx npx @drkmttr/adhere lint --preset typescript
+bun add -g @drkmttr/adhere
+adhere login # save your typesafe api key
+adhere lint --preset typescript,react
 ```
 
 Rules a normal linter can check exactly, such as a banned import or a type
@@ -106,24 +108,33 @@ your rules.
 
 ## Install
 
+Add adhere to your repo's dev dependencies, and run it with `npx adhere` or
+`bunx adhere`:
+
+```sh
+npm install -D @drkmttr/adhere
+```
+
+Or download the standalone executable, which needs no Node or Bun:
+
 ```sh
 curl -fsSL --create-dirs -o ~/.local/bin/adhere \
   https://github.com/darkmatter/adhere/releases/latest/download/adhere-$(uname -s)-$(uname -m)
 chmod +x ~/.local/bin/adhere
 ```
 
-- `adhere` is a single executable for macOS and Linux (arm64 and x64) and for
-  Windows (x64), and needs nothing else installed, Node included. Any directory
-  on your `PATH` works in place of `~/.local/bin`. On Windows, download
-  `adhere-Windows-x86_64.exe` from the
+- The npm package brings its own TypeScript compiler, for the
+  [`symbols` and `references`](#what-jev-reads) Jev reads by default. No other
+  setup is needed.
+- The standalone executable has no compiler, so it lints only with `reads: []`
+  or `reads: ["workspacePackages"]` in the [config](#config). It suits a global
+  install that your agent config can always call.
+- It is built for macOS and Linux, on arm64 and x64, and for Windows x64:
+  download `adhere-Windows-x86_64.exe` from the
   [latest release](https://github.com/darkmatter/adhere/releases/latest).
-- Run the command again to update. `download/v0.14.0` in place of
-  `latest/download` fetches that version.
-- To pin the version in a JavaScript repo, for CI or scripts, add
-  `@drkmttr/adhere` as a dev dependency and run `npx adhere`. That `adhere`
-  starts through Node, or through Bun under `bunx`.
-- adhere sends each file it judges to Jev at `api.typesafe.ai`, authenticated
-  with a TypeSafe AI API key.
+- adhere sends each file it judges, with what it [reads](#what-jev-reads)
+  beside it, to Jev at `api.typesafe.ai`, authenticated with a TypeSafe AI API
+  key.
 
 ### Login
 
@@ -131,23 +142,27 @@ chmod +x ~/.local/bin/adhere
 adhere login             # prompts for the key, masking what you type
 adhere login < key.txt   # reads it from stdin instead
 adhere logout            # deletes the saved key
+adhere login --openai    # saves an OpenAI API key, for the openai provider
+adhere logout --openai   # deletes it, and only it
 ```
 
 - The key is saved to `~/.config/adhere/credentials.json`, or under
-  `$XDG_CONFIG_HOME` when that is set, readable only by you.
+  `$XDG_CONFIG_HOME` when that is set, readable only by you. An OpenAI key is
+  saved beside the TypeSafe AI one, for a config whose provider is
+  `openai()`; see [Providers](#providers).
 - `TYPESAFE_API_KEY`, when set, takes precedence over the saved key, so CI can
-  pass a key without a login.
-- The key is read only when a request is about to be sent. A run where every
-  file is cached needs no key and no network.
+  pass a key without a login. `OPENAI_API_KEY` does the same for OpenAI's.
+- The key is read only when a request is about to be sent. A run the cache
+  answers in full needs no key and no network.
 
 ## Quick start
 
 ```sh
-adhere init        # .adhere/config.ts, two example rules, and the dependency
-adhere login       # save your TypeSafe AI API key, once
-adhere validate    # check your rules' wording, and ask Jev whether any contradict
-adhere lint        # audit the working directory
-git add .adhere    # commit the rules, and the judgments they cost
+npx adhere init        # .adhere/config.ts, two example rules, and the dependency
+npx adhere login       # save your TypeSafe AI API key, once
+npx adhere validate    # check your rules' wording, and ask Jev whether any contradict
+npx adhere lint        # audit the working directory
+git add .adhere        # commit the rules, and the judgments they cost
 ```
 
 ### Init
@@ -294,9 +309,8 @@ rule and the changed one side by side, and compare what each flags.
    amber and never fail the run, so the experiment can sit in the repo, and in
    CI, while you watch it.
 3. Change the copy: its description, its examples, its `appliesTo` or
-   `excludeIf`, or what it [`reads`](#what-a-rule-reads). To try giving Jev more
-   to read, make the copy a `RULE.ts` with an
-   [`appendState`](#rules-as-typescript-files) hook.
+   `excludeIf`. To try giving Jev more to read, make the copy a `RULE.ts` with
+   an [`appendState`](#rules-as-typescript-files) hook.
 4. Run `adhere lint`, or `adhere lint --filter '<glob>'` to try it on part of
    the repo first, and compare the two rules' findings on the same files.
 
@@ -340,13 +354,13 @@ writing a rule.
 
 ### What else the studies found
 
-| Lesson                                                 | What the study found                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "Should" is for people, not a weaker check.            | Rules written with "should" and with "must" scored nearly the same ([study](eval/studies/rule-vocabulary.md)).                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| A wrong finding is usually the rule's fault.           | Above 0.8, 31 of 35 wrong findings repeated within a rule: a scope its words reach past, or the same misreading again. Fixing the wording fixes them together. Below 0.8, one-off misreads grow, to about one finding in six at 0.6 to 0.7 ([study](eval/studies/presets.md)).                                                                                                                                                                                                                                                                              |
-| Narrow a rule in its description.                      | Jev scores an `excludeIf` near 0.5 for real and false findings alike, so it thins a rule's findings about as much as a higher threshold ([study](eval/studies/presets.md)). Narrowing the description moves the judgment itself: scoping alchemy's idempotent-delete rule to providers' delete handlers dropped its findings elsewhere from 0.67–0.88 to 0.08–0.21, with nothing real lost ([study](eval/studies/idempotent-delete.md)).                                                                                                                    |
-| Beware rules that turn on what the file does not show. | The weakest preset rules hinged on facts outside the file: whether a client has a default timeout, whether a script is an entry point, whether a key is public ([study](eval/studies/presets.md)). Warning below a context of 0.7 marked one finding in five, and those were real about half the time, where the rest were real three times in four ([study](eval/studies/sufficiency.md)). Make such a rule a warning, or give Jev the fact with [`reads`](#what-a-rule-reads), an [`appendState`](#rules-as-typescript-files) hook, or an `@adhere` note. |
-| Jev believes comments.                                 | Eight of nine real violations of the idempotent-delete rule carried a comment wrongly saying they were fine, and scored 0.31 to 0.62; without comments, all nine scored 0.81 or more ([study](eval/studies/idempotent-delete.md)). That is why adhere takes comments out. A fact Jev needs, such as an exemption, goes in an `@adhere` note, which stays ([study](eval/studies/comments.md)).                                                                                                                                                               |
+| Lesson                                                 | What the study found                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Should" is for people, not a weaker check.            | Rules written with "should" and with "must" scored nearly the same ([study](eval/studies/rule-vocabulary.md)).                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| A wrong finding is usually the rule's fault.           | Above 0.8, 31 of 35 wrong findings repeated within a rule: a scope its words reach past, or the same misreading again. Fixing the wording fixes them together. Below 0.8, one-off misreads grow, to about one finding in six at 0.6 to 0.7 ([study](eval/studies/presets.md)).                                                                                                                                                                                                                                                                                        |
+| Narrow a rule in its description.                      | Jev scores an `excludeIf` near 0.5 for real and false findings alike, so it thins a rule's findings about as much as a higher threshold ([study](eval/studies/presets.md)). Narrowing the description moves the judgment itself: scoping alchemy's idempotent-delete rule to providers' delete handlers dropped its findings elsewhere from 0.67–0.88 to 0.08–0.21, with nothing real lost ([study](eval/studies/idempotent-delete.md)).                                                                                                                              |
+| Beware rules that turn on what the file does not show. | The weakest preset rules hinged on facts outside the file: whether a client has a default timeout, whether a script is an entry point, whether a key is public ([study](eval/studies/presets.md)). Warning below a context of 0.7 marked one finding in five, and those were real about half the time, where the rest were real three times in four ([study](eval/studies/sufficiency.md)). Make such a rule a warning, or give Jev the fact with config-level [`reads`](#what-jev-reads), an [`appendState`](#rules-as-typescript-files) hook, or an `@adhere` note. |
+| Jev believes comments.                                 | Eight of nine real violations of the idempotent-delete rule carried a comment wrongly saying they were fine, and scored 0.31 to 0.62; without comments, all nine scored 0.81 or more ([study](eval/studies/idempotent-delete.md)). That is why adhere takes comments out. A fact Jev needs, such as an exemption, goes in an `@adhere` note, which stays ([study](eval/studies/comments.md)).                                                                                                                                                                         |
 
 ## Commands
 
@@ -358,7 +372,7 @@ writing a rule.
 | `adhere init --shared org/repo`   | Scaffold a repo of rules other repos install. See [Creating a shared repo](#creating-a-shared-repo).                      |
 | `adhere list org/repo`            | List the rules in another repo's `.adhere/rules/`. See [Install rules from other repos](#install-rules-from-other-repos). |
 | `adhere install org/repo`         | Copy them into this repo's `.adhere/rules/org/repo/`.                                                                     |
-| `adhere login`, `adhere logout`   | Save or delete a TypeSafe AI API key. See [Login](#login).                                                                |
+| `adhere login`, `adhere logout`   | Save or delete a TypeSafe AI API key, or with `--openai`, an OpenAI one. See [Login](#login).                             |
 | `adhere skill [docs\|setup\|fix]` | Print an agent skill. See [Agent skills](#agent-skills).                                                                  |
 
 Bare `adhere` prints the help. `adhere <command> --help` lists a command's
@@ -400,7 +414,7 @@ Found 1 error.
 | `×` or `⚠`         | An error, or a warning, in amber, from a rule whose `level` is `warning`. Only errors fail the run.                                                 |
 | `data/brand-ports` | The rule's id, then its description. A preset's rule has the preset's name first, as in `effect/basics/gen-for-sequencing`.                         |
 | `confidence`       | Jev's probability that the file breaks the rule.                                                                                                    |
-| `context`          | Jev's probability that the file shows enough to decide that.                                                                                        |
+| `context`          | Jev's probability that it sees enough to decide that.                                                                                               |
 | The excerpt        | The section of the file Jev points at. The line it names is underlined, or the lines, when it names several, are marked with a bar beside the code. |
 | `hint:`            | The rule's code that must be written. A rule with only code that must never be written shows that code instead, labeled `never:`.                   |
 | The legend         | Under the last finding: each score's threshold, between its range in red and its range in green.                                                    |
@@ -412,10 +426,11 @@ its threshold:
 - Red is below the threshold, so lint never reports it: only the legend shows
   that range.
 
-**Low context.** Jev sees one file at a time. So we also ask whether the file
-shows enough to decide the rule at all. When `context` is below 0.6, it means
-Jev thinks it needs more info, which you can add with an `@adhere` comment.
-You may also see a hint:
+**Low context.** Jev sees the file and what adhere [reads](#what-jev-reads)
+beside it, not your whole repo. So we also ask whether that shows enough to
+decide the rule at all. When `context` is below 0.6, it means Jev thinks it
+needs more info, which you can add with an `@adhere` comment. You may also see a
+hint:
 
 ```text
   warning: this file may not show enough to check this rule
@@ -487,7 +502,6 @@ const port: number = Number(process.env.PORT);
 | `level`                  | `warning` reports the rule's findings as warnings, which do not fail the run. Use it for a nit, or for a rule that tends to flag code wrongly. |
 | `tests`                  | Rules skip tests by default. `only` is for a rule about tests, which judges nothing else. `include` is for one that holds in tests as well.    |
 | `appliesTo`, `excludeIf` | Where the rule applies. See [Scoping a rule](#scoping-a-rule).                                                                                 |
-| `reads`                  | What Jev reads beside the code. See [What a rule reads](#what-a-rule-reads).                                                                   |
 
 | Heading in the body          | The code under it                                           |
 | ---------------------------- | ----------------------------------------------------------- |
@@ -554,17 +568,35 @@ finding its matchers dropped, with their scores.
 > scored an `excludeIf` near 0.5 for real and false findings alike. See
 > [Writing good rules](#writing-good-rules).
 
-### What a rule reads
+### What Jev reads
 
-Jev judges a file by its code alone. A rule that turns on something the file
-does not show can name it in `reads`, and adhere gives it to Jev beside the
-code, for that rule only. It is a JSON array on one line in front matter, or an
-array in a config or a TypeScript rule.
+Beside the file's code, Jev reads three kinds of context, for every rule:
+
+| Name                | What Jev reads                                                                                                                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workspacePackages` | The repo's own packages the file imports, each name with its directory, as in `{ "orders-core": "packages/orders" }`. A package it imports that is not listed is an installed one. |
+| `symbols`           | The compiler's type blocks for each name, plus compiler documentation and JSDoc tags; not literal editor hover text.                                                               |
+| `references`        | The declaration of each name the file uses from another file of the repo, whole: a function with its body, a method without the rest of its class.                                 |
+
+To read fewer, list the ones you want in the config's `reads`:
+
+```ts
+// .adhere/config.ts
+import { defineConfig } from "@drkmttr/adhere";
+
+export default defineConfig({
+  reads: ["workspacePackages"], // no symbols or references
+});
+```
+
+`reads: []` sends the code alone.
+
+Each name is the key Jev reads it under, so a rule's description can name it in
+backticks, as the questions name `code`:
 
 ````md
 ---
-description: A function from one of this repository's own packages, which `workspacePackages` names, must be called through the package's namespace, never imported by its own name.
-reads: ["workspacePackages"]
+description: A function imported from one of this repository's own packages, which the file's `workspacePackages` names, must be called through the package's namespace, never imported by its own name.
 ---
 
 ## Must
@@ -580,25 +612,31 @@ import { parse } from "orders-core";
 ```
 ````
 
-There is one name so far:
-
-| Name                | What Jev reads                                                                                                                                                                                                                                                             |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workspacePackages` | The workspace's packages, each one's name with its directory, as in `{ "orders-core": "packages/orders" }`. A package that is not in it is an installed one. It is for a rule about whose package an import is of: the repository's own, or one installed from a registry. |
-
-- Each name is the key Jev reads it under, so the description can name it in
-  backticks, as the questions name `code`.
+- `symbols` and `references` use the SDK and native compiler pinned to exactly
+  `7.1.0-dev.20261009.1`, which the npm package installs. This prerelease contains
+  the tuple-reference serialization fix from [microsoft/TypeScript#64080](https://github.com/microsoft/TypeScript/issues/64080);
+  SDK and native executable must match that exact version. They use each file's
+  `tsconfig.json`, and work without one.
+- `symbols` is still a name-to-string map. Distinct binding/narrowing types get
+  distinct blocks; docs and JSDoc tags appear once per canonical symbol per file.
+  It has no IDE labels or selected-call overload presentation. Symbol/type queries
+  are batched, with independent SDK requests chunked to at most 8.
 - A name adhere does not have refuses the run, so a misspelled one does not go
-  unnoticed.
+  unnoticed. So does `reads` in a rule: it is the config's alone.
 - What adhere has no name for, such as a file of the repository's, a rule in
   TypeScript adds with [`appendState`](#rules-as-typescript-files).
 
-<details>
-<summary>More on requests and where the packages come from</summary>
+**Cost and privacy.** `symbols` and `references` send Jev more than the file it
+judges: whole declarations from other files, plus compiler-provided documentation
+and JSDoc tags in `symbols`, even with `includeComments` off. The plan's estimate leaves their tokens out. Leave them
+out of `reads` to send less.
 
-- The packages are read on every run, when a rule reads them, from the working
-  directory's `package.json`, whose `workspaces` npm, Bun, and Yarn read, and
-  from `pnpm-workspace.yaml`'s `packages`.
+<details>
+<summary>Where the packages come from</summary>
+
+- The packages are read on every run from the working directory's
+  `package.json`, whose `workspaces` npm, Bun, and Yarn read, and from
+  `pnpm-workspace.yaml`'s `packages`.
 - In a pattern, `*` is any directory and `**` any depth of them, and one that
   starts with `!` leaves out what it matches. Each matched directory's
   `package.json` gives the name, and its directory is given from the working
@@ -606,6 +644,8 @@ There is one name so far:
 - Nothing need be installed, so a run in CI reads the same packages as one on a
   laptop.
 - A working directory that is not a workspace's root has none.
+- Only an import whose path is a plain string counts, and one of a subpath, such
+  as `orders-core/client`, counts as its package's.
 
 </details>
 
@@ -637,7 +677,8 @@ export default defineRule({
   name `code`.
 - A `RULE.ts` is imported, as a config is, so its code runs on every lint.
 - A rule with a hook goes to Jev in requests of its own, so only that rule reads
-  what its hook adds. Each of those requests sends the file again.
+  what its hook adds. Each of those requests sends the file and its context
+  again.
 - What the hook reads outside the file is not part of the cache: when
   `db/schema.sql` changes, a file already judged is not judged again until it or
   the rule changes.
@@ -647,7 +688,8 @@ export default defineRule({
 
 - The state is what Jev reads beside each question: `code`, the file's sections
   as Jev reads them, under their numbers from 1, as in
-  `{ code: { "1": "import …", "2": "export const …" } }`.
+  `{ code: { "1": "import …", "2": "export const …" } }`, beside what the
+  config [`reads`](#what-jev-reads).
 - `file` is the file's absolute `path`, and its `contents` as written, comments
   and all.
 - Nothing the hook returns is checked, so it can change `code` too, or replace
@@ -691,9 +733,9 @@ and they apply project-wide.
 ## Config
 
 A config file is optional. Without one, adhere reads the rules in
-`.adhere/rules/` and any `--preset`. A config names presets, sets the model and
-thresholds, or gives rules inline. It sits in the working directory of the repo
-being audited, at one of these paths (keep one):
+`.adhere/rules/` and any `--preset`. A config names presets, sets the model,
+the thresholds, and what Jev reads, or gives rules inline. It sits in the
+working directory of the repo being audited, at one of these paths (keep one):
 
 - `.adhere/config.ts`, the default, next to the rules
 - `adhere.config.ts`
@@ -706,6 +748,7 @@ export default defineConfig({
   model: "jev-latest",
   threshold: 0.8,
   sufficiencyThreshold: 0.6,
+  reads: ["workspacePackages", "symbols", "references"],
   presets: ["effect"],
   exclude: ["**/generated/**"],
   overrides: { "effect/basics/instrument-with-pipe": "off" },
@@ -724,16 +767,18 @@ type UserId = typeof UserId.Type
 });
 ```
 
-| Key                    | Default          | Meaning                                                                                                                                                                |
-| ---------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `model`                | `"jev-latest"`   | The model id sent to TypeSafe.                                                                                                                                         |
-| `threshold`            | `0.8`            | Report a rule when Jev's probability is above this.                                                                                                                    |
-| `sufficiencyThreshold` | `0.6`            | Below it, a finding warns that the file may not show enough.                                                                                                           |
-| `presets`              | none             | Built-in rule sets, or their topics. See [Presets](#presets).                                                                                                          |
-| `rules`                | `.adhere/rules/` | Rules inline, as above, or a directory (see [Where rules live](#where-rules-live)). Either replaces `.adhere/rules/`: none of its rules, root or nested, is read then. |
-| `exclude`              | none             | Globs, relative to the working directory, of files no rule judges.                                                                                                     |
-| `overrides`            | none             | Settings for a rule by its id. See [Overrides](#overrides).                                                                                                            |
-| `includeComments`      | `false`          | Send every comment to Jev. See [Comments](#comments).                                                                                                                  |
+| Key                    | Default                                          | Meaning                                                                                                                                                                |
+| ---------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`                | `"jev-latest"`                                   | The model id sent to TypeSafe.                                                                                                                                         |
+| `threshold`            | `0.8`                                            | Report a rule when Jev's probability is above this.                                                                                                                    |
+| `sufficiencyThreshold` | `0.6`                                            | Below it, a finding warns that Jev may not see enough to decide.                                                                                                       |
+| `presets`              | none                                             | Built-in rule sets, or their topics. See [Presets](#presets).                                                                                                          |
+| `rules`                | `.adhere/rules/`                                 | Rules inline, as above, or a directory (see [Where rules live](#where-rules-live)). Either replaces `.adhere/rules/`: none of its rules, root or nested, is read then. |
+| `exclude`              | none                                             | Globs, relative to the working directory, of files no rule judges.                                                                                                     |
+| `overrides`            | none                                             | Settings for a rule by its id. See [Overrides](#overrides).                                                                                                            |
+| `includeComments`      | `false`                                          | Send every comment to Jev. See [Comments](#comments).                                                                                                                  |
+| `reads`                | `["workspacePackages", "symbols", "references"]` | What Jev reads beside each file's code, for every rule. `[]` is the code alone. See [What Jev reads](#what-jev-reads).                                                 |
+| `provider`             | TypeSafe's Jev                                   | Where the questions go instead, with its own model. See [Providers](#providers).                                                                                       |
 
 - An invalid shape refuses the run.
 - A config can import other files by relative path, but no packages besides
@@ -754,6 +799,85 @@ type UserId = typeof UserId.Type
   [rules written in TypeScript](#rules-as-typescript-files), with `bundler`
   resolution. For a config written by hand, add that file, or include
   `.adhere/config.ts` in a tsconfig that resolves the same way.
+
+</details>
+
+### Providers
+
+adhere asks TypeSafe's Jev by default. A provider asks another decision model
+instead, and adhere exports one for each model
+[the providers study](eval/studies/providers.md) measured:
+
+```ts
+import { defineConfig, openai } from "@drkmttr/adhere";
+
+// Asks with OPENAI_API_KEY, or the key `adhere login --openai` saved.
+export default defineConfig({ provider: openai() });
+```
+
+| Provider     | Asks                                                            | Options                          |
+| ------------ | --------------------------------------------------------------- | -------------------------------- |
+| `jev`        | TypeSafe's Jev, `jev-latest` by default                         | `apiKey`, `model`                |
+| `openai`     | OpenAI's `gpt-6-luna`, on its Decisions API                     | `apiKey`, `model`                |
+| `cloudflare` | Cloudflare's `clef`, by default, or `clef-flash`, on Workers AI | `accountId`, `apiToken`, `model` |
+
+- Without an `apiKey`, `jev` and `openai` ask with the key from
+  [Login](#login).
+- Each also takes `fetch`, what sends its requests.
+- Clef cuts a request too long for it short rather than refuse it, so
+  `cloudflare` skips a file whose request reaches clef's limit: 64,000 tokens,
+  or 24,000 for clef-flash.
+
+<details>
+<summary>Writing a provider</summary>
+
+A provider is a model's name, and an `ask` that answers adhere's questions
+about a state:
+
+```ts
+import { defineConfig, type Provider, RequestFailed } from "@drkmttr/adhere";
+
+const mine: Provider = {
+  model: "my-decision-model",
+  ask: async (state, questions, { signal }) => {
+    const response = await fetch("https://decisions.example.com/v1/decide", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state, questions }),
+      signal,
+    });
+    if (!response.ok) {
+      throw new RequestFailed(`My model answered HTTP ${response.status}`, response.status);
+    }
+    return { answers: await response.json() };
+  },
+};
+
+export default defineConfig({ provider: mine });
+```
+
+- `state` is the file's code by section under `code`, beside what adhere read
+  for it.
+- Each question has an `id`, the `question` as adhere phrases it, and the
+  `fields` it names in backticks, such as `rule`, `must`, and `never`. A `noul`
+  asks whether something holds. A `choice` asks for the key of one of its
+  `options`, and can have just one.
+- `ask` returns `{ answers }`: by id, a `noul`'s probability from 0 to 1, or a
+  `choice`'s key. An id left out goes unanswered: its rule is not reported, and
+  is asked again on the next run.
+- A rejection stops the run, but for three errors adhere exports:
+  `ContextOverflow` skips the file, `RequestBlocked` reports it blocked, and
+  `RequestFailed` is tried again, up to three times, when its `status` is 0,
+  for no answer, or a 408, 429, or 5xx.
+- adhere paces calls with `--rpm`, aborts `signal` after 30 seconds, and splits
+  requests to fit Jev's 64,000 tokens. A model that takes less splits further in
+  its `ask`.
+- `model` replaces the config's `model`. The cache keeps answers by it, so a
+  new model is asked again.
+- A provider that sets `savedKey` to `"typesafe"` or `"openai"` gets that key
+  as `apiKey`.
+- The executable resolves no packages besides `@drkmttr/adhere`, so an `ask`
+  uses `fetch` rather than an SDK.
 
 </details>
 
@@ -963,9 +1087,9 @@ the default, `0.6`.
 | `--threshold <0 to 1>`             | Replace the config's threshold. Per-rule thresholds still apply.                               |
 | `--sufficiency-threshold <0 to 1>` | Replace the config's `sufficiencyThreshold`: a finding warns when its `context` is below it.   |
 | `--yes`, `-y`                      | Send the requests without asking first.                                                        |
-| `--limit <checks>`                 | Judge at most that many checks. See [Limiting a run](#limiting-a-run).                         |
+| `--limit <files>`                  | Send requests for at most that many files. See [Limiting a run](#limiting-a-run).              |
 | `--rpm <requests>`                 | Send at most that many requests a minute.                                                      |
-| `--filter <glob>`                  | Read only the files a glob matches.                                                            |
+| `--filter <glob>`                  | Judge only the files a glob matches.                                                           |
 | `--deny-warnings`                  | Fail on warnings as well as errors.                                                            |
 | `--log-level <level>`              | Log the run's work on stderr. See [Logging a run](#logging-a-run).                             |
 
@@ -990,9 +1114,7 @@ the default, `0.6`.
   ```
 
 **Tests** are judged only by rules about tests, whose front matter says `tests`
-(see [Rules as Markdown files](#rules-as-markdown-files)). On alchemy, 38% of
-the findings from rules not about tests were in test helpers and fixtures. A
-test is:
+(see [Rules as Markdown files](#rules-as-markdown-files)). A test is:
 
 - a `.test` or `.spec` file, such as `a.test.ts` or `Button.spec.tsx`;
 - a fixture or test helper named as one, such as `fixtures.ts`,
@@ -1008,17 +1130,19 @@ takes, and asks:
 
 ```text
 200 files and 14 rules: 2800 checks, 1400 cached.
-Judging the other 1400 takes 200 requests to Jev, plus 1 or more for each file with a finding.
+Judging 100 files takes an estimated 100 requests to Jev, plus 1 or more for each file with a finding.
 Those carry about 1.9 million input tokens: about $0.08 at $0.042 per million, and more for locating findings.
-? Send 200 requests to Jev, about $0.08? › (Y/n)
+Estimates cover only code and workspace-package context; symbol/reference input, possible extra request splits, and size-skips are determined at send time.
+? Estimates cover only code and workspace-package context; symbol/reference input, possible extra request splits, and size-skips are determined at send time. Send an estimated 100 requests to Jev, about $0.08? › (Y/n)
 ```
 
-- It asks only with a terminal on stdin and stdout, and never when the cache
-  answers every check. `--yes` sends without asking.
+- It asks only with a terminal on stdin and stdout, and only when there is
+  something to send. `--yes` sends without asking.
 - The cost is adhere's estimate of the input tokens times the model's price. Jev
   charges only for input tokens: $0.042 a million for `jev-latest`, per
   [TypeSafe AI's models page](https://docs.typesafe.ai/models) in
-  September 2026.
+  September 2026. The estimate leaves out `symbols` and `references`, which
+  adhere reads as it sends each file, so a run can cost more than it says.
 - A run that stops loses nothing: files finished before it stopped are cached,
   so running again continues from there.
 
@@ -1040,22 +1164,24 @@ Those carry about 1.9 million input tokens: about $0.08 at $0.042 per million, a
 
 Three flags bound what a run does:
 
-| Flag               | Effect                                                                                                                                                                                                                                                        |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--limit <checks>` | Judges at most that many checks, taken in path order. The rest wait, and since judgments are cached, the next run with the same limit picks up where this one stopped. `--limit 0` shows the plan and judges nothing.                                         |
-| `--rpm <requests>` | Sends at most that many requests to Jev a minute, evenly spaced, retries included. The plan says about how long they take.                                                                                                                                    |
-| `--filter <glob>`  | Reads only the files whose path from the working directory matches, such as `src/**` or `**/*.service.ts`. Wrap a glob in single quotes so the shell does not expand it. Repeat the flag for more, and start a pattern with `!` to leave out what it matches. |
+| Flag               | Effect                                                                                                                                                                                                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--limit <files>`  | Sends requests for at most that many files, taken in path order. The rest wait, and since judgments are cached, the next run with the same limit picks up where this one stopped. `--limit 0` shows the plan and sends nothing.                                |
+| `--rpm <requests>` | Sends at most that many requests to Jev a minute, evenly spaced, retries included. The plan says about how long they take.                                                                                                                                     |
+| `--filter <glob>`  | Judges only the files whose path from the working directory matches, such as `src/**` or `**/*.service.ts`. Wrap a glob in single quotes so the shell does not expand it. Repeat the flag for more, and start a pattern with `!` to leave out what it matches. |
 
 ```sh
-adhere lint --filter 'packages/api/**' --filter '!**/generated/**' --limit 200 --rpm 30
+adhere lint --filter 'packages/api/**' --filter '!**/generated/**' --limit 100 --rpm 30
 ```
+
+`--limit` counts files, not requests: one file can take several.
 
 ### Logging a run
 
-| Level               | What it logs, on stderr                                                                                                                                                                                                                                                              |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--log-level debug` | The config it loaded, how many paths it listed and how many of them it reads, and each request to Jev, with the file it is for, about how many tokens it carries, the HTTP status, how long it took, and Cloudflare's Ray ID. A failed attempt is logged even when a retry hides it. |
-| `--log-level trace` | Also each file as it is read, planned, and answered from the cache, and the first 4000 characters of any error Jev's API answers with.                                                                                                                                               |
+| Level               | What it logs, on stderr                                                                                                                                                                                                                                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--log-level debug` | The config it loaded, how many paths it listed and how many of them it reads, and each request to Jev, with the file it is for, about how many tokens it carries, and how long it took. A failed attempt is logged even when a retry hides it, with the HTTP status, Cloudflare's Ray ID, and the start of what the API said. |
+| `--log-level trace` | Also each file as it is read, planned, and answered from the cache.                                                                                                                                                                                                                                                           |
 
 stdout still carries only the report, so the log can go to a file of its own:
 
@@ -1076,8 +1202,11 @@ adhere lint --log-level debug 2> adhere.log
 ### Comments
 
 Jev reads a file's code, not its comments. adhere takes every comment out before
-it hashes or sends a file, blanking it so every line keeps its number. The
-report's excerpts still show them.
+it hashes or sends a file, or a declaration from
+[`references`](#what-jev-reads), blanking it so every line keeps its number.
+The report's excerpts still show them. Compiler-provided documentation and
+JSDoc tags still reach Jev in the type/docs strings [`symbols`](#what-jev-reads)
+sends; these are not editor hovers.
 
 Jev takes what comments claim at their word, which hid real violations in the
 studies: see [Writing good rules](#writing-good-rules).
@@ -1128,15 +1257,15 @@ paid request, and Jev's answers vary a little from run to run, so a committed
 cache gives everyone and CI the same findings without paying for them again, and
 a pull request changes the judgments of only the files it changes.
 
-| What changed                                                 | What is judged again                                  |
-| ------------------------------------------------------------ | ----------------------------------------------------- |
-| A file's code                                                | Every rule, for that file.                            |
-| A file's comments alone                                      | Nothing.                                              |
-| A file is moved or copied                                    | Nothing. Identical files share their judgments.       |
-| A rule's text, a matcher, or the source of its `appendState` | That rule, for every file.                            |
-| What a rule `reads`, such as the workspace's packages        | That rule, for every file.                            |
-| The threshold is lowered                                     | Nothing. Cached judgments newly above it are located. |
-| adhere asks its questions differently, after an upgrade      | Every rule, once.                                     |
+| What changed                                                                                 | What is judged again                                                             |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| A file's code                                                                                | Every rule, for that file.                                                       |
+| A file's comments alone                                                                      | Nothing.                                                                         |
+| A file is moved or copied                                                                    | Nothing. Identical files share their judgments.                                  |
+| A rule's text, a matcher, or the source of its `appendState`                                 | That rule, for every file.                                                       |
+| Anything else Jev read: a file it imports, the workspace's packages, or the config's `reads` | Nothing, so a judgment can go stale. Delete the cache to judge every file again. |
+| The threshold is lowered                                                                     | Nothing. Cached judgments newly above it are located.                            |
+| adhere asks its questions differently, after an upgrade                                      | Every rule, once.                                                                |
 
 To keep the cache out of diffs, mark it as generated in `.gitattributes`:
 
@@ -1159,8 +1288,8 @@ To keep the cache out of diffs, mark it as generated in `.gitattributes`:
 - `files/` holds Jev's answers by the content they are about. Each cache file is
   named for the hash of a source file's content as Jev reads it, without its
   comments.
-- Each answer sits under a fingerprint of the model and everything the rule
-  sends: its text, its matchers, what it reads, and its `appendState`'s source.
+- Each answer sits under a fingerprint of the model and the rule: its text, its
+  matchers, and its `appendState`'s source.
 - `tallies/` keeps the linter check's answers, one tally per rule, under a key
   that changes with the rule's text and the model.
 - A cache file is written once and never changed: it is also named for the hash
@@ -1235,7 +1364,7 @@ adhere skill fix | codex exec --sandbox workspace-write \
 2. **Judge.** One request per file asks Jev, for each rule, how likely the file
    is to break it.
 3. **Locate.** A second request, only for rules above their threshold, asks
-   which section and lines break the rule, and whether the file shows enough to
+   which section and lines break the rule, and whether Jev sees enough to
    decide.
 
 A file too long for Jev's context is skipped and counted in the summary.
@@ -1250,9 +1379,9 @@ statements of its body. Jev reads the file as these sections.
 
 **Judge: one request per file.**
 
-- The state is the file's sections under their numbers from 1, as
-  `{ "1": "…", "2": "…" }`, without their comments (see [Comments](#comments)),
-  and nothing else.
+- The state is `code`, the file's sections under their numbers from 1, as
+  `{ code: { "1": "…", "2": "…" } }`, without their comments (see
+  [Comments](#comments)), beside what the config [`reads`](#what-jev-reads).
 - Each rule is one `noul` (yes/no probability) question that carries the rule's
   description and details, and its code under its words, `must` and `never`, or a guideline's
   `should` and `should_not`. It asks whether the file diverges from the pattern
@@ -1260,14 +1389,14 @@ statements of its body. Jev reads the file as these sections.
   only code that must never be written, whether the file contains that code.
 - Criteria for each answer draw the line at the rule's scope, so a file with no
   code the rule is about is a no.
-- No rule sits in the shared state, so a rule's probability depends only on the
-  file and that rule, not on which other rules share the request. Every question
+- No rule sits in the state, so a rule's probability depends only on the state
+  and that rule, not on which other rules share the request. Every question
   shares the state cost of the request.
 - On up to 10 files per project rule, the rule's question has a second one
   beside it, the linter check (see
   [Check for contradictions](#check-for-contradictions)), with the same fields.
-- A rule with `appendState` or `reads` has requests of its own, here and below,
-  whose state adds to this one.
+- A rule with `appendState` has requests of its own, here and below, whose
+  state adds to this one.
 
 **Locate: a second request, only when at least one rule's probability is above
 its threshold.** Per flagged rule:
@@ -1283,18 +1412,20 @@ its threshold.** Per flagged rule:
   for 94% of real findings, most often as one line
   ([study](eval/studies/pinpoint.md)).
 - One `noul` carrying the rule: whether you can tell if `code` breaks it from
-  `code` alone, without knowing what other files, libraries, services, or
-  configuration do. It yields the `context` score and its warning.
+  the state alone, without knowing what other files, libraries, services, or
+  configuration do beyond what it shows. It yields the `context` score and its
+  warning.
 
 **Limits.** Jev reads at most 32k tokens of state and one question together, and
 64k tokens in a request. adhere estimates tokens from the JSON it sends, at
-about three bytes a token.
+about three bytes a token, and leaves 1k of room for what Jev wraps around it.
 
 - When a file's questions would not fit in one request, they are split across
   several.
-- A file whose code and longest question would not fit together, or that has
+- A file whose state and longest question would not fit together, or that has
   more than 255 sections, is skipped and counted in the summary, and the rest of
-  the run goes on.
+  the run goes on. What adhere reads is never cut short to fit, so large
+  `references` can skip a file.
 - So is a file Jev itself counts as over its context, which text denser than the
   estimate, such as CJK, can cause.
 
@@ -1310,8 +1441,10 @@ Names and layouts from older versions:
 | through 0.7       | The `effect` preset checked seven conventions a linter checks exactly.                                       | They are left to `@effect/tsgo`. The notes on `effect` under [Presets](#presets) say how to turn them on.                                                                                               |
 | before 0.13       | A rule was any `*.md` file in `.adhere/`, as `.adhere/data/brand-ports.md`.                                  | A `*.md` file outside every rule's directory, but a `README.md`, refuses the run. The refusal says where each such file goes to keep its id, so `adhere-ignore` comments and `overrides` still name it. |
 | before 0.13       | `.adhere/tsconfig.json` included only `config.ts`.                                                           | Make its `include` `["**/*.ts"]` to give rules written in TypeScript their types.                                                                                                                       |
-| 0.13.1            | The workspace's packages had a key of their own, `includeWorkspacePackages: true`.                           | adhere no longer reads it, and a rule that still has it gets no packages. Write `reads: ["workspacePackages"]` in its place.                                                                            |
+| 0.13.1            | The workspace's packages had a key of their own, `includeWorkspacePackages: true`.                           | adhere no longer reads it. Jev reads the workspace's packages by default.                                                                                                                               |
 | 0.13.1 and before | Prose around a `RULE.md`'s code was ignored.                                                                 | Jev reads it after the description, as the rule's details, so a rule with prose is judged again once. Keep prose about the rule: why it holds, or where it does not apply.                              |
+| 0.15.0 and before | A rule named what Jev reads beside its code, in `reads`.                                                     | `reads` is the config's, for every rule, and a rule that has it refuses the run: delete it. Jev reads all three by default. See [What Jev reads](#what-jev-reads).                                      |
+| 0.15.0 and before | `--limit` counted rule checks.                                                                               | It counts files.                                                                                                                                                                                        |
 | 0.14.0 and before | The `effect` preset had `services/test-layers-are-in-memory` and `services/operations-have-no-requirements`. | They are gone, and an `overrides` entry naming either refuses the run: remove it. `@effect/tsgo`'s `leakingRequirements` checks the second. `adhere-ignore` comments naming them suppress nothing.      |
 
 ## Development
@@ -1325,24 +1458,31 @@ adhere lint --preset effect
 ```
 
 - In a checkout no platform package is installed, so `bin/adhere.js` runs
-  `src/main.ts` with Bun instead.
+  `src/main.ts` with Bun instead, and `symbols` and `references` use the
+  checkout's own TypeScript.
 - `bun run typecheck` runs `tsc` and the linter.
 - `bun run test` runs the tests.
+- `bun scripts/verify-npm.ts`, after `bun run build:npm`, installs the built
+  packages in a scratch project and checks that they read `symbols` and
+  `references`. It needs Node 24 or later, and sends Jev nothing.
 
 ### Native executable
 
-| Command             | What it builds                                                                                                                                                                                                                                                                                     |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bun run build`     | `dist/adhere`, a single binary with Bun and the presets inside it, through Bun's [`--compile`](https://bun.sh/docs/bundler/executables) with `--asset ./presets`. It runs without Bun or `node_modules` on the target machine and still loads the repo's `config.ts` and Markdown rules from disk. |
-| `bun run build:npm` | The same for every published platform, each into its package under `dist/npm/`, with a copy for the GitHub release in `dist/release/` ([`scripts/npm-packages.ts`](./scripts/npm-packages.ts)).                                                                                                    |
+| Command             | What it builds                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run build`     | `dist/adhere`, a single binary with Bun and the presets inside it, through Bun's [`--compile`](https://bun.sh/docs/bundler/executables) with `--asset ./presets`. It runs without Bun or `node_modules` on the target machine and still loads the repo's `config.ts` and Markdown rules from disk. It has no TypeScript compiler, so it reads no `symbols` or `references`. |
+| `bun run build:npm` | The same for every published platform, each into its package under `dist/npm/`, with a copy for the GitHub release in `dist/release/` ([`scripts/npm-packages.ts`](./scripts/npm-packages.ts)).                                                                                                                                                                             |
 
 Each platform's executable is its own npm package,
 `@drkmttr/adhere-<platform>-<arch>`, limited by `os` and `cpu`, and an optional
 dependency of `@drkmttr/adhere`, so an install fetches only its own machine's.
-The package's `bin/adhere.js` finds it and runs it with Node. The same
+Each depends on TypeScript's native compiler for its platform,
+`@typescript/typescript-<platform>-<arch>`, pinned to exactly
+`7.1.0-dev.20261009.1` to match the SDK. The package's
+`bin/adhere.js` finds both, and runs the executable with Node. The same
 executables are attached to each GitHub release, named for `uname -s` and
-`uname -m` as in `adhere-Linux-x86_64`, so [installing](#install) one needs no
-Node.
+`uname -m` as in `adhere-Linux-x86_64`, with `LICENSE` and
+`THIRD_PARTY_NOTICES.txt`, which go with any copy you redistribute.
 
 `adhere --version` tells the builds apart:
 
@@ -1375,6 +1515,9 @@ git push origin v0.3.0
    builds the platform packages, attaches their executables to the GitHub
    Release, and publishes each package before `@drkmttr/adhere`, which it first
    lists them in as `optionalDependencies` at the same version.
+
+CI, and the publish workflow before it publishes, run `scripts/verify-npm.ts`
+on Linux and on both Macs. Windows is built, but not run.
 
 <details>
 <summary>More on publishing</summary>
