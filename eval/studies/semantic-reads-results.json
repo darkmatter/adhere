@@ -1,0 +1,2045 @@
+{
+  "caseDigest": "892dd0005d6f057e115d465ed6e6d8799fe93796400d4c560620ce3dfe2c695d",
+  "ruleDigest": "053beb86f07550f3cc22768cdd4c2a11ea8202384dd8c87544c8004ace20871d",
+  "run": {
+    "models": "jev-1.13.0",
+    "judgments": [
+      {
+        "arm": "baseline",
+        "sample": "timeout-1",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.82
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.24
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.37
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.27
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-2",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "breaks",
+        "probability": 0.81
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.27
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.34
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.28
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.41
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.31
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-3",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.85
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.27
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-1",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.31
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-1",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.51
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-1",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.13
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-2",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "breaks",
+        "probability": 0.35
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-2",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.44
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-2",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.13
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-3",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.32
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-3",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.45
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-3",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-1",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.08
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-1",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.21
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-1",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-2",
+        "rule": "security/no-secrets-in-output",
+        "kind": "breaks",
+        "probability": 0.08
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-2",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.19
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-2",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-3",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.08
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-3",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.19
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-3",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.13
+      },
+      {
+        "arm": "baseline",
+        "sample": "comparison-1",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.2
+      },
+      {
+        "arm": "baseline",
+        "sample": "comparison-2",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "breaks",
+        "probability": 0.23
+      },
+      {
+        "arm": "baseline",
+        "sample": "comparison-3",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.24
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-1",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.84
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.25
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.34
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.31
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-2",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "breaks",
+        "probability": 0.84
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.26
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.38
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.26
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-3",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.82
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.24
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.33
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.28
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-1",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.31
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-1",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.45
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-1",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.13
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-2",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "breaks",
+        "probability": 0.3
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-2",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.42
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-2",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.12
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-3",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.33
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-3",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.52
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-3",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.13
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-1",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.08
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-1",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.18
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-1",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-2",
+        "rule": "security/no-secrets-in-output",
+        "kind": "breaks",
+        "probability": 0.08
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-2",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.18
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-2",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.15
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-3",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.08
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-3",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.18
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-3",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.15
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "comparison-1",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.24
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "comparison-2",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "breaks",
+        "probability": 0.23
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "comparison-3",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.29
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-1",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.89
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.27
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.41
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.24
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-2",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "breaks",
+        "probability": 0.91
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.24
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.37
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.26
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-3",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.85
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.23
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.38
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.22
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-1",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.41
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-1",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.58
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-1",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.13
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-2",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "breaks",
+        "probability": 0.45
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-2",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.67
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-2",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-3",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.46
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-3",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.58
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-3",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-1",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.07
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-1",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-1",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.18
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-2",
+        "rule": "security/no-secrets-in-output",
+        "kind": "breaks",
+        "probability": 0.08
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-2",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.19
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-2",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-3",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.07
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-3",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-3",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.18
+      },
+      {
+        "arm": "symbols",
+        "sample": "comparison-1",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.21
+      },
+      {
+        "arm": "symbols",
+        "sample": "comparison-2",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "breaks",
+        "probability": 0.2
+      },
+      {
+        "arm": "symbols",
+        "sample": "comparison-3",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.18
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-1",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.05
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.13
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-2",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "breaks",
+        "probability": 0.95
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.29
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.44
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.21
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-3",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.09
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.17
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.17
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "references",
+        "sample": "validation-1",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.1
+      },
+      {
+        "arm": "references",
+        "sample": "validation-1",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "references",
+        "sample": "validation-1",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.17
+      },
+      {
+        "arm": "references",
+        "sample": "validation-2",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "breaks",
+        "probability": 0.36
+      },
+      {
+        "arm": "references",
+        "sample": "validation-2",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.3
+      },
+      {
+        "arm": "references",
+        "sample": "validation-2",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.13
+      },
+      {
+        "arm": "references",
+        "sample": "validation-3",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.12
+      },
+      {
+        "arm": "references",
+        "sample": "validation-3",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "references",
+        "sample": "validation-3",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "references",
+        "sample": "logging-1",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.31
+      },
+      {
+        "arm": "references",
+        "sample": "logging-1",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.41
+      },
+      {
+        "arm": "references",
+        "sample": "logging-1",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.17
+      },
+      {
+        "arm": "references",
+        "sample": "logging-2",
+        "rule": "security/no-secrets-in-output",
+        "kind": "breaks",
+        "probability": 0.77
+      },
+      {
+        "arm": "references",
+        "sample": "logging-2",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.66
+      },
+      {
+        "arm": "references",
+        "sample": "logging-2",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.15
+      },
+      {
+        "arm": "references",
+        "sample": "logging-3",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.19
+      },
+      {
+        "arm": "references",
+        "sample": "logging-3",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.28
+      },
+      {
+        "arm": "references",
+        "sample": "logging-3",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "references",
+        "sample": "comparison-1",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.27
+      },
+      {
+        "arm": "references",
+        "sample": "comparison-2",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "breaks",
+        "probability": 0.89
+      },
+      {
+        "arm": "references",
+        "sample": "comparison-3",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.41
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-1",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.07
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.15
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.17
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.13
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-2",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "breaks",
+        "probability": 0.96
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.24
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.41
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.21
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-3",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.1
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.18
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.18
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.17
+      },
+      {
+        "arm": "both",
+        "sample": "validation-1",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.11
+      },
+      {
+        "arm": "both",
+        "sample": "validation-1",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.17
+      },
+      {
+        "arm": "both",
+        "sample": "validation-1",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.15
+      },
+      {
+        "arm": "both",
+        "sample": "validation-2",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "breaks",
+        "probability": 0.17
+      },
+      {
+        "arm": "both",
+        "sample": "validation-2",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.25
+      },
+      {
+        "arm": "both",
+        "sample": "validation-2",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "both",
+        "sample": "validation-3",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.22
+      },
+      {
+        "arm": "both",
+        "sample": "validation-3",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.26
+      },
+      {
+        "arm": "both",
+        "sample": "validation-3",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "both",
+        "sample": "logging-1",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.27
+      },
+      {
+        "arm": "both",
+        "sample": "logging-1",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.27
+      },
+      {
+        "arm": "both",
+        "sample": "logging-1",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "both",
+        "sample": "logging-2",
+        "rule": "security/no-secrets-in-output",
+        "kind": "breaks",
+        "probability": 0.55
+      },
+      {
+        "arm": "both",
+        "sample": "logging-2",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.48
+      },
+      {
+        "arm": "both",
+        "sample": "logging-2",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.19
+      },
+      {
+        "arm": "both",
+        "sample": "logging-3",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.12
+      },
+      {
+        "arm": "both",
+        "sample": "logging-3",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.19
+      },
+      {
+        "arm": "both",
+        "sample": "logging-3",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "both",
+        "sample": "comparison-1",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.28
+      },
+      {
+        "arm": "both",
+        "sample": "comparison-2",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "breaks",
+        "probability": 0.83
+      },
+      {
+        "arm": "both",
+        "sample": "comparison-3",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.36
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-1",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.06
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.15
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-1",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.16
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-2",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "breaks",
+        "probability": 0.96
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.26
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.49
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-2",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.23
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-3",
+        "rule": "typescript/async/network-calls-have-timeouts",
+        "kind": "follows",
+        "probability": 0.1
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:0",
+        "kind": "off-target",
+        "probability": 0.18
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:1",
+        "kind": "off-target",
+        "probability": 0.18
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-3",
+        "rule": "excludeIf:typescript/async/network-calls-have-timeouts:2",
+        "kind": "off-target",
+        "probability": 0.18
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-1",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.11
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-1",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.15
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-1",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.13
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-2",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "breaks",
+        "probability": 0.15
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-2",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.22
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-2",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-3",
+        "rule": "typescript/types/validate-external-data",
+        "kind": "follows",
+        "probability": 0.2
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-3",
+        "rule": "appliesTo:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.23
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-3",
+        "rule": "excludeIf:typescript/types/validate-external-data:0",
+        "kind": "off-target",
+        "probability": 0.14
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-1",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.23
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-1",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.24
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-1",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.17
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-2",
+        "rule": "security/no-secrets-in-output",
+        "kind": "breaks",
+        "probability": 0.57
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-2",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.52
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-2",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.2
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-3",
+        "rule": "security/no-secrets-in-output",
+        "kind": "follows",
+        "probability": 0.12
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-3",
+        "rule": "appliesTo:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.19
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-3",
+        "rule": "excludeIf:security/no-secrets-in-output:0",
+        "kind": "off-target",
+        "probability": 0.17
+      },
+      {
+        "arm": "both repeat",
+        "sample": "comparison-1",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.28
+      },
+      {
+        "arm": "both repeat",
+        "sample": "comparison-2",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "breaks",
+        "probability": 0.83
+      },
+      {
+        "arm": "both repeat",
+        "sample": "comparison-3",
+        "rule": "security/constant-time-secret-compare",
+        "kind": "follows",
+        "probability": 0.34
+      }
+    ],
+    "requests": [
+      {
+        "arm": "baseline",
+        "sample": "timeout-1",
+        "questions": 4,
+        "stateBytes": 181,
+        "questionBytes": 3223,
+        "estimated": 1136,
+        "used": 1270
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-2",
+        "questions": 4,
+        "stateBytes": 181,
+        "questionBytes": 3223,
+        "estimated": 1136,
+        "used": 1270
+      },
+      {
+        "arm": "baseline",
+        "sample": "timeout-3",
+        "questions": 4,
+        "stateBytes": 181,
+        "questionBytes": 3223,
+        "estimated": 1136,
+        "used": 1270
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-1",
+        "questions": 3,
+        "stateBytes": 296,
+        "questionBytes": 3383,
+        "estimated": 1228,
+        "used": 1249
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-2",
+        "questions": 3,
+        "stateBytes": 296,
+        "questionBytes": 3383,
+        "estimated": 1228,
+        "used": 1249
+      },
+      {
+        "arm": "baseline",
+        "sample": "validation-3",
+        "questions": 3,
+        "stateBytes": 296,
+        "questionBytes": 3383,
+        "estimated": 1228,
+        "used": 1249
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-1",
+        "questions": 3,
+        "stateBytes": 94,
+        "questionBytes": 3058,
+        "estimated": 1052,
+        "used": 1136
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-2",
+        "questions": 3,
+        "stateBytes": 94,
+        "questionBytes": 3058,
+        "estimated": 1052,
+        "used": 1136
+      },
+      {
+        "arm": "baseline",
+        "sample": "logging-3",
+        "questions": 3,
+        "stateBytes": 94,
+        "questionBytes": 3058,
+        "estimated": 1052,
+        "used": 1136
+      },
+      {
+        "arm": "baseline",
+        "sample": "comparison-1",
+        "questions": 1,
+        "stateBytes": 116,
+        "questionBytes": 1223,
+        "estimated": 447,
+        "used": 632
+      },
+      {
+        "arm": "baseline",
+        "sample": "comparison-2",
+        "questions": 1,
+        "stateBytes": 116,
+        "questionBytes": 1223,
+        "estimated": 447,
+        "used": 632
+      },
+      {
+        "arm": "baseline",
+        "sample": "comparison-3",
+        "questions": 1,
+        "stateBytes": 116,
+        "questionBytes": 1223,
+        "estimated": 447,
+        "used": 632
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-1",
+        "questions": 4,
+        "stateBytes": 181,
+        "questionBytes": 3223,
+        "estimated": 1136,
+        "used": 1270
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-2",
+        "questions": 4,
+        "stateBytes": 181,
+        "questionBytes": 3223,
+        "estimated": 1136,
+        "used": 1270
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "timeout-3",
+        "questions": 4,
+        "stateBytes": 181,
+        "questionBytes": 3223,
+        "estimated": 1136,
+        "used": 1270
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-1",
+        "questions": 3,
+        "stateBytes": 296,
+        "questionBytes": 3383,
+        "estimated": 1228,
+        "used": 1249
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-2",
+        "questions": 3,
+        "stateBytes": 296,
+        "questionBytes": 3383,
+        "estimated": 1228,
+        "used": 1249
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "validation-3",
+        "questions": 3,
+        "stateBytes": 296,
+        "questionBytes": 3383,
+        "estimated": 1228,
+        "used": 1249
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-1",
+        "questions": 3,
+        "stateBytes": 94,
+        "questionBytes": 3058,
+        "estimated": 1052,
+        "used": 1136
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-2",
+        "questions": 3,
+        "stateBytes": 94,
+        "questionBytes": 3058,
+        "estimated": 1052,
+        "used": 1136
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "logging-3",
+        "questions": 3,
+        "stateBytes": 94,
+        "questionBytes": 3058,
+        "estimated": 1052,
+        "used": 1136
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "comparison-1",
+        "questions": 1,
+        "stateBytes": 116,
+        "questionBytes": 1223,
+        "estimated": 447,
+        "used": 632
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "comparison-2",
+        "questions": 1,
+        "stateBytes": 116,
+        "questionBytes": 1223,
+        "estimated": 447,
+        "used": 632
+      },
+      {
+        "arm": "baseline repeat",
+        "sample": "comparison-3",
+        "questions": 1,
+        "stateBytes": 116,
+        "questionBytes": 1223,
+        "estimated": 447,
+        "used": 632
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-1",
+        "questions": 4,
+        "stateBytes": 279,
+        "questionBytes": 3223,
+        "estimated": 1168,
+        "used": 1326
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-2",
+        "questions": 4,
+        "stateBytes": 279,
+        "questionBytes": 3223,
+        "estimated": 1168,
+        "used": 1326
+      },
+      {
+        "arm": "symbols",
+        "sample": "timeout-3",
+        "questions": 4,
+        "stateBytes": 279,
+        "questionBytes": 3223,
+        "estimated": 1168,
+        "used": 1326
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-1",
+        "questions": 3,
+        "stateBytes": 766,
+        "questionBytes": 3383,
+        "estimated": 1385,
+        "used": 1507
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-2",
+        "questions": 3,
+        "stateBytes": 766,
+        "questionBytes": 3383,
+        "estimated": 1385,
+        "used": 1507
+      },
+      {
+        "arm": "symbols",
+        "sample": "validation-3",
+        "questions": 3,
+        "stateBytes": 766,
+        "questionBytes": 3383,
+        "estimated": 1385,
+        "used": 1507
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-1",
+        "questions": 3,
+        "stateBytes": 262,
+        "questionBytes": 3058,
+        "estimated": 1108,
+        "used": 1230
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-2",
+        "questions": 3,
+        "stateBytes": 262,
+        "questionBytes": 3058,
+        "estimated": 1108,
+        "used": 1230
+      },
+      {
+        "arm": "symbols",
+        "sample": "logging-3",
+        "questions": 3,
+        "stateBytes": 262,
+        "questionBytes": 3058,
+        "estimated": 1108,
+        "used": 1230
+      },
+      {
+        "arm": "symbols",
+        "sample": "comparison-1",
+        "questions": 1,
+        "stateBytes": 369,
+        "questionBytes": 1223,
+        "estimated": 531,
+        "used": 767
+      },
+      {
+        "arm": "symbols",
+        "sample": "comparison-2",
+        "questions": 1,
+        "stateBytes": 369,
+        "questionBytes": 1223,
+        "estimated": 531,
+        "used": 767
+      },
+      {
+        "arm": "symbols",
+        "sample": "comparison-3",
+        "questions": 1,
+        "stateBytes": 369,
+        "questionBytes": 1223,
+        "estimated": 531,
+        "used": 767
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-1",
+        "questions": 4,
+        "stateBytes": 573,
+        "questionBytes": 3223,
+        "estimated": 1266,
+        "used": 1456
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-2",
+        "questions": 4,
+        "stateBytes": 537,
+        "questionBytes": 3223,
+        "estimated": 1254,
+        "used": 1442
+      },
+      {
+        "arm": "references",
+        "sample": "timeout-3",
+        "questions": 4,
+        "stateBytes": 683,
+        "questionBytes": 3223,
+        "estimated": 1303,
+        "used": 1479
+      },
+      {
+        "arm": "references",
+        "sample": "validation-1",
+        "questions": 3,
+        "stateBytes": 1581,
+        "questionBytes": 3383,
+        "estimated": 1656,
+        "used": 1870
+      },
+      {
+        "arm": "references",
+        "sample": "validation-2",
+        "questions": 3,
+        "stateBytes": 1418,
+        "questionBytes": 3383,
+        "estimated": 1602,
+        "used": 1832
+      },
+      {
+        "arm": "references",
+        "sample": "validation-3",
+        "questions": 3,
+        "stateBytes": 1706,
+        "questionBytes": 3383,
+        "estimated": 1698,
+        "used": 1899
+      },
+      {
+        "arm": "references",
+        "sample": "logging-1",
+        "questions": 3,
+        "stateBytes": 642,
+        "questionBytes": 3058,
+        "estimated": 1234,
+        "used": 1380
+      },
+      {
+        "arm": "references",
+        "sample": "logging-2",
+        "questions": 3,
+        "stateBytes": 643,
+        "questionBytes": 3058,
+        "estimated": 1235,
+        "used": 1378
+      },
+      {
+        "arm": "references",
+        "sample": "logging-3",
+        "questions": 3,
+        "stateBytes": 764,
+        "questionBytes": 3058,
+        "estimated": 1275,
+        "used": 1401
+      },
+      {
+        "arm": "references",
+        "sample": "comparison-1",
+        "questions": 1,
+        "stateBytes": 905,
+        "questionBytes": 1223,
+        "estimated": 710,
+        "used": 986
+      },
+      {
+        "arm": "references",
+        "sample": "comparison-2",
+        "questions": 1,
+        "stateBytes": 906,
+        "questionBytes": 1223,
+        "estimated": 710,
+        "used": 987
+      },
+      {
+        "arm": "references",
+        "sample": "comparison-3",
+        "questions": 1,
+        "stateBytes": 1046,
+        "questionBytes": 1223,
+        "estimated": 757,
+        "used": 1023
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-1",
+        "questions": 4,
+        "stateBytes": 671,
+        "questionBytes": 3223,
+        "estimated": 1299,
+        "used": 1512
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-2",
+        "questions": 4,
+        "stateBytes": 635,
+        "questionBytes": 3223,
+        "estimated": 1287,
+        "used": 1498
+      },
+      {
+        "arm": "both",
+        "sample": "timeout-3",
+        "questions": 4,
+        "stateBytes": 781,
+        "questionBytes": 3223,
+        "estimated": 1336,
+        "used": 1535
+      },
+      {
+        "arm": "both",
+        "sample": "validation-1",
+        "questions": 3,
+        "stateBytes": 2051,
+        "questionBytes": 3383,
+        "estimated": 1813,
+        "used": 2128
+      },
+      {
+        "arm": "both",
+        "sample": "validation-2",
+        "questions": 3,
+        "stateBytes": 1888,
+        "questionBytes": 3383,
+        "estimated": 1759,
+        "used": 2090
+      },
+      {
+        "arm": "both",
+        "sample": "validation-3",
+        "questions": 3,
+        "stateBytes": 2176,
+        "questionBytes": 3383,
+        "estimated": 1855,
+        "used": 2157
+      },
+      {
+        "arm": "both",
+        "sample": "logging-1",
+        "questions": 3,
+        "stateBytes": 810,
+        "questionBytes": 3058,
+        "estimated": 1290,
+        "used": 1474
+      },
+      {
+        "arm": "both",
+        "sample": "logging-2",
+        "questions": 3,
+        "stateBytes": 811,
+        "questionBytes": 3058,
+        "estimated": 1291,
+        "used": 1472
+      },
+      {
+        "arm": "both",
+        "sample": "logging-3",
+        "questions": 3,
+        "stateBytes": 932,
+        "questionBytes": 3058,
+        "estimated": 1331,
+        "used": 1495
+      },
+      {
+        "arm": "both",
+        "sample": "comparison-1",
+        "questions": 1,
+        "stateBytes": 1158,
+        "questionBytes": 1223,
+        "estimated": 794,
+        "used": 1121
+      },
+      {
+        "arm": "both",
+        "sample": "comparison-2",
+        "questions": 1,
+        "stateBytes": 1159,
+        "questionBytes": 1223,
+        "estimated": 795,
+        "used": 1122
+      },
+      {
+        "arm": "both",
+        "sample": "comparison-3",
+        "questions": 1,
+        "stateBytes": 1299,
+        "questionBytes": 1223,
+        "estimated": 841,
+        "used": 1158
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-1",
+        "questions": 4,
+        "stateBytes": 671,
+        "questionBytes": 3223,
+        "estimated": 1299,
+        "used": 1512
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-2",
+        "questions": 4,
+        "stateBytes": 635,
+        "questionBytes": 3223,
+        "estimated": 1287,
+        "used": 1498
+      },
+      {
+        "arm": "both repeat",
+        "sample": "timeout-3",
+        "questions": 4,
+        "stateBytes": 781,
+        "questionBytes": 3223,
+        "estimated": 1336,
+        "used": 1535
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-1",
+        "questions": 3,
+        "stateBytes": 2051,
+        "questionBytes": 3383,
+        "estimated": 1813,
+        "used": 2128
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-2",
+        "questions": 3,
+        "stateBytes": 1888,
+        "questionBytes": 3383,
+        "estimated": 1759,
+        "used": 2090
+      },
+      {
+        "arm": "both repeat",
+        "sample": "validation-3",
+        "questions": 3,
+        "stateBytes": 2176,
+        "questionBytes": 3383,
+        "estimated": 1855,
+        "used": 2157
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-1",
+        "questions": 3,
+        "stateBytes": 810,
+        "questionBytes": 3058,
+        "estimated": 1290,
+        "used": 1474
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-2",
+        "questions": 3,
+        "stateBytes": 811,
+        "questionBytes": 3058,
+        "estimated": 1291,
+        "used": 1472
+      },
+      {
+        "arm": "both repeat",
+        "sample": "logging-3",
+        "questions": 3,
+        "stateBytes": 932,
+        "questionBytes": 3058,
+        "estimated": 1331,
+        "used": 1495
+      },
+      {
+        "arm": "both repeat",
+        "sample": "comparison-1",
+        "questions": 1,
+        "stateBytes": 1158,
+        "questionBytes": 1223,
+        "estimated": 794,
+        "used": 1121
+      },
+      {
+        "arm": "both repeat",
+        "sample": "comparison-2",
+        "questions": 1,
+        "stateBytes": 1159,
+        "questionBytes": 1223,
+        "estimated": 795,
+        "used": 1122
+      },
+      {
+        "arm": "both repeat",
+        "sample": "comparison-3",
+        "questions": 1,
+        "stateBytes": 1299,
+        "questionBytes": 1223,
+        "estimated": 841,
+        "used": 1158
+      }
+    ]
+  }
+}

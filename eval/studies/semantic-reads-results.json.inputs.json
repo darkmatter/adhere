@@ -1,0 +1,1288 @@
+{
+  "model": "jev-1.13.0",
+  "caseDigest": "892dd0005d6f057e115d465ed6e6d8799fe93796400d4c560620ce3dfe2c695d",
+  "ruleDigest": "053beb86f07550f3cc22768cdd4c2a11ea8202384dd8c87544c8004ace20871d",
+  "cases": [
+    {
+      "name": "timeout-1",
+      "family": "timeout",
+      "rule": "typescript/async/network-calls-have-timeouts",
+      "variant": "checked",
+      "label": "false",
+      "note": "The judged request receives a finite AbortSignal timeout from settings().",
+      "files": {
+        "subject.ts": "import { settings } from \"./neighbor\";\nexport async function loadRemote() {\n  return await fetch(\"https://billing.example.invalid/invoices\", settings());\n}\n",
+        "neighbor.ts": "export function settings(): RequestInit {\n  return { signal: AbortSignal.timeout(5_000) };\n}\n"
+      }
+    },
+    {
+      "name": "timeout-2",
+      "family": "timeout",
+      "rule": "typescript/async/network-calls-have-timeouts",
+      "variant": "unchecked",
+      "label": "real",
+      "note": "settings() supplies no timeout or signal for the judged third-party request.",
+      "files": {
+        "subject.ts": "import { settings } from \"./neighbor\";\nexport async function loadRemote() {\n  return await fetch(\"https://billing.example.invalid/invoices\", settings());\n}\n",
+        "neighbor.ts": "export function settings(): RequestInit {\n  return {};\n}\n"
+      }
+    },
+    {
+      "name": "timeout-3",
+      "family": "timeout",
+      "rule": "typescript/async/network-calls-have-timeouts",
+      "variant": "control",
+      "label": "false",
+      "note": "The judged request remains bounded; an unrelated request in the helper file is not its violation.",
+      "files": {
+        "subject.ts": "import { settings } from \"./neighbor\";\nexport async function loadRemote() {\n  return await fetch(\"https://billing.example.invalid/invoices\", settings());\n}\n",
+        "neighbor.ts": "export function settings(): RequestInit {\n  return { signal: AbortSignal.timeout(5_000) };\n}\nexport async function loadCatalog() {\n  return await fetch(\"https://billing.example.invalid/catalog\");\n}\n"
+      }
+    },
+    {
+      "name": "validation-1",
+      "family": "validation",
+      "rule": "typescript/types/validate-external-data",
+      "variant": "checked",
+      "label": "false",
+      "note": "The guard checks both fields before the target assigns external data a declared type.",
+      "files": {
+        "subject.ts": "import { inspect } from \"./neighbor\";\nexport async function readRecord(request: Request) {\n  const raw: unknown = await request.json();\n  if (!inspect(raw)) throw new TypeError(\"Invalid record\");\n  const record: { id: string; email: string } = raw;\n  return record;\n}\n",
+        "neighbor.ts": "export function inspect(value: unknown): value is { id: string; email: string } {\n  return typeof value === \"object\" && value !== null &&\n    \"id\" in value && typeof value.id === \"string\" &&\n    \"email\" in value && typeof value.email === \"string\";\n}\n"
+      }
+    },
+    {
+      "name": "validation-2",
+      "family": "validation",
+      "rule": "typescript/types/validate-external-data",
+      "variant": "unchecked",
+      "label": "real",
+      "note": "The predicate claims a type but performs no runtime validation; the target trusts unvalidated JSON.",
+      "files": {
+        "subject.ts": "import { inspect } from \"./neighbor\";\nexport async function readRecord(request: Request) {\n  const raw: unknown = await request.json();\n  if (!inspect(raw)) throw new TypeError(\"Invalid record\");\n  const record: { id: string; email: string } = raw;\n  return record;\n}\n",
+        "neighbor.ts": "export function inspect(value: unknown): value is { id: string; email: string } {\n  return true;\n}\n"
+      }
+    },
+    {
+      "name": "validation-3",
+      "family": "validation",
+      "rule": "typescript/types/validate-external-data",
+      "variant": "control",
+      "label": "false",
+      "note": "The target still uses the complete guard; another function's unchecked cast is not a target violation.",
+      "files": {
+        "subject.ts": "import { inspect } from \"./neighbor\";\nexport async function readRecord(request: Request) {\n  const raw: unknown = await request.json();\n  if (!inspect(raw)) throw new TypeError(\"Invalid record\");\n  const record: { id: string; email: string } = raw;\n  return record;\n}\n",
+        "neighbor.ts": "export function inspect(value: unknown): value is { id: string; email: string } {\n  return typeof value === \"object\" && value !== null &&\n    \"id\" in value && typeof value.id === \"string\" &&\n    \"email\" in value && typeof value.email === \"string\";\n}\nexport async function readSummary(request: Request) {\n  return (await request.json()) as { id: string; email: string };\n}\n"
+      }
+    },
+    {
+      "name": "logging-1",
+      "family": "logging",
+      "rule": "security/no-secrets-in-output",
+      "variant": "checked",
+      "label": "false",
+      "note": "The sole caller passes a public request correlation identifier, not a credential.",
+      "files": {
+        "subject.ts": "export function emit(value: string) {\n  console.info(\"value\", value);\n}\n",
+        "neighbor.ts": "import { emit } from \"./subject\";\nexport function handle(request: Request) {\n  const selected = request.headers.get(\"x-request-id\") ?? \"\";\n  emit(selected);\n}\n"
+      }
+    },
+    {
+      "name": "logging-2",
+      "family": "logging",
+      "rule": "security/no-secrets-in-output",
+      "variant": "unchecked",
+      "label": "real",
+      "note": "The sole caller passes an Authorization credential, which the target logs verbatim.",
+      "files": {
+        "subject.ts": "export function emit(value: string) {\n  console.info(\"value\", value);\n}\n",
+        "neighbor.ts": "import { emit } from \"./subject\";\nexport function handle(request: Request) {\n  const selected = request.headers.get(\"authorization\") ?? \"\";\n  emit(selected);\n}\n"
+      }
+    },
+    {
+      "name": "logging-3",
+      "family": "logging",
+      "rule": "security/no-secrets-in-output",
+      "variant": "control",
+      "label": "false",
+      "note": "The target logs only a public request ID; the separate credential log belongs to another function.",
+      "files": {
+        "subject.ts": "export function emit(value: string) {\n  console.info(\"value\", value);\n}\n",
+        "neighbor.ts": "import { emit } from \"./subject\";\nexport function handle(request: Request) {\n  const selected = request.headers.get(\"x-request-id\") ?? \"\";\n  emit(selected);\n}\nexport function audit(request: Request) {\n  console.info(\"authorization\", request.headers.get(\"authorization\"));\n}\n"
+      }
+    },
+    {
+      "name": "comparison-1",
+      "family": "comparison",
+      "rule": "security/constant-time-secret-compare",
+      "variant": "checked",
+      "label": "false",
+      "note": "The sole caller compares a public routing region with the configured region.",
+      "files": {
+        "subject.ts": "export function matches(received: string, expected: string) {\n  return received === expected;\n}\n",
+        "neighbor.ts": "import { matches } from \"./subject\";\nexport function handle(request: Request, configured: string) {\n  const received = request.headers.get(\"x-region\") ?? \"\";\n  return matches(received, configured);\n}\n"
+      }
+    },
+    {
+      "name": "comparison-2",
+      "family": "comparison",
+      "rule": "security/constant-time-secret-compare",
+      "variant": "unchecked",
+      "label": "real",
+      "note": "The sole caller checks a received API key against the configured credential using target ordinary equality.",
+      "files": {
+        "subject.ts": "export function matches(received: string, expected: string) {\n  return received === expected;\n}\n",
+        "neighbor.ts": "import { matches } from \"./subject\";\nexport function handle(request: Request, configured: string) {\n  const received = request.headers.get(\"x-api-key\") ?? \"\";\n  return matches(received, configured);\n}\n"
+      }
+    },
+    {
+      "name": "comparison-3",
+      "family": "comparison",
+      "rule": "security/constant-time-secret-compare",
+      "variant": "control",
+      "label": "false",
+      "note": "The target still compares public routing codes; the separate API-key equality is outside it.",
+      "files": {
+        "subject.ts": "export function matches(received: string, expected: string) {\n  return received === expected;\n}\n",
+        "neighbor.ts": "import { matches } from \"./subject\";\nexport function handle(request: Request, configured: string) {\n  const received = request.headers.get(\"x-region\") ?? \"\";\n  return matches(received, configured);\n}\nexport function checkAccess(request: Request, expectedApiKey: string) {\n  return request.headers.get(\"x-api-key\") === expectedApiKey;\n}\n"
+      }
+    }
+  ],
+  "rules": {
+    "typescript/async/network-calls-have-timeouts": {
+      "description": "An HTTP request, such as a `fetch` or a call through an HTTP client, should carry a timeout or an AbortSignal that ends it, and should not wait without limit.",
+      "level": "warning",
+      "excludeIf": [
+        "a call through a client configured with a default timeout",
+        "a call whose signal the caller passes in",
+        "a request from browser code to the app's own API"
+      ],
+      "should": "const response = await fetch(`${BILLING_URL}/invoices/${id}`, {\n  signal: AbortSignal.timeout(5_000),\n});",
+      "shouldNot": "const response = await fetch(`${BILLING_URL}/invoices/${id}`);"
+    },
+    "typescript/types/validate-external-data": {
+      "description": "Data from outside the program, such as a parsed request body, a fetch response, a file's contents, a message, or an environment variable, must be checked at runtime before code gives it a type, never cast with `as` or assigned from `any` to a declared type. A schema's parse or decode, such as Zod's or Effect Schema's, or a type guard that checks each field it claims, is a runtime check.",
+      "appliesTo": [
+        "code that reads data from outside the program"
+      ],
+      "excludeIf": [
+        "a value read through a typed client of the program's own database"
+      ],
+      "must": "const User = z.object({ id: z.string(), email: z.string().email() });\n\nconst response = await fetch(`/api/users/${id}`);\nconst user = User.parse(await response.json());",
+      "never": "const response = await fetch(`/api/users/${id}`);\nconst user = (await response.json()) as User;"
+    },
+    "security/no-secrets-in-output": {
+      "description": "A secret, such as a password, an API key, a token, a private key, a session id, or a connection string with credentials, must never be written to a log, put in an error message, or returned in an HTTP response; code must refer to a secret only by its name, its presence, or a non-secret id.",
+      "appliesTo": [
+        "code that writes a log, builds an error message, or builds an HTTP response"
+      ],
+      "excludeIf": [
+        "a masked secret that shows at most a few of its characters"
+      ],
+      "must": "logger.info(\"calling billing\", { keyId: apiKey.id });\nthrow new Error(`Could not connect to the database at ${dbHost}`);",
+      "never": "logger.info(`calling billing with key ${apiKey.secret}`);\nthrow new Error(`Could not connect to ${process.env.DATABASE_URL}`);"
+    },
+    "security/constant-time-secret-compare": {
+      "description": "Code that checks a secret it received, such as a token, an API key, or an HMAC signature, must compare it in constant time, as `crypto.timingSafeEqual` or a library's verify function does, never with `===`, `!==`, or a string method.",
+      "must": "const expected = createHmac(\"sha256\", WEBHOOK_SECRET).update(body).digest();\nconst received = Buffer.from(request.headers.get(\"x-signature\") ?? \"\", \"hex\");\nif (received.length !== expected.length || !timingSafeEqual(received, expected)) {\n  return new Response(\"Invalid signature\", { status: 401 });\n}",
+      "never": "const expected = createHmac(\"sha256\", WEBHOOK_SECRET).update(body).digest(\"hex\");\nif (request.headers.get(\"x-signature\") !== expected) {\n  return new Response(\"Invalid signature\", { status: 401 });\n}"
+    }
+  },
+  "contexts": {
+    "timeout-1": {
+      "symbols": {
+        "1": [
+          {
+            "name": "loadRemote",
+            "kind": "function",
+            "line": 2,
+            "column": 23,
+            "referenceCount": 0
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [],
+            "outgoing": [
+              {
+                "symbol": "settings",
+                "at": {
+                  "line": 1,
+                  "column": 10
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              },
+              {
+                "symbol": "settings",
+                "at": {
+                  "line": 3,
+                  "column": 66
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "export function settings(): RequestInit {\n  return { signal: AbortSignal.timeout(5_000) };\n}\n"
+        }
+      }
+    },
+    "timeout-2": {
+      "symbols": {
+        "1": [
+          {
+            "name": "loadRemote",
+            "kind": "function",
+            "line": 2,
+            "column": 23,
+            "referenceCount": 0
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [],
+            "outgoing": [
+              {
+                "symbol": "settings",
+                "at": {
+                  "line": 1,
+                  "column": 10
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              },
+              {
+                "symbol": "settings",
+                "at": {
+                  "line": 3,
+                  "column": 66
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "export function settings(): RequestInit {\n  return {};\n}\n"
+        }
+      }
+    },
+    "timeout-3": {
+      "symbols": {
+        "1": [
+          {
+            "name": "loadRemote",
+            "kind": "function",
+            "line": 2,
+            "column": 23,
+            "referenceCount": 0
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [],
+            "outgoing": [
+              {
+                "symbol": "settings",
+                "at": {
+                  "line": 1,
+                  "column": 10
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              },
+              {
+                "symbol": "settings",
+                "at": {
+                  "line": 3,
+                  "column": 66
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "export function settings(): RequestInit {\n  return { signal: AbortSignal.timeout(5_000) };\n}\nexport async function loadCatalog() {\n  return await fetch(\"https://billing.example.invalid/catalog\");\n}\n"
+        }
+      }
+    },
+    "validation-1": {
+      "symbols": {
+        "1": [
+          {
+            "name": "readRecord",
+            "kind": "function",
+            "line": 2,
+            "column": 23,
+            "referenceCount": 0
+          },
+          {
+            "name": "request",
+            "kind": "parameter",
+            "line": 2,
+            "column": 34,
+            "referenceCount": 1
+          },
+          {
+            "name": "raw",
+            "kind": "variable",
+            "line": 3,
+            "column": 9,
+            "referenceCount": 2
+          },
+          {
+            "name": "record",
+            "kind": "variable",
+            "line": 5,
+            "column": 9,
+            "referenceCount": 1
+          },
+          {
+            "name": "id",
+            "kind": "property",
+            "line": 5,
+            "column": 19,
+            "referenceCount": 0
+          },
+          {
+            "name": "email",
+            "kind": "property",
+            "line": 5,
+            "column": 31,
+            "referenceCount": 0
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [
+              {
+                "symbol": "request",
+                "at": {
+                  "line": 2,
+                  "column": 34
+                },
+                "pathname": "subject.ts",
+                "line": 3,
+                "column": 30
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 3,
+                  "column": 9
+                },
+                "pathname": "subject.ts",
+                "line": 4,
+                "column": 16
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 3,
+                  "column": 9
+                },
+                "pathname": "subject.ts",
+                "line": 5,
+                "column": 49
+              },
+              {
+                "symbol": "record",
+                "at": {
+                  "line": 5,
+                  "column": 9
+                },
+                "pathname": "subject.ts",
+                "line": 6,
+                "column": 10
+              }
+            ],
+            "outgoing": [
+              {
+                "symbol": "inspect",
+                "at": {
+                  "line": 1,
+                  "column": 10
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              },
+              {
+                "symbol": "request",
+                "at": {
+                  "line": 3,
+                  "column": 30
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 34
+              },
+              {
+                "symbol": "inspect",
+                "at": {
+                  "line": 4,
+                  "column": 8
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 4,
+                  "column": 16
+                },
+                "pathname": "subject.ts",
+                "line": 3,
+                "column": 9
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 5,
+                  "column": 49
+                },
+                "pathname": "subject.ts",
+                "line": 3,
+                "column": 9
+              },
+              {
+                "symbol": "record",
+                "at": {
+                  "line": 6,
+                  "column": 10
+                },
+                "pathname": "subject.ts",
+                "line": 5,
+                "column": 9
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "export function inspect(value: unknown): value is { id: string; email: string } {\n  return typeof value === \"object\" && value !== null &&\n    \"id\" in value && typeof value.id === \"string\" &&\n    \"email\" in value && typeof value.email === \"string\";\n}\n"
+        }
+      }
+    },
+    "validation-2": {
+      "symbols": {
+        "1": [
+          {
+            "name": "readRecord",
+            "kind": "function",
+            "line": 2,
+            "column": 23,
+            "referenceCount": 0
+          },
+          {
+            "name": "request",
+            "kind": "parameter",
+            "line": 2,
+            "column": 34,
+            "referenceCount": 1
+          },
+          {
+            "name": "raw",
+            "kind": "variable",
+            "line": 3,
+            "column": 9,
+            "referenceCount": 2
+          },
+          {
+            "name": "record",
+            "kind": "variable",
+            "line": 5,
+            "column": 9,
+            "referenceCount": 1
+          },
+          {
+            "name": "id",
+            "kind": "property",
+            "line": 5,
+            "column": 19,
+            "referenceCount": 0
+          },
+          {
+            "name": "email",
+            "kind": "property",
+            "line": 5,
+            "column": 31,
+            "referenceCount": 0
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [
+              {
+                "symbol": "request",
+                "at": {
+                  "line": 2,
+                  "column": 34
+                },
+                "pathname": "subject.ts",
+                "line": 3,
+                "column": 30
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 3,
+                  "column": 9
+                },
+                "pathname": "subject.ts",
+                "line": 4,
+                "column": 16
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 3,
+                  "column": 9
+                },
+                "pathname": "subject.ts",
+                "line": 5,
+                "column": 49
+              },
+              {
+                "symbol": "record",
+                "at": {
+                  "line": 5,
+                  "column": 9
+                },
+                "pathname": "subject.ts",
+                "line": 6,
+                "column": 10
+              }
+            ],
+            "outgoing": [
+              {
+                "symbol": "inspect",
+                "at": {
+                  "line": 1,
+                  "column": 10
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              },
+              {
+                "symbol": "request",
+                "at": {
+                  "line": 3,
+                  "column": 30
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 34
+              },
+              {
+                "symbol": "inspect",
+                "at": {
+                  "line": 4,
+                  "column": 8
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 4,
+                  "column": 16
+                },
+                "pathname": "subject.ts",
+                "line": 3,
+                "column": 9
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 5,
+                  "column": 49
+                },
+                "pathname": "subject.ts",
+                "line": 3,
+                "column": 9
+              },
+              {
+                "symbol": "record",
+                "at": {
+                  "line": 6,
+                  "column": 10
+                },
+                "pathname": "subject.ts",
+                "line": 5,
+                "column": 9
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "export function inspect(value: unknown): value is { id: string; email: string } {\n  return true;\n}\n"
+        }
+      }
+    },
+    "validation-3": {
+      "symbols": {
+        "1": [
+          {
+            "name": "readRecord",
+            "kind": "function",
+            "line": 2,
+            "column": 23,
+            "referenceCount": 0
+          },
+          {
+            "name": "request",
+            "kind": "parameter",
+            "line": 2,
+            "column": 34,
+            "referenceCount": 1
+          },
+          {
+            "name": "raw",
+            "kind": "variable",
+            "line": 3,
+            "column": 9,
+            "referenceCount": 2
+          },
+          {
+            "name": "record",
+            "kind": "variable",
+            "line": 5,
+            "column": 9,
+            "referenceCount": 1
+          },
+          {
+            "name": "id",
+            "kind": "property",
+            "line": 5,
+            "column": 19,
+            "referenceCount": 0
+          },
+          {
+            "name": "email",
+            "kind": "property",
+            "line": 5,
+            "column": 31,
+            "referenceCount": 0
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [
+              {
+                "symbol": "request",
+                "at": {
+                  "line": 2,
+                  "column": 34
+                },
+                "pathname": "subject.ts",
+                "line": 3,
+                "column": 30
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 3,
+                  "column": 9
+                },
+                "pathname": "subject.ts",
+                "line": 4,
+                "column": 16
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 3,
+                  "column": 9
+                },
+                "pathname": "subject.ts",
+                "line": 5,
+                "column": 49
+              },
+              {
+                "symbol": "record",
+                "at": {
+                  "line": 5,
+                  "column": 9
+                },
+                "pathname": "subject.ts",
+                "line": 6,
+                "column": 10
+              }
+            ],
+            "outgoing": [
+              {
+                "symbol": "inspect",
+                "at": {
+                  "line": 1,
+                  "column": 10
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              },
+              {
+                "symbol": "request",
+                "at": {
+                  "line": 3,
+                  "column": 30
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 34
+              },
+              {
+                "symbol": "inspect",
+                "at": {
+                  "line": 4,
+                  "column": 8
+                },
+                "pathname": "neighbor.ts",
+                "line": 1,
+                "column": 17
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 4,
+                  "column": 16
+                },
+                "pathname": "subject.ts",
+                "line": 3,
+                "column": 9
+              },
+              {
+                "symbol": "raw",
+                "at": {
+                  "line": 5,
+                  "column": 49
+                },
+                "pathname": "subject.ts",
+                "line": 3,
+                "column": 9
+              },
+              {
+                "symbol": "record",
+                "at": {
+                  "line": 6,
+                  "column": 10
+                },
+                "pathname": "subject.ts",
+                "line": 5,
+                "column": 9
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "export function inspect(value: unknown): value is { id: string; email: string } {\n  return typeof value === \"object\" && value !== null &&\n    \"id\" in value && typeof value.id === \"string\" &&\n    \"email\" in value && typeof value.email === \"string\";\n}\nexport async function readSummary(request: Request) {\n  return (await request.json()) as { id: string; email: string };\n}\n"
+        }
+      }
+    },
+    "logging-1": {
+      "symbols": {
+        "1": [
+          {
+            "name": "emit",
+            "kind": "function",
+            "line": 1,
+            "column": 17,
+            "referenceCount": 1
+          },
+          {
+            "name": "value",
+            "kind": "parameter",
+            "line": 1,
+            "column": 22,
+            "referenceCount": 1
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [
+              {
+                "symbol": "emit",
+                "at": {
+                  "line": 1,
+                  "column": 17
+                },
+                "pathname": "neighbor.ts",
+                "line": 4,
+                "column": 3
+              },
+              {
+                "symbol": "value",
+                "at": {
+                  "line": 1,
+                  "column": 22
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 25
+              }
+            ],
+            "outgoing": [
+              {
+                "symbol": "value",
+                "at": {
+                  "line": 2,
+                  "column": 25
+                },
+                "pathname": "subject.ts",
+                "line": 1,
+                "column": 22
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "import { emit } from \"./subject\";\nexport function handle(request: Request) {\n  const selected = request.headers.get(\"x-request-id\") ?? \"\";\n  emit(selected);\n}\n"
+        }
+      }
+    },
+    "logging-2": {
+      "symbols": {
+        "1": [
+          {
+            "name": "emit",
+            "kind": "function",
+            "line": 1,
+            "column": 17,
+            "referenceCount": 1
+          },
+          {
+            "name": "value",
+            "kind": "parameter",
+            "line": 1,
+            "column": 22,
+            "referenceCount": 1
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [
+              {
+                "symbol": "emit",
+                "at": {
+                  "line": 1,
+                  "column": 17
+                },
+                "pathname": "neighbor.ts",
+                "line": 4,
+                "column": 3
+              },
+              {
+                "symbol": "value",
+                "at": {
+                  "line": 1,
+                  "column": 22
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 25
+              }
+            ],
+            "outgoing": [
+              {
+                "symbol": "value",
+                "at": {
+                  "line": 2,
+                  "column": 25
+                },
+                "pathname": "subject.ts",
+                "line": 1,
+                "column": 22
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "import { emit } from \"./subject\";\nexport function handle(request: Request) {\n  const selected = request.headers.get(\"authorization\") ?? \"\";\n  emit(selected);\n}\n"
+        }
+      }
+    },
+    "logging-3": {
+      "symbols": {
+        "1": [
+          {
+            "name": "emit",
+            "kind": "function",
+            "line": 1,
+            "column": 17,
+            "referenceCount": 1
+          },
+          {
+            "name": "value",
+            "kind": "parameter",
+            "line": 1,
+            "column": 22,
+            "referenceCount": 1
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [
+              {
+                "symbol": "emit",
+                "at": {
+                  "line": 1,
+                  "column": 17
+                },
+                "pathname": "neighbor.ts",
+                "line": 4,
+                "column": 3
+              },
+              {
+                "symbol": "value",
+                "at": {
+                  "line": 1,
+                  "column": 22
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 25
+              }
+            ],
+            "outgoing": [
+              {
+                "symbol": "value",
+                "at": {
+                  "line": 2,
+                  "column": 25
+                },
+                "pathname": "subject.ts",
+                "line": 1,
+                "column": 22
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "import { emit } from \"./subject\";\nexport function handle(request: Request) {\n  const selected = request.headers.get(\"x-request-id\") ?? \"\";\n  emit(selected);\n}\nexport function audit(request: Request) {\n  console.info(\"authorization\", request.headers.get(\"authorization\"));\n}\n"
+        }
+      }
+    },
+    "comparison-1": {
+      "symbols": {
+        "1": [
+          {
+            "name": "matches",
+            "kind": "function",
+            "line": 1,
+            "column": 17,
+            "referenceCount": 1
+          },
+          {
+            "name": "received",
+            "kind": "parameter",
+            "line": 1,
+            "column": 25,
+            "referenceCount": 1
+          },
+          {
+            "name": "expected",
+            "kind": "parameter",
+            "line": 1,
+            "column": 43,
+            "referenceCount": 1
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [
+              {
+                "symbol": "matches",
+                "at": {
+                  "line": 1,
+                  "column": 17
+                },
+                "pathname": "neighbor.ts",
+                "line": 4,
+                "column": 10
+              },
+              {
+                "symbol": "received",
+                "at": {
+                  "line": 1,
+                  "column": 25
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 10
+              },
+              {
+                "symbol": "expected",
+                "at": {
+                  "line": 1,
+                  "column": 43
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 23
+              }
+            ],
+            "outgoing": [
+              {
+                "symbol": "received",
+                "at": {
+                  "line": 2,
+                  "column": 10
+                },
+                "pathname": "subject.ts",
+                "line": 1,
+                "column": 25
+              },
+              {
+                "symbol": "expected",
+                "at": {
+                  "line": 2,
+                  "column": 23
+                },
+                "pathname": "subject.ts",
+                "line": 1,
+                "column": 43
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "import { matches } from \"./subject\";\nexport function handle(request: Request, configured: string) {\n  const received = request.headers.get(\"x-region\") ?? \"\";\n  return matches(received, configured);\n}\n"
+        }
+      }
+    },
+    "comparison-2": {
+      "symbols": {
+        "1": [
+          {
+            "name": "matches",
+            "kind": "function",
+            "line": 1,
+            "column": 17,
+            "referenceCount": 1
+          },
+          {
+            "name": "received",
+            "kind": "parameter",
+            "line": 1,
+            "column": 25,
+            "referenceCount": 1
+          },
+          {
+            "name": "expected",
+            "kind": "parameter",
+            "line": 1,
+            "column": 43,
+            "referenceCount": 1
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [
+              {
+                "symbol": "matches",
+                "at": {
+                  "line": 1,
+                  "column": 17
+                },
+                "pathname": "neighbor.ts",
+                "line": 4,
+                "column": 10
+              },
+              {
+                "symbol": "received",
+                "at": {
+                  "line": 1,
+                  "column": 25
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 10
+              },
+              {
+                "symbol": "expected",
+                "at": {
+                  "line": 1,
+                  "column": 43
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 23
+              }
+            ],
+            "outgoing": [
+              {
+                "symbol": "received",
+                "at": {
+                  "line": 2,
+                  "column": 10
+                },
+                "pathname": "subject.ts",
+                "line": 1,
+                "column": 25
+              },
+              {
+                "symbol": "expected",
+                "at": {
+                  "line": 2,
+                  "column": 23
+                },
+                "pathname": "subject.ts",
+                "line": 1,
+                "column": 43
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "import { matches } from \"./subject\";\nexport function handle(request: Request, configured: string) {\n  const received = request.headers.get(\"x-api-key\") ?? \"\";\n  return matches(received, configured);\n}\n"
+        }
+      }
+    },
+    "comparison-3": {
+      "symbols": {
+        "1": [
+          {
+            "name": "matches",
+            "kind": "function",
+            "line": 1,
+            "column": 17,
+            "referenceCount": 1
+          },
+          {
+            "name": "received",
+            "kind": "parameter",
+            "line": 1,
+            "column": 25,
+            "referenceCount": 1
+          },
+          {
+            "name": "expected",
+            "kind": "parameter",
+            "line": 1,
+            "column": 43,
+            "referenceCount": 1
+          }
+        ]
+      },
+      "references": {
+        "sections": {
+          "1": {
+            "incoming": [
+              {
+                "symbol": "matches",
+                "at": {
+                  "line": 1,
+                  "column": 17
+                },
+                "pathname": "neighbor.ts",
+                "line": 4,
+                "column": 10
+              },
+              {
+                "symbol": "received",
+                "at": {
+                  "line": 1,
+                  "column": 25
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 10
+              },
+              {
+                "symbol": "expected",
+                "at": {
+                  "line": 1,
+                  "column": 43
+                },
+                "pathname": "subject.ts",
+                "line": 2,
+                "column": 23
+              }
+            ],
+            "outgoing": [
+              {
+                "symbol": "received",
+                "at": {
+                  "line": 2,
+                  "column": 10
+                },
+                "pathname": "subject.ts",
+                "line": 1,
+                "column": 25
+              },
+              {
+                "symbol": "expected",
+                "at": {
+                  "line": 2,
+                  "column": 23
+                },
+                "pathname": "subject.ts",
+                "line": 1,
+                "column": 43
+              }
+            ],
+            "unresolved": []
+          }
+        },
+        "files": {
+          "neighbor.ts": "import { matches } from \"./subject\";\nexport function handle(request: Request, configured: string) {\n  const received = request.headers.get(\"x-region\") ?? \"\";\n  return matches(received, configured);\n}\nexport function checkAccess(request: Request, expectedApiKey: string) {\n  return request.headers.get(\"x-api-key\") === expectedApiKey;\n}\n"
+        }
+      }
+    }
+  },
+  "questionHashes": {
+    "typescript/async/network-calls-have-timeouts": "105166e03cc23a3d41b3615d015df982d7a475cbbc66210597c7168f8ac424f4",
+    "typescript/types/validate-external-data": "3f18b93ed412af63abfea88661b7bd472b3d6c830a4755cecd60d7814463f289",
+    "security/no-secrets-in-output": "9a8fa8e40a772c3f5b8fd35070ab2aa09917d2aea6caf351f8c1e338c84dd18d",
+    "security/constant-time-secret-compare": "0c0b056ff2fcdaf31f7ef2222125066c504648652fa4b43c566dc74af0225885"
+  }
+}
