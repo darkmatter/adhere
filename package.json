@@ -41,7 +41,7 @@
     "effect": "4.0.0-rc.118"
   },
   "devDependencies": {
-    "@effect/platform-bun": "4.0.0-rc.118",
+    "@effect/platform-bun": "4.0.3",
     "@types/bun": "^1.4.2",
     "@types/node": "^24.13.6",
     "release-it": "^21.1.0",
