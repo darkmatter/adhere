@@ -7,6 +7,7 @@ import {
   type Rules,
 } from "#config.ts";
 import { type Range, sectionsOf } from "#excerpt.ts";
+import type { SystemOneRequest } from "#providers/systemOne.ts";
 import { Context, type Effect, Record, Schema } from "effect";
 
 export type { Rules };
@@ -454,20 +455,17 @@ export const fits = (lines: Lines, rules: Rules): boolean => {
   return tokensOf(stateOf(lines)) + longest <= QUESTION_CONTEXT - WRAPPER;
 };
 
-export interface Body {
-  readonly model: string;
-  readonly state: unknown;
-  readonly questions: Readonly<Record<string, unknown>>;
-}
+/** A request to Jev, its questions typed as `Q`: `Question`, as adhere asks them, or anything an eval arm asks. */
+export type Body<Q = unknown> = SystemOneRequest<Q>;
 
 /**
  * A body as requests Jev can take: its questions in order, with a new
  * request whenever the next question would not fit beside the state and
  * the questions before it.
  */
-export const requestsOf = (body: Body): ReadonlyArray<Body> => {
+export const requestsOf = <Q>(body: Body<Q>): ReadonlyArray<Body<Q>> => {
   const room = REQUEST_CONTEXT - WRAPPER - tokensOf(body.state);
-  const requests: Array<{ readonly questions: Record<string, unknown>; tokens: number }> = [];
+  const requests: Array<{ readonly questions: Record<string, Q>; tokens: number }> = [];
   for (const [id, question] of Object.entries(body.questions)) {
     const tokens = tokensOf(question);
     const last = requests.at(-1);
@@ -596,17 +594,15 @@ export const contradictBody = (model: string, rules: ReadonlyArray<ComparedRule>
  * it was one the question offered. "none", or a stray answer, names no pair.
  */
 export const namedPairs = (
-  answers: Readonly<Record<string, { readonly choice: string }>>,
+  answers: Readonly<Record<string, string>>,
   partners: ReadonlyArray<ReadonlyArray<number>>,
 ): ReadonlyArray<Pair> =>
-  Object.entries(answers).flatMap(([key, { choice }]): ReadonlyArray<Pair> => {
+  Object.entries(answers).flatMap(([key, choice]): ReadonlyArray<Pair> => {
     const rule = Number(key.split(":")[0]);
     const partner = Number(choice);
     return partners[rule]?.includes(partner) === true ? [[rule, partner]] : [];
   });
 
 /** The probability a contradiction answer gives its pair; 0 when it gives none. */
-export const pairProbability = (
-  answers: Readonly<Record<string, { readonly noul: number }>>,
-  pair: Pair,
-): number => answers[pairKey(pair)]?.noul ?? 0;
+export const pairProbability = (answers: Readonly<Record<string, number>>, pair: Pair): number =>
+  answers[pairKey(pair)] ?? 0;

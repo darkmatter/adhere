@@ -1,6 +1,11 @@
 import { AdhereConfig, AdhereConfigLive } from "#services/AdhereConfig.ts";
 import { AuditCacheLive } from "#services/AuditCache.ts";
-import { Credentials, CredentialsLive, CredentialsUnavailable } from "#services/Credentials.ts";
+import {
+  Credentials,
+  CredentialsLive,
+  CredentialsUnavailable,
+  KEYS,
+} from "#services/Credentials.ts";
 import { JevLive } from "#services/Jev.http.ts";
 import { SourceWalkerLive } from "#services/SourceWalker.ts";
 import { Status } from "#services/Status.ts";
@@ -26,6 +31,7 @@ import { type Install, initProject } from "#init.ts";
 import { installRules, listRules, parseSource } from "#install.ts";
 import { formatLinterCheck, tallyProjectRules } from "#mechanical.ts";
 import { type PresetName, presetNames } from "#presets.ts";
+import type { SavedKey } from "#providers/provider.ts";
 import { globalRuleSet } from "#rules.ts";
 import { formatStrays, straysAmong } from "#wording.ts";
 import {
@@ -44,7 +50,6 @@ import {
   Stream,
 } from "effect";
 import { Argument, Command, Flag, Prompt } from "effect/cli";
-import { FetchHttpClient } from "effect/http";
 // A Bun text import (https://bun.sh/docs/bundler/loaders#text): the file's
 // contents become a string at bundle time, so the compiled binary carries the
 // skill without an --asset flag. `skills/` sits beside `src/`, outside the `#`
@@ -222,7 +227,7 @@ export const auditLayer = (flags: Flags, filter: ReadonlyArray<string> = []) =>
   Layer.mergeAll(
     SourceWalkerLive(filter),
     AuditCacheLive,
-    JevLive.pipe(Layer.provide([FetchHttpClient.layer, CredentialsLive])),
+    JevLive.pipe(Layer.provide(CredentialsLive)),
   ).pipe(Layer.provideMerge(AdhereConfigLive(flags)), Layer.provideMerge(statusLayer));
 
 /** `adhere lint`: the audit. */
@@ -263,6 +268,7 @@ export const lintCommand = Command.make(
           root: path.resolve(),
           threshold: plan.threshold,
           sufficiencyThreshold: plan.sufficiencyThreshold,
+          ...(plan.provider === undefined ? {} : { provider: plan.provider }),
         }).join("\n"),
       );
       // Only errors fail the run, unless --deny-warnings: a warning is for a nit or a noisy rule.
@@ -290,10 +296,10 @@ export const lintCommand = Command.make(
 
 /** Jev, with the key `lint` uses, and the config it reads the model and threshold from. */
 export const validateLayer = (flags: Flags) =>
-  Layer.merge(
-    JevLive.pipe(Layer.provide([FetchHttpClient.layer, CredentialsLive])),
-    AuditCacheLive,
-  ).pipe(Layer.provideMerge(AdhereConfigLive(flags)), Layer.provideMerge(statusLayer));
+  Layer.merge(JevLive.pipe(Layer.provide(CredentialsLive)), AuditCacheLive).pipe(
+    Layer.provideMerge(AdhereConfigLive(flags)),
+    Layer.provideMerge(statusLayer),
+  );
 
 /**
  * `adhere validate`: everything `lint` loads, then how each rule's wording
@@ -439,10 +445,10 @@ export const installCommand = Command.make(
  * The key typed at a masked prompt, or piped in: `adhere login < key.txt`.
  * Whitespace around it, like the newline a pipe ends with, is dropped.
  */
-const readApiKey = Effect.fn("login.readApiKey")(function* () {
+const readApiKey = Effect.fn("login.readApiKey")(function* (label: string) {
   const stdio = yield* Stdio.Stdio;
   const typed: string = (yield* stdio.stdinIsTerminal)
-    ? Redacted.value(yield* Prompt.run(Prompt.Password({ message: "TypeSafe AI API key" })))
+    ? Redacted.value(yield* Prompt.run(Prompt.Password({ message: label })))
     : yield* stdio.stdin.pipe(
         Stream.decodeText(),
         Stream.mkString,
@@ -461,33 +467,49 @@ const readApiKey = Effect.fn("login.readApiKey")(function* () {
   return Redacted.make(key);
 });
 
-/** `adhere login`: save the API key, so a run needs no TYPESAFE_API_KEY. */
-export const loginCommand = Command.make("login", {}, () =>
+/** `--openai`: the OpenAI key, for the `openai` provider, in place of TypeSafe AI's. */
+const openaiKey = Flag.Boolean("openai").pipe(
+  Flag.withDefault(false),
+  Flag.withDescription(
+    "The OpenAI API key, for a config whose provider is openai(), in place of the TypeSafe AI key Jev asks with.",
+  ),
+);
+
+/** Which saved key a command means, and how it names it: TypeSafe AI's by default. */
+const keyOf = (openai: boolean) => {
+  const name: SavedKey = openai ? "openai" : "typesafe";
+  return { name, ...KEYS[name] };
+};
+
+/** `adhere login`: save an API key, so a run needs no TYPESAFE_API_KEY, or with `--openai`, no OPENAI_API_KEY. */
+export const loginCommand = Command.make("login", { openai: openaiKey }, ({ openai }) =>
   Effect.gen(function* () {
+    const { name, label, said } = keyOf(openai);
     const credentials = yield* Credentials;
-    yield* credentials.save(yield* readApiKey());
-    yield* Console.log(`Saved the API key to ${yield* credentials.file}.`);
+    yield* credentials.save(name, yield* readApiKey(label));
+    yield* Console.log(`Saved the ${said} to ${yield* credentials.file}.`);
   }),
 ).pipe(
   Command.withDescription(
-    "Save a TypeSafe AI API key in ~/.config/adhere ($XDG_CONFIG_HOME/adhere when set), readable only by you, so lint runs without TYPESAFE_API_KEY. Prompts for the key, or reads it from stdin when piped.",
+    "Save a TypeSafe AI API key in ~/.config/adhere ($XDG_CONFIG_HOME/adhere when set), readable only by you, so lint runs without TYPESAFE_API_KEY. With --openai, save an OpenAI API key beside it instead, for the openai provider. Prompts for the key, or reads it from stdin when piped.",
   ),
   Command.provide(CredentialsLive),
 );
 
-/** `adhere logout`: delete the saved API key. */
-export const logoutCommand = Command.make("logout", {}, () =>
+/** `adhere logout`: delete a saved API key. */
+export const logoutCommand = Command.make("logout", { openai: openaiKey }, ({ openai }) =>
   Effect.gen(function* () {
+    const { name, said } = keyOf(openai);
     const credentials = yield* Credentials;
     const file = yield* credentials.file;
-    const removed = yield* credentials.remove;
+    const removed = yield* credentials.remove(name);
     yield* Console.log(
-      removed ? `Deleted the API key saved in ${file}.` : `No API key is saved in ${file}.`,
+      removed ? `Deleted the ${said} saved in ${file}.` : `No ${said} is saved in ${file}.`,
     );
   }),
 ).pipe(
   Command.withDescription(
-    "Delete the API key adhere login saved. TYPESAFE_API_KEY, when set, still applies.",
+    "Delete the API key adhere login saved, or with --openai, the OpenAI one. TYPESAFE_API_KEY or OPENAI_API_KEY, when set, still applies.",
   ),
   Command.provide(CredentialsLive),
 );

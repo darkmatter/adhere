@@ -288,9 +288,10 @@ const legend = (
   result: AuditResult,
   threshold: number,
   sufficiencyThreshold: number,
+  answerer = "Jev",
 ): ReadonlyArray<Line> => {
   const rows = [
-    ["confidence", cellsOf(threshold), "Jev's probability that the file breaks the rule"],
+    ["confidence", cellsOf(threshold), `${answerer}'s probability that the file breaks the rule`],
     [
       "context",
       cellsOf(sufficiencyThreshold),
@@ -370,6 +371,8 @@ export interface RenderOptions {
   readonly threshold?: number;
   /** Below this, a finding's context is low and it carries a warning. Defaults to 0.6. */
   readonly sufficiencyThreshold?: number;
+  /** The model of the config's provider, which the legend names in place of Jev. */
+  readonly provider?: string;
 }
 
 /**
@@ -384,7 +387,12 @@ export const render = (result: AuditResult, options: RenderOptions = {}): Readon
       ...frame(finding, options.root, sufficiencyThreshold),
       [],
     ]),
-    ...legend(result, options.threshold ?? DEFAULT_THRESHOLD, sufficiencyThreshold),
+    ...legend(
+      result,
+      options.threshold ?? DEFAULT_THRESHOLD,
+      sufficiencyThreshold,
+      options.provider,
+    ),
     ...summary(result),
     ...blockedFiles(result, options.root),
   ].map((line) => serialize(line, options.color === true));
@@ -444,6 +452,9 @@ const costLine = (plan: AuditPlan): string => {
   return `Those carry about ${tokensSaid(plan.tokens)} input tokens${priced}, and more for locating findings.`;
 };
 
+/** Who answers the plan's requests: Jev, or the model of the config's provider. */
+const answererOf = (plan: AuditPlan): string => plan.provider ?? "Jev";
+
 export const describePlan = (plan: AuditPlan, limits: RunLimits = {}): ReadonlyArray<string> => {
   const cached = plan.cached > 0 ? `, ${plan.cached} cached` : "";
   const skipped =
@@ -479,7 +490,7 @@ export const describePlan = (plan: AuditPlan, limits: RunLimits = {}): ReadonlyA
       : ` At ${limits.rpm} a minute, they take about ${durationAt(plan.requests, limits.rpm)}.`;
   return [
     found,
-    `Judging ${rest} takes ${counted(plan.requests, "request", "requests")} to Jev, plus 1 or more for each file with a finding.${pace}${waiting}`,
+    `Judging ${rest} takes ${counted(plan.requests, "request", "requests")} to ${answererOf(plan)}, plus 1 or more for each file with a finding.${pace}${waiting}`,
     ...(plan.tokens > 0 ? [costLine(plan)] : []),
   ];
 };
@@ -488,7 +499,7 @@ export const describePlan = (plan: AuditPlan, limits: RunLimits = {}): ReadonlyA
 export const sendQuestion = (plan: AuditPlan): string => {
   const cost = costOf(plan);
   const priced = cost === undefined || plan.tokens === 0 ? "" : `, ${dollars(cost)}`;
-  return `Send ${counted(plan.requests, "request", "requests")} to Jev${priced}?`;
+  return `Send ${counted(plan.requests, "request", "requests")} to ${answererOf(plan)}${priced}?`;
 };
 
 /** A run's progress so far: every file it finished, with the requests and findings they added up to. */

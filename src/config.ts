@@ -1,6 +1,7 @@
 import { type PresetName, presetNames } from "#presets.ts";
+import { type Provider, SAVED_KEYS } from "#providers/provider.ts";
 import type { RuleSet } from "#rules.ts";
-import { Effect, Schema, SchemaTransformation } from "effect";
+import { Effect, Predicate, Schema, SchemaTransformation } from "effect";
 
 export type RuleId = string;
 
@@ -14,6 +15,21 @@ export interface JudgedFile {
   readonly path: string;
   readonly contents: string;
 }
+
+/**
+ * A config's provider, as `Provider` in `providers/provider.ts` describes it:
+ * a model, and how to ask it. Checked rather than copied, so a class keeps
+ * what its `ask` reads off `this`.
+ */
+const ProviderSchema = Schema.declare(
+  (value: unknown): value is Provider =>
+    Predicate.hasProperty(value, "model") &&
+    Predicate.isString(value.model) &&
+    Predicate.hasProperty(value, "ask") &&
+    Predicate.isFunction(value.ask) &&
+    (!Predicate.hasProperty(value, "savedKey") || SAVED_KEYS.some((key) => key === value.savedKey)),
+  { expected: "a provider: a model, and a function to ask it" },
+);
 
 /**
  * Bun's API, typed when the project has Bun's types. Read off `globalThis`,
@@ -179,6 +195,8 @@ export const AdhereConfig = Schema.Struct({
    * The model id sent to typesafe. Defaults to "jev-latest"
    */
   model: Schema.optionalKey(Schema.String),
+  /** Where the questions go in place of TypeSafe's Jev, with its own model (see `Provider`). */
+  provider: Schema.optionalKey(ProviderSchema),
   /**
    * The minimum confidence threshold for a positive match. Defaults to 0.8
    */
@@ -307,6 +325,8 @@ export const DEFAULT_SUFFICIENCY_THRESHOLD = 0.6;
 /** A config with its presets folded in and every default applied. */
 export interface ResolvedConfig {
   readonly model: string;
+  /** Where the questions go in place of Jev; `model` is its model. */
+  readonly provider?: Provider;
   readonly threshold: number;
   /** Below this, a finding's sufficiency adds a warning to it. */
   readonly sufficiencyThreshold: number;
@@ -370,7 +390,8 @@ export const resolveConfig = (
   const last = <K extends "model" | "threshold">(key: K) =>
     applied.map((preset) => preset[key]).findLast((value) => value !== undefined);
   return {
-    model: config.model ?? last("model") ?? DEFAULT_MODEL,
+    model: config.provider?.model ?? config.model ?? last("model") ?? DEFAULT_MODEL,
+    ...(config.provider === undefined ? {} : { provider: config.provider }),
     threshold: flags.threshold ?? config.threshold ?? last("threshold") ?? DEFAULT_THRESHOLD,
     sufficiencyThreshold:
       flags.sufficiencyThreshold ?? config.sufficiencyThreshold ?? DEFAULT_SUFFICIENCY_THRESHOLD,

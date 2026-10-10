@@ -98,6 +98,22 @@ describe("cli", () => {
     expect(again.stdout).toBe(`No API key is saved in ${file}.\n`);
   });
 
+  it("saves an OpenAI key piped to login --openai beside TypeSafe AI's, and logout --openai deletes only it", async () => {
+    const configHome = join(tmpdir(), `adhere-login-openai-${Date.now()}`);
+    const file = join(configHome, "adhere", "credentials.json");
+
+    await piped(["login"], "tsk_test\n", configHome);
+    const login = await piped(["login", "--openai"], "sk-test\n", configHome);
+    expect(login.stdout).toBe(`Saved the OpenAI API key to ${file}.\n`);
+    expect(await readFile(file, "utf8")).toBe('{"apiKey":"tsk_test","openaiApiKey":"sk-test"}\n');
+
+    const logout = await piped(["logout", "--openai"], "", configHome);
+    expect(logout.stdout).toBe(`Deleted the OpenAI API key saved in ${file}.\n`);
+    expect(await readFile(file, "utf8")).toBe('{"apiKey":"tsk_test"}\n');
+    const again = await piped(["logout", "--openai"], "", configHome);
+    expect(again.stdout).toBe(`No OpenAI API key is saved in ${file}.\n`);
+  });
+
   it("refuses a piped key that is not one word, and saves nothing", async () => {
     const configHome = join(tmpdir(), `adhere-login-refused-${Date.now()}`);
 
@@ -167,9 +183,12 @@ describe("cli", () => {
     await git("init", "--quiet");
     await git("add", "-A");
     await git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "rules");
+    // Bash can read .bashrc when these are set, writing shell startup output
+    // into the local upload-pack's Git protocol.
+    const { SSH_CLIENT: _sshClient, SSH2_CLIENT: _ssh2Client, ...localEnv } = process.env;
     // git reads github.com as the local repo, so nothing is fetched.
     const env = {
-      ...process.env,
+      ...localEnv,
       GIT_CONFIG_COUNT: "1",
       GIT_CONFIG_KEY_0: `url.file://${source}.insteadOf`,
       GIT_CONFIG_VALUE_0: "https://github.com/acme/rules.git",

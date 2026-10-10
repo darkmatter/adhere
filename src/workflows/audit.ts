@@ -146,7 +146,7 @@ const excerptOf = (lines: ReadonlyArray<string>, { first, last }: Range): Excerp
 const MATCHER_THRESHOLD = 0.5;
 
 /** Whether a judgment's matchers let it stand: a yes to every `appliesTo`, and to no `excludeIf`. */
-const inScope = (judgment: Judgment): boolean =>
+export const inScope = (judgment: Pick<Judgment, "appliesTo" | "excludeIf">): boolean =>
   (judgment.appliesTo ?? []).every((score) => score > MATCHER_THRESHOLD) &&
   !(judgment.excludeIf ?? []).some((score) => score > MATCHER_THRESHOLD);
 
@@ -208,6 +208,8 @@ export interface AuditPlan {
   readonly tokens: number;
   /** The model's price per million input tokens, in dollars, when adhere knows it. */
   readonly price?: number;
+  /** The model a config's provider asks in place of Jev, which the plan names instead. */
+  readonly provider?: string;
   /** The run's threshold, which a rule's own, or an override's, replaces for that rule. */
   readonly threshold: number;
   /** Below this, a finding's sufficiency adds a warning to it. */
@@ -477,6 +479,7 @@ export const planAudit = (
       requests: loads.reduce((sum, load) => sum + load.requests, 0),
       tokens: loads.reduce((sum, load) => sum + load.tokens, 0),
       ...(price === undefined ? {} : { price }),
+      ...(config.provider === undefined ? {} : { provider: config.provider.model }),
       threshold: config.threshold,
       sufficiencyThreshold: config.sufficiencyThreshold,
     };

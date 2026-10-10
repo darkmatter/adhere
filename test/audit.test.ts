@@ -17,7 +17,8 @@ import {
   Schema,
 } from "effect";
 import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
-import { HttpClient, HttpClientResponse } from "effect/http";
+import { FetchHttpClient } from "effect/http";
+import type { SystemOneRequest } from "../src/providers/systemOne.ts";
 import { describe, expect, it } from "vite-plus/test";
 import { isNote, withoutComments } from "../src/comments.ts";
 import { NO_SUPPRESSIONS, suppresses, suppressionsOf } from "../src/suppress.ts";
@@ -1650,14 +1651,9 @@ describe("contradictions", () => {
 
   it("reads a pair from each chosen partner that was offered, and a pair's probability", () => {
     const partners = [[1, 2], [0], [0]];
-    expect(
-      namedPairs(
-        { "0:0": { choice: "2" }, "1:0": { choice: "none" }, "2:0": { choice: "7" } },
-        partners,
-      ),
-    ).toEqual([[0, 2]]);
-    expect(pairProbability({ "0-2": { noul: 0.8 } }, [0, 2])).toBe(0.8);
-    expect(pairProbability({ "0-2": { noul: 0.8 } }, [0, 1])).toBe(0);
+    expect(namedPairs({ "0:0": "2", "1:0": "none", "2:0": "7" }, partners)).toEqual([[0, 2]]);
+    expect(pairProbability({ "0-2": 0.8 }, [0, 2])).toBe(0.8);
+    expect(pairProbability({ "0-2": 0.8 }, [0, 1])).toBe(0);
   });
 
   it("conflicts: a rule with more partners than a choice holds gets one question per chunk", () => {
@@ -2288,6 +2284,12 @@ describe("plan", () => {
       "Judging the other 1400 takes 197 requests to Jev, plus 1 or more for each file with a finding.",
     ]);
     expect(sendQuestion(partly)).toBe("Send 197 requests to Jev?");
+    expect(describePlan({ ...partly, provider: "clef-flash" })[1]).toBe(
+      "Judging the other 1400 takes 197 requests to clef-flash, plus 1 or more for each file with a finding.",
+    );
+    expect(sendQuestion({ ...partly, provider: "clef-flash" })).toBe(
+      "Send 197 requests to clef-flash?",
+    );
     expect(
       describePlan(
         summary({ rules: 1, checks: 1, cached: 0, skipped: 0, deferred: 0, requests: 1 }, 1),
@@ -3442,13 +3444,13 @@ describe("credentials", () => {
     );
 
   const apiKey = Effect.gen(function* () {
-    return Redacted.value(yield* (yield* Credentials).apiKey);
+    return Redacted.value(yield* (yield* Credentials).key("typesafe"));
   });
 
   it("saves a key under XDG_CONFIG_HOME, readable only by the user, and reads it back", async () => {
     const memory = memoryFiles();
     const saved = Effect.gen(function* () {
-      yield* (yield* Credentials).save(Redacted.make("tsk_saved"));
+      yield* (yield* Credentials).save("typesafe", Redacted.make("tsk_saved"));
       return yield* apiKey;
     });
     expect(await run({ XDG_CONFIG_HOME: "/config" }, memory.layer, saved)).toBe("tsk_saved");
@@ -3486,10 +3488,28 @@ describe("credentials", () => {
     );
   });
 
+  it("refuses a file that does not read as keys, and writes nothing over it", async () => {
+    const env = { XDG_CONFIG_HOME: "/config" };
+    const text = '{"apiKey":"tsk_saved",';
+    const memory = memoryFiles({ [FILE]: text });
+    const message = `${FILE} does not hold keys as \`adhere login\` saves them. Fix it, or delete it and run \`adhere login\` again.`;
+    expect((await run(env, memory.layer, Effect.flip(apiKey))).message).toBe(message);
+    const writes = Effect.gen(function* () {
+      const credentials = yield* Credentials;
+      return [
+        yield* Effect.flip(credentials.save("openai", Redacted.make("sk-new"))),
+        yield* Effect.flip(credentials.remove("typesafe")),
+      ];
+    });
+    const refused = await run(env, memory.layer, writes);
+    expect(refused.map((problem) => problem.message)).toEqual([message, message]);
+    expect(memory.files.get(FILE)?.text).toBe(text);
+  });
+
   it("refuses to save a key with a space, and writes nothing", async () => {
     const memory = memoryFiles();
     const save = Effect.gen(function* () {
-      yield* (yield* Credentials).save(Redacted.make("tsk one"));
+      yield* (yield* Credentials).save("typesafe", Redacted.make("tsk one"));
     });
     const refused = await run({ XDG_CONFIG_HOME: "/config" }, memory.layer, Effect.flip(save));
     expect(refused.message).toBe("An API key is one word, with no spaces or line breaks.");
@@ -3500,10 +3520,36 @@ describe("credentials", () => {
     const memory = memoryFiles(SAVED);
     const removed = Effect.gen(function* () {
       const credentials = yield* Credentials;
-      return [yield* credentials.remove, yield* credentials.remove];
+      return [yield* credentials.remove("typesafe"), yield* credentials.remove("typesafe")];
     });
     expect(await run({ XDG_CONFIG_HOME: "/config" }, memory.layer, removed)).toEqual([true, false]);
     expect(memory.files.size).toBe(0);
+  });
+
+  it("keeps the OpenAI key beside TypeSafe AI's, prefers OPENAI_API_KEY, and deletes only the one asked", async () => {
+    const env = { XDG_CONFIG_HOME: "/config" };
+    const memory = memoryFiles(SAVED);
+    const openai = Effect.gen(function* () {
+      const credentials = yield* Credentials;
+      yield* credentials.save("openai", Redacted.make("sk-saved"));
+      return Redacted.value(yield* credentials.key("openai"));
+    });
+    expect(await run(env, memory.layer, openai)).toBe("sk-saved");
+    expect(memory.files.get(FILE)?.text).toBe('{"apiKey":"tsk_saved","openaiApiKey":"sk-saved"}\n');
+    const openaiKey = Effect.gen(function* () {
+      return Redacted.value(yield* (yield* Credentials).key("openai"));
+    });
+    expect(await run({ ...env, OPENAI_API_KEY: "sk-env" }, memory.layer, openaiKey)).toBe("sk-env");
+    const removed = Effect.gen(function* () {
+      return yield* (yield* Credentials).remove("openai");
+    });
+    expect(await run(env, memory.layer, removed)).toBe(true);
+    expect(memory.files.get(FILE)?.text).toBe('{"apiKey":"tsk_saved"}\n');
+    expect(await run(env, memory.layer, apiKey)).toBe("tsk_saved");
+    const none = await run(env, memory.layer, Effect.flip(openaiKey));
+    expect(none.message).toBe(
+      `${FILE} holds no OpenAI API key. Run \`adhere login --openai\` to save one.`,
+    );
   });
 });
 
@@ -3511,17 +3557,25 @@ describe("jev over http", () => {
   /** The file a rule's appendState gets, beside the lines Jev reads. */
   const judgedFile = { path: "/repo/src/server.ts", contents: "const port = 3000;" };
 
+  /** A fetch for Jev's provider, answering each request with `respond`, given its body and headers. */
+  const fetchFrom = (
+    respond: (body: SystemOneRequest, headers: Headers) => Response,
+  ): typeof globalThis.fetch =>
+    (async (_url: unknown, init?: RequestInit) =>
+      respond(
+        JSON.parse(String(init?.body)),
+        new Headers(init?.headers),
+      )) as typeof globalThis.fetch;
+
   it("sends at most --rpm requests a minute, evenly spaced", async () => {
     const sent: Array<number> = [];
-    const client = HttpClient.make((request) => {
+    const fetch = fetchFrom(() => {
       sent.push(Date.now());
-      return Effect.succeed(
-        HttpClientResponse.fromWeb(request, Response.json({ answers: { a: { noul: 0.25 } } })),
-      );
+      return Response.json({ answers: { a: { noul: 0.25 } } });
     });
     const layer = JevLive.pipe(
       Layer.provide([
-        Layer.succeed(HttpClient.HttpClient, client),
+        Layer.succeed(FetchHttpClient.Fetch, fetch),
         // 1200 a minute is one every 50 milliseconds.
         Layer.succeed(AdhereConfig, {
           model: "jev-latest",
@@ -3531,10 +3585,10 @@ describe("jev over http", () => {
           rpm: 1200,
         }),
         Layer.succeed(Credentials, {
-          apiKey: Effect.succeed(Redacted.make("tsk_saved")),
+          key: () => Effect.succeed(Redacted.make("tsk_saved")),
           file: Effect.succeed("/config/adhere/credentials.json"),
           save: () => Effect.void,
-          remove: Effect.succeed(false),
+          remove: () => Effect.succeed(false),
         }),
       ]),
     );
@@ -3562,22 +3616,16 @@ describe("jev over http", () => {
   ) => {
     const authorizations: Array<string | undefined> = [];
     const asked: Array<ReadonlyArray<string>> = [];
-    const client = HttpClient.make((request) => {
-      authorizations.push(request.headers.authorization);
-      const body: { readonly questions: Record<string, unknown> } =
-        request.body._tag === "Uint8Array"
-          ? JSON.parse(new TextDecoder().decode(request.body.body))
-          : { questions: {} };
+    const fetch = fetchFrom((body, headers) => {
+      authorizations.push(headers.get("authorization") ?? undefined);
       const ids = Object.keys(body.questions);
       asked.push(ids);
       const answers = Object.fromEntries(ids.map((id) => [id, { noul: 0.25 }]));
-      return Effect.succeed(
-        HttpClientResponse.fromWeb(request, reply?.() ?? Response.json({ answers })),
-      );
+      return reply?.() ?? Response.json({ answers });
     });
     const layer = JevLive.pipe(
       Layer.provide([
-        Layer.succeed(HttpClient.HttpClient, client),
+        Layer.succeed(FetchHttpClient.Fetch, fetch),
         Layer.succeed(AdhereConfig, {
           model: "jev-latest",
           threshold: 0.7,
@@ -3585,10 +3633,10 @@ describe("jev over http", () => {
           rules: {},
         }),
         Layer.succeed(Credentials, {
-          apiKey: key,
+          key: () => key,
           file: Effect.succeed("/config/adhere/credentials.json"),
           save: () => Effect.void,
-          remove: Effect.succeed(false),
+          remove: () => Effect.succeed(false),
         }),
       ]),
     );
@@ -3601,11 +3649,7 @@ describe("jev over http", () => {
 
   it("locates each rule in the section Jev chooses, with its sufficiency, and chooses nothing in a file of one section", async () => {
     const sent: Array<ReadonlyArray<string>> = [];
-    const client = HttpClient.make((request) => {
-      const body: { readonly questions: Record<string, unknown> } =
-        request.body._tag === "Uint8Array"
-          ? JSON.parse(new TextDecoder().decode(request.body.body))
-          : { questions: {} };
+    const fetch = fetchFrom((body) => {
       const ids = Object.keys(body.questions);
       sent.push(ids);
       // b's choice names no section, which leaves it unlocated.
@@ -3618,11 +3662,11 @@ describe("jev over http", () => {
               { choice: { a: "2", b: "9", "start:a:2": "35", "end:a:2": "33" }[id] ?? "1" },
         ]),
       );
-      return Effect.succeed(HttpClientResponse.fromWeb(request, Response.json({ answers })));
+      return Response.json({ answers });
     });
     const layer = JevLive.pipe(
       Layer.provide([
-        Layer.succeed(HttpClient.HttpClient, client),
+        Layer.succeed(FetchHttpClient.Fetch, fetch),
         Layer.succeed(AdhereConfig, {
           model: "jev-latest",
           threshold: 0.7,
@@ -3630,10 +3674,10 @@ describe("jev over http", () => {
           rules: {},
         }),
         Layer.succeed(Credentials, {
-          apiKey: Effect.succeed(Redacted.make("tsk_saved")),
+          key: () => Effect.succeed(Redacted.make("tsk_saved")),
           file: Effect.succeed("/config/adhere/credentials.json"),
           save: () => Effect.void,
-          remove: Effect.succeed(false),
+          remove: () => Effect.succeed(false),
         }),
       ]),
     );
@@ -3659,23 +3703,16 @@ describe("jev over http", () => {
   /** Jev over a client that records each request's state and question ids, and says yes to each. */
   const recordedJev = (workspacePackages?: Readonly<Record<string, string>>) => {
     const sent: Array<{ readonly state: unknown; readonly ids: ReadonlyArray<string> }> = [];
-    const client = HttpClient.make((request) => {
-      const body: {
-        readonly state: unknown;
-        readonly questions: Readonly<Record<string, { readonly type: string }>>;
-      } =
-        request.body._tag === "Uint8Array"
-          ? JSON.parse(new TextDecoder().decode(request.body.body))
-          : { state: undefined, questions: {} };
+    const fetch = fetchFrom((body) => {
       sent.push({ state: body.state, ids: Object.keys(body.questions) });
       const answers = Record.map(body.questions, ({ type }) =>
         type === "noul" ? { noul: 0.9 } : { choice: "1" },
       );
-      return Effect.succeed(HttpClientResponse.fromWeb(request, Response.json({ answers })));
+      return Response.json({ answers });
     });
     const layer = JevLive.pipe(
       Layer.provide([
-        Layer.succeed(HttpClient.HttpClient, client),
+        Layer.succeed(FetchHttpClient.Fetch, fetch),
         Layer.succeed(AdhereConfig, {
           model: "jev-latest",
           threshold: 0.7,
@@ -3684,10 +3721,10 @@ describe("jev over http", () => {
           ...(workspacePackages === undefined ? {} : { workspacePackages }),
         }),
         Layer.succeed(Credentials, {
-          apiKey: Effect.succeed(Redacted.make("tsk_saved")),
+          key: () => Effect.succeed(Redacted.make("tsk_saved")),
           file: Effect.succeed("/config/adhere/credentials.json"),
           save: () => Effect.void,
-          remove: Effect.succeed(false),
+          remove: () => Effect.succeed(false),
         }),
       ]),
     );

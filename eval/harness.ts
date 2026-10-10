@@ -170,7 +170,7 @@ export const askJev = Effect.fn("eval.askJev")(function* (
     `${jobs.length} requests, ${samples.length} files for each of ${arms.length} arms`,
   );
 
-  const apiKey = yield* (yield* Credentials).apiKey;
+  const apiKey = yield* (yield* Credentials).key("typesafe");
   const client = (yield* HttpClient.HttpClient).pipe(
     HttpClient.filterStatusOk,
     HttpClient.transformResponse(Effect.timeout("60 seconds")),

@@ -1,5 +1,14 @@
 import type { AppendState, JevState, JudgedFile, RuleId } from "#config.ts";
 import { sectionsOf } from "#excerpt.ts";
+import { jev } from "#providers/jev.ts";
+import {
+  Answered,
+  type Provider,
+  type Question,
+  RequestFailed,
+  type State,
+} from "#providers/provider.ts";
+import { questionsOf, type SystemOneQuestion } from "#providers/systemOne.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { Credentials } from "#services/Credentials.ts";
 import {
@@ -29,40 +38,33 @@ import {
   tokensOf,
 } from "#services/Jev.ts";
 import {
-  type Cause,
   Duration,
   Effect,
   Layer,
-  Option,
+  Predicate,
   Record,
+  Redacted,
   Result,
   Schedule,
   Schema,
 } from "effect";
-import { HttpClient, HttpClientError, HttpClientResponse } from "effect/http";
-import * as HttpClientRequest from "effect/http/HttpClientRequest";
+import { FetchHttpClient } from "effect/http";
 import { RateLimiter } from "effect/persistence";
 
-const SYSTEM_ONE = "https://api.typesafe.ai/v1/systemone";
-
-const NoulAnswers = Schema.Struct({
-  answers: Schema.Record(Schema.String, Schema.Struct({ noul: Schema.Finite })),
+/** A provider's answers to `noul`s, which the eval's harness reads too, to `choice`s, and to a locate request's both. */
+export const NoulAnswers = Schema.Struct({
+  ...Answered.fields,
+  answers: Schema.Record(Schema.String, Schema.Finite),
 });
 const ChoiceAnswers = Schema.Struct({
-  answers: Schema.Record(Schema.String, Schema.Struct({ choice: Schema.String })),
+  ...Answered.fields,
+  answers: Schema.Record(Schema.String, Schema.String),
 });
-/** A locate request's answers: a choice per rule, and a noul per sufficiency question. */
-const LocateAnswers = Schema.Struct({
-  answers: Schema.Record(
-    Schema.String,
-    Schema.Struct({
-      choice: Schema.optionalKey(Schema.String),
-      noul: Schema.optionalKey(Schema.Finite),
-    }),
-  ),
-});
+const LocateAnswers = Answered;
 
 const refused = (message: string) => JevUnavailable.make({ message });
+
+const messageOf = (cause: unknown) => (cause instanceof Error ? cause.message : String(cause));
 
 /** Bun's API, for a rule's hook. Read off `globalThis`, as presets.ts reads it: Vitest runs this on Node. */
 const bun = (globalThis as { readonly Bun?: unknown }).Bun as Parameters<AppendState>[2];
@@ -73,11 +75,11 @@ const bun = (globalThis as { readonly Bun?: unknown }).Bun as Parameters<AppendS
  * the hook returns spread over that. A hook that fails refuses the run.
  */
 const hooked = (
-  sent: Body & { readonly state: JevState },
+  sent: Body<SystemOneQuestion> & { readonly state: JevState },
   group: Rules,
   file: JudgedFile,
   workspacePackages: Readonly<Record<string, string>>,
-): Effect.Effect<Body, JevUnavailable> => {
+): Effect.Effect<Body<SystemOneQuestion>, JevUnavailable> => {
   const body = Object.values(group).some(
     (rule) => rule.reads?.includes("workspacePackages") === true,
   )
@@ -93,69 +95,78 @@ const hooked = (
       ...body,
       state: { ...body.state, ...(await appendState(body.state, file, bun)) },
     }),
-    catch: (cause) =>
-      refused(
-        `the appendState of ${id} failed: ${cause instanceof Error ? cause.message : String(cause)}`,
-      ),
+    catch: (cause) => refused(`the appendState of ${id} failed: ${messageOf(cause)}`),
   });
 };
 
-/** A failed attempt, for the log: the status and Ray ID when Jev's side answered, the cause otherwise. */
-const attemptFailure = (
-  problem: HttpClientError.HttpClientError | RateLimiter.RateLimiterError | Cause.TimeoutError,
-): string =>
-  HttpClientError.isHttpClientError(problem) && problem.reason._tag === "StatusCodeError"
-    ? `HTTP ${problem.reason.response.status}, Ray ID ${problem.reason.response.headers["cf-ray"] ?? "none"}`
-    : problem.message;
-
-/** Jev's error body, on one line and cut short, or nothing when it sent none. */
-const detailOf = (body: string): string => {
-  const text = body.trim().replace(/\s+/g, " ");
-  return text.length === 0 ? "" : `: ${text.slice(0, 300)}`;
+/**
+ * A provider's rejection, as the run takes it: a `ContextOverflow` skips the
+ * file, a `RequestBlocked` reports it blocked, and anything else refuses the
+ * run with what the provider said. Read by tag, not class, so a provider
+ * built against another copy of adhere is read the same.
+ */
+const rejected = (cause: unknown): JevOverflow | JevBlocked | JevUnavailable => {
+  if (Predicate.isTagged(cause, "ContextOverflow")) return JevOverflow.make();
+  if (Predicate.isTagged(cause, "RequestBlocked") && Predicate.hasProperty(cause, "reference")) {
+    return JevBlocked.make({ ray: String(cause.reference) });
+  }
+  return refused(messageOf(cause));
 };
 
-/** What Jev answers, with a 400, to a request over its context. */
-const Overflowed = Schema.fromJsonString(
-  Schema.Struct({ detail: Schema.Struct({ error_type: Schema.Literal("max_tokens_exceeded") }) }),
-);
-const isOverflow = (body: string): boolean =>
-  Option.isSome(Schema.decodeUnknownOption(Overflowed)(body));
-
-/** A firewall's block page: HTML where Jev answers JSON, even for its own errors. */
-const isBlockPage = (response: HttpClientResponse.HttpClientResponse, body: string): boolean =>
-  (response.headers["content-type"] ?? "").includes("text/html") ||
-  body.trimStart().startsWith("<");
-
-/**
- * A request that failed. A 400 saying the request is over Jev's context is a
- * `JevOverflow`, which skips the file. Any other answer outside 2xx refuses
- * the run with its status and what Jev said, since the status alone does not
- * say why, and a request that got no answer refuses with the cause.
- */
-const failed = (
-  problem: HttpClientError.HttpClientError | RateLimiter.RateLimiterError | Cause.TimeoutError,
-) => {
-  if (!HttpClientError.isHttpClientError(problem) || problem.reason._tag !== "StatusCodeError") {
-    return Effect.fail(refused(`System One request failed: ${problem.message}`));
+/** Whether a failed attempt is worth another: a `RequestFailed`, read by tag, with no answer, a 408, a 429, or a 5xx. */
+const isTransient = (cause: unknown): boolean => {
+  if (!Predicate.isTagged(cause, "RequestFailed") || !Predicate.hasProperty(cause, "status")) {
+    return false;
   }
-  const { response } = problem.reason;
-  return Effect.flatMap(
-    Effect.orElseSucceed(response.text, () => "").pipe(
-      Effect.tap((body) =>
-        Effect.logDebug(
-          `Jev answered HTTP ${response.status}, ${response.headers["content-type"] ?? "no content type"}, ${body.length} characters, Ray ID ${response.headers["cf-ray"] ?? "none"}`,
-        ),
-      ),
-      Effect.tap((body) => Effect.logTrace(`Jev's answer: ${body.slice(0, 4000)}`)),
-    ),
-    (body): Effect.Effect<never, JevOverflow | JevBlocked | JevUnavailable> =>
-      response.status === 400 && isOverflow(body)
-        ? Effect.fail(JevOverflow.make())
-        : response.status === 403 && isBlockPage(response, body)
-          ? Effect.fail(JevBlocked.make({ ray: response.headers["cf-ray"] ?? "none given" }))
-          : Effect.fail(refused(`Jev answered HTTP ${response.status}${detailOf(body)}`)),
+  const { status } = cause;
+  return (
+    status === 0 ||
+    status === 408 ||
+    status === 429 ||
+    (Predicate.isNumber(status) && status >= 500)
   );
 };
+
+/**
+ * One request to `provider`, as adhere asks every provider: each attempt
+ * after `pace`, given 30 seconds before its signal aborts it, and logged when
+ * it fails. One that failed transiently is tried again up to three times,
+ * after half a second, one, and two. What it answers decodes as `Answers`.
+ * The eval's harness asks its providers this way too.
+ */
+export const askProvider = <A>(
+  provider: Provider,
+  state: State,
+  questions: ReadonlyArray<Question>,
+  Answers: Schema.Codec<A, unknown, never, never>,
+  apiKey?: string,
+  pace: Effect.Effect<unknown, unknown> = Effect.void,
+): Effect.Effect<A, JevOverflow | JevBlocked | JevUnavailable> =>
+  pace.pipe(
+    Effect.andThen(
+      Effect.tryPromise({
+        try: (signal) =>
+          provider.ask(state, questions, apiKey === undefined ? { signal } : { apiKey, signal }),
+        catch: (cause) => cause,
+      }).pipe(
+        Effect.timeoutOrElse({
+          duration: "30 seconds",
+          orElse: () =>
+            Effect.fail(new RequestFailed(`${provider.model} did not answer in 30 seconds`, 0)),
+        }),
+      ),
+    ),
+    Effect.tapError((cause) => Effect.logDebug(`attempt failed: ${messageOf(cause)}`)),
+    Effect.retry({ while: isTransient, times: 3, schedule: Schedule.exponential("500 millis") }),
+    Effect.mapError(rejected),
+    Effect.flatMap((answered) =>
+      Schema.decodeUnknownEffect(Answers)(answered).pipe(
+        Effect.mapError((problem) =>
+          refused(`${provider.model}'s answers did not decode: ${problem.message}`),
+        ),
+      ),
+    ),
+  );
 
 /**
  * Comparing rules has no file to skip, so a request over Jev's context, or one
@@ -181,70 +192,59 @@ export const JevLive = Layer.effect(Jev)(
   Effect.gen(function* () {
     const config = yield* AdhereConfig;
     const credentials = yield* Credentials;
-    const http = (yield* HttpClient.HttpClient).pipe(HttpClient.filterStatusOk);
-    // `--rpm`: one request per 60/rpm seconds, evenly spaced rather than in a
-    // burst each minute. Before the retries, so a retry waits its turn too.
-    type Failure = HttpClientError.HttpClientError | RateLimiter.RateLimiterError;
-    const paced: HttpClient.HttpClient.With<Failure> =
-      config.rpm === undefined
-        ? // The same client, typed to fail the ways the throttled one can.
-          HttpClient.transformResponse(
-            http,
-            (response): Effect.Effect<HttpClientResponse.HttpClientResponse, Failure> => response,
-          )
-        : http.pipe(
-            HttpClient.withRateLimiter({
-              limiter: yield* RateLimiter.RateLimiter,
-              key: "jev",
-              algorithm: "token-bucket",
-              limit: 1,
-              window: Duration.millis(60_000 / config.rpm),
-            }),
-          );
-    const client = paced.pipe(
-      HttpClient.transformResponse(Effect.timeout("30 seconds")),
-      // Every failed attempt, including those retried, so a log shows what retrying hid.
-      HttpClient.transformResponse(
-        Effect.tapError((problem) => Effect.logDebug(`attempt failed: ${attemptFailure(problem)}`)),
-      ),
-      HttpClient.retryTransient({
-        schedule: Schedule.exponential("500 millis"),
-        times: 3,
-      }),
-    );
+    const fetch = yield* FetchHttpClient.Fetch;
+    const limiter = yield* RateLimiter.RateLimiter;
 
-    /** One request. `kind` names the question for the log: judge, locate, blocks, and so on. */
-    const ask = <A>(kind: string, body: Body, Answers: Schema.Codec<A, unknown, never, never>) =>
+    const provider: Provider = config.provider ?? jev({ model: config.model, fetch });
+    // The key it asks with, when it names one `adhere login` saves. Read when
+    // a request needs it, not in the layer: a run with nothing pending needs none.
+    const apiKey: Effect.Effect<string | undefined, JevUnavailable> =
+      provider.savedKey === undefined
+        ? Effect.succeed(undefined)
+        : yield* Effect.cached(
+            credentials.key(provider.savedKey).pipe(
+              Effect.map(Redacted.value),
+              Effect.mapError((problem) => refused(problem.message)),
+            ),
+          );
+
+    // `--rpm`: one attempt per 60/rpm seconds, evenly spaced rather than in a
+    // burst each minute, so a retry waits its turn too.
+    const pace =
+      config.rpm === undefined
+        ? Effect.void
+        : RateLimiter.sleep(limiter, {
+            key: "provider",
+            algorithm: "token-bucket",
+            limit: 1,
+            window: Duration.millis(60_000 / config.rpm),
+          });
+
+    /** One request. `kind` names the question for the log: judge, locate, conflicts, and so on. */
+    const ask = <A>(
+      kind: string,
+      body: Body<SystemOneQuestion>,
+      Answers: Schema.Codec<A, unknown, never, never>,
+    ) =>
       Effect.gen(function* () {
-        // Read here, not in the layer: a run with nothing pending needs no key.
-        const apiKey = yield* credentials.apiKey.pipe(
-          Effect.mapError((problem) => refused(problem.message)),
-        );
-        const request = yield* HttpClientRequest.bodyJson(
-          HttpClientRequest.post(SYSTEM_ONE),
-          body,
-        ).pipe(Effect.orDie);
+        const key = yield* apiKey;
         const questions = Object.keys(body.questions).length;
         yield* Effect.logDebug(
-          `${kind}: sending ${questions} ${questions === 1 ? "question" : "questions"}, about ${tokensOf(body)} tokens`,
+          `${kind}: asking ${provider.model} ${questions} ${questions === 1 ? "question" : "questions"}, about ${tokensOf(body)} tokens`,
         );
-        const [elapsed, response] = yield* Effect.timed(
-          client.execute(HttpClientRequest.bearerToken(request, apiKey)).pipe(Effect.catch(failed)),
+        const [elapsed, answered] = yield* Effect.timed(
+          askProvider(provider, body.state, questionsOf(body.questions), Answers, key, pace),
         );
         yield* Effect.logDebug(
-          `${kind}: HTTP ${response.status} in ${Math.round(Duration.toMillis(elapsed))} ms, Ray ID ${response.headers["cf-ray"] ?? "none"}`,
+          `${kind}: ${provider.model} answered in ${Math.round(Duration.toMillis(elapsed))} ms`,
         );
-        return yield* HttpClientResponse.schemaBodyJson(Answers)(response).pipe(
-          Effect.mapError((problem) =>
-            refused(`System One response did not decode: ${problem.message}`),
-          ),
-        );
+        return answered;
       });
 
     /** Every answer to a body, over as many requests as Jev's context needs. */
     const answersTo = <A>(
       kind: string,
-      body: Body,
+      body: Body<SystemOneQuestion>,
       Answers: Schema.Codec<
         { readonly answers: Readonly<Record<string, A>> },
         unknown,
@@ -269,7 +269,7 @@ export const JevLive = Layer.effect(Jev)(
     const answersAbout = <A>(
       kind: string,
       rules: Rules,
-      bodyOf: (group: Rules) => Body & { readonly state: JevState },
+      bodyOf: (group: Rules) => Body<SystemOneQuestion> & { readonly state: JevState },
       file: JudgedFile,
       Answers: Schema.Codec<
         { readonly answers: Readonly<Record<string, A>> },
@@ -302,38 +302,38 @@ export const JevLive = Layer.effect(Jev)(
         file,
         NoulAnswers,
       );
-      /** Each rule's answer, read from the question it rode under. */
-      const answered = (ids: ReadonlyArray<RuleId>, keyOf: (id: RuleId) => string) =>
-        Record.fromEntries(
-          ids.flatMap((id) => {
-            const answer = answers[keyOf(id)];
-            return answer === undefined ? [] : [[id, answer.noul] as const];
-          }),
-        );
-      // A matcher Jev left unanswered counts as a no.
-      const scored = (
-        kind: keyof MatcherScores,
-        id: RuleId,
-        matchers: ReadonlyArray<string> = [],
-      ) => matchers.map((_, index) => answers[matcherKey(kind, id, index)]?.noul ?? 0);
+      const all = (scores: ReadonlyArray<number | undefined>): scores is ReadonlyArray<number> =>
+        scores.every((score) => score !== undefined);
+      // A rule is answered when its question and each of its matchers' are: a
+      // matcher left unanswered, as a refusal leaves one, leaves its rule
+      // unanswered too, to ask again on the next run rather than cache as a no.
+      const judged = Object.entries(rules).flatMap(([id, rule]) => {
+        const scored = (kind: keyof MatcherScores) =>
+          (rule[kind] ?? []).map((_, index) => answers[matcherKey(kind, id, index)]);
+        const probability = answers[id];
+        const appliesTo = scored("appliesTo");
+        const excludeIf = scored("excludeIf");
+        return probability === undefined || !all(appliesTo) || !all(excludeIf)
+          ? []
+          : [{ id, rule, probability, appliesTo, excludeIf }];
+      });
       const matchers: Record<RuleId, MatcherScores> = Record.fromEntries(
-        Object.entries(rules).flatMap(([id, rule]) =>
+        judged.flatMap(({ id, rule, appliesTo, excludeIf }) =>
           rule.appliesTo === undefined && rule.excludeIf === undefined
             ? []
-            : [
-                [
-                  id,
-                  {
-                    appliesTo: scored("appliesTo", id, rule.appliesTo),
-                    excludeIf: scored("excludeIf", id, rule.excludeIf),
-                  },
-                ] as const,
-              ],
+            : [[id, { appliesTo, excludeIf }] as const],
         ),
       );
       return {
-        probabilities: answered(Object.keys(rules), (id) => id),
-        linter: answered(sampled, linterKey),
+        probabilities: Record.fromEntries(
+          judged.map(({ id, probability }) => [id, probability] as const),
+        ),
+        linter: Record.fromEntries(
+          sampled.flatMap((id) => {
+            const answer = answers[linterKey(id)];
+            return answer === undefined ? [] : [[id, answer] as const];
+          }),
+        ),
         ...(Record.isEmptyRecord(matchers) ? {} : { matchers }),
       } satisfies Judged;
     });
@@ -352,15 +352,15 @@ export const JevLive = Layer.effect(Jev)(
         LocateAnswers,
       );
       // A file of one section has every finding in it. An answer that names no section,
-      // or none at all, which Jev should not give, leaves the rule unlocated; lines outside
-      // the section leave it without lines.
+      // or none at all, which a model should not give, leaves the rule unlocated; lines
+      // outside the section leave it without lines.
       return Record.filterMap(rules, (_, id) => {
-        const chosen = sections.length === 1 ? 1 : Number(answers[id]?.choice);
+        const chosen = sections.length === 1 ? 1 : Number(answers[id]);
         const section = sections[chosen - 1];
-        const sufficiency = answers[sufficiencyKey(id)]?.noul;
-        if (section === undefined || sufficiency === undefined) return Result.failVoid;
+        const sufficiency = answers[sufficiencyKey(id)];
+        if (section === undefined || typeof sufficiency !== "number") return Result.failVoid;
         const [start, end] = (["start", "end"] as const).map((edge) =>
-          Number(answers[edgeKey(edge, id, chosen)]?.choice),
+          Number(answers[edgeKey(edge, id, chosen)]),
         );
         const within = (line: number | undefined): line is number =>
           line !== undefined && section.first <= line && line <= section.last;
