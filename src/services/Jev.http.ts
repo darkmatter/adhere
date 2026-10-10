@@ -1,4 +1,4 @@
-import type { AppendState, JevState, JudgedFile, RuleId } from "#config.ts";
+import type { AppendState, JevState, JudgedFile, ReadState, RuleId } from "#config.ts";
 import { sectionsOf } from "#excerpt.ts";
 import { jev } from "#providers/jev.ts";
 import {
@@ -70,21 +70,15 @@ const messageOf = (cause: unknown) => (cause instanceof Error ? cause.message : 
 const bun = (globalThis as { readonly Bun?: unknown }).Bun as Parameters<AppendState>[2];
 
 /**
- * A body as it goes out: when its rule's `reads` names the workspace's
- * packages, with them in its state, and when it has `appendState`, with what
- * the hook returns spread over that. A hook that fails refuses the run.
+ * A prepared body as it goes out: `appendState` sees the shared enriched
+ * state, with what it returns spread over this group's state alone.
+ * A hook that fails refuses the run.
  */
 const hooked = (
-  sent: Body<SystemOneQuestion> & { readonly state: JevState },
+  body: Body<SystemOneQuestion> & { readonly state: JevState },
   group: Rules,
   file: JudgedFile,
-  workspacePackages: Readonly<Record<string, string>>,
 ): Effect.Effect<Body<SystemOneQuestion>, JevUnavailable> => {
-  const body = Object.values(group).some(
-    (rule) => rule.reads?.includes("workspacePackages") === true,
-  )
-    ? { ...sent, state: { ...sent.state, workspacePackages } }
-    : sent;
   const [hook] = Object.entries(group).flatMap(([id, rule]) =>
     rule.appendState === undefined ? [] : [[id, rule.appendState] as const],
   );
@@ -280,9 +274,8 @@ export const JevLive = Layer.effect(Jev)(
     ) =>
       Effect.map(
         Effect.forEach(requestGroups(rules), (group) =>
-          Effect.flatMap(
-            hooked(bodyOf(group), group, file, config.workspacePackages ?? {}),
-            (body) => answersTo(kind, body, Answers),
+          Effect.flatMap(hooked(bodyOf(group), group, file), (body) =>
+            answersTo(kind, body, Answers),
           ),
         ),
         (groups) =>
@@ -294,11 +287,12 @@ export const JevLive = Layer.effect(Jev)(
       rules: Rules,
       sampled: ReadonlyArray<RuleId>,
       file: JudgedFile,
+      readState: ReadState = {},
     ) {
       const answers = yield* answersAbout(
         "judge",
         rules,
-        (group) => judgeBody(config.model, lines, group, sampled),
+        (group) => judgeBody(config.model, lines, group, sampled, readState),
         file,
         NoulAnswers,
       );
@@ -342,12 +336,13 @@ export const JevLive = Layer.effect(Jev)(
       lines: Lines,
       rules: Rules,
       file: JudgedFile,
+      readState: ReadState = {},
     ) {
       const sections = sectionsOf(lines);
       const answers = yield* answersAbout(
         "locate",
         rules,
-        (group) => locateBody(config.model, lines, group),
+        (group) => locateBody(config.model, lines, group, readState),
         file,
         LocateAnswers,
       );

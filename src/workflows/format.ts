@@ -455,51 +455,97 @@ const costLine = (plan: AuditPlan): string => {
 /** Who answers the plan's requests: Jev, or the model of the config's provider. */
 const answererOf = (plan: AuditPlan): string => plan.provider ?? "Jev";
 
+const NATIVE_READS_CAVEAT =
+  "Estimates cover only code and workspace-package context; symbol/reference input, possible extra request splits, and size-skips are determined at send time.";
+
 export const describePlan = (plan: AuditPlan, limits: RunLimits = {}): ReadonlyArray<string> => {
+  const native = plan.nativeReads === undefined ? [] : [NATIVE_READS_CAVEAT];
+  const locating = plan.cachedLocateRequests ?? 0;
   const cached = plan.cached > 0 ? `, ${plan.cached} cached` : "";
   const skipped =
     plan.skipped > 0 ? `, ${counted(plan.skipped, "file", "files")} too long to judge` : "";
   const matching = (limits.filter?.length ?? 0) > 0 ? " matching the filter" : "";
   const found = `${counted(plan.files.length, "file", "files")}${matching} and ${counted(plan.rules, "rule", "rules")}: ${counted(plan.checks, "check", "checks")}${cached}${skipped}.`;
-  const pending = plan.checks - plan.cached;
   const waiting =
     plan.deferred > 0
-      ? ` The other ${plan.deferred} ${plan.deferred === 1 ? "waits" : "wait"} for a later run.`
+      ? ` ${counted(plan.deferred, "file", "files")} ${plan.deferred === 1 ? "waits" : "wait"} for a later run.`
       : "";
+  if (plan.planOnly === true) {
+    return [
+      found,
+      "Plan only (--limit 0): no native reads will be resolved and no requests will be sent.",
+      ...(plan.deferred > 0
+        ? [`${counted(plan.deferred, "file", "files")} left for a later run.`]
+        : []),
+      ...native,
+    ];
+  }
+  if (plan.requests === 0 && locating > 0) {
+    const pace =
+      limits.rpm === undefined
+        ? ""
+        : ` At ${limits.rpm} a minute, they take about ${durationAt(locating, limits.rpm)}.`;
+    return [
+      found,
+      `Locating cached findings takes an estimated ${counted(locating, "request", "requests")} to ${answererOf(plan)}.${pace}${waiting}`,
+      "Locating input tokens and cost are not estimated.",
+      ...native,
+    ];
+  }
   if (plan.requests === 0) {
     const none =
       plan.deferred > 0
         ? plan.deferred === 1
-          ? "The limit leaves the 1 unjudged check for a later run."
-          : `The limit leaves all ${plan.deferred} unjudged checks for a later run.`
+          ? "The limit leaves 1 file needing requests for a later run."
+          : `The limit leaves all ${plan.deferred} files needing requests for a later run.`
         : plan.checks === 0
           ? "Nothing to judge."
           : "The cache answers every check.";
-    return [found, none];
+    return [found, none, ...native];
   }
-  const judging = pending - plan.deferred;
-  const rest =
-    plan.deferred > 0
-      ? `${judging} of ${plan.cached > 0 ? `the other ${pending}` : "them"}`
-      : plan.cached > 0
-        ? `the other ${pending}`
-        : "them";
+  const judging = plan.files.filter(
+    (file) => !file.skipped && !file.deferred && Object.keys(file.pending).length > 0,
+  ).length;
+  const rest = counted(judging, "file", "files");
   const pace =
     limits.rpm === undefined
       ? ""
-      : ` At ${limits.rpm} a minute, they take about ${durationAt(plan.requests, limits.rpm)}.`;
+      : ` At ${limits.rpm} a minute, they take about ${durationAt(plan.requests + locating, limits.rpm)}.`;
   return [
     found,
-    `Judging ${rest} takes ${counted(plan.requests, "request", "requests")} to ${answererOf(plan)}, plus 1 or more for each file with a finding.${pace}${waiting}`,
+    `Judging ${rest} takes ${plan.nativeReads === undefined ? "" : "an estimated "}${counted(plan.requests, "request", "requests")} to ${answererOf(plan)}, plus 1 or more for each file with a finding.${pace}${waiting}`,
     ...(plan.tokens > 0 ? [costLine(plan)] : []),
+    ...(locating > 0
+      ? [
+          `Known cached findings need an estimated ${counted(locating, "request", "requests")} to locate; locating input tokens and cost are not included.`,
+        ]
+      : []),
+    ...native,
   ];
 };
 
 /** The question before a run sends anything. */
 export const sendQuestion = (plan: AuditPlan): string => {
+  if (plan.planOnly === true) {
+    return "Plan only (--limit 0): no native reads will be resolved and no requests will be sent.";
+  }
   const cost = costOf(plan);
   const priced = cost === undefined || plan.tokens === 0 ? "" : `, ${dollars(cost)}`;
-  return `Send ${counted(plan.requests, "request", "requests")} to ${answererOf(plan)}${priced}?`;
+  const estimate = plan.nativeReads === undefined ? "" : "an estimated ";
+  const caveat = plan.nativeReads === undefined ? "" : `${NATIVE_READS_CAVEAT} `;
+  const locating = plan.cachedLocateRequests ?? 0;
+  if (locating > 0) {
+    const work =
+      plan.requests === 0
+        ? "to locate cached findings"
+        : `(${counted(plan.requests, "request", "requests")} judging, ${counted(locating, "request", "requests")} locating cached findings)`;
+    const costs =
+      plan.requests === 0 || cost === undefined || plan.tokens === 0
+        ? "Locating input tokens and cost are not estimated. "
+        : `Judging costs ${dollars(cost)}; locating input tokens and cost are not estimated. `;
+    return `${caveat}${costs}Send an estimated ${counted(plan.requests + locating, "request", "requests")} to ${answererOf(plan)} ${work}?`;
+  }
+  return `${caveat}Send ${estimate}${counted(plan.requests, "request", "requests")} to ${answererOf(plan)}${priced}?`;
 };
 
 /** A run's progress so far: every file it finished, with the requests and findings they added up to. */

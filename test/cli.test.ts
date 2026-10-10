@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -36,6 +36,24 @@ describe("cli", () => {
     ]) {
       expect(subcommands).toMatch(new RegExp(`^  ${name} `, "m"));
     }
+  });
+
+  it("documents file-based limits and rejects negative file counts", async () => {
+    const { stdout } = await execFileAsync("bun", [main, "lint", "--help"], {
+      cwd: process.cwd(),
+    });
+    expect(stdout).toContain("files needing requests");
+    expect(stdout).toContain("A file can send multiple requests");
+    const refused = await execFileAsync("bun", [main, "lint", "--limit", "-1"], {
+      cwd: process.cwd(),
+    }).then(
+      () => undefined,
+      (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) => error,
+    );
+    expect(refused?.code).toBe(1);
+    expect(`${refused?.stdout}${refused?.stderr}`).toContain(
+      "--limit is a number of files, 0 or more, not -1.",
+    );
   });
 
   it("prints the reference skill, or with setup or fix, the one for setting up or fixing findings", async () => {
@@ -172,7 +190,11 @@ describe("cli", () => {
       'throw new Error("list and install never run a rule");\n',
       "utf8",
     );
-    await writeFile(join(rules, "data", "columns", "schema.ts"), "export const schema = 1;\n", "utf8");
+    await writeFile(
+      join(rules, "data", "columns", "schema.ts"),
+      "export const schema = 1;\n",
+      "utf8",
+    );
     await writeFile(
       join(rules, "style", "small", "RULE.md"),
       "---\ndescription: A file should be small.\n---\n\nx\n",
@@ -220,10 +242,196 @@ describe("cli", () => {
     expect((await readdir(join(root, installed))).sort()).toEqual(["data", "style"]);
   });
 
+  it("uses inferred native context with no config or tsconfig and preserves explicit code-only opt-out", async () => {
+    const root = await mkdtemp(join(tmpdir(), "adhere-default-reads-"));
+    const { TYPESAFE_API_KEY: _key, ...env } = process.env;
+    const options = {
+      cwd: root,
+      env: { ...env, XDG_CONFIG_HOME: join(root, "config") },
+      timeout: 20_000,
+    };
+    const source = "export const port = 3000;\n";
+    const capturedFile = join(root, "inferred-state.json");
+    try {
+      await mkdir(join(root, ".adhere", "rules", "ports"), { recursive: true });
+      await writeFile(join(root, "server.ts"), source, "utf8");
+      await writeFile(
+        join(root, ".adhere", "rules", "ports", "RULE.ts"),
+        `export default {
+          description: "A port must be named.",
+          must: "const port = PORT;",
+          appendState: async (state, file, bun) => {
+            await bun.write(${JSON.stringify(capturedFile)}, JSON.stringify(state));
+            return {};
+          },
+        };\n`,
+        "utf8",
+      );
+      const planned = await execFileAsync("bun", [main, "lint", "--limit", "0"], {
+        ...options,
+        env: {
+          ...options.env,
+          ADHERE_TYPESCRIPT_PACKAGE: join(root, "missing-compiler", "package.json"),
+        },
+      });
+      expect(planned.stderr.split("\n")[0]).toBe("1 file and 1 rule: 1 check.");
+      await expect(stat(capturedFile)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(stat(join(root, "tsconfig.json"))).rejects.toMatchObject({ code: "ENOENT" });
+
+      const refused = await execFileAsync("bun", [main, "lint"], options).then(
+        () => undefined,
+        (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) =>
+          error,
+      );
+      expect(refused?.code).toBe(1);
+      expect(`${refused?.stdout}${refused?.stderr}`).toContain("TYPESAFE_API_KEY");
+      expect(`${refused?.stdout}${refused?.stderr}`).not.toMatch(/reinstall|add a root tsconfig/i);
+      expect(refused?.stderr.split("\n")[0]).toBe("1 file and 1 rule: 1 check.");
+      const state: Readonly<Record<string, unknown>> = JSON.parse(
+        await readFile(capturedFile, "utf8"),
+      );
+      expect(state).toMatchObject({
+        code: { "1": source },
+        workspacePackages: {},
+        symbols: { port: "```typescript\n3000\n```" },
+        references: {},
+      });
+      await expect(stat(join(root, ".adhere", "config.ts"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(stat(join(root, "tsconfig.json"))).rejects.toMatchObject({ code: "ENOENT" });
+
+      await writeFile(
+        join(root, ".adhere", "config.ts"),
+        "export default { reads: [] };\n",
+        "utf8",
+      );
+      const { stderr } = await execFileAsync("bun", [main, "lint", "--limit", "0"], options);
+      expect(stderr.split("\n")[0]).toBe("1 file and 1 rule: 1 check.");
+      await expect(stat(join(root, "tsconfig.json"))).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it.each([
+    { policy: "default", reads: undefined },
+    { policy: "code-only", reads: [] },
+  ])(
+    "prepares $policy context for a request hook before refusing an absent API key",
+    async ({ reads }) => {
+      const root = await mkdtemp(join(tmpdir(), "adhere-default-context-"));
+      const { TYPESAFE_API_KEY: _key, ...env } = process.env;
+      const library = "export const value = 1;\n";
+      const caller = 'import { value } from "orders-core";\nconsole.log(value);\n';
+      const capturedFile = join(root, "request-state.json");
+      try {
+        for (const directory of [".adhere", "packages/orders"]) {
+          await mkdir(join(root, directory), { recursive: true });
+        }
+        const files: Readonly<Record<string, string>> = {
+          "packages/orders/library.ts": library,
+          "packages/orders/caller.ts": caller,
+          "package.json": JSON.stringify({ workspaces: ["packages/*"] }),
+          "packages/orders/package.json": JSON.stringify({
+            name: "orders-core",
+            exports: "./library.ts",
+          }),
+          ...(reads === undefined
+            ? {
+                "tsconfig.json": JSON.stringify({
+                  compilerOptions: {
+                    target: "ES2022",
+                    module: "ESNext",
+                    moduleResolution: "Bundler",
+                    types: [],
+                  },
+                  files: ["packages/orders/library.ts", "packages/orders/caller.ts"],
+                }),
+              }
+            : {}),
+          ".adhere/config.ts": `export default {
+          ${reads === undefined ? "" : "reads: [],"}
+          rules: {
+            named: {
+              description: "A value must be named.",
+              must: "export const value = VALUE;",
+              appendState: async (state, file, bun) => {
+                await bun.write(${JSON.stringify(capturedFile)}, JSON.stringify({ state, file }));
+                return {};
+              },
+            },
+          },
+        };\n`,
+        };
+        for (const [file, text] of Object.entries(files)) {
+          await writeFile(join(root, file), text, "utf8");
+        }
+        const planning = await execFileAsync(
+          "bun",
+          [main, "lint", "--limit", "0", "--filter", "packages/orders/caller.ts"],
+          {
+            cwd: root,
+            env: {
+              ...env,
+              XDG_CONFIG_HOME: join(root, "config"),
+              ADHERE_TYPESCRIPT_PACKAGE: join(root, "missing-compiler", "package.json"),
+            },
+            timeout: 20_000,
+          },
+        );
+        expect(planning.stderr.split("\n")[0]).toBe(
+          "1 file matching the filter and 1 rule: 1 check.",
+        );
+        await expect(stat(capturedFile)).rejects.toMatchObject({ code: "ENOENT" });
+
+        // Only execution runs the hook; isolated missing credentials prevent HTTP.
+        const refused = await execFileAsync(
+          "bun",
+          [main, "lint", "--filter", "packages/orders/caller.ts"],
+          {
+            cwd: root,
+            env: { ...env, XDG_CONFIG_HOME: join(root, "config") },
+            timeout: 20_000,
+          },
+        ).then(
+          () => undefined,
+          (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) =>
+            error,
+        );
+        expect(refused?.code).toBe(1);
+        expect(`${refused?.stdout}${refused?.stderr}`).toContain("TYPESAFE_API_KEY");
+        const captured: {
+          readonly state: Readonly<Record<string, unknown>>;
+          readonly file: { readonly path: string; readonly contents: string };
+        } = JSON.parse(await readFile(capturedFile, "utf8"));
+        expect(captured.file).toEqual({
+          path: join(root, "packages/orders/caller.ts"),
+          contents: caller,
+        });
+        if (reads === undefined) {
+          expect(captured.state).toMatchObject({
+            code: { "1": caller },
+            workspacePackages: { "orders-core": "packages/orders" },
+            symbols: { value: "```typescript\n1\n```" },
+            references: { value: { "packages/orders/library.ts": library.trimEnd() } },
+          });
+        } else {
+          expect(captured.state).toEqual({ code: { "1": caller } });
+          await expect(stat(join(root, "tsconfig.json"))).rejects.toMatchObject({ code: "ENOENT" });
+        }
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+    30_000,
+  );
+
   it("takes several presets, repeated or separated by commas, and refuses an unknown one", async () => {
     const root = join(tmpdir(), `adhere-presets-${Date.now()}`);
     await mkdir(root, { recursive: true });
     await writeFile(join(root, "index.ts"), "export const x = 1;\n", "utf8");
+    await writeFile(join(root, "adhere.config.ts"), "export default { reads: [] };\n", "utf8");
     // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
     const plan = (...presets: ReadonlyArray<string>) =>
       execFileAsync("bun", [main, "lint", ...presets, "--limit", "0"], { cwd: root }).then(
@@ -253,6 +461,7 @@ describe("cli", () => {
     const root = join(tmpdir(), `adhere-overrides-${Date.now()}`);
     await mkdir(root, { recursive: true });
     await writeFile(join(root, "index.ts"), "export const x = 1;\n", "utf8");
+    await writeFile(join(root, "adhere.config.ts"), "export default { reads: [] };\n", "utf8");
     // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
     const lint = () =>
       execFileAsync("bun", [main, "lint", "--preset", "effect", "--limit", "0"], { cwd: root });
@@ -261,7 +470,7 @@ describe("cli", () => {
     const config = (overrides: string) =>
       writeFile(
         join(root, "adhere.config.ts"),
-        `export default { overrides: ${overrides} };\n`,
+        `export default { reads: [], overrides: ${overrides} };\n`,
         "utf8",
       );
 
@@ -290,7 +499,7 @@ describe("cli", () => {
     const files: Readonly<Record<string, string>> = {
       "src/a.ts": "export const a = 1;\n",
       "gen/b.ts": "export const b = 1;\n",
-      "adhere.config.ts": 'export default { exclude: ["gen/**"] };\n',
+      "adhere.config.ts": 'export default { reads: [], exclude: ["gen/**"] };\n',
       ".adhere/rules/named/RULE.md":
         "---\ndescription: A constant must be named.\n---\n\nexport const named = 1;\n",
     };
@@ -310,7 +519,7 @@ describe("cli", () => {
     const files: Readonly<Record<string, string>> = {
       "src/a.ts": "export const port = 3000;\n",
       ".adhere/config.ts":
-        'import { defineConfig } from "@drkmttr/adhere";\n\nexport default defineConfig({});\n',
+        'import { defineConfig } from "@drkmttr/adhere";\n\nexport default defineConfig({ reads: [] });\n',
       ".adhere/rules/ports/RULE.ts": [
         'import { defineRule } from "@drkmttr/adhere";',
         "",
@@ -339,6 +548,7 @@ describe("cli", () => {
       "src/a.ts": "export const a = 1;\n",
       "src/a.test.ts": "export const t = 1;\n",
       "test/helper.ts": "export const h = 1;\n",
+      "adhere.config.ts": "export default { reads: [] };\n",
       ".adhere/rules/named/RULE.md":
         "---\ndescription: A constant must be named.\n---\n\nexport const named = 1;\n",
     };
@@ -369,6 +579,7 @@ describe("cli", () => {
     const cache = join(root, ".adhere", "cache");
     await mkdir(join(cache, "files"), { recursive: true });
     await mkdir(join(root, ".adhere", "rules", "ports"), { recursive: true });
+    await writeFile(join(root, "adhere.config.ts"), "export default { reads: [] };\n", "utf8");
     await writeFile(
       join(root, ".adhere", "rules", "ports", "RULE.md"),
       '---\ndescription: A port must be a branded integer.\n---\n\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\n',

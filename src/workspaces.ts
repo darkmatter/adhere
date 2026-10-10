@@ -1,7 +1,98 @@
 import { Effect, FileSystem, Path } from "effect";
+import { scan, type Token } from "#highlight.ts";
 
 /** A workspace's packages: each one's name, with its directory from the root. */
 export type WorkspacePackages = Readonly<Record<string, string>>;
+
+const ESCAPES: Readonly<Record<string, string>> = {
+  n: "\n",
+  r: "\r",
+  t: "\t",
+  b: "\b",
+  f: "\f",
+  v: "\v",
+  "0": "\0",
+};
+
+/** Decode a quoted module name without evaluating code; only calls accept plain templates. */
+const specifierOf = (token: Token | undefined, templates = false): string | undefined => {
+  if (token?.kind !== "string") return undefined;
+  const quote = token.text[0];
+  if (quote !== '"' && quote !== "'" && !(templates && quote === "`")) return undefined;
+  if (token.text.at(-1) !== quote) return undefined;
+  const body = token.text.slice(1, -1);
+  if (quote === "`" && /(?:^|[^\\])(?:\\\\)*\$\{/.test(body)) return undefined;
+  return body.replace(
+    /\\(u\{[\da-fA-F]{1,6}\}|u[\da-fA-F]{4}|x[\da-fA-F]{2}|[\s\S])/g,
+    (_, escaped: string) => {
+      if (/^(?:u\{|u[\da-fA-F]{4}$|x[\da-fA-F]{2}$)/.test(escaped)) {
+        const point = Number.parseInt(
+          escaped.startsWith("u{") ? escaped.slice(2, -1) : escaped.slice(1),
+          16,
+        );
+        return point <= 0x10ffff ? String.fromCodePoint(point) : `\\${escaped}`;
+      }
+      return ESCAPES[escaped] ?? escaped;
+    },
+  );
+};
+
+/**
+ * Only packages named by this file's literal imports, type imports, re-exports,
+ * or import/require calls. Tokens keep comments, strings, regexes, and templates
+ * opaque; computed modules and imports inside template substitutions are not resolved.
+ * Subpaths identify their canonical package, without walking the global catalog.
+ */
+export const workspacePackagesIn = (
+  code: string,
+  catalog: WorkspacePackages,
+): WorkspacePackages => {
+  const tokens = scan(code).flatMap((token) => {
+    if (token.kind === "comment" || token.text.trim() === "") return [];
+    // Highlighting groups punctuation; module clauses need individual delimiters.
+    return token.kind === undefined && /^[^\w$]+$/.test(token.text)
+      ? [...token.text].map((text): Token => ({ text }))
+      : [token];
+  });
+  const names = new Set<string>();
+  const keep = (specifier: string | undefined) => {
+    if (specifier === undefined || specifier.startsWith(".") || specifier.startsWith("/")) return;
+    const name = specifier.split("/", specifier.startsWith("@") ? 2 : 1).join("/");
+    if (Object.hasOwn(catalog, name)) names.add(name);
+  };
+  for (const [index, token] of tokens.entries()) {
+    if (tokens[index - 1]?.text === ".") continue;
+    const next = tokens[index + 1];
+    if ((token.text === "import" || token.text === "require") && next?.text === "(") {
+      const end = tokens[index + 3]?.text;
+      if (end === ")" || end === ",") {
+        keep(specifierOf(tokens[index + 2], true));
+      }
+      continue;
+    }
+    if (token.kind !== "keyword" || (token.text !== "import" && token.text !== "export")) continue;
+    if (token.text === "import" && next?.kind === "string") {
+      keep(specifierOf(next));
+      continue;
+    }
+    const head = next?.text === "type" ? tokens[index + 2]?.text : next?.text;
+    if (token.text === "export" && head !== "{" && head !== "*") continue;
+    let depth = 0;
+    for (let at = index + 1; at < tokens.length; at += 1) {
+      const part = tokens[at]!;
+      if ([";", "=", "(", ")", "."].includes(part.text)) break;
+      if (part.text === "{") depth += 1;
+      else if (part.text === "}") depth -= 1;
+      if (depth !== 0) continue;
+      if (part.text === "from" && tokens[at + 1]?.kind === "string") {
+        keep(specifierOf(tokens[at + 1]));
+        break;
+      }
+      if (part.kind === "keyword" && !["type", "as", "from"].includes(part.text)) break;
+    }
+  }
+  return Object.fromEntries([...names].sort().map((name) => [name, catalog[name]!]));
+};
 
 /** What JSON text holds, or nothing when it is not JSON. */
 const parsed = (text: string): unknown => {

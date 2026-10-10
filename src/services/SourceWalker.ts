@@ -5,18 +5,19 @@ import type { ScannedFile } from "#models/Audit.ts";
 import { WalkUnavailable } from "#models/Audit.ts";
 import { walkFiles } from "#walk.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
-import { clearingStatus, counted, countOf, Status } from "#services/Status.ts";
+import { clearingStatus, countOf, Status } from "#services/Status.ts";
+
+/** A source path and its classification, without retaining its contents. */
+export type SourceFile = Pick<ScannedFile, "path" | "test">;
 
 /** Walks the repository's TypeScript source, skipping what is not ours to read. */
 export class SourceWalker extends Context.Service<
   SourceWalker,
   {
-    /**
-     * Every TypeScript file under the audit's roots, in directory order, test
-     * files marked. A file that cannot be read refuses the walk: a silent gap
-     * would report a clean audit that was never complete.
-     */
-    readonly files: Effect.Effect<ReadonlyArray<ScannedFile>, WalkUnavailable>;
+    /** Every TypeScript path under the audit's roots, in directory order, with tests marked. */
+    readonly files: Effect.Effect<ReadonlyArray<SourceFile>, WalkUnavailable>;
+    /** Reads one path on demand. An unreadable file refuses the audit rather than leaving a gap. */
+    readonly read: (file: SourceFile) => Effect.Effect<ScannedFile, WalkUnavailable>;
   }
 >()("@drkmttr/adhere/services/SourceWalker") {}
 
@@ -136,50 +137,17 @@ const listRoot = Effect.fn("SourceWalker.listRoot")(function* (
   return files;
 });
 
-/** One scannable path, read into lines. */
-const readFile = Effect.fn("SourceWalker.readFile")((fs: FileSystem.FileSystem, path: string) =>
-  Effect.map(fs.readFileString(path), (content): ScannedFile => ({
-    path,
+/** One scannable path, read into lines without keeping it in the walker. */
+const readFile = Effect.fn("SourceWalker.readFile")((fs: FileSystem.FileSystem, file: SourceFile) =>
+  Effect.map(fs.readFileString(file.path), (content): ScannedFile => ({
+    ...file,
     lines: content.split("\n"),
-  })).pipe(Effect.tap((file) => Effect.logTrace(`read ${path}: ${file.lines.length} lines`))),
-);
-
-/** Reads a root's paths, several at a time, keeping their order, and counts them on the status line. */
-const readEach = Effect.fn("SourceWalker.readEach")(function* (
-  fs: FileSystem.FileSystem,
-  label: string,
-  paths: ReadonlyArray<string>,
-) {
-  const status = yield* Status;
-  let read = 0;
-  return yield* Effect.forEach(
-    paths,
-    (path: string) =>
-      readFile(fs, path).pipe(
-        Effect.tap(() => {
-          read += 1;
-          return status.show(
-            `Reading ${label}: ${counted(read)} of ${countOf(paths.length, "file", "files")}`,
-          );
-        }),
-      ),
-    { concurrency: 16 },
-  );
-});
-
-/** One root's files, in path order: read every scannable path. */
-const readRoot = Effect.fn("SourceWalker.readRoot")(
-  (
-    fs: FileSystem.FileSystem,
-    path: Path.Path,
-    root: string,
-    label: string,
-    self: string,
-    keep: Keep,
-  ) =>
-    Effect.flatMap(listRoot(fs, path, root, label, self, keep), (paths) =>
-      readEach(fs, label, paths),
+  })).pipe(
+    Effect.tap((read) => Effect.logTrace(`read ${file.path}: ${read.lines.length} lines`)),
+    Effect.mapError((problem) =>
+      WalkUnavailable.make({ message: `${file.path}: ${problem.message}` }),
     ),
+  ),
 );
 
 /**
@@ -199,9 +167,9 @@ const scanDirs = Effect.fn("SourceWalker.scanDirs")(function* (
 
 /**
  * The real walker: the roots walked a directory at a time, skipped trees
- * left unread, each file read and split into lines. The run's filter and the
- * config's `exclude` leave out what they match. Test files are read, and
- * marked, even when no rule judges them, so a prune keeps what other runs
+ * left unread, with contents loaded only when the audit asks for a file.
+ * The run's filter and the config's `exclude` leave out what they match.
+ * Tests are listed even when no rule judges them, so a prune keeps what other runs
  * know of them. Tests substitute their own tree.
  * The scan root is the current working directory, so the audit reads the
  * repository it is run in.
@@ -220,7 +188,7 @@ export const SourceWalkerLive = (filter: ReadonlyArray<string> = []) =>
         const dirs = yield* scanDirs(fs, root).pipe(Effect.mapError(refused));
         const trees = yield* clearingStatus(
           Effect.forEach(dirs, (dir) =>
-            readRoot(
+            listRoot(
               fs,
               path,
               path.join(root, dir),
@@ -232,12 +200,11 @@ export const SourceWalkerLive = (filter: ReadonlyArray<string> = []) =>
             ).pipe(Effect.mapError(refused)),
           ),
         );
-        return trees
-          .flat()
-          .map((file) =>
-            isTestFile(path.relative(root, file.path)) ? { ...file, test: true } : file,
-          );
+        return trees.flat().map((file): SourceFile => ({
+          path: file,
+          ...(isTestFile(path.relative(root, file)) ? { test: true } : {}),
+        }));
       });
-      return SourceWalker.of({ files: walk() });
+      return SourceWalker.of({ files: walk(), read: (file) => readFile(fs, file) });
     }),
   );

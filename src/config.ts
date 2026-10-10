@@ -5,9 +5,13 @@ import { Effect, Predicate, Schema, SchemaTransformation } from "effect";
 
 export type RuleId = string;
 
-/** The state a request to Jev carries: the file's code as numbered sections, which every question reads. */
+/** Shared context prepared for a file's requests; it does not affect cache validity. */
+export type ReadState = Readonly<Record<string, unknown>>;
+
+/** The file's numbered sections and the context enabled by its config. */
 export interface JevState {
   readonly code: Readonly<Record<string, string>>;
+  readonly [key: string]: unknown;
 }
 
 /** The file a request is about, as a rule's hook gets it: its absolute path, and its text as written. */
@@ -49,13 +53,15 @@ export type AppendState = (
 ) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
 
 /**
- * What a rule can have Jev read beside the code, each by the name of the key
- * the state carries it under, which the rule's description can name in
- * backticks. `workspacePackages` is the workspace's packages: each one's name
- * with its directory, so a rule can tell an import of the repository's own
- * package from an installed one's.
+ * What the config can have Jev read beside each file's code, shared by all
+ * its rules. Each name is the key the state carries it under, which a rule's
+ * description can name in backticks. `workspacePackages` maps only workspace
+ * packages imported by this file to their directories. `symbols` maps names
+ * to native compiler types, with documentation and JSDoc tags shared across variants.
+ * `references` maps used names to complete AST declaration scopes by
+ * repo-relative path, rather than fixed line windows or full related files.
  */
-export const Reads = Schema.Array(Schema.Literals(["workspacePackages"]));
+export const Reads = Schema.Array(Schema.Literals(["workspacePackages", "symbols", "references"]));
 
 /**
  * A rule's examples, named in RFC 2119's words, which Jev reads as written. A
@@ -100,12 +106,6 @@ const RuleFields = Schema.Struct({
    */
   excludeIf: Schema.optionalKey(Schema.Array(Schema.String)),
   /**
-   * What Jev reads for the rule beside the code, by name (see `Reads`). The
-   * rule's questions go in requests of their own, so only they read it, and
-   * a change to what is read judges the rule again.
-   */
-  reads: Schema.optionalKey(Reads),
-  /**
    * A hook on the state Jev reads for the rule, in a rule written in
    * TypeScript (see `AppendState`). The rule's questions go in requests of
    * their own, so only they read what it adds.
@@ -122,6 +122,12 @@ export const Rule = Schema.Struct({
   ...RuleFields.fields,
   reference: Schema.optionalKey(Schema.String),
   avoid: Schema.optionalKey(Schema.String),
+  // Guard the removed key instead of silently dropping it as an excess property.
+  reads: Schema.optionalKey(
+    Schema.declare((_value: unknown): _value is never => false, {
+      expected: "no rule-level reads; move reads to the top level of defineConfig({...})",
+    }),
+  ),
 })
   .pipe(
     Schema.decodeTo(
@@ -214,6 +220,8 @@ export const AdhereConfig = Schema.Struct({
   presets: Schema.Array(Schema.Literals(presetNames)).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed([])),
   ),
+  /** Shared context for every audited file and all its rules. Unset: all built-in reads; []: code only. */
+  reads: Schema.optionalKey(Reads),
   /**
    * A record of rules, or a directory path relative to the config file,
    * which holds its rules as `.adhere/rules/` does. Unset: the rules in
@@ -321,6 +329,7 @@ export type Loaded<T extends { readonly rules?: unknown }> = Omit<T, "rules"> & 
 export const DEFAULT_MODEL = "jev-latest";
 export const DEFAULT_THRESHOLD = 0.8;
 export const DEFAULT_SUFFICIENCY_THRESHOLD = 0.6;
+export const DEFAULT_READS: typeof Reads.Type = ["workspacePackages", "symbols", "references"];
 
 /** A config with its presets folded in and every default applied. */
 export interface ResolvedConfig {
@@ -338,9 +347,11 @@ export interface ResolvedConfig {
   readonly exclude?: ReadonlyArray<string>;
   /** Whether Jev reads every comment; unset, only the `@adhere` notes. */
   readonly includeComments?: boolean;
+  /** Built-in context shared by every rule, with the default applied. */
+  readonly reads: typeof Reads.Type;
   /**
    * The workspace's packages, each name with its directory from the working
-   * directory, read from its manifests on every run, when a rule's `reads`
+   * directory, read from its manifests on every run when the config's reads
    * names them.
    */
   readonly workspacePackages?: Readonly<Record<string, string>>;
@@ -399,6 +410,7 @@ export const resolveConfig = (
     ...(flags.rpm === undefined ? {} : { rpm: flags.rpm }),
     ...(config.exclude === undefined ? {} : { exclude: config.exclude }),
     ...(config.includeComments === undefined ? {} : { includeComments: config.includeComments }),
+    reads: config.reads ?? DEFAULT_READS,
   };
 };
 

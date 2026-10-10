@@ -1,4 +1,4 @@
-import { ConfigUnavailable, type Example, Reads, type Rule } from "#config.ts";
+import { ConfigUnavailable, type Example, type Rule } from "#config.ts";
 import { Effect, Schema } from "effect";
 
 /**
@@ -34,8 +34,7 @@ import { Effect, Schema } from "effect";
  * `warning` reports the rule's findings as warnings, which do not fail a run.
  * `appliesTo` and `excludeIf`, the rule's scope, are JSON arrays of strings on
  * one line, as in `excludeIf: ["a type that mirrors a third-party format"]`.
- * So is `reads`, of the names of what Jev reads for the rule beside the code,
- * as in `reads: ["workspacePackages"]`.
+
  */
 const Matchers = Schema.fromJsonString(Schema.Array(Schema.String));
 
@@ -46,7 +45,6 @@ const FrontMatter = Schema.Struct({
   level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
   appliesTo: Schema.optionalKey(Matchers),
   excludeIf: Schema.optionalKey(Matchers),
-  reads: Schema.optionalKey(Schema.fromJsonString(Reads)),
 });
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
@@ -209,7 +207,13 @@ export const parseRuleMarkdown = (
         message: `${file}: a rule starts with front matter between --- lines`,
       });
     }
-    const front = yield* Schema.decodeUnknownEffect(FrontMatter)(parseFrontMatter(match[1])).pipe(
+    const fields = parseFrontMatter(match[1]);
+    if (Object.hasOwn(fields, "reads")) {
+      return yield* ConfigUnavailable.make({
+        message: `${file}: move reads from the rule's front matter to the top level of defineConfig({...}) in your config file.`,
+      });
+    }
+    const front = yield* Schema.decodeUnknownEffect(FrontMatter)(fields).pipe(
       Effect.mapError((problem) =>
         ConfigUnavailable.make({ message: `${file}: ${problem.message}` }),
       ),

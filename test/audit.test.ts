@@ -1,4 +1,13 @@
-import { access, mkdir, mkdtemp, readdir, readFile, symlink, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
@@ -26,9 +35,12 @@ import { findContradictions, formatContradictions } from "../src/contradictions.
 import {
   AdhereConfig as AdhereConfigSchema,
   type AppendState,
+  DEFAULT_READS,
   decodeConfig,
   type Loaded,
   type Preset,
+  type ReadState,
+  type ResolvedConfig,
   presetsOf,
   resolveConfig,
 } from "../src/config.ts";
@@ -38,7 +50,7 @@ import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
 import { workspacePackagesOf } from "../src/workspaces.ts";
 import { presetOf, presets, topicsOf, wholePresetOf } from "../src/presets.ts";
-import type { ScannedFile } from "../src/models/Audit.ts";
+import { type ScannedFile, WalkUnavailable } from "../src/models/Audit.ts";
 import {
   applicableRules,
   loadAdhereRuleSet,
@@ -48,7 +60,7 @@ import {
   shownId,
   withOverrides,
 } from "../src/rules.ts";
-import { AdhereConfig } from "../src/services/AdhereConfig.ts";
+import { AdhereConfig, AdhereConfigLive } from "../src/services/AdhereConfig.ts";
 import {
   type Answers,
   AuditCache,
@@ -63,6 +75,7 @@ import {
   CredentialsUnavailable,
 } from "../src/services/Credentials.ts";
 import { JevLive } from "../src/services/Jev.http.ts";
+import { SourceReads, SourceReadsLive } from "../src/services/SourceReads.ts";
 import {
   conflictBody,
   contradictBody,
@@ -93,6 +106,7 @@ import {
   isTestFile,
   passesFilter,
   SourceWalker,
+  SourceWalkerLive,
 } from "../src/services/SourceWalker.ts";
 import { formatStrays, straysAmong, strayingOf, TIPS_URL } from "../src/wording.ts";
 import { walkFiles } from "../src/walk.ts";
@@ -211,23 +225,26 @@ const recordingJev = (answers: {
   readonly locate: Record<string, number>;
 }) => {
   const calls = { judge: [] as Array<Rules>, locate: [] as Array<Rules> };
+  const states = { judge: [] as Array<ReadState>, locate: [] as Array<ReadState> };
   const asked = (table: Record<string, number>, rules: Rules) =>
     Record.filter(table, (_, id) => rules[id] !== undefined);
   const layer = Layer.succeed(Jev, {
-    judge: (_lines, rules) =>
+    judge: (_lines, rules, _sampled, _file, readState = {}) =>
       Effect.sync(() => {
         calls.judge.push(rules);
+        states.judge.push(readState);
         return { probabilities: asked(answers.judge, rules), linter: {} };
       }),
-    locate: (lines, rules) =>
+    locate: (lines, rules, _file, readState = {}) =>
       Effect.sync(() => {
         calls.locate.push(rules);
+        states.locate.push(readState);
         return Record.map(asked(answers.locate, rules), (line) => placedAt(lines, line));
       }),
     conflicts: () => Effect.die("an audit compares no rules"),
     contradicts: () => Effect.die("an audit compares no rules"),
   });
-  return { calls, layer };
+  return { calls, states, layer };
 };
 
 const source: ScannedFile = {
@@ -239,23 +256,41 @@ const source: ScannedFile = {
   ],
 };
 
+const fixtureWalker = (files: ReadonlyArray<ScannedFile>) =>
+  Layer.succeed(SourceWalker, {
+    files: Effect.succeed(
+      files.map(({ path, test }) => ({ path, ...(test === undefined ? {} : { test }) })),
+    ),
+    read: ({ path }) =>
+      Effect.suspend(() => {
+        const file = files.find((file) => file.path === path);
+        return file === undefined
+          ? Effect.die(`Missing source fixture: ${path}`)
+          : Effect.succeed(file);
+      }),
+  });
+
 const audit = (options: {
   readonly rules: Rules;
+  readonly model?: string;
   readonly threshold?: number;
   readonly jev: Layer.Layer<Jev>;
   readonly cache: Layer.Layer<AuditCache>;
   readonly files?: ReadonlyArray<ScannedFile>;
   readonly includeComments?: boolean;
+  readonly reads?: ResolvedConfig["reads"];
   readonly workspacePackages?: Readonly<Record<string, string>>;
+  readonly sourceReads?: Layer.Layer<SourceReads>;
 }) =>
   Effect.runPromise(
     runAudit.pipe(
       Effect.provide(
         Layer.mergeAll(
           Layer.succeed(AdhereConfig, {
-            model: "jev-latest",
+            model: options.model ?? "jev-latest",
             threshold: options.threshold ?? 0.7,
             sufficiencyThreshold: 0.7,
+            reads: options.reads ?? [],
             rules: options.rules,
             ...(options.includeComments === undefined
               ? {}
@@ -264,10 +299,11 @@ const audit = (options: {
               ? {}
               : { workspacePackages: options.workspacePackages }),
           }),
-          Layer.succeed(SourceWalker, { files: Effect.succeed(options.files ?? [source]) }),
+          fixtureWalker(options.files ?? [source]),
           options.jev,
           options.cache,
           testCrypto,
+          ...(options.sourceReads === undefined ? [] : [options.sourceReads]),
         ),
       ),
     ),
@@ -506,11 +542,12 @@ describe("jev's context", () => {
     const hooked = { ...b, appendState: () => ({}) };
     expect(requestGroups({ a, hooked, b })).toEqual([{ a, b }, { hooked }]);
     expect(requestGroups({ hooked })).toEqual([{ hooked }]);
-    // A rule that reads the workspace's packages has state of its own too.
-    const packaged = { ...b, reads: ["workspacePackages"] as const };
-    expect(requestGroups({ a, packaged, hooked })).toEqual([{ a }, { packaged }, { hooked }]);
-    expect(judgeLoad(code1, { a, b, hooked }).requests).toBe(2);
-    expect(locateRequests(code1, { a, hooked })).toBe(2);
+    const readState = { workspacePackages: { "orders-core": "packages/orders" } };
+    expect(requestGroups(rules)).toEqual([rules]);
+    expect(judgeLoad(code1, rules, [], readState).requests).toBe(1);
+    expect(locateRequests(code1, rules, readState)).toBe(1);
+    expect(judgeLoad(code1, { a, b, hooked }, [], readState).requests).toBe(2);
+    expect(locateRequests(code1, { a, hooked }, readState)).toBe(2);
   });
 
   it("keeps a body that fits as one request", () => {
@@ -533,14 +570,18 @@ const loaded = (config: typeof AdhereConfigSchema.Encoded, rules: Rules = {}) =>
   Effect.map(decodeConfig(config), (decoded) => ({ ...decoded, rules }));
 
 describe("config", () => {
-  it("applies the default model and thresholds", async () => {
+  it("applies the default model, thresholds, and all three reads only at resolution", async () => {
     const config = await Effect.runPromise(
       loaded({}, { "data/brand": { description: "d", must: "r" } }),
     );
+    expect(config.reads).toBeUndefined();
+    expect(Object.hasOwn(config, "reads")).toBe(false);
+    expect(DEFAULT_READS).toEqual(["workspacePackages", "symbols", "references"]);
     expect(resolveConfig(config)).toEqual({
       model: "jev-latest",
       threshold: 0.8,
       sufficiencyThreshold: 0.6,
+      reads: ["workspacePackages", "symbols", "references"],
       rules: { "data/brand": { description: "d", must: "r" } },
     });
   });
@@ -662,16 +703,42 @@ describe("config", () => {
     expect(refused.message).toContain("Expected a function");
   });
 
-  it("takes the names of what a rule reads beside the code, and refuses one it does not have", async () => {
-    const reading = { ...a, reads: ["workspacePackages"] };
-    const decoded = await Effect.runPromise(decodeConfig({ rules: { a: reading } }));
-    expect(decoded.rules).toEqual({ a: reading });
-    const refused = await Effect.runPromise(
-      Effect.flip(decodeConfig({ rules: { a: { ...a, reads: ["comments"] } } })),
-    );
+  it("keeps configured shared reads through resolution and refuses unknown reads", async () => {
+    const reads = ["workspacePackages", "symbols", "references"] as const;
+    const decoded = await Effect.runPromise(decodeConfig({ reads, rules }));
+    expect(decoded.reads).toEqual(reads);
+    expect(decoded.rules).toEqual(rules);
+    expect(resolveConfig({ ...decoded, rules }).reads).toEqual(reads);
+    const refused = await Effect.runPromise(Effect.flip(decodeConfig({ reads: ["comments"] })));
     expect(refused.message).toContain(
-      'Expected "workspacePackages"\n  at ["rules"]["a"]["reads"][0]',
+      'Expected "workspacePackages" | "symbols" | "references"\n  at ["reads"][0]',
     );
+  });
+
+  it("replaces default reads with explicit empty or subset lists rather than merging them", async () => {
+    for (const reads of [
+      [],
+      ["workspacePackages"],
+      ["symbols"],
+      ["references"],
+      ["symbols", "references"],
+    ] as const) {
+      const config = await Effect.runPromise(loaded({ reads }, rules));
+      expect(config.reads).toEqual(reads);
+      expect(resolveConfig(config).reads).toEqual(reads);
+    }
+  });
+
+  it("refuses rule-level reads with instructions to move them to the config", async () => {
+    for (const reads of [["workspacePackages", "symbols", "references"], [], ["comments"]]) {
+      const refused = await Effect.runPromise(
+        Effect.flip(decodeConfig({ reads: ["symbols"], rules: { a: { ...a, reads } } })),
+      );
+      expect(refused._tag).toBe("ConfigUnavailable");
+      expect(refused.message).toContain("reads");
+      expect(refused.message).toMatch(/move/i);
+      expect(refused.message).toMatch(/config/i);
+    }
   });
 
   it("reads reference and avoid, the names before 0.7, as must and never", async () => {
@@ -914,18 +981,22 @@ describe("markdown rules", () => {
     expect(refused.message).toContain("rules/a.md");
   });
 
-  it("front matter's reads is a JSON array of the names of what Jev reads beside the code", async () => {
-    const reading = (names: string) => `---\ndescription: d\nreads: ${names}\n---\na()\n`;
-    expect(await parse(reading('["workspacePackages"]'))).toEqual({
-      description: "d",
-      reads: ["workspacePackages"],
-      must: "a()",
-    });
-    // A name adhere does not have refuses the rule, so a misspelled one is not passed over.
-    const refused = await Effect.runPromise(
-      Effect.flip(parseRuleMarkdown(reading('["workspacePackagez"]'), "rules/a.md")),
-    );
-    expect(refused.message).toBe('rules/a.md: Expected "workspacePackages"\n  at ["reads"][0]');
+  it("refuses front matter's reads, naming the file and telling the user to move them to the config", async () => {
+    for (const reads of [
+      '["workspacePackages", "symbols", "references"]',
+      "[]",
+      '["workspacePackagez"]',
+    ]) {
+      const refused = await Effect.runPromise(
+        Effect.flip(
+          parseRuleMarkdown(`---\ndescription: d\nreads: ${reads}\n---\na()\n`, "rules/a.md"),
+        ),
+      );
+      expect(refused.message).toContain("rules/a.md");
+      expect(refused.message).toContain("reads");
+      expect(refused.message).toMatch(/move/i);
+      expect(refused.message).toMatch(/config/i);
+    }
   });
 
   it("front matter's appliesTo and excludeIf are JSON arrays of strings", async () => {
@@ -1090,6 +1161,92 @@ describe("workspace packages", () => {
   const packagesOf = (root: string) =>
     Effect.runPromise(workspacePackagesOf(root).pipe(Effect.provide(realFileSystem)));
   const named = (name: string) => JSON.stringify({ name });
+
+  it("loads workspace package context by default and respects empty or subset replacements", async () => {
+    const path = await Effect.runPromise(Path.Path.pipe(Effect.provide(Path.layer)));
+    for (const reads of [
+      undefined,
+      [],
+      ["workspacePackages"],
+      ["symbols"],
+      ["references"],
+    ] as const) {
+      const root = await onDisk({
+        ".adhere/config.ts": `export default ${JSON.stringify({
+          rules,
+          ...(reads === undefined ? {} : { reads }),
+        })};\n`,
+        "package.json": JSON.stringify({ workspaces: ["packages/*"] }),
+        "packages/orders/package.json": named("orders-core"),
+      });
+      try {
+        const config = await Effect.runPromise(
+          AdhereConfig.pipe(
+            Effect.provide(
+              AdhereConfigLive({}).pipe(
+                Layer.provide([
+                  BunFileSystem.layer,
+                  Layer.succeed(Path.Path, {
+                    ...path,
+                    resolve: (...parts) => path.resolve(root, ...parts),
+                  }),
+                ]),
+              ),
+            ),
+          ),
+        );
+        const expectedReads = reads ?? ["workspacePackages", "symbols", "references"];
+        expect(config.reads).toEqual(expectedReads);
+        expect(config.rules).toEqual(rules);
+        expect(config.workspacePackages).toEqual(
+          expectedReads.some((name) => name === "workspacePackages")
+            ? { "orders-core": "packages/orders" }
+            : undefined,
+        );
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("defaults all three reads with no config file when a preset or discovered rules supplies the rules", async () => {
+    const path = await Effect.runPromise(Path.Path.pipe(Effect.provide(Path.layer)));
+    for (const preset of [false, true]) {
+      const root = await onDisk({
+        "package.json": JSON.stringify({ workspaces: ["packages/*"] }),
+        "packages/orders/package.json": named("orders-core"),
+        ...(preset
+          ? {}
+          : {
+              ".adhere/rules/ports/RULE.md":
+                "---\ndescription: A port must be named.\n---\nconst port = PORT;\n",
+            }),
+      });
+      try {
+        const config = await Effect.runPromise(
+          AdhereConfig.pipe(
+            Effect.provide(
+              AdhereConfigLive(preset ? { presets: ["effect"] } : {}).pipe(
+                Layer.provide([
+                  BunFileSystem.layer,
+                  Layer.succeed(Path.Path, {
+                    ...path,
+                    resolve: (...parts) => path.resolve(root, ...parts),
+                  }),
+                ]),
+              ),
+            ),
+          ),
+        );
+        expect(config.reads).toEqual(["workspacePackages", "symbols", "references"]);
+        expect(config.workspacePackages).toEqual({ "orders-core": "packages/orders" });
+        expect(Object.keys(config.rules).length).toBeGreaterThan(0);
+        expect(config.scopedRules?.some((entry) => entry.preset === "effect")).toBe(preset);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
 
   it("reads a root package.json's workspaces, by name, with each package's directory", async () => {
     const root = await onDisk({
@@ -1447,6 +1604,68 @@ describe("comments", () => {
 });
 
 describe("source walker", () => {
+  it("lists only paths and classifications, then reads current contents on demand", async () => {
+    const root = await onDisk({
+      "src/a.ts": "export const before = 1;\n",
+      "src/a.test.ts": "export const test = 1;\n",
+      "src/skip.ts": "export const skipped = 1;\n",
+      "src/types.d.ts": "declare const declared: number;\n",
+      ".adhere/config.ts": "export default {};\n",
+    });
+    try {
+      const [fs, path] = await Effect.runPromise(
+        Effect.all([FileSystem.FileSystem, Path.Path]).pipe(Effect.provide(realFileSystem)),
+      );
+      const reads: Array<string> = [];
+      const layer = SourceWalkerLive(["src/**"]).pipe(
+        Layer.provide(
+          Layer.mergeAll(
+            Layer.succeed(FileSystem.FileSystem, {
+              ...fs,
+              readFileString: (file) =>
+                Effect.suspend(() => {
+                  reads.push(file);
+                  return fs.readFileString(file);
+                }),
+            }),
+            Layer.succeed(Path.Path, {
+              ...path,
+              resolve: (...parts) => path.resolve(root, ...parts),
+            }),
+            Layer.succeed(AdhereConfig, {
+              model: "jev-latest",
+              threshold: 0.7,
+              sufficiencyThreshold: 0.7,
+              reads: [],
+              rules,
+              exclude: ["src/skip.ts"],
+            }),
+          ),
+        ),
+      );
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const walker = yield* SourceWalker;
+          const files = yield* walker.files;
+          expect(files).toEqual([
+            { path: join(root, "src/a.test.ts"), test: true },
+            { path: join(root, "src/a.ts") },
+          ]);
+          expect(reads).toEqual([]);
+          const file = files.find((file) => file.path.endsWith("/a.ts"))!;
+          yield* Effect.promise(() => writeFile(file.path, "export const after = 2;\n", "utf8"));
+          expect(yield* walker.read(file)).toEqual({
+            ...file,
+            lines: ["export const after = 2;", ""],
+          });
+          expect(reads).toEqual([file.path]);
+        }).pipe(Effect.provide(layer)),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps the files a filter's globs match, and leaves out what a ! pattern matches", () => {
     expect(passesFilter("src/a.ts", [])).toBe(true);
     expect(passesFilter("src/deep/a.ts", ["src/**"])).toBe(true);
@@ -1949,6 +2168,12 @@ const planOf = (options: {
   readonly files: ReadonlyArray<ScannedFile>;
   readonly cache: Layer.Layer<AuditCache>;
   readonly limit?: number;
+  readonly reads?: ResolvedConfig["reads"];
+  readonly includeComments?: boolean;
+  readonly workspacePackages?: Readonly<Record<string, string>>;
+  readonly sourceReads?: Layer.Layer<SourceReads>;
+  readonly walker?: Layer.Layer<SourceWalker>;
+  readonly scopedRules?: RuleSet;
 }) =>
   Effect.runPromise(
     planAudit({ limit: options.limit }).pipe(
@@ -1958,11 +2183,20 @@ const planOf = (options: {
             model: "jev-latest",
             threshold: 0.7,
             sufficiencyThreshold: 0.7,
+            reads: options.reads ?? [],
             rules: options.rules,
+            ...(options.scopedRules === undefined ? {} : { scopedRules: options.scopedRules }),
+            ...(options.includeComments === undefined
+              ? {}
+              : { includeComments: options.includeComments }),
+            ...(options.workspacePackages === undefined
+              ? {}
+              : { workspacePackages: options.workspacePackages }),
           }),
-          Layer.succeed(SourceWalker, { files: Effect.succeed(options.files) }),
+          options.walker ?? fixtureWalker(options.files),
           options.cache,
           testCrypto,
+          ...(options.sourceReads === undefined ? [] : [options.sourceReads]),
         ),
       ),
     ),
@@ -1970,6 +2204,299 @@ const planOf = (options: {
 
 describe("plan", () => {
   const other: ScannedFile = { path: "/repo/src/other.ts", lines: ["const x = 1;"] };
+
+  it("consumes bounded source prefetch while retaining only compact file metadata", async () => {
+    const paths = Array.from({ length: 64 }, (_, index) => ({
+      path: `/repo/src/f${String(index).padStart(2, "0")}.ts`,
+    }));
+    let loaded = 0;
+    let consumed = 0;
+    let peak = 0;
+    const walker = Layer.succeed(SourceWalker, {
+      files: Effect.succeed(paths),
+      read: (file) =>
+        Effect.sync(() => {
+          loaded += 1;
+          peak = Math.max(peak, loaded - consumed);
+          return { ...file, lines: [`export const bounded = ${loaded};`] };
+        }),
+    });
+    const status = Layer.succeed(Status, {
+      show: () =>
+        Effect.sync(() => {
+          consumed += 1;
+        }),
+      clear: Effect.void,
+    });
+    const planned = await Effect.runPromise(
+      planAudit({ limit: 0 }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            walker,
+            status,
+            memoryCache(),
+            testCrypto,
+            Layer.succeed(AdhereConfig, {
+              model: "jev-latest",
+              threshold: 0.7,
+              sufficiencyThreshold: 0.7,
+              reads: [],
+              rules,
+            }),
+          ),
+        ),
+      ),
+    );
+    expect(loaded).toBe(paths.length);
+    expect(consumed).toBe(paths.length);
+    expect(peak).toBeLessThanOrEqual(16);
+    expect(planned.files.map((plan) => plan.file)).toEqual(paths);
+    expect(planned.files.every((plan) => !Object.hasOwn(plan, "original"))).toBe(true);
+    expect(JSON.stringify(planned)).not.toContain("export const bounded");
+    expect(planned).toMatchObject({ checks: 128, deferred: 64, requests: 0, tokens: 0 });
+  });
+
+  it("refuses the whole audit without pruning when a later prefetched source read fails", async () => {
+    const paths = Array.from({ length: 64 }, (_, index) => ({
+      path: `/repo/src/f${String(index).padStart(2, "0")}.ts`,
+    }));
+    const refusal = WalkUnavailable.make({ message: `${paths.at(-1)!.path}: unreadable source` });
+    const walker = Layer.succeed(SourceWalker, {
+      files: Effect.succeed(paths),
+      read: (file) =>
+        file.path === paths.at(-1)!.path
+          ? Effect.fail(refusal)
+          : Effect.succeed({ ...file, lines: ["export const value = 1;"] }),
+    });
+    let progress = 0;
+    let cleared = 0;
+    const status = Layer.succeed(Status, {
+      show: () =>
+        Effect.sync(() => {
+          progress += 1;
+        }),
+      clear: Effect.sync(() => {
+        cleared += 1;
+      }),
+    });
+    const pruned: Array<Live> = [];
+    const jev = recordingJev({ judge: { a: 0.1, b: 0.1 }, locate: {} });
+    const result = await Effect.runPromise(
+      Effect.result(
+        Effect.flatMap(planAudit(), (plan) =>
+          executeAudit(plan).pipe(Effect.tap(() => pruneCache(plan))),
+        ),
+      ).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            walker,
+            status,
+            jev.layer,
+            memoryCache({}, new Map(), pruned),
+            testCrypto,
+            Layer.succeed(AdhereConfig, {
+              model: "jev-latest",
+              threshold: 0.7,
+              sufficiencyThreshold: 0.7,
+              reads: [],
+              rules,
+            }),
+          ),
+        ),
+      ),
+    );
+    expect(result).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "WalkUnavailable", message: refusal.message },
+    });
+    expect(progress).toBeGreaterThan(0);
+    expect(cleared).toBe(1);
+    expect(jev.calls).toEqual({ judge: [], locate: [] });
+    expect(pruned).toEqual([]);
+  });
+
+  it.each([
+    { directive: "adhere-ignore", before: "a", after: "b", cached: true },
+    { directive: "adhere-ignore-file", before: "b", after: "a", cached: false },
+  ])(
+    "refuses changed $directive metadata before requests or cache writes",
+    async ({ directive, before, after, cached }) => {
+      const cache = memoryCache();
+      let current = { ...source, lines: [`// ${directive} ${before} -- before`, ...code1] };
+      if (cached) {
+        await audit({
+          rules,
+          files: [{ ...source, lines: ["// before", ...code1] }],
+          cache,
+          jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
+        });
+      }
+      const walker = Layer.succeed(SourceWalker, {
+        files: Effect.succeed([{ path: source.path }]),
+        read: () => Effect.sync(() => current),
+      });
+      const planned = await planOf({ rules, files: [], cache, walker });
+      const oldLines = current.lines;
+      current = { ...current, lines: [`// ${directive} ${after} -- after`, ...code1] };
+      expect(suppressionsOf(current.lines).lines).toEqual(suppressionsOf(oldLines).lines);
+      let writes = 0;
+      const guardedCache = Layer.effect(AuditCache)(
+        Effect.map(AuditCache, (cache) => ({
+          ...cache,
+          put: () =>
+            Effect.sync(() => {
+              writes += 1;
+            }),
+          putTally: () =>
+            Effect.sync(() => {
+              writes += 1;
+            }),
+        })),
+      ).pipe(Layer.provide(cache));
+      const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+      const result = await Effect.runPromise(
+        Effect.result(executeAudit(planned)).pipe(
+          Effect.provide(Layer.mergeAll(walker, guardedCache, jev.layer, testCrypto)),
+        ),
+      );
+      expect(result).toMatchObject({
+        _tag: "Failure",
+        failure: {
+          _tag: "WalkUnavailable",
+          message: expect.stringContaining(
+            `${source.path}: source changed since planning. Rerun adhere lint`,
+          ),
+        },
+      });
+      expect(jev.calls).toEqual({ judge: [], locate: [] });
+      expect(writes).toBe(0);
+      const replanned = await planOf({ rules, files: [], cache, walker });
+      expect(replanned.files[0]?.hash).toBe(planned.files[0]?.hash);
+      if (cached) expect(replanned.files[0]?.kept.a).toEqual(planned.files[0]?.kept.a);
+      else expect(Object.keys(replanned.files[0]!.prepared)).toEqual(["b"]);
+    },
+  );
+
+  it("accepts reordered ignore rule sets and edited reasons without changing suppression semantics", async () => {
+    const cache = memoryCache();
+    let current = {
+      ...source,
+      lines: [
+        "// adhere-ignore-file outside-a, outside-b -- before",
+        "// adhere-ignore a, outside-c -- before",
+        ...code1,
+      ],
+    };
+    await audit({
+      rules,
+      files: [{ ...source, lines: ["// before", "// before", ...code1] }],
+      cache,
+      jev: recordingJev({ judge: { a: 0.1, b: 0.9 }, locate: { b: 3 } }).layer,
+    });
+    const walker = Layer.succeed(SourceWalker, {
+      files: Effect.succeed([{ path: source.path }]),
+      read: () => Effect.sync(() => current),
+    });
+    const planned = await planOf({ rules, files: [], cache, walker });
+    current = {
+      ...current,
+      lines: [
+        "// adhere-ignore-file outside-b, outside-a -- after",
+        "// adhere-ignore outside-c, a -- after",
+        ...code1,
+      ],
+    };
+    const jev = recordingJev({ judge: {}, locate: {} });
+    const result = await Effect.runPromise(
+      executeAudit(planned).pipe(
+        Effect.provide(Layer.mergeAll(walker, cache, jev.layer, testCrypto)),
+      ),
+    );
+    expect(result.cached).toBe(1);
+    expect(result.findings.map((finding) => finding.rule)).toEqual(["b"]);
+    expect(jev.calls).toEqual({ judge: [], locate: [] });
+  });
+
+  it.each([false, true])(
+    "refuses changed source before execution, including cached excerpts (cached: %s)",
+    async (cached) => {
+      const cache = memoryCache();
+      let current = source;
+      if (cached) {
+        await audit({
+          rules: { a },
+          cache,
+          jev: recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } }).layer,
+        });
+      }
+      const walker = Layer.succeed(SourceWalker, {
+        files: Effect.succeed([{ path: source.path }]),
+        read: () => Effect.sync(() => current),
+      });
+      const planned = await planOf({ rules: { a }, files: [], cache, walker });
+      const before = await Effect.runPromise(
+        Effect.flatMap(AuditCache, (cache) => cache.get(planned.files[0]!.hash, source.path)).pipe(
+          Effect.provide(cache),
+        ),
+      );
+      current = { ...source, lines: ["export const changed = 2;"] };
+      const jev = recordingJev({ judge: { a: 0.9 }, locate: { a: 1 } });
+      const result = await Effect.runPromise(
+        Effect.result(executeAudit(planned)).pipe(
+          Effect.provide(Layer.mergeAll(walker, cache, jev.layer, testCrypto)),
+        ),
+      );
+      expect(result).toMatchObject({
+        _tag: "Failure",
+        failure: {
+          _tag: "WalkUnavailable",
+          message: expect.stringContaining(
+            `${source.path}: source changed since planning. Rerun adhere lint`,
+          ),
+        },
+      });
+      expect(jev.calls).toEqual({ judge: [], locate: [] });
+      const after = await Effect.runPromise(
+        Effect.flatMap(AuditCache, (cache) => cache.get(planned.files[0]!.hash, source.path)).pipe(
+          Effect.provide(cache),
+        ),
+      );
+      expect(after).toEqual(before);
+    },
+  );
+
+  it("reloads cached report excerpts while accepting comment-only changes to the same normalized hash", async () => {
+    const cache = memoryCache();
+    let current = { ...source, lines: ["// before", ...source.lines] };
+    await audit({
+      rules: { a },
+      files: [current],
+      cache,
+      jev: recordingJev({ judge: { a: 0.9 }, locate: { a: 3 } }).layer,
+    });
+    let reads = 0;
+    const walker = Layer.succeed(SourceWalker, {
+      files: Effect.succeed([{ path: source.path }]),
+      read: () =>
+        Effect.sync(() => {
+          reads += 1;
+          return current;
+        }),
+    });
+    const planned = await planOf({ rules: { a }, files: [], cache, walker });
+    expect(reads).toBe(1);
+    current = { ...source, lines: ["// after", ...source.lines] };
+    const jev = recordingJev({ judge: {}, locate: {} });
+    const result = await Effect.runPromise(
+      executeAudit(planned).pipe(
+        Effect.provide(Layer.mergeAll(walker, cache, jev.layer, testCrypto)),
+      ),
+    );
+    expect(reads).toBe(2);
+    expect(result.cached).toBe(1);
+    expect(result.findings[0]?.excerpt.lines).toEqual(current.lines);
+    expect(jev.calls).toEqual({ judge: [], locate: [] });
+  });
 
   it("judges a test file only by the rules that say tests, and leaves out a file no rule judges", async () => {
     const plain = { description: "Plain.", must: "plain()" };
@@ -2001,6 +2528,116 @@ describe("plan", () => {
     });
     expect(judgedBy(plainOnly)).toEqual({ [other.path]: ["plain"] });
   });
+
+  it.each(["preset", "full tally", "already tallied"] as const)(
+    "estimates judging and cached locating in one source pass without sample additions (%s)",
+    async (sampling) => {
+      const imported = {
+        ...source,
+        lines: [...source.lines, 'import type { Order } from "@repo/orders/core";'],
+      };
+      const files = [imported, other];
+      const workspacePackages = { "@repo/orders": "packages/orders", unused: "x".repeat(110_000) };
+      const tallies = new Map<string, Tally>();
+      if (sampling !== "preset") {
+        const paths =
+          sampling === "full tally"
+            ? Array.from({ length: SAMPLE }, (_, index) => `/repo/previous${index}.ts`)
+            : files.map((file) => file.path);
+        for (const rule of Object.values(rules)) {
+          const key = await Effect.runPromise(
+            tallyKeyOf("jev-latest", rule).pipe(Effect.provide(testCrypto)),
+          );
+          tallies.set(key, { files: Object.fromEntries(paths.map((path) => [path, 0.9])) });
+        }
+      }
+      const cache = memoryCache({}, tallies);
+      await audit({
+        rules: { a },
+        files: [imported],
+        cache,
+        jev: recordingJev({ judge: { a: 0.9 }, locate: {} }).layer,
+      });
+      const reads: Array<string> = [];
+      const walker = Layer.succeed(SourceWalker, {
+        files: Effect.succeed(files.map(({ path }) => ({ path }))),
+        read: ({ path }) =>
+          Effect.sync(() => {
+            reads.push(path);
+            return files.find((file) => file.path === path)!;
+          }),
+      });
+      const planned = await planOf({
+        rules,
+        files,
+        cache,
+        walker,
+        reads: ["workspacePackages"],
+        workspacePackages,
+        ...(sampling === "preset"
+          ? {
+              scopedRules: Object.entries(rules).map(([id, rule]) => ({
+                id,
+                rule,
+                scope: "/repo",
+                preset: "example",
+              })),
+            }
+          : {}),
+      });
+      expect(reads.toSorted()).toEqual(files.map((file) => file.path).toSorted());
+      expect(planned.files.every((file) => Record.isEmptyRecord(file.sampled))).toBe(true);
+      const loads = planned.files.map((plan) =>
+        judgeLoad(
+          files.find((file) => file.path === plan.file.path)!.lines,
+          Record.map(plan.pending, ({ rule }) => rule),
+          [],
+          plan.readState,
+        ),
+      );
+      expect(planned.requests).toBe(loads.reduce((sum, load) => sum + load.requests, 0));
+      expect(planned.tokens).toBe(loads.reduce((sum, load) => sum + load.tokens, 0));
+      expect(planned.skipped).toBe(0);
+      const importedPlan = planned.files.find((plan) => plan.file.path === imported.path)!;
+      expect(importedPlan.readState).toEqual({
+        workspacePackages: { "@repo/orders": "packages/orders" },
+      });
+      expect(planned.files.find((plan) => plan.file.path === other.path)?.readState).toEqual({
+        workspacePackages: {},
+      });
+      expect(planned.cachedLocateRequests).toBe(
+        locateRequests(imported.lines, { a }, importedPlan.readState),
+      );
+    },
+  );
+
+  it.each(["code", "ignore directives"])(
+    "revalidates %s changes when sampled estimates need a reread",
+    async (change) => {
+      const original = { ...source, lines: ["// adhere-ignore b", ...code1] };
+      let reads = 0;
+      const walker = Layer.succeed(SourceWalker, {
+        files: Effect.succeed([{ path: source.path }]),
+        read: () =>
+          Effect.sync(() => {
+            reads += 1;
+            return reads === 1
+              ? original
+              : {
+                  ...original,
+                  lines:
+                    change === "code"
+                      ? ["// adhere-ignore b", "export const changed = 2;"]
+                      : ["// adhere-ignore a", ...code1],
+                };
+          }),
+      });
+      await expect(
+        planOf({ rules: { a }, files: [], cache: memoryCache(), walker }),
+      ).rejects.toThrow(`${source.path}: source changed since planning. Rerun adhere lint`);
+      expect(reads).toBe(2);
+    },
+  );
 
   it("counts the checks, what the cache answers, and the requests the rest take", async () => {
     const cache = memoryCache();
@@ -2043,9 +2680,10 @@ describe("plan", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              reads: [],
               rules,
             }),
-            Layer.succeed(SourceWalker, { files: Effect.succeed([source, other]) }),
+            fixtureWalker([source, other]),
             memoryCache(),
             testCrypto,
             status,
@@ -2077,7 +2715,9 @@ describe("plan", () => {
         Effect.sync(() => {
           done.push(file);
         }),
-      ).pipe(Effect.provide(Layer.merge(jev, cache))),
+      ).pipe(
+        Effect.provide(Layer.mergeAll(jev, cache, fixtureWalker([source, other]), testCrypto)),
+      ),
     );
 
     // Both files are judged; only server.ts has a finding, so only it is located too.
@@ -2194,9 +2834,10 @@ describe("plan", () => {
                 model: "jev-latest",
                 threshold: 0.7,
                 sufficiencyThreshold: 0.7,
+                reads: [],
                 rules,
               }),
-              Layer.succeed(SourceWalker, { files: Effect.succeed([source]) }),
+              fixtureWalker([source]),
               refusing,
               memoryCache(),
               testCrypto,
@@ -2210,18 +2851,6 @@ describe("plan", () => {
     );
   });
 
-  const filePlan = (path: string): FilePlan => ({
-    file: { path, lines: [] },
-    skipped: false,
-    hash: "",
-    prepared: {},
-    kept: {},
-    pending: {},
-    deferred: 0,
-    sampled: {},
-    suppressions: NO_SUPPRESSIONS,
-    original: [],
-  });
   const summary = (
     fields: Omit<
       AuditPlan,
@@ -2230,62 +2859,188 @@ describe("plan", () => {
       readonly tokens?: number;
     },
     files = 200,
-  ): AuditPlan => ({
-    files: Array.from({ length: files }, (_, index) => filePlan(`/repo/${index}.ts`)),
-    unjudged: [],
-    tokens: 0,
-    threshold: 0.7,
-    sufficiencyThreshold: 0.7,
-    ...fields,
-  });
-
-  it("judges at most --limit checks, in path order, and leaves the rest waiting", async () => {
-    const cache = memoryCache();
-    // other.ts sorts first, so it takes a and b, and server.ts gets the last one.
-    const three = await planOf({ rules, files: [source, other], cache, limit: 3 });
-    expect(three.files.map((plan) => [Object.keys(plan.pending), plan.deferred])).toEqual([
-      [["a", "b"], 0],
-      [["a"], 1],
-    ]);
-    expect({ deferred: three.deferred, requests: three.requests }).toEqual({
-      deferred: 1,
-      requests: 2,
-    });
-
-    const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
-    const two = await planOf({ rules, files: [source, other], cache, limit: 2 });
-    const result = await Effect.runPromise(
-      executeAudit(two).pipe(Effect.provide(Layer.merge(jev.layer, cache))),
+  ): AuditPlan => {
+    const prepared: FilePlan["prepared"] = Object.fromEntries(
+      Array.from({ length: fields.rules }, (_, index) => [
+        `rule${index}`,
+        {
+          rule: { ...a, description: `Summary rule ${index}.` },
+          fingerprint: `rule${index}`,
+          threshold: 0.7,
+        },
+      ]),
     );
-    expect(jev.calls.judge).toEqual([{ a, b }]);
-    expect({ judged: result.judged, waiting: result.waiting }).toEqual({ judged: 1, waiting: 1 });
+    const cachedFiles = fields.cached / fields.rules;
+    return {
+      files: Array.from({ length: files }, (_, index): FilePlan => {
+        const cached = index < cachedFiles;
+        const skipped = index >= files - fields.skipped;
+        const deferred = !skipped && index >= files - fields.skipped - fields.deferred;
+        return {
+          file: { path: `/repo/${String(index).padStart(3, "0")}.ts` },
+          skipped,
+          hash: "",
+          readState: {},
+          prepared,
+          kept: cached
+            ? Record.map(prepared, ({ fingerprint }) => ({ fingerprint, probability: 0.2 }))
+            : {},
+          pending: cached || skipped || deferred ? {} : prepared,
+          deferred,
+          sampled: {},
+          suppressions: NO_SUPPRESSIONS,
+        };
+      }),
+      unjudged: [],
+      tokens: 0,
+      threshold: 0.7,
+      sufficiencyThreshold: 0.7,
+      ...fields,
+    };
+  };
 
-    // The next run judges what waited, and asks nothing already cached.
-    const next = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
-    await Effect.runPromise(
-      executeAudit(await planOf({ rules, files: [source, other], cache, limit: 2 })).pipe(
-        Effect.provide(Layer.merge(next.layer, cache)),
+  it("selects whole pending rule maps for --limit files in path order, without charging cached files", async () => {
+    const manyRules: Rules = {
+      ...rules,
+      names: { description: "Constants must be named.", must: "const named = 1;" },
+      numbers: { description: "Numbers must be branded.", must: "const count = Count.make(1);" },
+    };
+    const cache = memoryCache();
+    const one = await planOf({ rules: manyRules, files: [source, other], cache, limit: 1 });
+    expect(one.files.map((plan) => [Object.keys(plan.pending), plan.deferred])).toEqual([
+      [Object.keys(manyRules), false],
+      [[], true],
+    ]);
+    expect(one).toMatchObject({ checks: 8, cached: 0, deferred: 1, requests: 1 });
+    const answers = { judge: { ...Record.map(manyRules, () => 0.2), a: 0.9 }, locate: { a: 1 } };
+    const jev = recordingJev(answers);
+    const result = await Effect.runPromise(
+      executeAudit(one).pipe(
+        Effect.provide(
+          Layer.mergeAll(jev.layer, cache, fixtureWalker([source, other]), testCrypto),
+        ),
       ),
     );
-    expect(next.calls.judge).toEqual([{ a, b }]);
+    expect(jev.calls.judge).toEqual([manyRules]);
+    expect({ judged: result.judged, waiting: result.waiting }).toEqual({ judged: 1, waiting: 1 });
+
+    // The cached, located first file reports its finding without taking the next run's slot.
+    const next = recordingJev(answers);
+    const nextPlan = await planOf({ rules: manyRules, files: [source, other], cache, limit: 1 });
+    expect(nextPlan.files.map((plan) => [Object.keys(plan.pending), plan.deferred])).toEqual([
+      [[], false],
+      [Object.keys(manyRules), false],
+    ]);
+    const again = await Effect.runPromise(
+      executeAudit(nextPlan).pipe(
+        Effect.provide(
+          Layer.mergeAll(next.layer, cache, fixtureWalker([source, other]), testCrypto),
+        ),
+      ),
+    );
+    expect(next.calls.judge).toEqual([manyRules]);
+    expect(again).toMatchObject({ judged: 1, cached: 1, waiting: 0 });
+    expect(
+      again.findings.some((finding) => finding.file === other.path && finding.rule === "a"),
+    ).toBe(true);
   });
 
-  it("describes the plan: checks, the cache's share, and the requests the rest take", () => {
+  it("budgets only selected files, leaving later overflow and cached locating unbudgeted", async () => {
+    const cache = memoryCache();
+    const first = { ...other, path: "/repo/src/a-first.ts" };
+    const cached = { ...source, path: "/repo/src/b-cached.ts" };
+    await audit({
+      rules,
+      files: [cached],
+      cache,
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: {} }).layer,
+    });
+    const generated: ScannedFile = {
+      path: "/repo/src/z-generated.ts",
+      lines: ["x".repeat(110_000)],
+    };
+    expect(fits(generated.lines, rules)).toBe(false);
+    const planned = await planOf({
+      rules,
+      reads: DEFAULT_READS,
+      files: [generated, cached, first],
+      cache,
+      limit: 1,
+    });
+    expect(
+      planned.files.map((plan) => ({
+        path: plan.file.path,
+        pending: Object.keys(plan.pending),
+        deferred: plan.deferred,
+        skipped: plan.skipped,
+      })),
+    ).toEqual([
+      { path: first.path, pending: ["a", "b"], deferred: false, skipped: false },
+      { path: cached.path, pending: [], deferred: true, skipped: false },
+      { path: generated.path, pending: [], deferred: true, skipped: false },
+    ]);
+    expect(planned).toMatchObject({
+      rules: 2,
+      checks: 6,
+      cached: 2,
+      skipped: 0,
+      deferred: 2,
+      requests: 1,
+    });
+    expect(planned.cachedLocateRequests ?? 0).toBe(0);
+  });
+
+  it("refills the limit in path order after selected work fails the cheap budget", async () => {
+    const generated: ScannedFile = {
+      path: "/repo/src/a-generated.ts",
+      lines: ["x".repeat(110_000)],
+    };
+    const first = { ...other, path: "/repo/src/b-first.ts" };
+    const last = { ...source, path: "/repo/src/c-last.ts" };
+    const planned = await planOf({
+      rules,
+      files: [last, generated, first],
+      cache: memoryCache(),
+      limit: 1,
+    });
+    expect(
+      planned.files.map((plan) => ({
+        path: plan.file.path,
+        pending: Object.keys(plan.pending),
+        deferred: plan.deferred,
+        skipped: plan.skipped,
+      })),
+    ).toEqual([
+      { path: generated.path, pending: [], deferred: false, skipped: true },
+      { path: first.path, pending: ["a", "b"], deferred: false, skipped: false },
+      { path: last.path, pending: [], deferred: true, skipped: false },
+    ]);
+    expect(planned).toMatchObject({
+      rules: 2,
+      checks: 4,
+      cached: 0,
+      skipped: 1,
+      deferred: 1,
+      requests: 1,
+    });
+  });
+
+  it("describes diagnostic checks and selected, cached, skipped, and deferred files", () => {
     const partly = summary({
       rules: 14,
-      checks: 2800,
+      checks: 2758,
       cached: 1400,
       skipped: 3,
       deferred: 0,
       requests: 197,
     });
     expect(describePlan(partly)).toEqual([
-      "200 files and 14 rules: 2800 checks, 1400 cached, 3 files too long to judge.",
-      "Judging the other 1400 takes 197 requests to Jev, plus 1 or more for each file with a finding.",
+      "200 files and 14 rules: 2758 checks, 1400 cached, 3 files too long to judge.",
+      "Judging 97 files takes 197 requests to Jev, plus 1 or more for each file with a finding.",
     ]);
     expect(sendQuestion(partly)).toBe("Send 197 requests to Jev?");
     expect(describePlan({ ...partly, provider: "clef-flash" })[1]).toBe(
-      "Judging the other 1400 takes 197 requests to clef-flash, plus 1 or more for each file with a finding.",
+      "Judging 97 files takes 197 requests to clef-flash, plus 1 or more for each file with a finding.",
     );
     expect(sendQuestion({ ...partly, provider: "clef-flash" })).toBe(
       "Send 197 requests to clef-flash?",
@@ -2296,7 +3051,7 @@ describe("plan", () => {
       ),
     ).toEqual([
       "1 file and 1 rule: 1 check.",
-      "Judging them takes 1 request to Jev, plus 1 or more for each file with a finding.",
+      "Judging 1 file takes 1 request to Jev, plus 1 or more for each file with a finding.",
     ]);
     expect(
       describePlan(
@@ -2308,27 +3063,55 @@ describe("plan", () => {
       checks: 2800,
       cached: 1400,
       skipped: 0,
-      deferred: 900,
+      deferred: 64,
       requests: 42,
     });
     expect(describePlan(limited, { filter: ["src/**"], rpm: 30 })).toEqual([
       "200 files matching the filter and 14 rules: 2800 checks, 1400 cached.",
-      "Judging 500 of the other 1400 takes 42 requests to Jev, plus 1 or more for each file with a finding. At 30 a minute, they take about 1 minute. The other 900 wait for a later run.",
+      "Judging 36 files takes 42 requests to Jev, plus 1 or more for each file with a finding. At 30 a minute, they take about 1 minute. 64 files wait for a later run.",
     ]);
     expect(
       describePlan(
-        summary({ rules: 2, checks: 4, cached: 0, skipped: 0, deferred: 4, requests: 0 }, 2),
+        summary({ rules: 2, checks: 4, cached: 0, skipped: 0, deferred: 2, requests: 0 }, 2),
       )[1],
-    ).toBe("The limit leaves all 4 unjudged checks for a later run.");
+    ).toBe("The limit leaves all 2 files needing requests for a later run.");
+    expect(
+      describePlan(
+        summary({ rules: 1, checks: 1, cached: 0, skipped: 0, deferred: 1, requests: 0 }, 1),
+      )[1],
+    ).toBe("The limit leaves 1 file needing requests for a later run.");
     const one = summary(
       { rules: 1, checks: 4, cached: 0, skipped: 0, deferred: 1, requests: 3 },
       4,
     );
     expect(describePlan(one)[1]).toBe(
-      "Judging 3 of them takes 3 requests to Jev, plus 1 or more for each file with a finding. The other 1 waits for a later run.",
+      "Judging 3 files takes 3 requests to Jev, plus 1 or more for each file with a finding. 1 file waits for a later run.",
     );
     expect(progressLine({ files: 37, requests: 41, findings: 1 }, partly)).toBe(
       "37/200 files, 41 requests sent, 1 finding",
+    );
+  });
+
+  it("describes a plan-only limit in files without prompting to send requests", () => {
+    const plan = summary(
+      {
+        rules: 2,
+        checks: 4,
+        cached: 0,
+        skipped: 0,
+        deferred: 2,
+        requests: 0,
+        planOnly: true,
+      },
+      2,
+    );
+    expect(describePlan(plan)).toEqual([
+      "2 files and 2 rules: 4 checks.",
+      "Plan only (--limit 0): no native reads will be resolved and no requests will be sent.",
+      "2 files left for a later run.",
+    ]);
+    expect(sendQuestion(plan)).toBe(
+      "Plan only (--limit 0): no native reads will be resolved and no requests will be sent.",
     );
   });
 
@@ -2359,6 +3142,34 @@ describe("plan", () => {
     );
   });
 
+  it("labels native-read plan costs and prompts as base estimates that exclude execution-time native context", () => {
+    const plan = summary(
+      {
+        rules: 2,
+        checks: 4,
+        cached: 0,
+        skipped: 0,
+        deferred: 0,
+        requests: 2,
+        tokens: 41_234,
+        price: 0.042,
+        nativeReads: { symbols: true, references: true, includeComments: false },
+      },
+      2,
+    );
+    const description = describePlan(plan).join("\n");
+    expect(description).toContain("41,000");
+    expect(description).toMatch(/native|symbols?|references?/i);
+    expect(description).toMatch(/base|estim|exclud|not includ/i);
+    const prompt = sendQuestion(plan);
+    expect(prompt).toMatch(/native|symbols?|references?/i);
+    expect(prompt).toMatch(/base|estim|extra|additional|increas|exclud/i);
+    const { price: _price, ...unpricedPlan } = plan;
+    const unpriced = describePlan(unpricedPlan).join("\n");
+    expect(unpriced).toMatch(/native|symbols?|references?/i);
+    expect(unpriced).not.toContain("$");
+  });
+
   it("tells each finding the preset its rule came from, and nothing for the project's own", async () => {
     const scopedRules: RuleSet = [
       { id: "a", rule: a, scope: "/repo" },
@@ -2373,10 +3184,11 @@ describe("plan", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              reads: [],
               rules,
               scopedRules,
             }),
-            Layer.succeed(SourceWalker, { files: Effect.succeed([source]) }),
+            fixtureWalker([source]),
             jev.layer,
             memoryCache(),
             testCrypto,
@@ -2397,7 +3209,8 @@ describe("plan", () => {
       planned.files.reduce((sum, plan) => {
         const pending = Record.map(plan.pending, ({ rule }) => rule);
         const ids = sampled ? Object.keys(plan.sampled) : [];
-        return sum + judgeLoad(plan.file.lines, pending, ids).tokens;
+        const lines = [source, other].find((file) => file.path === plan.file.path)!.lines;
+        return sum + judgeLoad(lines, pending, ids, plan.readState).tokens;
       }, 0);
     expect({ tokens: planned.tokens, price: planned.price }).toEqual({
       tokens: load(true),
@@ -2450,6 +3263,59 @@ describe("linter check", () => {
     );
   });
 
+  it("keeps exact split and token estimates while rereading only files that gain sample questions", async () => {
+    const largeRules = {
+      ports: { ...ports, must: "x".repeat(70_000) },
+      secrets: { ...b, must: "y".repeat(70_000) },
+    };
+    const importedFiles = files.map((file, index) => ({
+      ...file,
+      lines: [
+        ...file.lines,
+        ...(index % 2 === 0 ? ['import type { Order } from "@repo/orders/types";'] : []),
+      ],
+    }));
+    const workspacePackages = { "@repo/orders": "packages/orders", unused: "x".repeat(110_000) };
+    const reads: Array<string> = [];
+    const walker = Layer.succeed(SourceWalker, {
+      files: Effect.succeed(importedFiles.map(({ path }) => ({ path }))),
+      read: ({ path }) =>
+        Effect.sync(() => {
+          reads.push(path);
+          return importedFiles.find((file) => file.path === path)!;
+        }),
+    });
+    const planned = await planOf({
+      rules: largeRules,
+      files: importedFiles,
+      cache: memoryCache(),
+      walker,
+      reads: ["workspacePackages"],
+      workspacePackages,
+    });
+    const samples = new Set(sampledPaths(planned));
+    expect(samples.size).toBe(SAMPLE);
+    expect(reads).toHaveLength(importedFiles.length + samples.size);
+    for (const file of importedFiles) {
+      expect(reads.filter((path) => path === file.path)).toHaveLength(
+        samples.has(file.path) ? 2 : 1,
+      );
+    }
+    const loads = planned.files.map((plan) =>
+      judgeLoad(
+        importedFiles.find((file) => file.path === plan.file.path)!.lines,
+        Record.map(plan.pending, ({ rule }) => rule),
+        Object.keys(plan.sampled),
+        plan.readState,
+      ),
+    );
+    expect(planned.requests).toBe(loads.reduce((sum, load) => sum + load.requests, 0));
+    expect(planned.tokens).toBe(loads.reduce((sum, load) => sum + load.tokens, 0));
+    expect(planned.requests).toBeGreaterThan(
+      importedFiles.reduce((sum, file) => sum + judgeLoad(file.lines, largeRules).requests, 0),
+    );
+  });
+
   it("asks only for the answers a rule's tally lacks, on files it has none from", async () => {
     const key = await keyOf(ports);
     const tallies = new Map([
@@ -2486,10 +3352,11 @@ describe("linter check", () => {
                 model: "jev-latest",
                 threshold: 0.7,
                 sufficiencyThreshold: 0.7,
+                reads: [],
                 rules: { ports, logs },
                 scopedRules,
               }),
-              Layer.succeed(SourceWalker, { files: Effect.succeed(files) }),
+              fixtureWalker(files),
               cache,
               testCrypto,
             ),
@@ -2530,7 +3397,11 @@ describe("linter check", () => {
       contradicts: () => Effect.die("an audit compares no rules"),
     });
 
-    await Effect.runPromise(executeAudit(planned).pipe(Effect.provide(Layer.merge(jev, cache))));
+    await Effect.runPromise(
+      executeAudit(planned).pipe(
+        Effect.provide(Layer.mergeAll(jev, cache, fixtureWalker(files), testCrypto)),
+      ),
+    );
 
     // The tally had one answer, so 9 of the 25 files carried the question.
     expect(asked.filter((ids) => ids.length > 0)).toEqual(
@@ -2599,6 +3470,27 @@ describe("linter check", () => {
 });
 
 describe("pipeline", () => {
+  const execute = (
+    plan: AuditPlan,
+    jev: Layer.Layer<Jev>,
+    cache: Layer.Layer<AuditCache>,
+    sourceReads?: Layer.Layer<SourceReads>,
+    files: ReadonlyArray<ScannedFile> = [source],
+  ) =>
+    Effect.runPromise(
+      executeAudit(plan).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            jev,
+            cache,
+            fixtureWalker(files),
+            testCrypto,
+            ...(sourceReads === undefined ? [] : [sourceReads]),
+          ),
+        ),
+      ),
+    );
+
   it("judges every rule in one call, locates only the flagged rule, reports the located line", async () => {
     const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
     const result = await audit({ rules, jev: jev.layer, cache: memoryCache() });
@@ -2641,6 +3533,10 @@ describe("pipeline", () => {
     expect(third.calls).toEqual({ judge: [{ b: editedB }], locate: [] });
     expect(edited.findings).toEqual([findingA]);
     expect(edited.judged).toBe(1);
+
+    const changedModel = recordingJev({ judge: { a: 0.9, b: 0.3 }, locate: { a: 2 } });
+    await audit({ rules: { a, b: editedB }, model: "jev-other", jev: changedModel.layer, cache });
+    expect(changedModel.calls).toEqual({ judge: [{ a, b: editedB }], locate: [{ a }] });
   });
 
   it("re-judges a rule whose appendState is edited, by its source, and nothing else", async () => {
@@ -2666,23 +3562,803 @@ describe("pipeline", () => {
     expect(third.calls).toEqual({ judge: [], locate: [] });
   });
 
-  it("re-judges a rule that reads the workspace's packages when they change, and nothing else", async () => {
-    const cache = memoryCache();
-    const packaged = { ...b, reads: ["workspacePackages"] as const };
-    const run = (workspacePackages: Readonly<Record<string, string>>) => {
-      const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
-      return audit({ rules: { a, b: packaged }, jev: jev.layer, cache, workspacePackages }).then(
-        () => jev.calls,
-      );
+  it("keeps judgments cached when workspace packages change, but refreshes an edited target", async () => {
+    const imported = {
+      ...source,
+      lines: [...source.lines, 'import type { Order } from "orders-core/types";'],
     };
-    await run({ "orders-core": "packages/orders" });
-    // The same packages: every answer is cached.
+    const cache = memoryCache();
+    const run = (
+      workspacePackages: Readonly<Record<string, string>>,
+      files: ReadonlyArray<ScannedFile> = [imported],
+    ) => {
+      const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+      return audit({
+        rules,
+        reads: ["workspacePackages"],
+        jev: jev.layer,
+        cache,
+        workspacePackages,
+        files,
+      }).then(() => jev.calls);
+    };
+    expect(await run({ "orders-core": "packages/orders" })).toEqual({
+      judge: [rules],
+      locate: [{ a }],
+    });
     expect(await run({ "orders-core": "packages/orders" })).toEqual({ judge: [], locate: [] });
-    // A package added: the rule that reads them is judged again, and the other is not.
     expect(await run({ "orders-core": "packages/orders", billing: "packages/billing" })).toEqual({
-      judge: [{ b: packaged }],
+      judge: [],
       locate: [],
     });
+    expect(await run({ "orders-core": "packages/moved", billing: "packages/billing" })).toEqual({
+      judge: [],
+      locate: [],
+    });
+    expect(
+      await run({ billing: "packages/billing" }, [
+        { ...imported, lines: [...imported.lines, "const edited = true;"] },
+      ]),
+    ).toEqual({
+      judge: [rules],
+      locate: [{ a }],
+    });
+  });
+
+  it("keeps explicit code-only reads lazy without a tsconfig and shares their cache entries", async () => {
+    const imported = {
+      ...source,
+      lines: [...source.lines, 'import type { Order } from "orders-core/types";'],
+    };
+    const root = await onDisk({ "server.ts": imported.lines.join("\n") });
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: () =>
+        Effect.die("code-only and workspace-package reads must not prepare the compiler"),
+      read: () => Effect.die("code-only and workspace-package reads must not query the compiler"),
+    });
+    const files = [{ ...imported, path: join(root, "server.ts") }];
+    const cache = memoryCache();
+    try {
+      const first = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+      const result = await audit({
+        rules,
+        reads: [],
+        jev: first.layer,
+        cache,
+        files,
+        sourceReads,
+        workspacePackages: { "orders-core": "packages/orders" },
+      });
+      expect(result.judged).toBe(1);
+      expect(first.states).toEqual({ judge: [{}], locate: [{}] });
+
+      const second = recordingJev({ judge: {}, locate: {} });
+      const cached = await audit({
+        rules,
+        reads: [],
+        jev: second.layer,
+        cache,
+        files,
+        sourceReads,
+        workspacePackages: { billing: "packages/billing" },
+      });
+      expect(cached.cached).toBe(1);
+      expect(second.calls).toEqual({ judge: [], locate: [] });
+      expect(cached.findings).toEqual(result.findings);
+
+      const enabled = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+      await audit({
+        rules,
+        reads: ["workspacePackages"],
+        jev: enabled.layer,
+        cache,
+        files,
+        sourceReads,
+        workspacePackages: { billing: "packages/billing" },
+      });
+      expect(enabled.calls).toEqual({ judge: [], locate: [] });
+      expect(enabled.states).toEqual({ judge: [], locate: [] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([false, true])(
+    "reuses only imported workspace context without the compiler (includeComments: %s)",
+    async (includeComments) => {
+      const files = [
+        {
+          ...source,
+          lines: [
+            ...source.lines,
+            'import type { Order } from "@repo/orders/types";',
+            '// import Unused from "unused";',
+            "const text = 'require(\"unused\")';",
+          ],
+        },
+        { path: "/repo/src/no-imports.ts", lines: ['export const name = "@repo/orders";'] },
+      ];
+      const workspacePackages = {
+        "@repo/orders": "packages/orders",
+        unused: "x".repeat(110_000),
+      };
+      const sourceReads = Layer.succeed(SourceReads, {
+        prepare: () => Effect.die("workspace-only reads must not prepare the compiler"),
+        read: () => Effect.die("workspace-only reads must not query the compiler"),
+      });
+      const cache = memoryCache();
+      const planned = await planOf({
+        rules,
+        files,
+        cache,
+        reads: ["workspacePackages"],
+        includeComments,
+        workspacePackages,
+        sourceReads,
+      });
+      expect(planned.skipped).toBe(0);
+      expect(planned.nativeReads).toBeUndefined();
+      expect(planned.files.map(({ readState }) => readState)).toEqual([
+        { workspacePackages: {} },
+        { workspacePackages: { "@repo/orders": "packages/orders" } },
+      ]);
+      workspacePackages["@repo/orders"] = "packages/moved-after-planning";
+      const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+      const result = await execute(planned, jev.layer, cache, sourceReads, files);
+      expect(result.judged).toBe(2);
+      for (const file of planned.files) {
+        expect(jev.states.judge).toContain(file.readState);
+        expect(jev.states.locate).toContain(file.readState);
+      }
+    },
+  );
+
+  it("keeps default-native limit-zero plans and execution compiler-free even with uncached files", async () => {
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: () => Effect.die("planning and deferred files must not start the compiler"),
+      read: () => Effect.die("planning and deferred files must not read native context"),
+    });
+    const cache = memoryCache();
+    const generated: ScannedFile = {
+      path: "/repo/src/generated.ts",
+      lines: ["x".repeat(110_000)],
+    };
+    const planned = await planOf({
+      rules,
+      reads: DEFAULT_READS,
+      files: [source, generated],
+      cache,
+      limit: 0,
+      sourceReads,
+    });
+    expect(planned.nativeReads).toEqual({
+      symbols: true,
+      references: true,
+      includeComments: false,
+    });
+    expect(planned).toMatchObject({
+      planOnly: true,
+      checks: 4,
+      cached: 0,
+      skipped: 0,
+      deferred: 2,
+      requests: 0,
+      tokens: 0,
+    });
+    expect(
+      planned.files.map((plan) => [plan.skipped, Object.keys(plan.pending), plan.deferred]),
+    ).toEqual([
+      [false, [], true],
+      [false, [], true],
+    ]);
+    const jev = recordingJev({ judge: {}, locate: {} });
+    const result = await execute(planned, jev.layer, cache, sourceReads);
+    expect(jev.calls).toEqual({ judge: [], locate: [] });
+    expect({ judged: result.judged, waiting: result.waiting, skipped: result.skipped }).toEqual({
+      judged: 0,
+      waiting: 2,
+      skipped: 0,
+    });
+  });
+
+  it("keeps cached-unlocated limit-zero plans strictly dry-run with no SDK or HTTP", async () => {
+    const cache = memoryCache();
+    await audit({
+      rules,
+      cache,
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: {} }).layer,
+    });
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: () => Effect.die("a dry-run cached locate must not start the SDK"),
+      read: () => Effect.die("a dry-run cached locate must not acquire native context"),
+    });
+    const noHttp = Layer.succeed(Jev, {
+      judge: () => Effect.die("a dry run must not judge"),
+      locate: () => Effect.die("a dry run must not locate cached flags"),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const planned = await planOf({
+      rules,
+      reads: DEFAULT_READS,
+      files: [source],
+      cache,
+      limit: 0,
+      sourceReads,
+    });
+    expect(planned.planOnly).toBe(true);
+    expect(planned.cachedLocateRequests ?? 0).toBe(0);
+    expect(planned.cached).toBe(2);
+    expect(planned.requests).toBe(0);
+    expect(planned.files[0]?.pending).toEqual({});
+    expect(planned.files[0]?.deferred).toBe(true);
+    expect(planned.deferred).toBe(1);
+    const result = await execute(planned, noHttp, cache, sourceReads);
+    expect(result).toMatchObject({ judged: 0, cached: 0, waiting: 1 });
+    expect(result.findings).toEqual([]);
+  });
+
+  it.each([false, true])(
+    "charges one file slot for cached locating and its pending rules, deferring later native/HTTP work (pending: %s)",
+    async (pending) => {
+      const files = [
+        { path: "/repo/src/a-first.ts", lines: ["// first", "const port = 1001;"] },
+        {
+          path: "/repo/src/b-later.ts",
+          lines: [
+            pending ? "// adhere-ignore b -- cached finding" : "// later",
+            "const port = 1002;",
+          ],
+        },
+      ];
+      const cache = memoryCache();
+      await audit({
+        rules,
+        files,
+        cache,
+        jev: recordingJev({ judge: { a: 0.9, b: 0.9 }, locate: { b: 2 } }).layer,
+      });
+      const c = { description: "Ports must be named.", must: "const serverPort = 3000;" };
+      const selectedRules = pending ? { ...rules, c } : rules;
+      const preparations: Array<readonly string[]> = [];
+      const queried: Array<string> = [];
+      const sourceReads = Layer.succeed(SourceReads, {
+        prepare: (paths) =>
+          Effect.sync(() => {
+            preparations.push(paths);
+          }),
+        read: (file) =>
+          Effect.sync(() => {
+            queried.push(file.path);
+            return {};
+          }),
+      });
+      const planned = await planOf({
+        rules: selectedRules,
+        reads: DEFAULT_READS,
+        files: [...files].reverse(),
+        cache,
+        limit: 1,
+        sourceReads,
+      });
+      expect(
+        planned.files.map((plan) => [plan.file.path, Object.keys(plan.pending), plan.deferred]),
+      ).toEqual([
+        [files[0]!.path, pending ? ["c"] : [], false],
+        [files[1]!.path, [], true],
+      ]);
+      expect(planned).toMatchObject({
+        checks: pending ? 6 : 4,
+        cached: 4,
+        deferred: 1,
+        requests: pending ? 1 : 0,
+        cachedLocateRequests: 1,
+      });
+      expect(preparations).toEqual([]);
+      const jev = recordingJev({ judge: { c: 0.2 }, locate: { a: 2 } });
+      const result = await execute(planned, jev.layer, cache, sourceReads, files);
+      expect(preparations).toEqual([[files[0]!.path]]);
+      expect(queried).toEqual([files[0]!.path]);
+      expect(jev.calls).toEqual({ judge: pending ? [{ c }] : [], locate: [{ a }] });
+      expect(result).toMatchObject({
+        judged: 1,
+        cached: 0,
+        waiting: 1,
+        suppressed: pending ? 1 : 0,
+      });
+      expect(
+        result.findings
+          .filter((finding) => finding.file === files[1]!.path)
+          .map((finding) => finding.rule),
+      ).toEqual(pending ? [] : ["b"]);
+    },
+  );
+
+  it.each(["native", "HTTP"])(
+    "does not refill a selected file slot after %s overflow during execution",
+    async (overflow) => {
+      const files = [
+        { ...source, path: "/repo/src/a-first.ts" },
+        { path: "/repo/src/b-later.ts", lines: ["const other = 1;"] },
+      ];
+      const cache = memoryCache();
+      const preparations: Array<readonly string[]> = [];
+      const queried: Array<string> = [];
+      const sourceReads = Layer.succeed(SourceReads, {
+        prepare: (paths) =>
+          Effect.sync(() => {
+            preparations.push(paths);
+          }),
+        read: (file) =>
+          Effect.sync(() => {
+            queried.push(file.path);
+            return overflow === "native"
+              ? { references: { files: { "caller.ts": "x".repeat(110_000) } } }
+              : {};
+          }),
+      });
+      const planned = await planOf({
+        rules,
+        reads: ["references"],
+        files,
+        cache,
+        limit: 1,
+        sourceReads,
+      });
+      expect(planned.files.map((file) => file.deferred)).toEqual([false, true]);
+      const sent: Array<Rules> = [];
+      const jev = Layer.succeed(Jev, {
+        judge: (_lines, asked) =>
+          Effect.sync(() => {
+            sent.push(asked);
+          }).pipe(Effect.andThen(Effect.fail(JevOverflow.make({})))),
+        locate: () => Effect.die("overflowing selected work must not locate"),
+        conflicts: () => Effect.die("an audit compares no rules"),
+        contradicts: () => Effect.die("an audit compares no rules"),
+      });
+      const result = await execute(planned, jev, cache, sourceReads, files);
+      expect(result).toMatchObject({ judged: 0, skipped: 1, waiting: 1 });
+      expect(preparations).toEqual([[files[0]!.path]]);
+      expect(queried).toEqual([files[0]!.path]);
+      expect(sent).toEqual(overflow === "native" ? [] : [rules]);
+    },
+  );
+
+  it("preserves fully located cached errors when cheap workspace context outgrows the budget", async () => {
+    const imported = { ...source, lines: [...source.lines, 'import "@acme/workspace";'] };
+    const cache = memoryCache();
+    const first = await audit({
+      rules,
+      files: [imported],
+      cache,
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
+    });
+    const workspacePackages = { "@acme/workspace": "packages/" + "workspace-".repeat(12_000) };
+    expect(fits(imported.lines, rules, { workspacePackages })).toBe(false);
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: () => Effect.die("fully located cached findings need no SDK"),
+      read: () => Effect.die("fully located cached findings need no native context"),
+    });
+    const noHttp = Layer.succeed(Jev, {
+      judge: () => Effect.die("fully cached checks must not be re-judged"),
+      locate: () => Effect.die("fully located cached findings need no HTTP"),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const planned = await planOf({
+      rules,
+      reads: DEFAULT_READS,
+      files: [imported],
+      cache,
+      sourceReads,
+      workspacePackages,
+    });
+    expect(planned.cached).toBe(2);
+    const result = await execute(planned, noHttp, cache, sourceReads, [imported]);
+    expect(result.findings).toEqual(first.findings);
+    expect(failing(result.findings)).toHaveLength(1);
+    expect(render(result, { root: "/repo" }).join("\n")).toContain(a.description);
+  });
+
+  it("preserves cached located errors when native context overflows for new pending work", async () => {
+    const cache = memoryCache();
+    const first = await audit({
+      rules: { a },
+      cache,
+      jev: recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } }).layer,
+    });
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: () => Effect.void,
+      read: () => Effect.succeed({ references: { files: { "caller.ts": "x".repeat(110_000) } } }),
+    });
+    const noHttp = Layer.succeed(Jev, {
+      judge: () => Effect.die("oversized pending context must not be sent"),
+      locate: () => Effect.die("the cached error is already located"),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const planned = await planOf({
+      rules,
+      reads: ["references"],
+      files: [source],
+      cache,
+      sourceReads,
+    });
+    expect(planned.cached).toBe(1);
+    expect(planned.files[0]?.pending.b?.rule).toEqual(b);
+    expect(planned.skipped).toBe(0);
+    const result = await execute(planned, noHttp, cache, sourceReads);
+    expect(result.skipped).toBe(1);
+    expect(result.findings).toEqual(first.findings);
+    expect(failing(result.findings)).toHaveLength(1);
+    const reused = await audit({ rules: { a }, cache, jev: noHttp });
+    expect(reused.findings).toEqual(first.findings);
+  });
+
+  it("prepares native context only before locating an unlocated cached flag, then skips the SDK on a fully cached run", async () => {
+    const cache = memoryCache();
+    await audit({
+      rules,
+      cache,
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: {} }).layer,
+    });
+    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
+    const references = { files: { "caller.ts": "use(port);\n" } };
+    const events: string[] = [];
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: (files) =>
+        Effect.sync(() => {
+          expect(files).toEqual([source.path]);
+          events.push("prepare");
+        }),
+      read: () =>
+        Effect.sync(() => {
+          events.push("read");
+          return { symbols, references };
+        }),
+    });
+    const planned = await planOf({
+      rules,
+      reads: DEFAULT_READS,
+      files: [source],
+      cache,
+      sourceReads,
+      workspacePackages: {},
+    });
+    expect(planned.cached).toBe(2);
+    expect(planned.requests).toBe(0);
+    expect(planned.planOnly).not.toBe(true);
+    expect(planned.cachedLocateRequests).toBe(1);
+    const description = describePlan(planned).join("\n");
+    expect(description).toMatch(/locat/i);
+    expect(description).toMatch(/\b1 request\b/);
+    const prompt = sendQuestion(planned);
+    expect(prompt).toMatch(/locat/i);
+    expect(prompt).toMatch(/\b1 request\b/);
+    expect(prompt).not.toMatch(/Send (?:an estimated )?0 requests/i);
+    expect(events).toEqual([]);
+    const jev = Layer.succeed(Jev, {
+      judge: () => Effect.die("cached judgments must not be re-judged"),
+      locate: (lines, asked, _file, state = {}) =>
+        Effect.sync(() => {
+          events.push("locate");
+          expect(asked).toEqual({ a });
+          expect(state).toEqual({ workspacePackages: {}, symbols, references });
+          return { a: placedAt(lines, 2) };
+        }),
+      conflicts: () => Effect.die("an audit compares no rules"),
+      contradicts: () => Effect.die("an audit compares no rules"),
+    });
+    const result = await execute(planned, jev, cache, sourceReads);
+    expect(events).toEqual(["prepare", "read", "locate"]);
+    expect(result.findings).toEqual([findingA]);
+    const noNative = Layer.succeed(SourceReads, {
+      prepare: () => Effect.die("fully cached files must not start the SDK"),
+      read: () => Effect.die("fully cached files must not acquire native context"),
+    });
+    const cached = await planOf({
+      rules,
+      reads: DEFAULT_READS,
+      files: [source],
+      cache,
+      sourceReads: noNative,
+      workspacePackages: { changed: "packages/changed" },
+    });
+    expect(cached.cached).toBe(2);
+    const again = recordingJev({ judge: {}, locate: {} });
+    const reused = await execute(cached, again.layer, cache, noNative);
+    expect(again.calls).toEqual({ judge: [], locate: [] });
+    expect(reused.cached).toBe(1);
+    expect(reused.findings).toEqual(result.findings);
+  });
+
+  it("keeps reader subsets as flags in the plan and exposes only enabled native fields at execution", async () => {
+    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
+    const references = { files: { "caller.ts": "use(port);\n" } };
+    for (const reads of [["symbols"], ["references"]] as const) {
+      const includeComments = reads[0] === "references";
+      const requested = { symbols: !includeComments, references: includeComments, includeComments };
+      const preparations: Array<readonly string[]> = [];
+      let queried = 0;
+      const sourceReads = Layer.succeed(SourceReads, {
+        prepare: (files) =>
+          Effect.sync(() => {
+            preparations.push(files);
+          }),
+        read: (_file, _lines, flags) =>
+          Effect.sync(() => {
+            expect(flags).toEqual(requested);
+            queried += 1;
+            return { symbols, references, unrequested: true };
+          }),
+      });
+      const cache = memoryCache();
+      const planned = await planOf({
+        rules,
+        reads,
+        includeComments,
+        files: [source],
+        cache,
+        sourceReads,
+      });
+      expect(planned.nativeReads).toEqual(requested);
+      expect(planned.files[0]?.readState).toEqual({});
+      expect(preparations).toEqual([]);
+      expect(queried).toBe(0);
+      const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+      await execute(planned, jev.layer, cache, sourceReads);
+      const state = includeComments ? { references } : { symbols };
+      expect(jev.states).toEqual({ judge: [state], locate: [state] });
+      expect(preparations).toEqual([[source.path]]);
+      expect(queried).toBe(1);
+      expect(planned.files[0]?.readState).toEqual({});
+    }
+  });
+
+  it("does not prepare the compiler when there are no files to send", async () => {
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: () => Effect.die("an empty eligible set must not prepare the compiler"),
+      read: () => Effect.die("an empty eligible set must not query the compiler"),
+    });
+    for (const files of [
+      [],
+      [{ ...source, test: true }],
+      [{ ...source, lines: ["x".repeat(110_000)] }],
+    ]) {
+      const planned = await planOf({
+        rules,
+        reads: DEFAULT_READS,
+        files,
+        cache: memoryCache(),
+        sourceReads,
+      });
+      expect(planned.requests).toBe(0);
+      expect(planned.tokens).toBe(0);
+      const jev = recordingJev({ judge: {}, locate: {} });
+      await execute(planned, jev.layer, memoryCache(), sourceReads);
+      expect(jev.calls).toEqual({ judge: [], locate: [] });
+    }
+  });
+
+  it("prepares only selected execution paths, excluding cached, deferred, and unjudged files", async () => {
+    const other = { ...source, path: "/repo/src/other.ts", lines: ["export const other = 1;"] };
+    const cached = { ...source, path: "/repo/src/cached.ts", lines: ["export const cached = 1;"] };
+    const cache = memoryCache();
+    await audit({
+      rules,
+      files: [cached],
+      cache,
+      jev: recordingJev({ judge: { a: 0.1, b: 0.2 }, locate: {} }).layer,
+    });
+    const preparations: Array<readonly string[]> = [];
+    const queried: string[] = [];
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: (files) =>
+        Effect.sync(() => {
+          preparations.push(files);
+        }),
+      read: (file, _lines, requested) =>
+        Effect.sync(() => {
+          expect(preparations).toEqual([[other.path]]);
+          expect(requested).toEqual({ symbols: true, references: true, includeComments: false });
+          queried.push(file.path);
+          return { symbols: {}, references: { sections: {}, files: {} } };
+        }),
+    });
+    const planned = await planOf({
+      rules,
+      reads: ["symbols", "references", "symbols"],
+      cache,
+      sourceReads,
+      limit: 1,
+      files: [
+        source,
+        other,
+        cached,
+        { ...source, path: "/repo/test/unjudged.ts", test: true },
+        { ...source, path: "/repo/src/oversized.ts", lines: ["x".repeat(110_000)] },
+      ],
+    });
+    expect(preparations).toEqual([]);
+    expect(queried).toEqual([]);
+    expect(planned.cached).toBe(2);
+    expect(planned.deferred).toBe(2);
+    expect(planned.skipped).toBe(0);
+    expect(planned.unjudged).toHaveLength(1);
+    const jev = recordingJev({ judge: { a: 0.1, b: 0.2 }, locate: {} });
+    const result = await execute(planned, jev.layer, cache, sourceReads, [other]);
+    expect(preparations).toEqual([[other.path]]);
+    expect(queried).toEqual([other.path]);
+    expect(jev.calls).toEqual({ judge: [rules], locate: [] });
+    expect({
+      judged: result.judged,
+      cached: result.cached,
+      waiting: result.waiting,
+      skipped: result.skipped,
+    }).toEqual({ judged: 1, cached: 1, waiting: 2, skipped: 0 });
+  });
+
+  it("ignores caller and reader changes in the cache but refreshes edited target code", async () => {
+    const library = "export function parse(value: number) {\n\treturn value;\n}\n";
+    const caller = 'import { parse as read } from "./library";\nexport const result = read(1);\n';
+    const root = await onDisk({
+      "library.ts": library,
+      "caller.ts": caller,
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: {
+          target: "ES2022",
+          module: "ESNext",
+          moduleResolution: "Bundler",
+          types: [],
+        },
+        files: ["library.ts", "caller.ts"],
+      }),
+    });
+    const cache = memoryCache();
+    const noNative = Layer.succeed(SourceReads, {
+      prepare: () => Effect.die("cached judgments must not start the SDK"),
+      read: () => Effect.die("cached judgments must not acquire native context"),
+    });
+    const run = async (reader = SourceReadsLive(root).pipe(Layer.provide(Path.layer))) => {
+      const text = await readFile(join(root, "library.ts"), "utf8");
+      const jev = recordingJev({ judge: { a: 0.1, b: 0.9 }, locate: { b: 2 } });
+      await audit({
+        rules,
+        reads: ["symbols", "references"],
+        jev: jev.layer,
+        cache,
+        // The caller is context, although this run only judges the declaration file.
+        files: [{ path: join(root, "library.ts"), lines: text.split("\n") }],
+        sourceReads: reader,
+      });
+      return jev.calls;
+    };
+    try {
+      expect(await run()).toEqual({ judge: [rules], locate: [{ b }] });
+      expect(await run(noNative)).toEqual({ judge: [], locate: [] });
+      await writeFile(join(root, "caller.ts"), caller.replace("read(1)", "read(2)"));
+      expect(await run(noNative)).toEqual({ judge: [], locate: [] });
+      await writeFile(join(root, "caller.ts"), `${caller}read(3);\n`);
+      expect(await run(noNative)).toEqual({ judge: [], locate: [] });
+      await writeFile(
+        join(root, "library.ts"),
+        library.replace("return value", "return value + 1"),
+      );
+      expect(await run()).toEqual({ judge: [rules], locate: [{ b }] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("plans all default reads without the compiler and acquires one shared context only during execution", async () => {
+    const workspacePackages = { "orders-core": "packages/orders" };
+    const catalog = { ...workspacePackages, unused: "packages/unused" };
+    const files = [
+      { ...source, lines: [...source.lines, 'import type { Order } from "orders-core/types";'] },
+    ];
+    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
+    const references = { files: { "caller.ts": "\tuse(port);\n  use(port);\n" } };
+    const readState = { workspacePackages, symbols, references };
+    let reads = 0;
+    const preparations: Array<readonly string[]> = [];
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: (files) =>
+        Effect.sync(() => {
+          preparations.push(files);
+        }),
+      read: (_file, _lines, requested) =>
+        Effect.sync(() => {
+          expect(preparations).toEqual([[source.path]]);
+          expect(requested).toEqual({ symbols: true, references: true, includeComments: false });
+          reads += 1;
+          return { symbols, references, unrequested: true };
+        }),
+    });
+    const cache = memoryCache();
+    const config = resolveConfig(await Effect.runPromise(loaded({}, rules)), {
+      threshold: 0.7,
+      sufficiencyThreshold: 0.7,
+    });
+    expect(config.reads).toEqual(["workspacePackages", "symbols", "references"]);
+    const planned = await Effect.runPromise(
+      planAudit().pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(AdhereConfig, { ...config, workspacePackages: catalog }),
+            fixtureWalker(files),
+            cache,
+            testCrypto,
+            sourceReads,
+          ),
+        ),
+      ),
+    );
+    expect(planned.files).toHaveLength(1);
+    expect(preparations).toEqual([]);
+    expect(reads).toBe(0);
+    expect(planned.nativeReads).toEqual({
+      symbols: true,
+      references: true,
+      includeComments: false,
+    });
+    expect(JSON.stringify(planned)).not.toContain("caller.ts");
+    for (const file of planned.files) {
+      expect(file.readState).toEqual({ workspacePackages });
+      expect(file.readState.workspacePackages).not.toBe(catalog);
+      expect(Object.values(file.prepared).some((rule) => Object.hasOwn(rule, "readState"))).toBe(
+        false,
+      );
+      const pending = Record.map(file.pending, ({ rule }) => rule);
+      const sampled = Object.keys(file.sampled);
+      const load = judgeLoad(files[0]!.lines, pending, sampled, file.readState);
+      expect(planned.requests).toBe(1);
+      expect(planned.requests).toBe(load.requests);
+      expect(planned.tokens).toBe(load.tokens);
+      expect(planned.tokens).toBeGreaterThan(judgeLoad(files[0]!.lines, pending, sampled).tokens);
+
+      const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+      expect(planned.tokens).toBeLessThan(
+        judgeLoad(files[0]!.lines, pending, sampled, readState).tokens,
+      );
+      await execute(planned, jev.layer, cache, sourceReads, files);
+      expect(jev.calls).toEqual({ judge: [rules], locate: [{ a }] });
+      expect(jev.states).toEqual({ judge: [readState], locate: [readState] });
+      expect(jev.states.judge[0]).toBe(jev.states.locate[0]);
+      expect(jev.states.judge[0]).not.toBe(file.readState);
+      expect(file.readState).toEqual({ workspacePackages });
+      expect(JSON.stringify(planned)).not.toContain("caller.ts");
+    }
+    expect(reads).toBe(1);
+    expect(preparations).toEqual([[source.path]]);
+  });
+
+  it("rechecks sampled questions against real context and skips overflow during execution before HTTP", async () => {
+    const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    const preparations: Array<readonly string[]> = [];
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: (files) =>
+        Effect.sync(() => {
+          preparations.push(files);
+        }),
+      read: () => Effect.succeed({ references: { files: { "caller.ts": "x".repeat(110_000) } } }),
+    });
+    const cache = memoryCache();
+    const planned = await planOf({
+      rules,
+      reads: ["references"],
+      files: [source],
+      cache,
+      sourceReads,
+    });
+    expect(planned.skipped).toBe(0);
+    expect(planned.requests).toBe(1);
+    expect(Object.keys(planned.files[0]?.sampled ?? {}).sort()).toEqual(["a", "b"]);
+    expect(preparations).toEqual([]);
+    const result = await execute(planned, jev.layer, cache, sourceReads);
+    expect(result.skipped).toBe(1);
+    expect(result.judged).toBe(0);
+    expect(preparations).toEqual([[source.path]]);
+    expect(jev.calls).toEqual({ judge: [], locate: [] });
   });
 
   it("answers a file from the cache wherever its content moves", async () => {
@@ -2711,9 +4387,10 @@ describe("pipeline", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              reads: [],
               rules,
             }),
-            Layer.succeed(SourceWalker, { files: Effect.succeed([source]) }),
+            fixtureWalker([source]),
             memoryCache({}, new Map(), pruned),
             testCrypto,
           ),
@@ -2730,7 +4407,7 @@ describe("pipeline", () => {
     ]);
   });
 
-  it("prunes nothing another run knows of a file this run's rules do not judge, such as a test", async () => {
+  it("keeps unjudged content live when pruning a limit-zero plan", async () => {
     const pruned: Array<Live> = [];
     const helper: ScannedFile = {
       path: "/repo/test/helper.ts",
@@ -2738,7 +4415,7 @@ describe("pipeline", () => {
       test: true,
     };
     const plan = await Effect.runPromise(
-      planAudit().pipe(
+      planAudit({ limit: 0 }).pipe(
         Effect.tap(pruneCache),
         Effect.provide(
           Layer.mergeAll(
@@ -2746,9 +4423,10 @@ describe("pipeline", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              reads: [],
               rules,
             }),
-            Layer.succeed(SourceWalker, { files: Effect.succeed([source, helper]) }),
+            fixtureWalker([source, helper]),
             memoryCache({}, new Map(), pruned),
             testCrypto,
           ),
@@ -3581,6 +5259,7 @@ describe("jev over http", () => {
           model: "jev-latest",
           threshold: 0.7,
           sufficiencyThreshold: 0.7,
+          reads: [],
           rules: {},
           rpm: 1200,
         }),
@@ -3630,6 +5309,7 @@ describe("jev over http", () => {
           model: "jev-latest",
           threshold: 0.7,
           sufficiencyThreshold: 0.7,
+          reads: [],
           rules: {},
         }),
         Layer.succeed(Credentials, {
@@ -3671,6 +5351,7 @@ describe("jev over http", () => {
           model: "jev-latest",
           threshold: 0.7,
           sufficiencyThreshold: 0.7,
+          reads: [],
           rules: {},
         }),
         Layer.succeed(Credentials, {
@@ -3701,7 +5382,9 @@ describe("jev over http", () => {
   });
 
   /** Jev over a client that records each request's state and question ids, and says yes to each. */
-  const recordedJev = (workspacePackages?: Readonly<Record<string, string>>) => {
+  const recordedJev = (
+    config: Partial<Pick<ResolvedConfig, "reads" | "workspacePackages">> = {},
+  ) => {
     const sent: Array<{ readonly state: unknown; readonly ids: ReadonlyArray<string> }> = [];
     const fetch = fetchFrom((body) => {
       sent.push({ state: body.state, ids: Object.keys(body.questions) });
@@ -3718,7 +5401,8 @@ describe("jev over http", () => {
           threshold: 0.7,
           sufficiencyThreshold: 0.7,
           rules: {},
-          ...(workspacePackages === undefined ? {} : { workspacePackages }),
+          ...config,
+          reads: config.reads ?? [],
         }),
         Layer.succeed(Credentials, {
           key: () => Effect.succeed(Redacted.make("tsk_saved")),
@@ -3731,54 +5415,168 @@ describe("jev over http", () => {
     return { sent, layer };
   };
 
-  it("runs a rule's appendState right before its own requests, over their state alone", async () => {
+  it("runs a rule's appendState right before its isolated requests, over the shared prepared state", async () => {
+    const workspacePackages = { "orders-core": "packages/orders" };
+    const readState = { workspacePackages };
     // It adds a key and replaces the code, and nothing stops it.
     const appendState: AppendState = (state, file) => ({
       code: { "1": "const replaced = true;" },
-      seen: { sections: Object.keys(state.code), path: file.path, contents: file.contents },
+      seen: {
+        sections: Object.keys(state.code),
+        path: file.path,
+        contents: file.contents,
+        workspacePackages: state.workspacePackages,
+      },
     });
     const hooked = { ...b, appendState };
-    const { sent, layer } = recordedJev();
+    const { sent, layer } = recordedJev({ reads: ["workspacePackages"] });
     const asked = Effect.gen(function* () {
       const jev = yield* Jev;
-      const judged = yield* jev.judge(["const port = 3000;"], { a, hooked }, [], judgedFile);
-      yield* jev.locate(["const port = 3000;"], { hooked }, judgedFile);
+      const judged = yield* jev.judge(code1, { a, b, hooked }, [], judgedFile, readState);
+      yield* jev.locate(code1, { hooked }, judgedFile, readState);
       return judged;
     });
 
     const judged = await Effect.runPromise(Effect.provide(asked, layer));
 
-    expect(judged.probabilities).toEqual({ a: 0.9, hooked: 0.9 });
+    expect(judged.probabilities).toEqual({ a: 0.9, b: 0.9, hooked: 0.9 });
     const appended = {
+      workspacePackages,
       code: { "1": "const replaced = true;" },
-      seen: { sections: ["1"], path: "/repo/src/server.ts", contents: "const port = 3000;" },
+      seen: {
+        sections: ["1"],
+        path: "/repo/src/server.ts",
+        contents: "const port = 3000;",
+        workspacePackages,
+      },
     };
     expect(sent).toEqual([
-      { state: { code: { "1": "const port = 3000;" } }, ids: ["a"] },
+      { state: { workspacePackages, code: { "1": "const port = 3000;" } }, ids: ["a", "b"] },
       { state: appended, ids: ["hooked"] },
       { state: appended, ids: ["start:hooked:1", "end:hooked:1", "sufficient:hooked"] },
     ]);
   });
 
-  it("adds the workspace's packages to the state of a rule that asks for them, and of no other", async () => {
-    const packaged = { ...b, reads: ["workspacePackages"] as const };
-    const { sent, layer } = recordedJev({ "orders-core": "packages/orders" });
+  it("inherits execution-time native context in isolated hooks without retaining it on the plan", async () => {
+    const workspacePackages = { "orders-core": "packages/orders" };
+    const catalog = { ...workspacePackages, unused: "packages/unused" };
+    const lines = [...code1, 'import type { Order } from "orders-core/types";'];
+    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
+    const references = { files: { "caller.ts": "use(port);\n" } };
+    const seen: ReadState[] = [];
+    const hooked = {
+      ...b,
+      appendState: (state: ReadState) => {
+        seen.push(state);
+        return { private: true };
+      },
+    };
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: () => Effect.void,
+      read: () => Effect.succeed({ symbols, references }),
+    });
+    const cache = memoryCache();
+    const planned = await planOf({
+      rules: { a, b, hooked },
+      reads: DEFAULT_READS,
+      files: [{ path: judgedFile.path, lines }],
+      cache,
+      sourceReads,
+      workspacePackages: catalog,
+    });
+    expect(seen).toEqual([]);
+    expect(planned.files[0]?.readState).toEqual({ workspacePackages });
+    const { sent, layer } = recordedJev({ reads: DEFAULT_READS, workspacePackages: catalog });
+    await Effect.runPromise(
+      executeAudit(planned).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            layer,
+            cache,
+            sourceReads,
+            fixtureWalker([{ path: judgedFile.path, lines }]),
+            testCrypto,
+          ),
+        ),
+      ),
+    );
+    const state = { code: { "1": lines.join("\n") }, workspacePackages, symbols, references };
+    expect(seen).toEqual([state, state]);
+    expect(sent.map(({ state }) => state)).toEqual([
+      state,
+      { ...state, private: true },
+      state,
+      { ...state, private: true },
+    ]);
+    expect(sent[0]?.ids).toEqual(["a", "b", "linter:a", "linter:b"]);
+    expect(sent[1]?.ids).toEqual(["hooked", "linter:hooked"]);
+    expect(sent[2]?.ids).not.toContain("sufficient:hooked");
+    expect(sent[3]?.ids).toEqual(["start:hooked:1", "end:hooked:1", "sufficient:hooked"]);
+    expect(planned.files[0]?.readState).toEqual({ workspacePackages });
+    expect(JSON.stringify(planned)).not.toContain("caller.ts");
+  });
+
+  it("sends config-prepared workspace packages to every rule in one request and keeps them when locating", async () => {
+    const workspacePackages = { "orders-core": "packages/orders" };
+    const readState = { workspacePackages };
+    const { sent, layer } = recordedJev({ reads: ["workspacePackages"], workspacePackages });
     const asked = Effect.gen(function* () {
       const jev = yield* Jev;
-      yield* jev.judge(["const port = 3000;"], { a, packaged }, [], judgedFile);
+      yield* jev.judge(code1, rules, [], judgedFile, readState);
+      yield* jev.locate(code1, { b }, judgedFile, readState);
     });
 
     await Effect.runPromise(Effect.provide(asked, layer));
 
+    const state = { code: { "1": "const port = 3000;" }, workspacePackages };
     expect(sent).toEqual([
-      { state: { code: { "1": "const port = 3000;" } }, ids: ["a"] },
-      {
-        state: {
-          code: { "1": "const port = 3000;" },
-          workspacePackages: { "orders-core": "packages/orders" },
-        },
-        ids: ["packaged"],
-      },
+      { state, ids: ["a", "b"] },
+      { state, ids: ["start:b:1", "end:b:1", "sufficient:b"] },
+    ]);
+  });
+
+  it("does not prepare workspace context in HTTP when shared state is omitted", async () => {
+    for (const reads of [[], ["workspacePackages"], DEFAULT_READS] as const) {
+      const { sent, layer } = recordedJev({
+        reads,
+        workspacePackages: { "orders-core": "packages/orders" },
+      });
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const jev = yield* Jev;
+          yield* jev.judge(code1, rules, [], judgedFile);
+          yield* jev.locate(code1, { b }, judgedFile);
+        }).pipe(Effect.provide(layer)),
+      );
+      const state = { code: { "1": "const port = 3000;" } };
+      expect(sent).toEqual([
+        { state, ids: ["a", "b"] },
+        { state, ids: ["start:b:1", "end:b:1", "sufficient:b"] },
+      ]);
+    }
+  });
+
+  it("carries the full shared prepared context through judge and locate without replacing it from config", async () => {
+    const readState = {
+      workspacePackages: { "orders-core": "packages/orders" },
+      symbols: { "1": [{ name: "port", referenceCount: 1 }] },
+      references: { files: { "caller.ts": "use(port);\n" } },
+    };
+    const { sent, layer } = recordedJev({
+      reads: ["workspacePackages", "symbols", "references"],
+      workspacePackages: { stale: "packages/stale" },
+    });
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const jev = yield* Jev;
+        yield* jev.judge(code1, rules, [], judgedFile, readState);
+        yield* jev.locate(code1, { b }, judgedFile, readState);
+      }).pipe(Effect.provide(layer)),
+    );
+    const state = { ...readState, code: { "1": "const port = 3000;" } };
+    expect(sent).toEqual([
+      { state, ids: ["a", "b"] },
+      { state, ids: ["start:b:1", "end:b:1", "sufficient:b"] },
     ]);
   });
 

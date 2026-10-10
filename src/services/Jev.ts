@@ -1,7 +1,9 @@
 import {
   type Example,
   examplesOf,
+  type JevState,
   type JudgedFile,
+  type ReadState,
   type Rule,
   type RuleId,
   type Rules,
@@ -55,23 +57,26 @@ export class Jev extends Context.Service<
     /**
      * Each rule's probability that the file breaks it. A rule in `sampled`
      * also carries the linter check's question, whose answer comes back
-     * under `linter`. `file` is what a rule's `appendState` gets.
+     * under `linter`. `file` is what a rule's `appendState` gets;
+     * `readState` is the shared context already prepared for the file.
      */
     readonly judge: (
       lines: Lines,
       rules: Rules,
       sampled: ReadonlyArray<RuleId>,
       file: JudgedFile,
+      readState?: ReadState,
     ) => Effect.Effect<Judged, JevUnavailable | JevOverflow | JevBlocked>;
     /**
      * Per rule, the section of the file that most clearly breaks it, and
-     * whether the file shows enough to decide. A rule Jev answers either
-     * question for with nothing it offered is left out.
+     * whether the file and its prepared context show enough to decide.
+     * A rule Jev answers either question for with nothing it offered is left out.
      */
     readonly locate: (
       lines: Lines,
       rules: Rules,
       file: JudgedFile,
+      readState?: ReadState,
     ) => Effect.Effect<Record<RuleId, Located>, JevUnavailable | JevOverflow | JevBlocked>;
     /**
      * Per rule, the partner Jev names as impossible to follow in the same code,
@@ -96,7 +101,7 @@ export class Jev extends Context.Service<
 /** Where a finding is, and how sure Jev is that the file shows enough to decide it. */
 export interface Located {
   readonly section: Range;
-  /** Jev's probability that everything judging the rule turns on is in the file. */
+  /** Jev's probability that the file and its shared context show everything judging the rule turns on. */
   readonly sufficiency: number;
   /** The lines in the section the code that breaks the rule starts and ends on, when Jev named them. */
   readonly lines?: Range;
@@ -124,6 +129,7 @@ const REQUEST_CONTEXT = 64_000;
 const WRAPPER = 1_000;
 
 const encoder = new TextEncoder();
+const bytesOf = (value: unknown): number => encoder.encode(JSON.stringify(value)).length;
 
 /**
  * An estimate, meant to run high, of the tokens Jev reads for a value: one
@@ -131,18 +137,22 @@ const encoder = new TextEncoder();
  * bytes a token, and this ran 12 to 16 percent high on the eval's requests.
  * Text that packs more tokens into its bytes, such as CJK, can outrun it.
  */
-export const tokensOf = (value: unknown): number =>
-  Math.ceil(encoder.encode(JSON.stringify(value)).length / 3);
+export const tokensOf = (value: unknown): number => Math.ceil(bytesOf(value) / 3);
 
 /**
  * The file as Jev reads it: its sections, by `sectionsOf`, under their
- * numbers from 1, so the locate question can name one. The only thing the
- * questions share. On the eval it judged as well as the file with every line
- * numbered, and located as well as a choice among the lines.
+ * numbers from 1, so the locate question can name one. Prepared context is
+ * added beside the code, never in its place. On the eval it judged as well as
+ * the file with every line numbered, and located as well as a choice among the lines.
  */
-const stateOf = (lines: Lines) => ({
+const stateOf = (
+  lines: Lines,
+  readState: ReadState = {},
+  sections: ReadonlyArray<Range> = sectionsOf(lines),
+): JevState => ({
+  ...readState,
   code: Object.fromEntries(
-    sectionsOf(lines).map((section, index) => [
+    sections.map((section, index) => [
       String(index + 1),
       lines.slice(section.first - 1, section.last).join("\n"),
     ]),
@@ -199,7 +209,7 @@ const comparedState = (rules: ReadonlyArray<ComparedRule>, mentioned: Iterable<n
  * asking whether code "must be written the way `must` shows": the same words,
  * but a pattern to compare rather than code to match.
  */
-export const judgeQuestion = (rule: Rule) => {
+const judgeQuestionWith = (rule: Rule, fields: ReturnType<typeof ruleFields>) => {
   const { good, bad } = examplesOf(rule);
   const avoided = fieldOf(bad ?? { word: "never", code: "" });
   const example = bad === undefined ? "" : `, for example by doing what \`${avoided}\` shows`;
@@ -217,13 +227,15 @@ export const judgeQuestion = (rule: Rule) => {
         ];
   return {
     type: "noul" as const,
-    instructions: { question, ...ruleFields(rule) },
+    instructions: { question, ...fields },
     criteria: {
       true: `${yes}, in code that \`rule\` is about`,
       false: `${no}, or has no code that \`rule\` is about`,
     },
   };
 };
+
+export const judgeQuestion = (rule: Rule) => judgeQuestionWith(rule, ruleFields(rule));
 
 /** What the offending section does, for the locate question. */
 const offense = (rule: Rule): string => {
@@ -270,8 +282,11 @@ type MatcherKind = keyof MatcherScores;
  * `appliesTo`, whether any of that code is as described, and for `excludeIf`,
  * whether all of it is. It carries the rule as the judge question does.
  */
-export const matcherQuestion = (rule: Rule, kind: MatcherKind, matcher: string) => {
-  const { instructions } = judgeQuestion(rule);
+const matcherQuestionWith = (
+  instructions: ReturnType<typeof judgeQuestion>["instructions"],
+  kind: MatcherKind,
+  matcher: string,
+) => {
   const [quantity, yes, no] =
     kind === "appliesTo" ? ["any", "Some", "None"] : ["all", "All", "Not all"];
   return {
@@ -288,6 +303,9 @@ export const matcherQuestion = (rule: Rule, kind: MatcherKind, matcher: string) 
   };
 };
 
+export const matcherQuestion = (rule: Rule, kind: MatcherKind, matcher: string) =>
+  matcherQuestionWith(judgeQuestion(rule).instructions, kind, matcher);
+
 /** The key a rule's matcher question rides under, beside its judge question. */
 export const matcherKey = (kind: MatcherKind, id: RuleId, index: number): string =>
   `${kind}:${id}:${index}`;
@@ -303,9 +321,9 @@ export const matcherQuestions = (id: RuleId, rule: Rule) =>
     ),
   );
 
-/** The tokens a file's code leaves in Jev's context for any one question beside it, as `fits` counts them. */
-export const questionRoom = (lines: Lines): number =>
-  QUESTION_CONTEXT - WRAPPER - tokensOf(stateOf(lines));
+/** The room for one question beside the file and its shared prepared context. Hooks are not predicted. */
+export const questionRoom = (lines: Lines, readState: ReadState = {}): number =>
+  QUESTION_CONTEXT - WRAPPER - tokensOf(stateOf(lines, readState));
 
 /**
  * One question per rule, one per matcher of each rule, and the linter
@@ -316,9 +334,10 @@ export const judgeBody = (
   lines: Lines,
   rules: Rules,
   sampled: ReadonlyArray<RuleId> = [],
+  readState: ReadState = {},
 ) => ({
   model,
-  state: stateOf(lines),
+  state: stateOf(lines, readState),
   questions: {
     ...Record.map(rules, (rule): ReturnType<typeof judgeQuestion> => judgeQuestion(rule)),
     ...Object.fromEntries(
@@ -341,19 +360,34 @@ export const judgeBody = (
  * in a field, ranked real findings worse, and read no easier. Of findings
  * it scored below 0.6, 62% were false, where 22% of all were.
  */
-export const sufficiencyQuestion = (rule: Rule) => ({
-  type: "noul" as const,
-  instructions: {
-    question:
-      "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
-    ...ruleFields(rule),
-  },
-  criteria: {
-    true: "`code` shows everything needed to tell whether it breaks `rule`",
-    false:
-      "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration",
-  },
-});
+const sufficiencyQuestionWith = (fields: ReturnType<typeof ruleFields>, readState: ReadState) => {
+  const keys = Object.keys(readState).filter((key) => key !== "code");
+  const context =
+    keys.length === 0 ? undefined : ["`code`", ...keys.map((key) => `\`${key}\``)].join(" and ");
+  return {
+    type: "noul" as const,
+    instructions: {
+      question:
+        context === undefined
+          ? "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?"
+          : `Can you tell whether \`code\` breaks \`rule\` from ${context}, without knowing what other files, libraries, services, or configuration do beyond what they show?`,
+      ...fields,
+    },
+    criteria: {
+      true:
+        context === undefined
+          ? "`code` shows everything needed to tell whether it breaks `rule`"
+          : `${context} show everything needed to tell whether \`code\` breaks \`rule\``,
+      false:
+        context === undefined
+          ? "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+          : `Whether \`code\` breaks \`rule\` depends on something ${context} do not show, such as another file, a library, a service, or configuration`,
+    },
+  };
+};
+
+export const sufficiencyQuestion = (rule: Rule, readState: ReadState = {}) =>
+  sufficiencyQuestionWith(ruleFields(rule), readState);
 
 /** The key a rule's sufficiency question rides under, beside its locate question. */
 export const sufficiencyKey = (id: RuleId): string => `sufficient:${id}`;
@@ -368,20 +402,39 @@ export const edgeKey = (edge: "start" | "end", id: RuleId, section: number): str
  * line's text, since the state carries no line numbers.
  */
 const edgeQuestion = (
-  rule: Rule,
+  fields: ReturnType<typeof ruleFields>,
   edge: "start" | "end",
   key: string,
-  lines: Lines,
-  numbers: ReadonlyArray<number>,
+  criteria: Readonly<Record<string, string>>,
 ) => ({
   type: "choice" as const,
   instructions: {
     question: `Which line of \`code["${key}"]\` does the code that breaks \`rule\` ${edge} on?`,
-    ...ruleFields(rule),
+    ...fields,
   },
-  criteria: Object.fromEntries(
-    numbers.map((line) => [String(line), (lines[line - 1] ?? "").trim().slice(0, 120)]),
-  ),
+  criteria,
+});
+
+const lineCriteria = (lines: Lines, section: Range): Record<string, string> => {
+  const criteria: Record<string, string> = {};
+  for (let line = section.first; line <= section.last; line++) {
+    const text = (lines[line - 1] ?? "").trim();
+    if (text !== "") criteria[String(line)] = text.slice(0, 120);
+  }
+  return criteria;
+};
+
+const sectionQuestion = (
+  rule: Rule,
+  fields: ReturnType<typeof ruleFields>,
+  criteria: Readonly<Record<string, null>>,
+) => ({
+  type: "choice" as const,
+  instructions: {
+    question: `Which entry of \`code\` most clearly ${offense(rule)}?`,
+    ...fields,
+  },
+  criteria,
 });
 
 /**
@@ -395,64 +448,100 @@ const edgeQuestion = (
  * held a violation for 94% of real findings, and 98% where the section was
  * right, and were most often one line.
  */
-export const locateBody = (model: string, lines: Lines, rules: Rules) => {
-  const state = stateOf(lines);
+export const locateBody = (
+  model: string,
+  lines: Lines,
+  rules: Rules,
+  readState: ReadState = {},
+) => {
+  const sections = sectionsOf(lines);
+  const state = stateOf(lines, readState, sections);
   const criteria = Record.map(state.code, () => null);
-  const choosing = Object.keys(criteria).length > 1;
-  const withCode = sectionsOf(lines).map(({ first, last }) =>
-    Array.from({ length: last - first + 1 }, (_, index) => first + index).filter(
-      (line) => (lines[line - 1] ?? "").trim() !== "",
-    ),
-  );
+  const choosing = sections.length > 1;
+  const withCode = sections.map((section) => lineCriteria(lines, section));
   return {
     model,
     state,
     questions: Object.fromEntries(
-      Object.entries(rules).flatMap(([id, rule]) => [
-        ...(choosing
-          ? [
-              [
-                id,
-                {
-                  type: "choice" as const,
-                  instructions: {
-                    question: `Which entry of \`code\` most clearly ${offense(rule)}?`,
-                    ...ruleFields(rule),
-                  },
-                  criteria,
-                },
-              ] as const,
-            ]
-          : []),
-        ...withCode.flatMap((numbers, index) =>
-          numbers.length === 0
-            ? []
-            : (["start", "end"] as const).map(
-                (edge) =>
-                  [
-                    edgeKey(edge, id, index + 1),
-                    edgeQuestion(rule, edge, String(index + 1), lines, numbers),
-                  ] as const,
-              ),
-        ),
-        [sufficiencyKey(id), sufficiencyQuestion(rule)] as const,
-      ]),
+      Object.entries(rules).flatMap(([id, rule]) => {
+        const fields = ruleFields(rule);
+        return [
+          ...(choosing ? [[id, sectionQuestion(rule, fields, criteria)] as const] : []),
+          ...withCode.flatMap((options, index) =>
+            Record.isEmptyRecord(options)
+              ? []
+              : (["start", "end"] as const).map(
+                  (edge) =>
+                    [
+                      edgeKey(edge, id, index + 1),
+                      edgeQuestion(fields, edge, String(index + 1), options),
+                    ] as const,
+                ),
+          ),
+          [sufficiencyKey(id), sufficiencyQuestionWith(fields, readState)] as const,
+        ];
+      }),
     ),
   };
 };
 
 /**
  * Whether Jev can take every request a file may need: its sections within
- * one choice, and its code beside the longest question any rule asks.
+ * one choice, and the shared state beside its longest question. Hooks are not predicted.
  */
-export const fits = (lines: Lines, rules: Rules): boolean => {
-  if (sectionsOf(lines).length > CHOICE_LIMIT) return false;
-  const questions = [
-    ...Object.values(judgeBody("", lines, rules).questions),
-    ...Object.values(locateBody("", lines, rules).questions),
-  ];
-  const longest = Math.max(0, ...questions.map(tokensOf));
-  return tokensOf(stateOf(lines)) + longest <= QUESTION_CONTEXT - WRAPPER;
+export const fits = (lines: Lines, rules: Rules, readState: ReadState = {}): boolean => {
+  const sections = sectionsOf(lines);
+  if (sections.length > CHOICE_LIMIT) return false;
+  const state = stateOf(lines, readState, sections);
+  const room = QUESTION_CONTEXT - WRAPPER - tokensOf(state);
+  if (room < 0) return false;
+  if (Record.isEmptyRecord(rules)) return true;
+
+  // These ids can overwrite generated questions; retain the bodies' last-write semantics.
+  if (Object.keys(rules).some((id) => /^(appliesTo|excludeIf|start|end|sufficient):/.test(id))) {
+    return [
+      judgeBody("", lines, rules, [], readState),
+      locateBody("", lines, rules, readState),
+    ].every((body) =>
+      Object.values(body.questions).every((question) => tokensOf(question) <= room),
+    );
+  }
+
+  const emptyFields = { rule: "" };
+  const fieldBytes = bytesOf(emptyFields);
+  const limit = room * 3;
+  const criteriaBytes = bytesOf(Record.map(state.code, () => null)) - 2;
+  let longest = bytesOf(sufficiencyQuestionWith(emptyFields, readState));
+  for (const [index, section] of sections.entries()) {
+    const options = lineCriteria(lines, section);
+    if (Record.isEmptyRecord(options)) continue;
+    // `start` is two bytes longer than `end`; fields and criteria are identical.
+    longest = Math.max(
+      longest,
+      bytesOf(edgeQuestion(emptyFields, "start", String(index + 1), options)),
+    );
+  }
+  for (const rule of Object.values(rules)) {
+    // Replace the template's fields in bytes, rounding only the complete question.
+    const extra = bytesOf(ruleFields(rule)) - fieldBytes;
+    if (longest + extra > limit) return false;
+    const judge = judgeQuestionWith(rule, emptyFields);
+    if (bytesOf(judge) + extra > limit) return false;
+    if (
+      sections.length > 1 &&
+      bytesOf(sectionQuestion(rule, emptyFields, {})) + criteriaBytes + extra > limit
+    ) {
+      return false;
+    }
+    for (const kind of MATCHER_KINDS) {
+      for (const matcher of rule[kind] ?? []) {
+        if (bytesOf(matcherQuestionWith(judge.instructions, kind, matcher)) + extra > limit) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 };
 
 /** A request to Jev, its questions typed as `Q`: `Question`, as adhere asks them, or anything an eval arm asks. */
@@ -479,26 +568,30 @@ export const requestsOf = <Q>(body: Body<Q>): ReadonlyArray<Body<Q>> => {
   return requests.map(({ questions }) => ({ ...body, questions }));
 };
 
-/** Whether a rule reads state of its own: what its `appendState` adds, or what its `reads` names. */
-const readsOwnState = (rule: Rule): boolean =>
-  rule.appendState !== undefined || (rule.reads ?? []).length > 0;
-
 /**
- * The rules as requests carry them: every rule that reads only the code in
- * one body, and each rule with state of its own in a body of its own, so
- * that what is added to the state for it only its own questions read.
+ * All rules share one body except those with `appendState`, each in a body
+ * of its own so only its questions read what its hook adds to the shared state.
  */
 export const requestGroups = (rules: Rules): ReadonlyArray<Rules> => {
-  const shared = Record.filter(rules, (rule) => !readsOwnState(rule));
+  const shared = Record.filter(rules, (rule) => rule.appendState === undefined);
   return [
     ...(Record.isEmptyRecord(shared) ? [] : [shared]),
-    ...Object.entries(rules).flatMap(([id, rule]) => (readsOwnState(rule) ? [{ [id]: rule }] : [])),
+    ...Object.entries(rules).flatMap(([id, rule]) =>
+      rule.appendState === undefined ? [] : [{ [id]: rule }],
+    ),
   ];
 };
 
 /** The judge requests for `rules` over a file: a body per group, split to fit, as `judge` sends them. */
-const judgeRequestsOf = (lines: Lines, rules: Rules, sampled: ReadonlyArray<RuleId>) =>
-  requestGroups(rules).flatMap((group) => requestsOf(judgeBody("", lines, group, sampled)));
+const judgeRequestsOf = (
+  lines: Lines,
+  rules: Rules,
+  sampled: ReadonlyArray<RuleId>,
+  readState: ReadState,
+) =>
+  requestGroups(rules).flatMap((group) =>
+    requestsOf(judgeBody("", lines, group, sampled, readState)),
+  );
 
 /**
  * The requests judging `rules` over a file takes, and about how many input
@@ -510,8 +603,9 @@ export const judgeLoad = (
   lines: Lines,
   rules: Rules,
   sampled: ReadonlyArray<RuleId> = [],
+  readState: ReadState = {},
 ): { readonly requests: number; readonly tokens: number } => {
-  const requests = judgeRequestsOf(lines, rules, sampled);
+  const requests = judgeRequestsOf(lines, rules, sampled, readState);
   return {
     requests: requests.length,
     tokens: requests.reduce((sum, request) => sum + tokensOf(request), 0),
@@ -523,11 +617,13 @@ export const judgeRequests = (
   lines: Lines,
   rules: Rules,
   sampled: ReadonlyArray<RuleId> = [],
-): number => judgeRequestsOf(lines, rules, sampled).length;
+  readState: ReadState = {},
+): number => judgeRequestsOf(lines, rules, sampled, readState).length;
 
 /** The requests locating `rules` in a file takes, a body per group split to fit, as `locate` sends them. */
-export const locateRequests = (lines: Lines, rules: Rules): number =>
-  requestGroups(rules).flatMap((group) => requestsOf(locateBody("", lines, group))).length;
+export const locateRequests = (lines: Lines, rules: Rules, readState: ReadState = {}): number =>
+  requestGroups(rules).flatMap((group) => requestsOf(locateBody("", lines, group, readState)))
+    .length;
 
 /** A choice keeps one criterion for "none", which leaves this many for partners. */
 const PARTNERS_PER_QUESTION = CHOICE_LIMIT - 1;

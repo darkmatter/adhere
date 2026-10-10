@@ -7,6 +7,7 @@ import {
   KEYS,
 } from "#services/Credentials.ts";
 import { JevLive } from "#services/Jev.http.ts";
+import { SourceReadsLive } from "#services/SourceReads.ts";
 import { SourceWalkerLive } from "#services/SourceWalker.ts";
 import { Status } from "#services/Status.ts";
 import {
@@ -115,12 +116,12 @@ const sufficiencyThreshold = Flag.Finite("sufficiency-threshold").pipe(
 
 const limit = Flag.Int("limit").pipe(
   Flag.filter(
-    (checks) => checks >= 0,
-    (checks) => `--limit is a number of checks, 0 or more, not ${checks}.`,
+    (files) => files >= 0,
+    (files) => `--limit is a number of files, 0 or more, not ${files}.`,
   ),
   Flag.optional,
   Flag.withDescription(
-    "Judge at most this many checks. The rest wait for a later run, which picks up where this one stopped, since judgments are cached. --limit 0 shows the plan and judges nothing.",
+    "Process at most this many files needing requests, in path order, including every pending rule per selected file. Fully cached and located files do not count. A file can send multiple requests. --limit 0 shows the plan without resolving native reads or sending requests.",
   ),
 );
 
@@ -226,6 +227,7 @@ const force = Flag.Boolean("force").pipe(
 export const auditLayer = (flags: Flags, filter: ReadonlyArray<string> = []) =>
   Layer.mergeAll(
     SourceWalkerLive(filter),
+    SourceReadsLive(),
     AuditCacheLive,
     JevLive.pipe(Layer.provide(CredentialsLive)),
   ).pipe(Layer.provideMerge(AdhereConfigLive(flags)), Layer.provideMerge(statusLayer));
@@ -240,10 +242,19 @@ export const lintCommand = Command.make(
       const plan = yield* planAudit({ limit: Option.getOrUndefined(input.limit) });
       const limits = { filter: input.filter, rpm: Option.getOrUndefined(input.rpm) };
       yield* toStderr(`${describePlan(plan, limits).join("\n")}\n`);
+      if (plan.planOnly === true) {
+        // Planning still knows the live content keys, so a complete walk can prune without sending.
+        if (input.filter.length === 0) yield* pruneCache(plan);
+        return;
+      }
       // A prompt draws on stdout, so it needs a terminal at both ends: none when
       // the report is redirected, or in CI.
       const interactive = (yield* stdio.stdinIsTerminal) && (yield* stdio.stdoutIsTerminal);
-      if (plan.requests > 0 && interactive && !input.yes) {
+      if (
+        (plan.requests > 0 || (plan.cachedLocateRequests ?? 0) > 0) &&
+        interactive &&
+        !input.yes
+      ) {
         const send = yield* Prompt.run(
           Prompt.Confirm({ message: sendQuestion(plan), initial: true }),
         );
