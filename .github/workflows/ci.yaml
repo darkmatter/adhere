@@ -13,15 +13,37 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.2"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run test
       - run: bun run build:npm
-      - name: Run the launcher against the linux-x64 package
-        run: |
-          # Outside the checkout, where the launcher has no source to fall back to.
-          launcher="$RUNNER_TEMP/launcher"
-          mkdir -p "$launcher/node_modules/@drkmttr"
-          cp -r bin "$launcher/bin"
-          ln -s "$PWD/dist/npm/linux-x64" "$launcher/node_modules/@drkmttr/adhere-linux-x64"
-          node "$launcher/bin/adhere.js" --version
+      - name: Verify installed npm packages and native semantic reads
+        timeout-minutes: 6
+        run: bun scripts/verify-npm.ts
+
+  verify-macos:
+    name: macOS native reads (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: bun install --frozen-lockfile
+      - run: bun run build:npm
+      - name: Verify installed npm packages and native semantic reads
+        timeout-minutes: 6
+        run: bun scripts/verify-npm.ts

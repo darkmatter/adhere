@@ -2,7 +2,10 @@
 /**
  * `adhere` on PATH. Runs the executable compiled for this machine, which the
  * install fetched as the optional dependency `@drkmttr/adhere-<platform>-<arch>`
- * (see scripts/npm-packages.ts). A checkout has none installed, so there it
+ * (see scripts/npm-packages.ts). For semantic reads, passes the native TypeScript
+ * compiler package resolved from that executable's dependencies to the bundled
+ * SDK. A missing compiler does not block plain commands; the reads adapter
+ * validates it when needed. A checkout has no executable installed, so there it
  * runs src/main.ts with Bun instead.
  */
 import { spawnSync } from "node:child_process";
@@ -24,8 +27,20 @@ const resolveExecutable = () => {
   }
 };
 
-const run = (command, commandArgs) => {
-  const result = spawnSync(command, commandArgs, { stdio: "inherit" });
+const resolveCompilerPackage = (prebuilt) => {
+  try {
+    return createRequire(prebuilt).resolve(`@typescript/typescript-${platform}/package.json`);
+  } catch {
+    return undefined;
+  }
+};
+
+const run = (command, commandArgs, compilerPackage) => {
+  const env = { ...process.env };
+  // This private handoff must not let an inherited value redirect the compiler.
+  delete env.ADHERE_TYPESCRIPT_PACKAGE;
+  if (compilerPackage) env.ADHERE_TYPESCRIPT_PACKAGE = compilerPackage;
+  const result = spawnSync(command, commandArgs, { stdio: "inherit", env });
   if (result.error) throw result.error;
   if (result.signal) {
     // A killed process says nothing itself, so say what killed it.
@@ -39,7 +54,7 @@ const run = (command, commandArgs) => {
 };
 
 const prebuilt = resolveExecutable();
-if (prebuilt) run(prebuilt, args);
+if (prebuilt) run(prebuilt, args, resolveCompilerPackage(prebuilt));
 else if (existsSync(new URL("../.git", import.meta.url)))
   run("bun", [fileURLToPath(new URL("../src/main.ts", import.meta.url)), ...args]);
 else {
