@@ -1,0 +1,2170 @@
+[
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/admin/domains/refresh/route.ts",
+    "line": 7,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "Line 7 destructures `domain` from `await req.json()` (`any`) with no check, and line 18 passes it to addDomainToVercel's `domain: string` parameter, which calls domain.toLowerCase(); withAdmin limits who can call the route but does not check the body."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/cron/campaigns/broadcast/route.ts",
+    "line": 270,
+    "rule": "typescript/async/concurrent-independent-work",
+    "label": "debatable",
+    "note": "The chunk loop awaits sendBatchEmail (line 270) and its notificationEmail.createMany once per chunk although the chunks are independent, but these are Resend bulk sends in a route built around throttling (BATCH_DELAY_SECONDS and EXTENDED_DELAY_SECONDS between batches), so one batch call at a time may be deliberate pacing, though no comment says so."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/cron/campaigns/broadcast/route.ts",
+    "line": 293,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`campaign.bodyJson as unknown as TiptapNode` (line 293) double-casts a Prisma Json column read through the app's own client, with nothing checking it is a Tiptap document, so it is not the outside data excludeIf covers. The `partnerUser.email!` at line 280 is fine because the chunk is filtered on email just above it."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/cron/campaigns/broadcast/route.ts",
+    "line": 293,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The QStash body is Zod-parsed (lines 54-56) and the Upstash-Message-Id header stays `string | null`; the only cast, `campaign.bodyJson as unknown as TiptapNode` on line 293, narrows a Prisma Json column read from the program's own database, which excludeIf covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/cron/framer/backfill-leads-batch/route.ts",
+    "line": 327,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "debatable",
+    "note": "The `!`s follow the validEntries filters (lines 124, 151) and the createMany/findMany on the unique (projectId, externalId) pair, and `as PayloadItem[]` (line 68) casts the parsed body; only `as [string]` (line 327) is in doubt: it exists to satisfy redis.sadd's required first member, and the return at line 203 does keep the list non-empty, but the tuple claims exactly one element."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/cron/framer/backfill-leads-batch/route.ts",
+    "line": 146,
+    "rule": "typescript/types/validate-external-data",
+    "label": "debatable",
+    "note": "The body is Zod-parsed (line 66), and `as PayloadItem[]` only drops the null that parseDateSchema's refine already rejects; but the get_framer_lead_events pipe declares `data: z.any()` (line 52), so line 146 puts an unchecked `any` click_id into invalidEntries' declared `clickId?: string`. That value is only echoed in the JSON response and comes from dub's own Tinybird store, so reviewers could split on whether it counts as giving outside data a type."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/cron/streams/update-click-stats/route.ts",
+    "line": 227,
+    "rule": "typescript/errors/no-swallowed-errors",
+    "label": "debatable",
+    "note": "Each per-update catch (lines 207, 227, 250) returns { success: false, error }, which processInSubBatches counts and the GET reports as an errors count, and failed link updates keep their stream entries for the next run; but processedEntryIds (line 205) tracks only link updates, so a failed workspace or enrollment increment is deleted with the batch while the run still answers success: true (line 351)."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/api/stripe/integration/webhook/invoice-paid.ts",
+    "line": 239,
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "label": "real",
+    "note": "invoicePaid awaits recordSale(saleData) (line 239), a tb.buildIngestEndpoint POST to Tinybird whose @chronark/zod-bird client passes no signal or timeout (getLeadEvent at line 192 uses the same client); only stripe.invoices.retrieve (line 476) is covered, by the Stripe SDK's 80-second default."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/app.dub.co/embed/referrals/bounties/detail.tsx",
+    "line": 203,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "EmbedBountyDetail only renders bounty progress, requirements and the bounty name (line 203); it writes no log, error message or HTTP response and handles no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/app.dub.co/embed/referrals/bounties/detail.tsx",
+    "line": 101,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "The casts at lines 101 and 118 restate the variant that the enclosing `view.mode === ...` checks already narrow `view` to, so they claim nothing the code has not established."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/app.dub.co/embed/referrals/bounties/submission-fields.tsx",
+    "line": 237,
+    "rule": "react/effects/event-logic-in-handlers",
+    "label": "real",
+    "note": "The effect at lines 237-240 watches `value`, which changes only when the user types or blurs the input (the parent's setUrls([v])), and resets urlToCheck and calls onRequirementsMetChange(false); that is the onChange handler's job, and as an effect it even cancels the check onBlur starts whenever trimming changes the value."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/app.dub.co/embed/referrals/bounties/submission-fields.tsx",
+    "line": 78,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The embed token is only sent as the Authorization header of the upload-URL request (line 78); the toasts at lines 90, 118 and 138 show server or exception messages, never the token."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/app.dub.co/embed/referrals/bounties/submission-fields.tsx",
+    "line": 131,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "Line 99 destructures `{ signedUrl, destinationUrl }` from the `any` upload-URL response with no check: signedUrl is fetched, and destinationUrl is stored in FileInput state typed `url?: string` (line 131), which is rendered as the image src and submitted. Only the error bodies are checked, by toErrorMessage's handling of `unknown`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/app.dub.co/invoices/[invoiceId]/domain-renewal-invoice.tsx",
+    "line": 54,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "console.error(error) at line 54 logs a Stripe customers.retrieve failure, and Stripe masks API keys in its messages; the invoice shows billing name, address, email and tax ID, which are not secrets."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/app.dub.co/invoices/[invoiceId]/domain-renewal-invoice.tsx",
+    "line": 35,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`invoice.registeredDomains as string[]` (line 35) casts a nullable Json column (`Json?`) from the app's own Prisma client to a string array with no check, even though parseRegisteredDomainSlugs exists to validate exactly that. The `response as Stripe.Customer` at line 52 is on a Stripe API response, which excludeIf covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/partners.dub.co/(dashboard)/payouts/payout-table.tsx",
+    "line": 70,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The only error text is the fixed \"Failed to load payouts\" at line 70; the table renders payout periods, amounts and program names, none of them secrets."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/partners.dub.co/(dashboard)/profile/industry-interests-modal.tsx",
+    "line": 123,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "A modal for picking industry interests that hands the selection to onSave (line 123); there is no log, error message or HTTP response and no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/partners.dub.co/(dashboard)/rewind/2025/share-rewind-modal.tsx",
+    "line": 78,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "console.error at line 78 logs a clipboard write failure and the toasts are fixed strings; no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/(ee)/partners.dub.co/(onboarding)/onboarding/platforms/page.tsx",
+    "line": 110,
+    "rule": "typescript/design/no-argument-mutation",
+    "label": "false",
+    "note": "platforms.push(...) at line 110 appends to the local array that z.array(partnerPlatformSchema).parse() built at line 89; OnboardingPlatformsFormRSC takes no arguments and buildSocialPlatformLookup only reads the array, so nothing a caller passed in is mutated."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/ai/support-chat/route.ts",
+    "line": 234,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The 4xx responses (lines 43-142) are fixed strings, the stream at line 234 returns model output, schema-filtered tool results and a Slack thread timestamp, and line 265 logs a Slack client error; the Slack bot token is never logged or returned."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/ai/sync-embeddings/fetch-plausible-pageviews.ts",
+    "line": 45,
+    "rule": "typescript/types/validate-external-data",
+    "label": "debatable",
+    "note": "Lines 45-46 annotate the `any` Plausible response fields as `page: string` and `pageviews: number` before line 48 checks them with typeof. The rule's wording forbids that ordering, but nothing uses the values before the check, so reviewers could split."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/callback/plain/workspace/route.ts",
+    "line": 60,
+    "rule": "typescript/async/concurrent-independent-work",
+    "label": "real",
+    "note": "When the Plain customer has no externalId, the route awaits upsertPlainCustomer (line 60), whose result it never uses, before the independent prisma.project.findFirst at line 69, which only needs customer.externalId, set synchronously at line 59."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/api/workspaces/[idOrSlug]/billing/invoices/route.ts",
+    "line": 48,
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "label": "false",
+    "note": "The only HTTP call, stripe.invoices.list (line 48), goes through the Stripe Node SDK client from lib/stripe, which applies the SDK's 80-second default timeout; the other query is Prisma."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(auth)/oauth/authorize/authorize-form.tsx",
+    "line": 89,
+    "rule": "typescript/types/validate-external-data",
+    "label": "debatable",
+    "note": "The /api/oauth/authorize response stays `any`: line 89 assigns data.callbackUrl to window.location.href and line 85 passes data.error.message to toast.error, both unchecked. The code never names a type for the response, so reviewers could split on whether passing `any` fields to DOM and library sinks counts as assigning from `any` to a declared type."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/program/campaigns/[campaignId]/campaign-editor.tsx",
+    "line": 297,
+    "rule": "react/effects/event-logic-in-handlers",
+    "label": "debatable",
+    "note": "The effect at lines 297-300 focuses the preview input after the 'Preview text' click (line 668) sets showPreviewText, which ties it to that click, but focusing an input that stays inert until the re-render is commonly left to an effect (the handler would need flushSync); the watch() subscriptions at lines 289 and 389 react to form changes, not to state a handler set."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/program/campaigns/[campaignId]/campaign-editor.tsx",
+    "line": 139,
+    "rule": "react/state/no-props-copied-into-state",
+    "label": "false",
+    "note": "CampaignFromField's displayName/localPart (lines 127-128) are edit buffers for partial input the formatted `value` can't represent, and the effect at lines 139-152 re-parses them whenever `value` changes, so they keep following the prop; showPreviewText (line 284) is a user-toggled UI flag only seeded from campaign.preview."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/program/campaigns/[campaignId]/campaign-editor.tsx",
+    "line": 792,
+    "rule": "typescript/errors/no-swallowed-errors",
+    "label": "false",
+    "note": "The only catch, in uploadImage (line 792), logs the error, shows it with toast.error, and returns null, which RichTextProvider's uploadImage contract (Promise<string | null>) treats as a failed upload and does not insert."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/program/campaigns/[campaignId]/campaign-editor.tsx",
+    "line": 762,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "debatable",
+    "note": "`workspaceId!` (line 762) is unchecked in the file and only satisfies the upload action's string type. But CampaignEditor renders only after useCampaign has fetched the campaign with that workspaceId, and the id comes from the SWR workspace fetch, which excludeIf's fetch-response clause arguably covers. The other casts (Object.keys keys, the `{}` reduce accumulator) restate what the code establishes."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/program/commissions/create-commission-sheet.tsx",
+    "line": 69,
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "label": "real",
+    "note": "fetcherStripeInvoices' return type (lines 69-73) is invoices plus an optional noStripeCustomerId flag and an optional message that only comes with that flag, the flag-and-optional-field shape the rule forbids; FormData (lines 52-65) likewise flattens the custom/lead/sale body union and keeps the type in separate commissionType state, a choice its comment makes for react-hook-form."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/program/commissions/create-commission-sheet.tsx",
+    "line": 86,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "fetcherStripeInvoices checks the `any` stripe-invoices response only with Array.isArray before returning it as `invoices: StripeInvoiceFromApi[]` (line 86), though StripeCustomerInvoiceSchema is imported and used only for its inferred type; the invoices' id, amount, and dubCommissionId are then rendered and filtered."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/program/partners/invite-email-preview.tsx",
+    "line": 89,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "An invite email preview editor whose only error output is the fixed toast at line 89; no secret is logged or returned."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/program/resources/program-brand-assets/index.tsx",
+    "line": 81,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "debatable",
+    "note": "`workspaceId as string` (line 81) in handleDelete is unchecked and only drops useWorkspace's undefined. The delete buttons render only for resources fetched with the loaded workspace's defaultProgramId, and the id comes from the SWR workspace fetch that excludeIf arguably covers, so reviewers would split."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/billing/upgrade/adjust-usage-row.tsx",
+    "line": 156,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Plan usage sliders that render limits (line 156); there is no log, error message or HTTP response and no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/domains/email/page-client.tsx",
+    "line": 41,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The toasts at lines 41-45 are fixed strings that do not echo the DNS provider's error params, and line 67 only strips the callback params from the URL."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/integrations/[integrationSlug]/manage/page.tsx",
+    "line": 30,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`integration.screenshots as string[]` (line 30) casts a nullable Prisma Json column (`Json?`) read through the app's own client to a string array with nothing checking it, so excludeIf does not apply."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/integrations/featured-integrations.tsx",
+    "line": 65,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Renders integration screenshots, names and descriptions (lines 65-92); the Integration rows passed in have no secret fields (OAuth client secrets live in OAuthApp, which the parent query does not include)."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/integrations/featured-integrations.tsx",
+    "line": 65,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "The only assertion, `integration.screenshots![0]` (line 65), maps over featuredIntegrations, which lines 35-36 filter to integrations whose screenshots is a non-empty array."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(dashboard)/[slug]/(ee)/settings/integrations/integrations-cards.tsx",
+    "line": 85,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Spreads each Integration row into IntegrationCard at line 85; the Integration model has no secret fields and the file writes no log, error or response."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(deeplink)/deeplink/[domain]/[[...key]]/page.tsx",
+    "line": 125,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "`link.shortDomain.assetLinks as Array<AssetLink>` (line 125) narrows a Prisma Json column read through the program's own typed client, which excludeIf covers, and each entry's namespace and package_name are still checked with typeof and a regex; deepviewData goes through parseDeepViewData's safeParse (line 112) and the accept-language header stays `string | null`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(invites)/[slug]/invite/accept-invite-button.tsx",
+    "line": 26,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "toast.error at line 26 shows the server's error message for a failed invite accept; no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(onboarding)/onboarding/(steps)/program/form.tsx",
+    "line": 113,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "Line 98 destructures `{ signedUrl, destinationUrl }` from the `any` upload-url response with no check, fetches signedUrl, and line 113 sets destinationUrl into the form's `logo` field (typed `string` by programDataSchema), which is rendered as the logo preview and submitted."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(onboarding)/onboarding/next-button.tsx",
+    "line": 17,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "A Next button that calls continueTo(step) (line 17); there is nothing the rule covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(onboarding)/onboarding/use-onboarding-progress.ts",
+    "line": 30,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "console.error at line 30 logs a failed onboarding-progress action and line 26 logs a fixed string; neither carries a secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(onboarding)/onboarding/use-onboarding-progress.ts",
+    "line": 54,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`(providedSlug || slug)!` (line 54) asserts that a workspace slug is present. Without a providedSlug, that slug comes from the ?workspace= query param (useWorkspace falls back to it on onboarding routes), which is request input that excludeIf covers, and continueTo itself adds that param to every later step's URL."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(share)/share/[dashboardId]/action.ts",
+    "line": 22,
+    "rule": "security/no-secrets-in-output",
+    "label": "debatable",
+    "note": "verifyPassword sets the dashboard's plaintext password as the httpOnly, secure dub_password_<id> cookie (line 22) that page.tsx compares on later visits; it goes back only to the visitor who just typed it, as an access credential like a session cookie, but it is the reusable password rather than a token, and a Set-Cookie header is literally part of the HTTP response."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/app/app.dub.co/(share)/share/[dashboardId]/action.ts",
+    "line": 7,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`data.get(\"dashboardId\") as string` and `data.get(\"password\") as string` (lines 7-8) cast the server action's FormData, a request body that excludeIf covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/actions/cancel-email-change.ts",
+    "line": 12,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "cancelEmailChangeAction (line 12) is a \"use server\" next-safe-action that awaits deleteEmailChangeRequest(token); the file has no React effect, so the rule does not apply."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/actions/cancel-email-change.ts",
+    "line": 20,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The email-change token is only passed to deleteEmailChangeRequest at line 20, which hashes it and swallows errors, and the validation errors at line 15 are zod field messages that do not echo the value."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/actions/partners/program-resources/delete-program-resource.ts",
+    "line": 42,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The input is checked by `.inputSchema(deleteProgramResourceSchema)`, and the casts are `program.resources as any` (line 42), a Prisma Json column from the program's own database that excludeIf covers, and line 73's `as any` on a value programResourcesSchema.parse has just checked."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/ai/build-system-prompt.ts",
+    "line": 98,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "The file holds prompt string constants and buildSystemPrompt (line 98), which joins them into one string; there is no React effect and nothing is subscribed, listened to, timed, or opened."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/ai/build-system-prompt.ts",
+    "line": 87,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Builds an LLM system prompt; line 87 embeds the selected workspace's id, name and slug, which are not secrets, and nothing is logged or put in an error or HTTP response."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/ai/generate-csv-mapping.ts",
+    "line": 50,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Sends the CSV headers and first rows to the model (line 50) and streams back a column mapping; there is no log or error message and no secret in the response."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/analytics/export-analytics-to-zip.ts",
+    "line": 86,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "`response as Record<string, unknown>[]` (lines 86-87) only widens getAnalytics' return value, and getAnalytics already Zod-parses the Tinybird rows through the pipe's data schema and analyticsResponse[groupBy].parse, so nothing unchecked gets a type."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api-logs/capture-request-log.ts",
+    "line": 116,
+    "rule": "security/no-secrets-in-output",
+    "label": "real",
+    "note": "recordApiLog at line 116 writes raw request and response bodies to the workspace API log, but lines 91-114 mask only the per-route fields in SENSITIVE_*_FIELDS_BY_ROUTE, which list nothing for /links or /dashboards/:id, so a link's or shared dashboard's password is logged in plaintext (query-params.ts masks password, this body path does not)."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/demo/guard.ts",
+    "line": 13,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The unauthorized error at line 13 names DEMO_CLICK_SECRET without its value, which is the rule's own must pattern."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/fraud/utils.ts",
+    "line": 85,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The thrown errors at lines 85 and 99 include only the fraud rule type; nothing is logged and no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/fraud/utils.ts",
+    "line": 77,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`metadata as Record<string, string>` (line 77) removes `null | undefined` from caller-built metadata and claims every value is a string, then reads it with `eventMetadata?.`. The cast claims more than the code knows so that duplicatePartnerId can be returned as a string, and line 139 repeats the string claim (the `p!` at line 63 does nothing, since those fields are already strings)."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/fraud/utils.ts",
+    "line": 77,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The file reads no outside data: the casts of `metadata` (lines 77, 119, 139) are on fraud-event metadata that the program's own detectors build and pass in, so the rule does not apply."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/groups/get-groups.ts",
+    "line": 79,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "The file has no `as` or `!`: the raw rows get their type from `satisfies Array<any>` (line 79), which is a satisfies check rather than an assertion, and the counts are converted with Number()."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/groups/get-groups.ts",
+    "line": 79,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The rows come from the program's own database through Prisma's $queryRaw and stay `any` (`satisfies Array<any>`, line 79), with only the aggregate columns converted by Number(); the one caller, GET /api/groups, parses the result with z.array(GroupSchemaExtended)."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/links/utils/check-if-links-have-program-partners.ts",
+    "line": 3,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "A one-line predicate over programId and partnerId; there is nothing the rule covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/oauth/actions.ts",
+    "line": 47,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`(oAuthApp.redirectUris || []) as string[]` (line 47) casts the OAuthApp.redirectUris Json column from the app's own Prisma client to a string array, with no check, before using it as the redirect_uri allowlist, so excludeIf does not cover it."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/oauth/actions.ts",
+    "line": 47,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The params go through authorizeRequestSchema.safeParse (line 8), and the only cast, `oAuthApp.redirectUris as string[]` on line 47, narrows a Prisma Json column from the program's own database, which excludeIf covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/scrape-creators/get-social-profile.ts",
+    "line": 49,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "scrapeCreatorsFetch is a better-fetch client whose route declares `output: socialProfileSchema`, and better-fetch parses each response against it at runtime, so `data` is already Zod-checked; the cast on line 49 just restates the account_not_found variant's own optional `message: string`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/workflows/operator-definitions.ts",
+    "line": 17,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "WORKFLOW_OPERATORS (line 17) is a plain object of pure validate/evaluate functions for workflow conditions; the file has no React effect, so the rule does not apply."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/api/workflows/operator-definitions.ts",
+    "line": 24,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The validate errors (lines 24-181) are fixed user-facing strings; no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/bounty/periods.ts",
+    "line": 44,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Date math and labels for bounty submission periods (e.g. getPeriodLabel at line 44); there is no log, error or response and no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/edge-config/is-blacklisted-referrer.ts",
+    "line": 12,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "`let referrers;` (line 10) is implicitly `any` under apps/web's `strict: false`, so the Edge Config value read on line 12 is never cast or assigned to a declared type; line 16 only calls .includes on it."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/firstpromoter/update-stripe-customers.ts",
+    "line": 125,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "The only assertion, `workspace.stripeConnectId!` (line 125), is in the module-private searchStripeAndUpdateCustomer. Its only caller returns at line 39 when stripeConnectId is null, so the claim is established in the file."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/hooks/use-synced-local-storage.ts",
+    "line": 33,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Syncs localStorage values through an in-memory event channel (line 33); nothing is logged or returned and no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/hooks/use-synced-local-storage.ts",
+    "line": 44,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "handleStorageChange passes `JSON.parse(e.newValue)`, localStorage written by another tab, straight to setValueOriginal, typed `(value: T) => void`, with no check (line 44); line 50's parse only reads back the in-memory channel's own JSON.stringify output."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/integrations/google-ads/upload-conversion.ts",
+    "line": 200,
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "label": "real",
+    "note": "uploadGoogleAdsConversion calls googleAdsApi.uploadClickConversion (line 200), which POSTs to datamanager.googleapis.com through api.ts's dataManagerFetch, a plain fetch with no signal or timeout; the retry loop only retries after a failure, so a hung request is never cut off."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/integrations/shopify/admin-graphql.ts",
+    "line": 57,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`json.data as T` (line 57) casts the Shopify Admin API fetch response, which excludeIf covers, and the file has no other assertions."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/stripe/index.ts",
+    "line": 4,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "new Stripe(...) at line 4 and the stripeAppClient factory (line 19) build server-side SDK clients at module scope or on call, not inside a React effect, so the rule does not apply."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/stripe/index.ts",
+    "line": 4,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The Stripe secret keys at lines 4 and 22 are only passed to the Stripe constructors, never logged, put in an error, or returned."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/stripe/index.ts",
+    "line": 22,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "`appSecretKey!` (line 22) asserts that the STRIPE_APP_SECRET_KEY* environment variable, `string | undefined` in secretMap, is set without checking it, and line 4 turns an unset STRIPE_SECRET_KEY into the string \"undefined\" with a template literal; dub has no env validation."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/submitted-leads/mark-submitted-lead-closed-won.ts",
+    "line": 48,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`lead.customerId!` (line 48) follows the `if (!lead.customer) throw` at line 25, and customer is the relation loaded through customerId, so a present customer means customerId is set."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/submitted-leads/mark-submitted-lead-qualified.ts",
+    "line": 58,
+    "rule": "typescript/async/concurrent-independent-work",
+    "label": "false",
+    "note": "Each await feeds the next: recordFakeClick uses the partner link from findMany, trackLead (line 58) needs clickEvent.click_id, the customer lookup needs trackedLead's externalId, and the submittedLead update needs customer.id."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/submitted-leads/mark-submitted-lead-qualified.ts",
+    "line": 75,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`trackedLead.customer.externalId!` (line 75) restates what the call above established. trackLead was given customerExternalId `externalId || lead.email` (email is a required column), and it returns the customer it found or created under that externalId."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/swr/use-api-mutation.ts",
+    "line": 50,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The debug log at line 50 prints the request body and headers only in development in the browser, and no caller passes headers or secret-bearing bodies (bounties, commissions, groups, campaigns and the like); the error toasts show server messages."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/tapfiliate/cleanup-partners.ts",
+    "line": 138,
+    "rule": "security/parameterized-queries",
+    "label": "false",
+    "note": "The only raw SQL, conn.execute at line 138, interpolates just a list of `?` placeholders and passes partnerIdsToDelete as bound parameters."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/tinybird/delete-customer-events.ts",
+    "line": 32,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The Tinybird token is only sent in the Authorization header (line 20); the error at line 32 carries Tinybird's response payload and the one at line 12 names the service, not the key."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/tinybird/delete-customer-events.ts",
+    "line": 28,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The Tinybird env vars stay `string | undefined` and are checked before use (line 11), and the delete response read on line 28 stays `any`: it is only stringified into an error message and returned untyped to a caller that ignores it, so no outside data is given a type."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/tolt/import-links.ts",
+    "line": 74,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The payload is Zod-parsed by toltImportPayloadSchema in the cron route, and listLinks returns `ToltLinkSchema.array().parse(data)` (api.ts line 116), so the Tolt links are checked; the casts here (`workspace as WorkspaceProps` on line 74, `program.domain!`) are on Prisma rows, which excludeIf covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/lib/zod/schemas/opens.ts",
+    "line": 4,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "trackOpenRequestSchema (line 4) and trackOpenResponseSchema (line 28) are Zod schema declarations; the file has no React effect."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/playwright/api/campaigns/helpers.ts",
+    "line": 70,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "createCampaign (line 70) and createPartnerTag (line 82) are Playwright test helpers that create records through the API and Prisma, with matching delete helpers; they are not React effects, so the rule does not apply."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/playwright/api/campaigns/helpers.ts",
+    "line": 74,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Playwright helpers that create and delete campaigns and partner tags (e.g. line 74); there is no log, error message or response and no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/customers/beehiiv/fix-case-c.ts",
+    "line": 42,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`newLink.partnerId!` (lines 42, 64, 93, 247) and `oldLink.partnerId!` (lines 140, 161, 243) assert the nullable Link.partnerId of two links fetched by ID, and nothing checks that they belong to a partner; this is the program's own Prisma data, not outside data. The `payoutId!` at line 122 follows a `payoutId !== null` filter and is fine."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/misc/restore-program-enrollments.ts",
+    "line": 67,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "Every `as never` (lines 67, 90, 105, 116, 125, 147) passes rows read through prismaOld, a Prisma client of the program's own backup database, into createMany, which excludeIf covers; the Stripe calls go through the typed SDK."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/partners/backfill-partner-search-args.ts",
+    "line": 40,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The thrown errors (lines 40-80) echo CLI arguments such as --programId and --batchSize, which are not secrets."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/programs/delete-network-invites.ts",
+    "line": 58,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`i.programEnrollment?.id!` (line 58) is established by the query, whose where clause filters on `programEnrollment: { status: \"invited\" }` and so only matches discovered partners that have an enrollment."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/programs/update-commissions-canceled.ts",
+    "line": 38,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`commission.payoutId!` (line 38) maps over commissions that were just filtered on `commission.payoutId`, so the claim is established."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/tinybird/delete-sale-event.ts",
+    "line": 57,
+    "rule": "typescript/async/concurrent-independent-work",
+    "label": "real",
+    "note": "main awaits prisma.link.update (line 43) and then prisma.customer.update (line 57), decrements on different tables that don't use each other's results; only syncPartnerLinksStats needs the link update first."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/tinybird/delete-sale-event.ts",
+    "line": 72,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`link.partnerId!` and `link.programId!` (lines 72-73) assert nullable columns of a link looked up from a sale event's link_id, and nothing checks that it is a partner link; the link is the program's own Prisma data."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/tinybird/delete-sale-event.ts",
+    "line": 16,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "getSaleEvents declares `data: z.any()`, so the Tinybird rows stay `any` rather than claiming a shape; link_id, customer_id and amount (lines 16-25, 52, 66) only reach Prisma query arguments, which Prisma validates at runtime, and the delete responses are only logged, as in update-lead-event.ts."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/scripts/tinybird/update-lead-event.ts",
+    "line": 40,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The pipe's `data: z.any()` (line 12) leaves the Tinybird rows `any` rather than claiming a shape, and the merged row goes into recordLeadWithTimestamp on line 40, a zod-bird ingest endpoint that safeParses it against leadEventSchemaTB before sending; the delete responses are only logged."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/analytics/bar-list.tsx",
+    "line": 407,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "An analytics bar list that renders titles and counts (line 407); nothing is logged or returned and no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/application-analytics.tsx",
+    "line": 38,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "The useEffect at line 38 fires a one-shot trackApplicationEvent POST (fetch at line 14) per pathname; it adds no subscription, listener, timer, interval, or long-lived connection and sets no state from the response, so there is nothing left running to clean up."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/application-analytics.tsx",
+    "line": 27,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "console.error at line 27 logs the error body from /api/track/application, whose request carries only an event name, URL and referrer; no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/application-analytics.tsx",
+    "line": 24,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The /api/track/application response read on line 24 stays `any`: it is only passed to prettyPrint, whose parameter is `any`, and returned untyped to callers that ignore it, so no outside data is given a type."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/domains/add-edit-domain-form.tsx",
+    "line": 346,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "The validate response is checked field by field (lines 238-261), but the POST/PATCH response read on line 344 is `any` and goes straight to `onSuccess?.(data)` on line 346, typed `(data: DomainProps) => void`, whose callers read domain.slug."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/domains/register-domain-form.tsx",
+    "line": 38,
+    "rule": "react/state/no-contradictory-state",
+    "label": "false",
+    "note": "isSearching (line 38) tracks the availability search and isRegistering (line 39) the register or save request, two different requests that can overlap, so no pair of booleans describes one request's status."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/domains/register-domain-form.tsx",
+    "line": 73,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "The search-availability response (`any`) is checked only with Array.isArray, then setSearchedDomains(data) on line 73 stores it as `DomainSearchResult[]`, whose domain, available, and premium fields drive the UI and handleSubmit, though DomainStatusSchema is imported only for its inferred type."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/folders/folder-dropdown.tsx",
+    "line": 285,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "A folder picker that renders folder names (line 285); it writes no log, error message or HTTP response and handles no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/folders/move-link-form.tsx",
+    "line": 52,
+    "rule": "typescript/types/validate-external-data",
+    "label": "debatable",
+    "note": "The only outside data is the bulk PATCH's error body: line 51 destructures `error` from `any`, and line 52 passes error.message unchecked to toast.error, with no optional chaining or fallback. The code never names a type for the body, so, as with authorize-form.tsx, reviewers could split on whether passing an `any` field to a library sink counts as assigning it to a declared type."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/link-builder/controls/link-builder-short-link-input.tsx",
+    "line": 36,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Wraps ShortLinkInput and passes the key's form error through (line 36); there is no log, response or secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/link-builder/link-builder-header.tsx",
+    "line": 130,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Renders the link builder header with the folder name and short link (line 130); no log, error or response and no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/link-builder/link-builder-header.tsx",
+    "line": 118,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "debatable",
+    "note": "`selectedLink={props!}` (line 118) assumes a link is being edited whenever onSelectLink is passed. Nothing in LinkBuilderHeader ties the two together (its other branch handles props being undefined), but the only caller that passes onSelectLink, the link page, renders the provider only after its link loads, so reviewers would split on whether a caller's guarantee counts."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/link-builder/use-metatags.ts",
+    "line": 58,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "real",
+    "note": "The effect starts a fetch whose callback writes title/description/image and starts setTimeout(() => setGeneratingMetatags(false), 200) (line 58), and it returns no cleanup to abort the request or clear the timer, so a response for an old URL can still land after the URL changes or the builder unmounts."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/link-builder/use-metatags.ts",
+    "line": 60,
+    "rule": "typescript/errors/no-swallowed-errors",
+    "label": "false",
+    "note": "The empty catch (_) {} at line 60 only guards new URL(debouncedUrl) (line 43), the one call in the try that can throw, so it recovers from the expected not-yet-valid URL by skipping metatag generation; the fetch's own failures are never caught there."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/link-builder/use-metatags.ts",
+    "line": 55,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "The /api/links/metatags response (line 47) is `any`: results.title and results.description go into truncate's `string | null | undefined` parameter (lines 48-49), which calls .length and .slice, and line 55 sets results.image into the form's `image` field after only a truthiness check."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/short-link-input.tsx",
+    "line": 177,
+    "rule": "react/effects/notify-parents-in-handlers",
+    "label": "real",
+    "note": "The effect at lines 176-178 watches useCompletion's completion state and calls onChange({ key: completion }), where generateAIKey (by awaiting complete()) or the existing onFinish callback could notify the parent; the isFocused effect (lines 113-121) likewise generates and reports a random key on blur instead of in onBlur."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/short-link-input.tsx",
+    "line": 167,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "toast.error at line 167 shows the AI completion error and line 129 shows the key-exists error from the API; neither contains a secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/links/short-link-input.tsx",
+    "line": 107,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "generateRandomKey passes the `any` /api/links/random body straight to onChange({ key }), typed `key?: string`, without checking res.ok or the value (line 107), though the route returns an error object on failure; runKeyChecks also stores the unchecked error.message in `string | null` state (line 129) that is later .includes()'d and .split()."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/logs/logs-histogram.tsx",
+    "line": 188,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "A chart of API log status counts whose only error output is the fixed \"Failed to load\" at line 188."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/add-edit-token-modal.tsx",
+    "line": 63,
+    "rule": "react/state/store-ids-not-copies",
+    "label": "false",
+    "note": "`data` (line 63) is the edit form's draft of the token's name, scopes and type, which the user changes, not state pointing at a selected list item; the copied selectedToken state lives in settings/tokens/page.tsx, not this file."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/add-edit-token-modal.tsx",
+    "line": 104,
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "label": "false",
+    "note": "The only fetch (line 104) is browser code calling the app's own /api/tokens endpoint, which excludeIf covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/add-edit-token-modal.tsx",
+    "line": 411,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`RESOURCES.find((r) => r.key === resourceKey)!` (line 411) claims that every resource in the role's scopes is in RESOURCES, but RESOURCE_SCOPES also covers workspaces, webhooks and groups, which RESOURCES lacks. The code relies on `.filter(({ name }) => name)` at line 149 to drop the entries the `!` says cannot exist."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/add-edit-token-modal.tsx",
+    "line": 40,
+    "rule": "typescript/types/derive-dont-restate",
+    "label": "real",
+    "note": "`type ScopePreset = \"all_access\" | \"read_only\" | \"restricted\"` (line 40) restates by hand the value fields of scopePresets, which this file already imports and passes to the ToggleGroup at line 249, instead of deriving it from an `as const` list with (typeof scopePresets)[number][\"value\"]."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/add-edit-token-modal.tsx",
+    "line": 33,
+    "rule": "typescript/types/unrepresentable-invalid-states",
+    "label": "false",
+    "note": "APIKeyProps (lines 33-38) has only an optional id, absent for a new key and present for an existing one, beside name, scopes and isMachine, which apply to both, so every combination is a valid draft; the preset/scopes pairing lives in two useState calls, not in a declared type."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/add-edit-token-modal.tsx",
+    "line": 124,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "The `any` token-creation response's result.token goes to onTokenCreated, typed `(token: string) => void` (line 124), which stores it in string state for the created-token modal, with no runtime check of the response."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/import-csv-modal/field-mapping.tsx",
+    "line": 205,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Shows example values from the user's own CSV (line 205) and calls generateCsvMapping; nothing is logged and no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/import-csv-modal/field-mapping.tsx",
+    "line": 39,
+    "rule": "typescript/types/validate-external-data",
+    "label": "debatable",
+    "note": "Line 39 casts each entry of the LLM stream (createStreamableValue is untyped, so the partial objects are `any`) `as string[]` before checking it. Lines 41-42 then check that the field is a mappable key and the value is one of fileColumns before setValue, so reviewers could split on whether a cast followed at once by a check of each claimed element breaks the rule."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/import-rebrandly-modal.tsx",
+    "line": 77,
+    "rule": "react/state/no-contradictory-state",
+    "label": "false",
+    "note": "submitting (line 68) tracks the API-key PUT in one form and importing (line 77) the import POST in the other, one boolean per request, and isLoading comes from SWR, so no two flags describe the same status."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/link-builder/ab-testing/end-ab-testing-modal.tsx",
+    "line": 62,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "A modal that renders the A/B test variant URLs (line 62); no log, error or response and no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/link-builder/ab-testing/end-ab-testing-modal.tsx",
+    "line": 24,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`watchParent(\"testVariants\") as Array<{ url; percentage }> | null` (line 24) narrows the form's Prisma Json value (LinkFormData is the Link model) to the variant array with nothing checking it, while the A/B testing modal parses the same value with ABTestVariantsSchema."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/modal-provider.tsx",
+    "line": 130,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The toast messages at lines 128-130 are fixed strings and the fetches send link hashes and a workspace slug; no secret is logged or returned."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/modal-provider.tsx",
+    "line": 107,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "`useCookies<SimpleLinkProps[]>(\"hashes__dub\", [])` (line 107) gives the JSON-parsed hashes__dub cookie the type SimpleLinkProps[] with no runtime check, and lines 113-120 read its length and post it to /api/links/sync, as analytics-provider.tsx's useLocalStorage<AnalyticsSaleUnit> does."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/reject-partner-application-modal.tsx",
+    "line": 111,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The toasts show the partner's email (line 111) and the server error (line 120); an email is not a secret under the rule."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/remove-saml-modal.tsx",
+    "line": 88,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "debatable",
+    "note": "`currentProvider!.logo` and `currentProvider!.name` (lines 88-93) and `provider!` (line 26) are unchecked, and rendering would throw for a connection whose provider name matches no SAML_PROVIDERS entry. But they rest on the SAML connection's friendlyProviderName from the useSAML fetch, which excludeIf's fetch-response clause arguably covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/modals/remove-saml-modal.tsx",
+    "line": 58,
+    "rule": "typescript/types/validate-external-data",
+    "label": "debatable",
+    "note": "The SAML connections are typed in use-saml.ts, not here, and this file's only outside read is the DELETE error body, whose `error.message` (line 58) goes from `any` straight to toast.error. As with authorize-form.tsx, the code names no type, so reviewers could split on whether an `any` field passed to a library sink counts."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/oauth-apps/add-edit-integration-form.tsx",
+    "line": 280,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`(editor as any).getMarkdown()` (line 280) casts the editor to any to call a method its Editor type lacks. The method exists only because the `markdown` prop adds the Markdown extension, and the cast silences the checker instead of proving that. (`workspaceId!` at line 160 is the usual unchecked id from useWorkspace.)"
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/oauth-apps/add-edit-integration-form.tsx",
+    "line": 101,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "Line 101 destructures `{ key, signedUrl }` from the `any` upload-url response with no check: signedUrl is fetched, and key is stored in `screenshots` state typed `key?: string` (line 122), which is rendered and submitted."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/partners/groups/design/application-form/fields/image-upload-field.tsx",
+    "line": 148,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`file.type as any` (line 148) only lets the user's file MIME type, which is outside data, reach the allowlist `.includes` check. The `f.url!` at lines 87 and 115 follow `.filter((f) => f.url && !f.uploading)`."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/partners/groups/design/application-form/fields/image-upload-field.tsx",
+    "line": 195,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "signedUrl and destinationUrl (line 195) come from uploadProgramApplicationImageAction, the program's own typed server action, so the `Promise<any>` prop only erases an internal type; the one fetch-response read, `result.error?.message || \"...\"` on line 209, is an error string with a fallback passed to new Error."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/program-marketplace/use-public-marketplace-filters.tsx",
+    "line": 92,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Builds marketplace filter hrefs from search params (line 92); there is no log, error or response and no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/program-marketplace/use-public-marketplace-filters.tsx",
+    "line": 44,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`searchParamsObj.rewardType as MarketplaceRewardType | undefined` (line 44) casts a URL query param, which is request input that excludeIf covers. The `value as Category` and `value as MarketplaceRewardType` casts in onSelect (lines 106, 113) restate the option values this hook built from typed counts."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/program-marketplace/use-public-marketplace-filters.tsx",
+    "line": 44,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "`searchParamsObj.rewardType as MarketplaceRewardType | undefined` (line 44) casts a URL query param, a plain string from Object.fromEntries(searchParams), to the reward-type union without checking it against MARKETPLACE_REWARD_TYPES, though lines 32-43 typeof-check the neighboring params; the value feeds activeFilters and every filter href."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/support/chat-bubble.tsx",
+    "line": 30,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "postMessage at line 30 sends only { type, isOpen } to the parent frame; nothing secret is logged or sent."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "apps/web/ui/support/types.ts",
+    "line": 18,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Two string-parsing helpers for the chat variant and context; there is nothing the rule covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/email/src/templates/links-limit.tsx",
+    "line": 32,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "The template declares `workspace: Partial<WorkspaceProps>` and then casts it (line 32) to an object with required slug, name, linksUsage, linksLimit and plan. Nothing checks those fields; the cast only lets it compute the percentage and render without undefined errors."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/carousel/carousel.tsx",
+    "line": 50,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The only error is the fixed \"useCarousel must be used within a <Carousel />\" at line 50; no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/carousel/nav-bar.tsx",
+    "line": 71,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Carousel navigation markup (line 71) with no logging, error messages, responses or secrets."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/combobox/index.tsx",
+    "line": 230,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "A combobox component that renders option labels and search text (line 230); it writes no log, error message or HTTP response and handles no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/date-picker/date-range-picker.tsx",
+    "line": 140,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "A date range picker that formats the selected range (line 140); nothing is logged or returned and no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/file-upload.tsx",
+    "line": 251,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "console.error at line 251 logs an image resize failure and the toasts are file size and type messages; no secret is involved."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/hooks/use-cookies.ts",
+    "line": 37,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Reads and writes a JSON cookie in the browser (line 37); that is not a log, error message or HTTP response, and the hook never logs the value."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/hooks/use-cookies.ts",
+    "line": 12,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "useCookies returns `JSON.parse(Cookies.get(key))` as the caller's T (line 12) and passes it to setStoredValue again on line 20, giving browser cookie contents a caller-chosen type with no runtime check."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/hooks/use-input-focused.ts",
+    "line": 12,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Tracks whether an input or textarea is focused (line 12); there is nothing the rule covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/hooks/use-scroll.ts",
+    "line": 10,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Tracks whether the page or a container has scrolled past a threshold (line 10); there is nothing the rule covers."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/shimmer-dots.tsx",
+    "line": 108,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The console.error calls at lines 86-114 log WebGL setup failures and shader compile logs, which are not secrets."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/table/table.tsx",
+    "line": 108,
+    "rule": "react/state/no-props-copied-into-state",
+    "label": "false",
+    "note": "useTable seeds columnVisibility and rowSelection from props.columnVisibility and props.selectedRows (lines 82-88), and the effects at lines 108-112 and 119-125 reset each copy whenever its prop changes, so the copies keep following the props while also holding the user's own toggles."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/table/table.tsx",
+    "line": 809,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "A table component that renders the caller's error or empty-state text (line 809); it writes no log or HTTP response and handles no secret."
+  },
+  {
+    "repo": "dubinc/dub",
+    "file": "packages/ui/src/table/use-table-pagination.tsx",
+    "line": 26,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "A pagination state hook that reports the page index (line 26); there is nothing the rule covers."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/common/debug.ts",
+    "line": 178,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Debug only logs perf timings (lines 51-72) and, in the unused logChanged (line 178), a diff of whatever object a caller passes; nothing here logs a password, key, or token."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/common/debug.ts",
+    "line": 91,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`Debug.ANIMATION_FRAME_ID!` (line 91) runs only when DEBUG_LOG_INTERVAL_ID is set, and setupInterval always schedules the frame right after setting the interval, with both cleared together at lines 92-96; the deepEqual casts (lines 201-212) follow the non-null object checks at lines 188-195."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/common/src/font-metadata.ts",
+    "line": 28,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The file only declares font metrics; `private?: true` (line 28) marks fonts hidden from the picker, and nothing is logged, thrown, or returned in an HTTP response."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/common/src/promise-pool.ts",
+    "line": 47,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "PromisePool only gathers promise results in call order (line 47); it has no log, error message, or HTTP response, and no secret."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/element/src/image.ts",
+    "line": 105,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The only outside data is the SVG string in normalizeSVG, which DOMParser parses and the code checks for a parsererror and an svg root (lines 105-109), handling getAttribute's `string | null`; the other casts (`fileId as string`, the filtered image elements) are on typed in-memory values."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/element/src/utils.ts",
+    "line": 195,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The only outputs are `throw new Error(\"prevPoint is undefined\")` (line 152) and console.error(\"Unknown op type\", op.op) (line 195), which carry shape-op names, not secrets."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/canvases/StaticCanvas.tsx",
+    "line": 59,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "StaticCanvas sizes the canvas and calls renderStaticScene (line 59); it has no log, error, or HTTP response and no secret."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/Card.tsx",
+    "line": 30,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`[\"--card-color\" as any]` and its two siblings (lines 30-32) cast CSS custom-property names to any only so the style object passes React's CSSProperties type, which has no custom properties. The any-cast silences that type error rather than proving anything."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/ColorPicker/ColorInput.tsx",
+    "line": 52,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The error messages set at lines 52 and 54 are translated invalid-color hints for a hex input; no secret is involved."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/CommandPalette/CommandPalette.tsx",
+    "line": 171,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The palette builds UI commands; its only outbound data is trackEvent(\"command_palette\", \"open\", \"shortcut\") (line 171), and nothing secret is logged, thrown, or returned."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/ConvertElementTypePopup.tsx",
+    "line": 845,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The only error, `Invalid conversion from ${element.type} to ${targetType}` (line 845), names element types, not a secret."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/ConvertElementTypePopup.tsx",
+    "line": 790,
+    "rule": "typescript/design/no-argument-mutation",
+    "label": "real",
+    "note": "convertLineToElbow seeds ortho, trimmed and clean with line.points[0] itself (line 714), and the absorb-leg loops (lines 777-791) write clean[k][0]/clean[k][1] down to k = 0, so a line with a short first jog such as [[0,0],[5,10],[100,10]] has its first point moved in place, a tuple the converted element shares with the original element and LINEAR_ELEMENT_CONVERSION_CACHE."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/ConvertElementTypePopup.tsx",
+    "line": 869,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "Each cast restates what nearby code establishes: the filter casts at lines 684 and 702 follow their predicates, and `type as ...` at line 357 reads the SHAPES literal above it. `as typeof element` at line 869 follows the generic-type checks at lines 843 and 856, and its only generic caller passes the rectangle/diamond/ellipse union."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/FontPicker/FontPickerList.tsx",
+    "line": 130,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "`!metadata.private` (line 130) filters internal fonts out of the picker; the component writes no log, error, or HTTP response and handles no secret."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/hyperlink/Hyperlink.tsx",
+    "line": 306,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The popup shows the element's own link back to the user (line 306, and the tooltip at line 414) plus translated toasts; that is editor UI, not a log, error message, or HTTP response, and a diagram link is not a credential."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/hyperlink/Hyperlink.tsx",
+    "line": 213,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "The only assertion, `shouldHideLinkPopup(...) as boolean` (line 213), converts the helper's `Boolean` return annotation; the helper (lines 453-495) returns only true and false literals, and the `if` would compile without the cast."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/InitializeApp.tsx",
+    "line": 30,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The component sets the UI language and renders a loading message (line 30); it has no log, error, or HTTP response and no secret."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/PasteChartDialog.tsx",
+    "line": 200,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The dialog previews charts from pasted spreadsheet data and sends trackEvent(\"paste\", \"chart\", chartType) (line 200); no secret is logged, thrown, or returned."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/PublishLibrary.tsx",
+    "line": 301,
+    "rule": "typescript/async/network-calls-have-timeouts",
+    "label": "false",
+    "note": "The only HTTP request, fetch(`${VITE_APP_LIBRARY_BACKEND}/submit`) at line 301, is browser code posting the publish form to Excalidraw's own library backend (its excalidraw-room-persistence Cloud Function per .env.production), which the excludeIf for requests to the app's own API covers."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/PublishLibrary.tsx",
+    "line": 353,
+    "rule": "typescript/design/no-argument-mutation",
+    "label": "real",
+    "note": "The SingleLibraryItem onChange copies clonedLibItems with slice() and then sets items[index].name = val (line 353), renaming in place the LibraryItem objects the libraryItems prop shares with the library state, since slice() at lines 244 and 352 copies only the array; the parent's updateItemsInStorage persists renames only through this hidden mutation."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/PublishLibrary.tsx",
+    "line": 57,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "The only assertion, `canvas.getContext(\"2d\")!` (line 57), is on the canvas created at line 46, and getContext('2d') returns null only when a canvas already holds another context type, which a new one cannot."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/PublishLibrary.tsx",
+    "line": 235,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "`EditorLocalStorage.get<PublishLibraryDataParams>` (line 235) gives stored localStorage data the form's type with no check before setLibraryData, and line 308 passes the `any` url from the library backend's response to onSuccess, typed `url: string`, which renders it as the success dialog's link."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/SearchMenu.tsx",
+    "line": 338,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "SearchMenu shows canvas text matches and a result count (line 338) in the UI; it has no log, error message, or HTTP response, and no secret."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/components/TTDDialog/TTDDialog.tsx",
+    "line": 116,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "TTDDialog only lays out the text-to-diagram and Mermaid tabs and passes props through to them (line 116); it writes no log, error, or HTTP response."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/EditorLocalStorage.ts",
+    "line": 5,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "EditorLocalStorage (line 5) is a static class wrapping window.localStorage getItem/setItem/removeItem; the file has no React effect, so the rule does not apply."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/encode.ts",
+    "line": 406,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "decompressData's console.error (line 406) logs encodingMetadata, which is only { version, compression, encryption: \"AES-GCM\" }; the decryptionKey is never logged or put in an error."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/encode.ts",
+    "line": 381,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "decompressData assigns `JSON.parse` of the buffer's unencrypted header chunk to the declared FileEncodingInfo (line 381) and casts the decrypted metadata `as T` (line 397) without checks, though its callers pass bytes fetched from the share-link backend and Firebase storage."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/library.ts",
+    "line": 874,
+    "rule": "typescript/async/concurrent-independent-work",
+    "label": "false",
+    "note": "Every awaited chain in library.ts uses the previous result or must stay ordered: migrationAdapter.clear() (line 874) may only wipe the legacy store after persistLibraryUpdate succeeds, adapter.save follows the load it merges with, and setLibrary waits on the update queue on purpose; importLibraryFromURL already starts its fetch before waiting for focus."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/library.ts",
+    "line": 824,
+    "rule": "typescript/errors/no-swallowed-errors",
+    "label": "real",
+    "note": "In the getInitialLibraryItems path, the .catch at line 824 only console.errors a failed load, so the library shows as loaded and empty with no errorMessage (unlike the persist failure at line 972), and the next change hands onLibraryChange only the new items."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/library.ts",
+    "line": 317,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The file casts nothing: the library fetched from a URL (lines 733-735) stays a Blob until loadLibraryFromBlob parses it, checks it with isValidLibrary and restores it (line 317), adapter and migration loads go through restoreLibraryItems (lines 557, 862), and URL hash and query values stay `string | null`."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/restore.ts",
+    "line": 144,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The console.error calls (lines 144, 420, 424, 983, 1106, 1111) log element ids, sizes, coordinates, and restore errors; none is a secret."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/data/restore.ts",
+    "line": 737,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "Line 737 reads the legacy `maxHeight` off a sticky note being restored from imported data through `element as typeof element & { maxHeight?: number }` and uses it as baseHeight unchecked, and line 539 assigns `(element as any).font.split(\" \")` to a declared `[string, string]` after checking only that `font` exists."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/fonts/ExcalidrawFontFace.ts",
+    "line": 73,
+    "rule": "typescript/errors/no-swallowed-errors",
+    "label": "false",
+    "note": "getContent's catch (line 73) records each URL's error and falls through to the next URL, and when all fail it logs them and returns the last URL, which the doc comment promises and which still works as the @font-face src, just not inlined; getFormat's catch (line 186) only covers new URL on a value that is already a URL."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/hooks/useAppStateValue.ts",
+    "line": 39,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The only output is a fixed console.warn about rendering outside <Excalidraw/> (line 39); no secret is involved."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/hooks/useEmitter.ts",
+    "line": 16,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "The useEffect subscribes with emitter.on (line 12), which returns an unsubscribe callback (packages/common/src/emitter.ts line 20), and returns () => unsubscribe() at line 16, exactly the cleanup the rule asks for."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/hooks/useEmitter.ts",
+    "line": 13,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "useEmitter mirrors emitter events into React state (line 13); it has no log, error, or HTTP response."
+  },
+  {
+    "repo": "excalidraw/excalidraw",
+    "file": "packages/excalidraw/hooks/useTextEditorFocus.ts",
+    "line": 22,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The helpers save and restore the text editor's caret position (line 22); nothing is logged, thrown, or returned over HTTP."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "benchmarks/http-server/benchmark.ts",
+    "line": 115,
+    "rule": "security/no-untrusted-input-in-commands-or-paths",
+    "label": "false",
+    "note": "The only outside input is the --baseline/--target refs the developer types (CI runs `bun run benchmark.ts` with no arguments), and runCommand hands the split words to spawn without a shell; like scripts/run.ts, a local dev script's own argv is not input from an untrusted party."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "benchmarks/http-server/benchmark.ts",
+    "line": 170,
+    "rule": "typescript/errors/release-on-every-path",
+    "label": "real",
+    "note": "buildVersion stashes the working tree and checks out the baseline ref (lines 106, 115) but restores them (lines 169-175) only after bun install, the copy and the endpoint tests succeed, so a failed test (it throws at line 139, 144 or 157) leaves the repo on the baseline ref with the developer's changes still stashed."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "benchmarks/jsx/src/react.ts",
+    "line": 5,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The benchmark renders a static React page to a string (line 5); no secret is involved."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "benchmarks/routers/src/express.mts",
+    "line": 12,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "router.route(path).get(handler) at line 12 registers Express routes for a router benchmark at module scope; this is not a React effect, so the rule does not apply."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "benchmarks/routers/src/express.mts",
+    "line": 22,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The benchmark registers routes and calls router.handle with a fake request (line 22); nothing containing a secret is output."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/adapter/cloudflare-workers/utils.ts",
+    "line": 21,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`options.manifest as Record<string, string>` (line 21) types the Workers Sites asset manifest that wrangler generates (the same data lines 19 and 25 JSON.parse), and `content as unknown as ReadableStream` (line 49) types what KV's get(key, { type: 'stream' }) returned after the null check at line 46; both are data from outside the program, which excludeIf covers."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/adapter/deno/serve-static.ts",
+    "line": 19,
+    "rule": "typescript/errors/release-on-every-path",
+    "label": "false",
+    "note": "getContent opens the file (line 18) and immediately returns file.readable, a stream that closes the file when it is read to the end or cancelled and becomes the response body; nothing runs between open and the hand-off, and a failed open leaves nothing to release."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/adapter/lambda-edge/handler.ts",
+    "line": 158,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "createResult (line 158) copies the app's own Response status, headers, and body into the CloudFront result, and the TypeError at line 176 is fixed text; the adapter adds no secret to responses or errors."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/adapter/lambda-edge/handler.ts",
+    "line": 172,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "The Lambda@Edge event is typed by the handler's signature, not by a cast or `any`, and getCloudFrontRecord (line 172) checks for Records[0].cf.request while headers and body are read with optional chaining and checks; the one cast, line 202's `as Uint8Array<ArrayBuffer>`, only retypes TextEncoder output."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/adapter/service-worker/handler.ts",
+    "line": 26,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "handle (line 18) returns a Service Worker FetchEvent handler that calls evt.respondWith (line 26); it registers no listener itself and is not a React effect."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/client/client.ts",
+    "line": 115,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "hc sets caller-supplied cookies and headers (line 115) on its own outgoing fetch, which is a request, not a log, error message, or HTTP response."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/helper/conninfo/types.ts",
+    "line": 35,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "ConnInfo (line 35) and NetAddrInfo are type-only declarations describing an HTTP connection's remote address; nothing is opened and there is no React effect."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/helper/conninfo/types.ts",
+    "line": 15,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The file only declares the ConnInfo types (remote address, port, transport); it builds no log, error, or response."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/helper/css/common.ts",
+    "line": 76,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "defaultOnInvalidSlug logs `Invalid slug: ${slug}` (line 76), a generated CSS class name, not a secret."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/jsx/dom/css.ts",
+    "line": 132,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The Style component puts its CSP `nonce` on the <style> element (line 132), which is where a nonce belongs, and the only error is the fixed 'style sheet not found' (line 97)."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/jsx/dom/render.ts",
+    "line": 182,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The only built error, `Event handler for \"${key}\" is not a function` (line 182), names a prop key; the DOM renderer handles no secret."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/jsx/dom/render.ts",
+    "line": 539,
+    "rule": "typescript/design/no-argument-mutation",
+    "label": "debatable",
+    "note": "render.ts is a virtual-DOM reconciler whose build, apply, removeNode and getNextChildren update the node objects passed in by design, which their in-renderer callers rely on; but build flattens node.props.children in place with splice (line 539), which can be the user's own array, and buildNode rewrites props.children of svg/math elements (line 745) shared with the user's JSX."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/jsx/dom/render.ts",
+    "line": 396,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`(isNew ? undefined : container.childNodes) as NodeListOf<ChildNode>` (line 396) types a value that is undefined whenever isNew is true as a node list, and the code avoids it only through isNew checks. oldChild is likewise cast `as NodeObject` (lines 587, 599) when it can be a NodeString, then cast back through unknown at lines 612-614."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/jsx/intrinsic-element/components.ts",
+    "line": 107,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "These components render title/script/style/link/meta/form elements from the props they are given (line 107); they add no secret and write no log or error."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/jsx/streaming.ts",
+    "line": 119,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Suspense writes the CSP scriptNonce into the streamed <script nonce> (line 119), where a nonce has to go, and console.log(err) at line 186 logs a render error, not a secret."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/middleware/jwk/jwk.ts",
+    "line": 166,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "jwk() puts only fixed text ('invalid credentials structure', 'token verification failure') into its HTTPExceptions and the 'Unauthorized' 401 (lines 86-195); the token is never interpolated here, and the verify error attached as `cause` (line 166) gets its token-bearing message from utils/jwt."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/middleware/method-override/index.ts",
+    "line": 60,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "methodOverride (line 60) is Hono server middleware that re-dispatches a rewritten Request through app.fetch (lines 88, 102, 117, 134); there is no React effect, so the rule does not apply."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/body.ts",
+    "line": 100,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "parseBody (line 100) and its helpers parse multipart and urlencoded request bodies into objects; the file has no React effect."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/body.ts",
+    "line": 262,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The only error is the fixed 'Nesting limit exceeded' (line 262); parsed form values are returned to the caller, not logged or put in errors."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/body.ts",
+    "line": 205,
+    "rule": "typescript/design/no-argument-mutation",
+    "label": "false",
+    "note": "handleParsingAllValues and handleParsingNestedValues write into the form object that convertFormDataToBodyData creates at line 164 and builds through them, the accumulator excludeIf names, and parseFormData's request.bodyCache.formData assignment (line 141) fills HonoRequest's own body cache, as its other body readers do."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/body.ts",
+    "line": 12,
+    "rule": "typescript/types/derive-dont-restate",
+    "label": "debatable",
+    "note": "BodyDataValueDot, BodyDataValueDotAll and the unions in SimplifyBodyData (lines 12-24) restate by hand the shapes BodyDataValue<T>/BodyDataValueObject<T> produce for the dot/all options; but SimplifyBodyData exists to swap that generic type for flat, readable ones in parseBody's return type, which deriving them from BodyDataValue would undo."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/jwt/jwa.ts",
+    "line": 7,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The file only declares the JWA algorithm enum and algorithm types; it has no output of any kind."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/jwt/jwt.ts",
+    "line": 133,
+    "rule": "security/no-secrets-in-output",
+    "label": "real",
+    "note": "verify() hands the full bearer token to errors whose messages embed it: JwtTokenNotBefore(token) (line 133), JwtTokenExpired(token) (line 138), JwtTokenSignatureMismatched(token) (line 185), and JwtTokenInvalid(token) (lines 120, 251, 268), each built as `token (${token}) ...`."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/utils/stream.ts",
+    "line": 53,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "StreamingApi only writes the caller's chunks to the response stream (line 53) and swallows write errors; it builds no message containing a secret."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/validator/validator.ts",
+    "line": 89,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "validator (line 46) returns Hono middleware (line 89) that reads json, form, query, param, header, or cookie input and runs the validation function; it is server code with no React effect."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/validator/validator.ts",
+    "line": 124,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The 400 messages are fixed ('Malformed JSON in request body') or append the FormData parser's error text (line 124), which describes the parse failure, not request contents or a secret."
+  },
+  {
+    "repo": "honojs/hono",
+    "file": "src/validator/validator.ts",
+    "line": 170,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`(await next()) as ExtractValidationResponse<VF>` (line 170) claims that next()'s void result is the validator's typed response, and `c as never` and `res as never` (lines 162, 168) silence the generic mismatches outright. Only `value as never` and the `param()` cast are on request data, which excludeIf covers."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/commands/version.command.ts",
+    "line": 16,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The command prints the server version (line 16) and logs version-lookup errors; no secret is involved."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/activity.dto.ts",
+    "line": 72,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "mapActivity returns ids, comment, type, and mapUser(activity.user) (line 72), which maps only id, name, email, avatar color, and profile fields; no password or token."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/album.dto.ts",
+    "line": 247,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "mapAlbum reduces sharedLinks to the boolean hasSharedLink (line 247), referring to them only by presence, and album users go through mapUser, which has no secret fields."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/asset-file.dto.ts",
+    "line": 40,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "mapAssetFile returns the file id, type, path, and flags (line 40); none is a secret."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/asset-ids.response.dto.ts",
+    "line": 54,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "The file declares Zod schemas and nestjs-zod DTO classes such as AssetIdsResponseDto (line 54) for the NestJS server; there is no React effect."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/asset-ids.response.dto.ts",
+    "line": 49,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The file only declares bulk-id response schemas with an optional errorMessage string (line 49); it builds no message or response from a secret."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/maintenance.dto.ts",
+    "line": 5,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "SetMaintenanceModeSchema (line 5) and the other maintenance schemas are Zod declarations wrapped in nestjs-zod DTOs (lines 53-57); there is no React effect."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/maintenance.dto.ts",
+    "line": 18,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The maintenance `token` (line 18) is an input field of the login request DTO; the response schemas carry only username, status, and storage-folder info."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/notification.dto.ts",
+    "line": 100,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "The file declares notification Zod schemas, DTO classes, and the pure mapNotification mapper (line 100) for the server; there is no React effect."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/notification.dto.ts",
+    "line": 108,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "mapNotification returns title, description, and data (line 108); the notification services fill data with album or cluster-group ids only, not secrets."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/plugin.dto.ts",
+    "line": 99,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "The file declares plugin Zod schemas, DTO classes, and pure mappers mapTemplate (line 99), mapPlugin, and mapMethod; there is no React effect."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/dtos/plugin.dto.ts",
+    "line": 107,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "mapTemplate and mapPlugin return plugin metadata and the manifest's template step configs (line 107); no credential flows into these responses."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/main.ts",
+    "line": 129,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "main.ts logs worker names, exit codes, and worker errors (line 129); database.config is only passed to getKyselyConfig, never logged."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/main.ts",
+    "line": 56,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "`(error as PostgresError).code === '42P01'` (line 56) is on an `any` catch variable and only reads code, so the comparison itself is the check and every other error is rethrown; `this.workers[ImmichWorker.Api]!` (line 157) follows the Object.hasOwn check at line 155."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/main.ts",
+    "line": 73,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "Env comes from ConfigRepository.getEnv(), which safeParses process.env with EnvSchema; maintenance mode is read through the typed SystemMetadataRepository (line 52) and the advisory lock through Kysely's `sql<...>` (line 73), both on the program's own database, which excludeIf covers; the remaining cast is on a caught error."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/database.repository.ts",
+    "line": 399,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Logs and errors name extensions, tables, migrations, and query errors (e.g. `Migrations failed: ${error}` at line 399); database.config at line 281 goes to schemaFromDatabase, not to output."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/database.repository.ts",
+    "line": 139,
+    "rule": "typescript/design/no-argument-mutation",
+    "label": "false",
+    "note": "The only writes to parameters rebind primitives (`targetVersion ??= availableVersion` at line 139, `lists ||=` at line 230, the sourceFolder/targetFolder trims at lines 420-426), which change nothing the caller holds; `probes[indexName] =` writes the module-level map."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/email.repository.ts",
+    "line": 124,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "sendEmail logs only the recipient and subject (line 124) and the SMTP password goes only to nodemailer's auth (line 170); the welcome email's password is sent by email, which is not a log, error message, or HTTP response."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/email.repository.ts",
+    "line": 135,
+    "rule": "typescript/errors/release-on-every-path",
+    "label": "false",
+    "note": "verifySmtp and sendEmail close the transport in a finally (lines 111-113, 135-137), so it is released on every path; returning the un-awaited promise makes close() run before the send settles, an early release rather than a leak, and a non-pooled nodemailer SMTP transport opens and closes its own connection per message."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/machine-learning.repository.ts",
+    "line": 148,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The logs name the machine-learning server URL and HTTP status (lines 148, 178), and the final error serializes the model request config (line 187); none is a secret."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/machine-learning.repository.ts",
+    "line": 171,
+    "rule": "typescript/async/concurrent-independent-work",
+    "label": "false",
+    "note": "predict's loop (line 171) is failover: it tries the next ML server only after the previous one failed and returns on the first success, so the attempts are not independent work, and tick already starts every health check without awaiting."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/machine-learning.repository.ts",
+    "line": 139,
+    "rule": "typescript/errors/no-swallowed-errors",
+    "label": "false",
+    "note": "check's empty catch (line 139) leaves isHealthy false, so a failed ping is recorded as the server being unhealthy, which is what the health check reports; predict's catch logs, marks the URL unhealthy, tries the next one, and throws once every URL has failed."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/machine-learning.repository.ts",
+    "line": 174,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "predict<T> returns the ML server's `response.json()` (`any`) as the caller-chosen Promise<T> (line 174), so FacialRecognitionResponse, ClipVisualResponse, and OcrResponse are trusted as the remote service's output with no runtime check."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/repositories/server-info.repository.ts",
+    "line": 78,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "getLatestRelease returns the version server's `response.json()` (`any`) as Promise<VersionResponse> with no check (line 78), and version.service stores its version in system metadata and broadcasts it; lines 102-103 likewise assign JSON-parsed build-lock.json to BuildLockfile."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/schema/migrations/1779806699547-AddPluginTemplates.ts",
+    "line": 3,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "up (line 3) and down (line 10) are a Kysely database migration that adds and drops plugin columns; it is not a React effect, so the rule does not apply."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/api-key.service.ts",
+    "line": 55,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "The only assertions, `existing.permissions as Permission[]` (line 55) and `entity.permissions as Permission[]` (line 109), restate the type that the api_key table and the ApiKey type already give permissions, so they claim nothing new."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/asset-media.service.ts",
+    "line": 224,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Logs and exceptions carry file names, asset ids, and the upload error (lines 88, 224); the shared link is used only by id to attach assets, never output."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/asset-media.service.ts",
+    "line": 266,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "debatable",
+    "note": "`(dto.size ?? AssetMediaSize.THUMBNAIL) as unknown as AssetFileType` (line 266) double-casts one enum to another. Once line 258 rules out Original, the remaining values match AssetFileType's strings, so the claim holds today, but only because two enum declarations agree, which nothing checks."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/asset-media.service.ts",
+    "line": 62,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "canUploadFile and getUploadFilename read body.filename from an UploadRequest that asUploadRequest in utils/asset.util.ts has already typed; the unchecked `request.body` assignment is there, not here. uploadAsset's DTOs are nestjs-zod DTOs checked by the global ZodValidationPipe, and line 266 only maps a validated AssetMediaSize onto the AssetFileType enum, whose values match."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/auth.service.ts",
+    "line": 468,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "Logs carry emails, IPs, and OAuth profile claims (lines 72, 313), not passwords or tokens; the tokens it returns go to their owner as the protocol requires: the new session token from login (line 632) and the OIDC id_token_hint in the logout redirect URL (line 468)."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/auth.service.ts",
+    "line": 669,
+    "rule": "typescript/async/concurrent-independent-work",
+    "label": "real",
+    "note": "getAuthStatus awaits userRepository.getForPinCode (line 664) and then sessionRepository.get (line 669), two reads that don't use each other's results; link and unlink likewise await the session update and then the independent user update."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/metadata.service.ts",
+    "line": 579,
+    "rule": "typescript/design/no-argument-mutation",
+    "label": "false",
+    "note": "getExifTags deletes keys from mediaTags and sidecarTags and sets mediaTags.Orientation (lines 579-609), but those are fresh objects readTags returned inside the function, not its asset argument; validate's `value = value[0]` only rebinds the parameter, and orientRegionInfo returns spread copies."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/metadata.service.ts",
+    "line": 803,
+    "rule": "typescript/errors/no-swallowed-errors",
+    "label": "real",
+    "note": "applyMotionPhotos wraps the whole motion-video extraction in a catch-all (line 803) that only logs, so handleMetadataExtraction goes on to set metadataExtractedAt and emit AssetMetadataExtracted as if it succeeded, and the asset is not retried; the inner catch at line 746 narrowly handles the checksum-constraint race and is fine."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/metadata.service.ts",
+    "line": 671,
+    "rule": "typescript/types/validate-external-data",
+    "label": "real",
+    "note": "applyMotionPhotos checks exiftool's ContainerDirectory (typed `ContainerDirectoryItem[] | Struct[]`) only with Array.isArray, then casts it `as ContainerDirectoryItem[]` (line 671) and uses each entry's Item.Length and Padding from the file as numbers for the video byte offset and Buffer.alloc."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/storage-template.service.ts",
+    "line": 185,
+    "rule": "typescript/async/concurrent-independent-work",
+    "label": "real",
+    "note": "handleMigration awaits moveRepository.cleanMoveHistory() (line 185) and then userRepository.getList() (line 188), a delete on move_history and a read of users that don't depend on each other; the per-asset moveAsset loop is serialized on purpose by the StorageTemplateMigration lock and duplicate-name checks."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/storage.service.ts",
+    "line": 101,
+    "rule": "typescript/async/concurrent-independent-work",
+    "label": "real",
+    "note": "Inside the MediaLocation lock, onBootstrap awaits assetRepository.getFileSamples() (line 101) and then systemMetadataRepository.get(MediaLocation) (line 102), two reads that don't use each other's results."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/storage.service.ts",
+    "line": 53,
+    "rule": "typescript/types/validate-external-data",
+    "label": "false",
+    "note": "Environment values come from configRepository.getEnv(), which runs EnvSchema.safeParse on process.env, and the system flags and media location are read through the typed systemMetadataRepository (excludeIf). `{ mountChecks: {} } as SystemFlags` on line 53 casts a literal, and the other casts are on caught errors."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/workflow-execution.service.ts",
+    "line": 298,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "validate() logs the jsonwebtoken verification error, not authToken (line 298), and the signed authToken at line 432 goes into the plugin call payload, which is not a log, error message, or HTTP response."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/services/workflow-execution.service.ts",
+    "line": 296,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "validate() returns `{ user: { id: jwt.userId } } as AuthDto` (line 296), and execute() builds another at line 464. Both claim a full AuthUser (isAdmin, name, email, quota fields) where only id exists, so they can be passed to AlbumService, TagService and AssetService; `data: { asset } as any` at line 349 also silences the WorkflowEventData type."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/asset.util.ts",
+    "line": 165,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "onBeforeLink emits an AssetHide event through eventRepository.emit (line 165), which publishes rather than subscribes, inside server-side asset helpers; the file has no React effect."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/database.ts",
+    "line": 77,
+    "rule": "security/no-secrets-in-output",
+    "label": "real",
+    "note": "The Kysely log hook console.errors every failed query with unredacted `params: event.query.parameters` (line 77); bound parameters include secrets such as the system-config upsert carrying the OAuth clientSecret and SMTP password, and the session's raw oauthBearerToken."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/database.ts",
+    "line": 454,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "real",
+    "note": "`options.city!` (line 454, and likewise state, country, make, model, lensModel and rating through line 484) asserts non-null inside the expression that tests `options.city === null` to pick 'is', so the claim is false for every null filter and only strips undefined for where()'s typing; the `!`s under `$if(!!x)` guards are fine, and `viewingUserId!` (lines 543, 818) rests on a doc comment rather than its withFaces/withPeople guard."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/misc.ts",
+    "line": 108,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "handlePromiseError logs the error (line 108) and the other errors name entities, CLIP model names, or OpenAPI schema problems; the Swagger setup only declares auth schemes."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/pagination.ts",
+    "line": 11,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "paginationHelper only trims a list and reports hasNextPage (line 11); there is no output of any kind."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/preferences.ts",
+    "line": 60,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "The file merges user UI preferences with defaults (line 60); it has no log, error, response, or secret."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/sync.ts",
+    "line": 28,
+    "rule": "react/effects/clean-up-what-they-start",
+    "label": "false",
+    "note": "fromAck, toAck, and serialize (line 28) are pure string helpers for sync acks and JSON lines; the file has no React effect."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/sync.ts",
+    "line": 34,
+    "rule": "security/no-secrets-in-output",
+    "label": "false",
+    "note": "serialize (line 34) JSON-encodes whatever typed sync item and ack ids it is handed; this file selects no data and puts no secret into the stream."
+  },
+  {
+    "repo": "immich-app/immich",
+    "file": "server/src/utils/sync.ts",
+    "line": 13,
+    "rule": "typescript/types/assertions-only-when-proven",
+    "label": "false",
+    "note": "The only assertion, `type as SyncEntityType` (line 13), types the first segment of an ack string the client sent in the request body (dto.acks), which excludeIf covers, and setAcks checks it against SyncEntityType right after."
+  }
+]

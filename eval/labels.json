@@ -280,5 +280,293 @@
     "file": "src/services/Jev.ts",
     "label": "false",
     "note": "Not a test. It does contain adhere's question text."
+  },
+  {
+    "rule": "services/operations-have-no-requirements",
+    "file": "services/dependencies-through-layers#1",
+    "label": "false",
+    "note": "invoice uses the orders and mailer handed to createBilling, so it yields no service and its Effect has no requirements. Taking them as arguments is what dependencies-through-layers rules out, not this rule."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "src/config.ts",
+    "label": "false",
+    "note": "Question and ProviderAnswers mirror System One's request and answer formats, whose `type` key and noul/choice shapes that API fixes, which the rule leaves out of scope. The file's other unions have no tag field."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "src/init.ts",
+    "label": "real",
+    "note": "Install is a hand-written union of object types joined by a status field, and its installed variant carries what and packageManager; cli.ts switches on it. It is adhere's own type, not a third-party format."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/install.ts",
+    "label": "real",
+    "note": "The Source interface declares repo, an org/repo id, and rule, a rule id or topic, as bare strings."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/services/NativeLsp.ts",
+    "label": "debatable",
+    "note": "The Message schema declares the JSON-RPC id as a bare number or string, and Session a pipe path as a bare string. Both mirror the LSP wire format inside one private connection class, where a brand is arguable."
+  },
+  {
+    "rule": "basics/gen-for-sequencing",
+    "file": "src/walk.ts",
+    "label": "debatable",
+    "note": "The walk chains readDirectory, a forEach over entryOf, and progress with two flatMaps in a flat pipe, and entryOf calls readLink inside stat's flatMap callback. Neither nests a chain the way the Never does, so whether a flat chain of steps counts is a judgment call."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "src/walk.ts",
+    "label": "real",
+    "note": "Entry is a hand-written union of object types joined by a kind field, whose file and directory variants carry relative, checked with entry.kind ===."
+  },
+  {
+    "rule": "errors/wrap-external-errors",
+    "file": "basics/instrument-with-pipe#1",
+    "label": "false",
+    "note": "Catalog is the app's own module, so the errors that pass through are its own; the code calls no external library, and the timeout error is Effect's."
+  },
+  {
+    "rule": "config/secrets-are-redacted",
+    "file": "config/business-logic-depends-on-config-service#1",
+    "label": "false",
+    "note": "MAIL_FROM and MAIL_REPLY_TO are email addresses, not tokens, passwords, or keys, so Config.string fits them."
+  },
+  {
+    "rule": "errors/wrap-external-errors",
+    "file": "config/secrets-are-redacted#1",
+    "label": "false",
+    "note": "StripeSettings only reads two values with Config.string; it calls no external library, and Stripe appears only in the variable names."
+  },
+  {
+    "rule": "services/fresh-layer-per-test",
+    "file": "config/tests-provide-values-directly#2",
+    "label": "false",
+    "note": "Its one it.effect provides ReportService.layer and the ConfigProvider layer itself, and no it.layer shares anything."
+  },
+  {
+    "rule": "errors/defects-for-bugs",
+    "file": "config/validate-with-schema#1",
+    "label": "false",
+    "note": "Out-of-range config ends in Effect.die, a defect, as the rule's own Must does to config with Effect.orDie; no typed error stands for a bug."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "config/validate-with-schema#2",
+    "label": "debatable",
+    "note": "WorkerSettings reads Config in an Effect that is not a service's layer, though it could become one."
+  },
+  {
+    "rule": "errors/defects-for-bugs",
+    "file": "errors/wrap-external-errors#2",
+    "label": "false",
+    "note": "StorageError is a failed S3 upload, which a caller can retry or report; no bug or invariant violation is typed."
+  },
+  {
+    "rule": "services/test-layers-are-in-memory",
+    "file": "services/memoize-parameterized-layers#1",
+    "label": "false",
+    "note": "Not a test: RepoLayer wires the app's repos to a Postgres layer, and no test implementation is built."
+  },
+  {
+    "rule": "services/test-layers-are-in-memory",
+    "file": "services/memoize-parameterized-layers#2",
+    "label": "false",
+    "note": "Not a test: RepoLayer wires the app's repos to Postgres and Redis layers, and no test implementation is built."
+  },
+  {
+    "rule": "services/test-layers-are-in-memory",
+    "file": "services/operations-have-no-requirements#2",
+    "label": "false",
+    "note": "Not a test: UsersLive is the production layer over Database."
+  },
+  {
+    "rule": "errors/wrap-external-errors",
+    "file": "src/install.ts",
+    "label": "real",
+    "note": "Its tryPromise calls around fs and git catch with `failed`, which makes a plain Error holding only the cause's message, not a tagged error with a Schema.Defect field."
+  },
+  {
+    "rule": "errors/wrap-external-errors",
+    "file": "src/services/SourceWalker.ts",
+    "label": "debatable",
+    "note": "File system errors are wrapped in the tagged WalkUnavailable, with a message rather than a Schema.Defect field."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "config/validate-with-schema#3",
+    "label": "debatable",
+    "note": "WorkerSettings reads Config in an Effect that is not a service's layer, though it could become one."
+  },
+  {
+    "rule": "errors/defects-for-bugs",
+    "file": "src/config.ts",
+    "label": "false",
+    "note": "Its one typed error, ConfigUnavailable, is a config that fails to decode, a failure to report rather than a bug; no invariant violation is typed."
+  },
+  {
+    "rule": "config/business-logic-depends-on-config-service",
+    "file": "src/services/Jev.reads.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and it reads no Config primitive: it provides AdhereConfig with Layer.succeed."
+  },
+  {
+    "rule": "config/tests-provide-values-directly",
+    "file": "src/services/Jev.reads.test.ts",
+    "label": "false",
+    "note": "recordedJev supplies config with Layer.succeed(AdhereConfig, ...), as the rule asks, and the file sets no environment variable or ConfigProvider."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "src/services/Jev.reads.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and it declares no union type; its objects with a type field are literals, which the rule leaves out."
+  },
+  {
+    "rule": "errors/defects-for-bugs",
+    "file": "src/services/Jev.reads.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and its only error is Effect.die in the fake HTTP client for a body it does not expect, a defect as the rule asks."
+  },
+  {
+    "rule": "errors/wrap-external-errors",
+    "file": "src/services/Jev.reads.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and it fakes the HTTP client, so no external library's error is caught or passed on."
+  },
+  {
+    "rule": "services/dependencies-through-layers",
+    "file": "src/services/Jev.reads.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and recordedJev provides JevLive's dependencies as layers rather than building operations from arguments."
+  },
+  {
+    "rule": "services/memoize-parameterized-layers",
+    "file": "src/services/Jev.reads.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and each test calls recordedJev with its own arguments for a fresh recorded layer, used once."
+  },
+  {
+    "rule": "services/no-mutable-state",
+    "file": "src/services/Jev.reads.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and it defines no service; the sent array it pushes to is the fake client's recording, not a service member."
+  },
+  {
+    "rule": "services/operations-have-no-requirements",
+    "file": "src/services/Jev.reads.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and it defines no service; its fake Credentials operations, Effect.succeed and Effect.void, need nothing."
+  },
+  {
+    "rule": "errors/wrap-external-errors",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "It calls nothing external: it declares the Jev service and its error classes and builds request bodies, and the HTTP errors are wrapped in Jev.http.ts. It does contain adhere's question text."
+  },
+  {
+    "rule": "services/dependencies-through-layers",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "Jev is a Context.Service, and the file's functions build request bodies from rules and lines; none takes a service or client and returns operations."
+  },
+  {
+    "rule": "services/operations-have-no-requirements",
+    "file": "src/services/Jev.ts",
+    "label": "false",
+    "note": "Jev's judge, locate, conflicts, and contradicts are each typed Effect<A, E> with no requirements."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/providers/cloudflare.ts",
+    "label": "real",
+    "note": "CloudflareOptions declares accountId, a Cloudflare account id, as a bare string, as the rule's Never declares accountId. Ran's usage.input_tokens, a count, mirrors Workers AI's response, where a brand is arguable."
+  },
+  {
+    "rule": "services/dependencies-through-layers",
+    "file": "src/providers/cloudflare.ts",
+    "label": "debatable",
+    "note": "cloudflare takes an optional fetch, what sends its requests, beside accountId, apiToken, and model, and returns the provider's ask with them built in, which the rule's words cover. But Provider is the plain Promise interface a config passes, not an Effect service, and fetch only replaces the global, so whether it is a service built from other services is a judgment call."
+  },
+  {
+    "rule": "services/dependencies-through-layers",
+    "file": "src/providers/jev.ts",
+    "label": "debatable",
+    "note": "jev takes an optional fetch beside apiKey and model and returns the provider's ask with them built in, which the rule's words cover; adhere's own call is inside JevLive, the Jev service's Layer, which yields FetchHttpClient.Fetch and passes it in. Provider is the plain Promise interface a config passes, not an Effect service, so whether the rule reaches it is a judgment call."
+  },
+  {
+    "rule": "services/dependencies-through-layers",
+    "file": "src/providers/openai.ts",
+    "label": "debatable",
+    "note": "openai takes an optional fetch beside apiKey and model and returns the provider's ask with them built in, which the rule's words cover. But Provider is the plain Promise interface a config passes, not an Effect service, and fetch only replaces the global, so whether it is a service built from other services is a judgment call."
+  },
+  {
+    "rule": "data/brand-meaningful-primitives",
+    "file": "src/providers/provider.ts",
+    "label": "real",
+    "note": "Question declares id, the key each provider answers by, as a bare string, and Answered declares inputTokens, a token count, as a bare number, in the contract every provider implements."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "src/providers/provider.ts",
+    "label": "real",
+    "note": "Question is a hand-written union of object types joined by a type field, whose noul variant carries yes and no and whose choice variant carries options, checked with question.type ===. It is adhere's own phrasing of a question, not System One's format, which systemOne.ts mirrors separately."
+  },
+  {
+    "rule": "data/variants-are-tagged-unions",
+    "file": "src/providers/systemOne.ts",
+    "label": "false",
+    "note": "SystemOneQuestion mirrors System One's question format, whose type key and noul/choice shapes that API fixes, which the rule leaves out of scope. The file's other union, Instructions, has no tag field, and the objects with a type field that questionsOf and requestOf build are literals."
+  },
+  {
+    "rule": "basics/instrument-with-pipe",
+    "file": "src/services/Jev.http.ts",
+    "label": "debatable",
+    "note": "ask's Effect.gen yields Effect.logDebug before and after the provider call, and pipes the three-minute timeout onto that call alone, inside the body; its spans come from Effect.fn. The rule lists logging, but the preset's own gen-for-sequencing Must yields a log in a gen body the same way, so whether these count is a judgment call."
+  },
+  {
+    "rule": "config/tests-provide-values-directly",
+    "file": "config/secrets-are-redacted#1",
+    "label": "false",
+    "note": "Not a test: StripeSettings reads two keys with Config.string, and nothing sets an environment variable or a ConfigProvider."
+  },
+  {
+    "rule": "errors/catch-defects-at-boundaries-only",
+    "file": "src/markdown.ts",
+    "label": "false",
+    "note": "It catches no defect: parseRuleMarkdown fails with ConfigUnavailable, and its one Effect.mapError turns the front matter's typed decode error into a ConfigUnavailable."
+  },
+  {
+    "rule": "services/fresh-layer-per-test",
+    "file": "src/providers/providers.test.ts",
+    "label": "false",
+    "note": "Its tests are plain `it` calls, the three provider tests each with a recording fetch of their own; there is no it.effect, no it.layer, and no layer at all."
+  },
+  {
+    "rule": "basics/gen-for-sequencing",
+    "file": "src/services/SourceReads.ts",
+    "label": "debatable",
+    "note": "load passes the NativeLsp connection that Effect.acquireRelease opens through one Effect.flatMap into an Effect.gen that yields the next four steps. Those steps are written with yield*, but they sit in a flatMap callback, so whether one flatMap into a gen counts as a callback chain is a judgment call."
+  },
+  {
+    "rule": "basics/gen-for-sequencing",
+    "file": "src/providers/providers.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and it uses no Effect: its tests await the providers' Promise-based ask."
+  },
+  {
+    "rule": "errors/defects-for-bugs",
+    "file": "src/providers/providers.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and it declares no error: its fake fetch answers each request with a canned Response."
+  },
+  {
+    "rule": "services/memoize-parameterized-layers",
+    "file": "src/providers/providers.test.ts",
+    "label": "false",
+    "note": "A test, which this rule skips since it does not say `tests`, and it builds no layer; recording, called once in each provider test, makes a fake fetch."
   }
 ]
