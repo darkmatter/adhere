@@ -6,3 +6,4 @@ dist/
 .env.*
 !.envrc
 .direnv/
+.vitest/

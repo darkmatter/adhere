@@ -34,7 +34,8 @@
     "typecheck": "tsc --noEmit && bun run lint",
     "build": "bun build --compile --minify --sourcemap --define ADHERE_BUILD=\"\\\"$(git describe --tags --dirty --always)\\\"\" src/main.ts --asset ./presets --outfile dist/adhere",
     "build:npm": "bun scripts/npm-packages.ts build",
-    "release": "release-it"
+    "release": "release-it",
+    "prepare": "vp config"
   },
   "dependencies": {
     "effect": "4.0.0-rc.118"
@@ -44,12 +45,27 @@
     "@types/bun": "^1.4.2",
     "@types/node": "^24.13.6",
     "release-it": "^21.1.0",
-    "typescript": "7.0.2",
-    "vite-plus": "0.3.2",
-    "vitest": "4.1.11"
+    "typescript": "7.1.0-dev.20261009.1",
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
+    "vite-plus": "1.1.0",
+    "vitest": "5.0.3"
   },
   "overrides": {
-    "@effect/platform-node-shared": "4.0.0-rc.118"
+    "@effect/platform-node-shared": "4.0.0-rc.118",
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
+    "vitest": "5.0.3"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "bun",
+      "version": "1.4.2",
+      "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "24.21.0",
+      "onFail": "download"
+    }
   },
   "release-it": {
     "$schema": "https://unpkg.com/release-it@21.1.0/schema/release-it.json",
