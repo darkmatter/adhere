@@ -2,36 +2,54 @@
  * The eval's harness. Each arm is a way of building adhere's request; the
  * harness asks Jev every Effect preset rule, once per arm, about each file
  * planted in `cases/` to break or follow a rule and each file of adhere's own
- * `src/`, one request per file as a cold `adhere lint` would. It scores the
- * arms against the planted files and the hand labels in `labels.json`, and
- * prints Markdown tables. `judge.ts` and each study in `studies/` hand it
- * their arms.
+ * `src/`, one request per file as a cold `adhere lint` would. An arm with a
+ * provider asks it instead, as a config with that provider would. It scores
+ * the arms against the planted files and the hand labels in `labels.json`,
+ * and prints Markdown tables. `judge.ts` and each study in `studies/` hand it
+ * their arms. At its end are the four repos `studies/presets.md` labeled
+ * findings on, read and scored for the studies that judge them.
  *
- * Needs a TypeSafe AI API key, as `adhere lint` does, and sends one request
- * per file per arm. With a path as the first argument, also writes every
- * probability and each request's size and token usage there; with
- * `--rescore` and such a file, reports it again against the current labels
- * without asking Jev anything.
+ * Needs a TypeSafe AI API key, as `adhere lint` does, when an arm asks Jev,
+ * and sends one request per file per arm. With a path as the first argument,
+ * also writes every probability and each request's size, token usage, and
+ * time there; with `--rescore` and such a file, reports it again against the
+ * current labels without asking anything.
  */
-import { DEFAULT_THRESHOLD } from "#config.ts";
-import { loadRules } from "#rules.ts";
+import { isNote, withoutComments } from "#comments.ts";
+import { DEFAULT_THRESHOLD, type RuleId } from "#config.ts";
+import { questionsOf, type SystemOneQuestion } from "#providers/systemOne.ts";
+import { judgesFile, loadRules } from "#rules.ts";
 import { Credentials, CredentialsLive } from "#services/Credentials.ts";
-import { type Body, type Lines, requestsOf, type Rules, tokensOf } from "#services/Jev.ts";
+import { askProvider, NoulAnswers } from "#services/Jev.http.ts";
+import { type Body, fits, type Lines, requestsOf, type Rules, tokensOf } from "#services/Jev.ts";
+import { isTestFile } from "#services/SourceWalker.ts";
+import { inScope } from "#workflows/audit.ts";
+import { jev, type Provider } from "@drkmttr/adhere";
 import { BunRuntime, BunServices } from "@effect/platform-bun";
-import { Console, Effect, FileSystem, Layer, Path, Schedule, Schema } from "effect";
-import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/http";
-import * as HttpClientRequest from "effect/http/HttpClientRequest";
+import { Console, Duration, Effect, FileSystem, Path, Record, Redacted, Schema } from "effect";
+import { homedir } from "node:os";
 
-const SYSTEM_ONE = "https://api.typesafe.ai/v1/systemone";
 const MODEL = "jev-latest";
 /** Where the labeled pairs are counted. */
 const THRESHOLDS = [0.7, 0.8, 0.9] as const;
 
 /** A way of building adhere's request: every rule, as questions about one file. */
-export type Ask = (model: string, lines: Lines, rules: Rules) => Body;
+export type Ask = (model: string, lines: Lines, rules: Rules) => Body<SystemOneQuestion>;
 
-/** An arm: its name in the report, and how it builds the request. */
-export type Arm = readonly [name: string, ask: Ask];
+/**
+ * An arm: its name in the report, how it builds the request, and the provider
+ * that answers it, as a config's would; Jev's, with adhere's key and the
+ * request's model, when it names none.
+ */
+export type Arm = readonly [name: string, ask: Ask, provider?: Provider];
+
+/** The value `share` of the way through `values`, sorted: 0.5 for the median. */
+export const percentile = (values: ReadonlyArray<number>, share: number): number | undefined =>
+  [...values].sort((a, b) => a - b)[Math.min(values.length - 1, Math.floor(share * values.length))];
+
+/** Request times as the reports give them: the median and the 95th percentile. */
+export const timingOf = (times: ReadonlyArray<number>): string =>
+  times.length === 0 ? "–" : `${percentile(times, 0.5)} / ${percentile(times, 0.95)}`;
 
 /** A file's lines numbered the way adhere numbers them, for arms that build their own state. */
 export const numbered = (lines: Lines): string =>
@@ -89,16 +107,12 @@ export const Run = Schema.Struct({
       questionBytes: Schema.Finite,
       estimated: Schema.Finite,
       used: Schema.Finite,
+      /** How long the request took, sent beside the others; runs saved before it was recorded lack it. */
+      ms: Schema.optionalKey(Schema.Finite),
     }),
   ),
 });
 export type Run = typeof Run.Type;
-
-const Answered = Schema.Struct({
-  model: Schema.String,
-  answers: Schema.Record(Schema.String, Schema.Struct({ noul: Schema.Finite })),
-  usage: Schema.Struct({ input_tokens: Schema.Finite }),
-});
 
 /** Where a probability falls: on a planted file's own rule, another rule, or adhere's source. */
 type Kind = Side | "off-target" | "src";
@@ -161,34 +175,53 @@ export const askJev = Effect.fn("eval.askJev")(function* (
   rules: Rules,
   skipRefused = false,
 ) {
-  const jobs = arms.flatMap(([arm, build]) =>
+  const jobs = arms.flatMap(([arm, build, provider]) =>
     samples.flatMap((sample) =>
-      requestsOf(build(MODEL, sample.lines, rules)).map((body) => ({ arm, sample, body })),
+      requestsOf(build(provider?.model ?? MODEL, sample.lines, rules)).map((body) => ({
+        arm,
+        sample,
+        body,
+        provider,
+      })),
     ),
   );
   yield* Console.error(
     `${jobs.length} requests, ${samples.length} files for each of ${arms.length} arms`,
   );
 
-  const apiKey = yield* (yield* Credentials).key("typesafe");
-  const client = (yield* HttpClient.HttpClient).pipe(
-    HttpClient.filterStatusOk,
-    HttpClient.transformResponse(Effect.timeout("60 seconds")),
-    HttpClient.retryTransient({ schedule: Schedule.exponential("1 second"), times: 5 }),
-  );
-  const ask = Effect.fn("eval.ask")(function* (body: Body) {
-    const request = yield* HttpClientRequest.bodyJson(
-      HttpClientRequest.post(SYSTEM_ONE),
-      body,
-    ).pipe(Effect.orDie);
-    const response = yield* client.execute(HttpClientRequest.bearerToken(request, apiKey));
-    return yield* HttpClientResponse.schemaBodyJson(Answered)(response);
-  });
+  // A provider that names a saved key gets it, as adhere passes it: read once, when one asks.
+  const credentials = yield* Credentials;
+  const savedKeys = {
+    typesafe: yield* Effect.cached(credentials.key("typesafe")),
+    openai: yield* Effect.cached(credentials.key("openai")),
+  };
+  /** One request's answers from the arm's provider, or Jev's for the request's model, as adhere asks it. */
+  const ask = (body: Body<SystemOneQuestion>, provider: Provider = jev({ model: body.model })) =>
+    Effect.gen(function* () {
+      const apiKey =
+        provider.savedKey === undefined
+          ? undefined
+          : Redacted.value(yield* savedKeys[provider.savedKey]);
+      return yield* askProvider(
+        provider,
+        body.state,
+        questionsOf(body.questions),
+        NoulAnswers,
+        apiKey,
+      );
+    });
 
   const answered = (yield* Effect.forEach(
     jobs,
     (job) => {
-      const asked = Effect.map(ask(job.body), (response) => ({ ...job, response }));
+      const asked = Effect.map(
+        Effect.timed(ask(job.body, job.provider)),
+        ([elapsed, response]) => ({
+          ...job,
+          response,
+          ms: Math.round(Duration.toMillis(elapsed)),
+        }),
+      );
       return skipRefused
         ? asked.pipe(
             Effect.catch((problem) =>
@@ -209,10 +242,10 @@ export const askJev = Effect.fn("eval.askJev")(function* (
       sample: sample.name,
       rule,
       kind: kindOf(sample, rule),
-      probability: answer.noul,
+      probability: answer,
     })),
   );
-  const requests = answered.map(({ arm, sample, body, response }) => {
+  const requests = answered.map(({ arm, sample, body, response, ms }) => {
     const questions = Object.values(body.questions);
     return {
       arm,
@@ -221,10 +254,15 @@ export const askJev = Effect.fn("eval.askJev")(function* (
       stateBytes: JSON.stringify(body.state).length,
       questionBytes: questions.reduce<number>((sum, q) => sum + JSON.stringify(q).length, 0),
       estimated: tokensOf(body.state) + questions.reduce<number>((sum, q) => sum + tokensOf(q), 0),
-      used: response.usage.input_tokens,
+      used: response.inputTokens ?? 0,
+      ms,
     };
   });
-  const models = [...new Set(answered.map(({ response }) => response.model))].join(", ");
+  const models = [
+    ...new Set(
+      answered.map(({ response, provider }) => response.model ?? provider?.model ?? MODEL),
+    ),
+  ].join(", ");
   return { models, judgments, requests };
 });
 
@@ -285,6 +323,12 @@ const study = Effect.fn("eval.study")(function* (arms: ReadonlyArray<Arm>) {
   };
   const ratios = (arm: string) =>
     requests.filter((r) => r.arm === arm).map((r) => r.used / r.estimated);
+  /** The questions an arm sent that came back with no answer, such as those a provider refused. */
+  const unanswered = (arm: string) =>
+    requests.filter((r) => r.arm === arm).reduce((sum, r) => sum + r.questions, 0) -
+    judgedBy(arm).length;
+  const timing = (arm: string) =>
+    timingOf(requests.flatMap((r) => (r.arm === arm && r.ms !== undefined ? [r.ms] : [])));
 
   const breaking = planted.filter((sample) => sample.planted?.side === "breaks").length;
   const count = (label: string) => labels.filter((entry) => entry.label === label).length;
@@ -322,7 +366,9 @@ const study = Effect.fn("eval.study")(function* (arms: ReadonlyArray<Arm>) {
         "follows",
         "off-target",
         "src",
+        "unanswered",
         "used / estimated tokens",
+        "median / p95 ms",
       ],
       arms.map(([arm]) => [
         arm,
@@ -332,7 +378,9 @@ const study = Effect.fn("eval.study")(function* (arms: ReadonlyArray<Arm>) {
         `${above(of(arm, "follows"), DEFAULT_THRESHOLD)}/${of(arm, "follows").length}`,
         `${above(of(arm, "off-target"), DEFAULT_THRESHOLD)}/${of(arm, "off-target").length}`,
         `${above(of(arm, "src"), DEFAULT_THRESHOLD)}/${of(arm, "src").length}`,
+        String(unanswered(arm)),
         `${Math.min(...ratios(arm)).toFixed(2)} to ${Math.max(...ratios(arm)).toFixed(2)}`,
+        timing(arm),
       ]),
     ),
   );
@@ -373,9 +421,182 @@ const study = Effect.fn("eval.study")(function* (arms: ReadonlyArray<Arm>) {
 });
 
 /** Runs a study's arms and prints its report: the entry point of `judge.ts` and each study. */
-export const runStudy = (arms: ReadonlyArray<Arm>): void =>
-  study(arms).pipe(
-    Effect.provide(Layer.mergeAll(FetchHttpClient.layer, CredentialsLive)),
+export const runStudy = (arms: ReadonlyArray<Arm>): void => run(study(arms));
+
+/** Runs a study as its script's entry point, with adhere's saved keys and Bun's services. */
+export const run = <A, E>(
+  program: Effect.Effect<A, E, Credentials | FileSystem.FileSystem | Path.Path>,
+): void =>
+  program.pipe(
+    Effect.provide(CredentialsLive),
     Effect.provide(BunServices.layer),
     BunRuntime.runMain,
   );
+
+/**
+ * The four repos `presets.md` labeled findings on, dub, immich, hono, and
+ * excalidraw, as `details.ts` and `providers-repos.ts` judge them: checked
+ * out at `<owner>/<repo>` under ADHERE_EVAL_REPOS or ~/.agents/repos, at the
+ * commits `presets.md` names. The findings are of the typescript, react, and
+ * security presets' rules, labeled in `studies/`.
+ */
+const REPOS = process.env.ADHERE_EVAL_REPOS ?? `${homedir()}/.agents/repos`;
+const REPO_PRESETS = ["typescript", "react", "security"] as const;
+/** Where the repos' studies count what lint would report. */
+export const REPO_THRESHOLDS = [0.7, DEFAULT_THRESHOLD, 0.9] as const;
+
+const RepoLabels = Schema.fromJsonString(
+  Schema.Array(
+    Schema.Struct({
+      repo: Schema.String,
+      file: Schema.String,
+      rule: Schema.String,
+      label: Schema.Literals(["real", "debatable", "false"]),
+    }),
+  ),
+);
+export type RepoLabel = (typeof RepoLabels.Type)[number];
+
+/** A labeled finding's file, as its sample is named: `<owner>/<repo>/<path>`. */
+export const nameOf = (entry: { readonly repo: string; readonly file: string }) =>
+  `${entry.repo}/${entry.file}`;
+
+/**
+ * The presets' rules, each id under its preset; the labels in `labelFiles`,
+ * in `studies/`, of rules the presets still have; the files they are in, read
+ * from the repos; and the labels of the files kept. As lint does, a file too
+ * long for Jev's context is left out: here, too long with any of `changes`
+ * made to the rules.
+ */
+export const labeledRepos = Effect.fn("eval.labeledRepos")(function* (
+  labelFiles: ReadonlyArray<string>,
+  changes: ReadonlyArray<(rules: Rules) => Rules> = [(rules) => rules],
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const root = path.resolve(import.meta.dirname, "..");
+
+  const rules: Rules = Object.fromEntries(
+    (yield* Effect.forEach(REPO_PRESETS, (preset) =>
+      Effect.map(loadRules(path.join(root, "presets", preset)), (loaded) =>
+        Object.entries(loaded).map(([id, rule]) => [`${preset}/${id}`, rule] as const),
+      ),
+    )).flat(),
+  );
+  const labels = (yield* Effect.forEach(labelFiles, (name) =>
+    Effect.flatMap(
+      fs.readFileString(path.join(root, "eval", "studies", name)),
+      Schema.decodeUnknownEffect(RepoLabels),
+    ),
+  ))
+    .flat()
+    .filter((entry) => rules[entry.rule] !== undefined);
+  const files = [...new Map(labels.map((entry) => [nameOf(entry), entry.file])).entries()].sort();
+  const read = yield* Effect.forEach(
+    files,
+    ([name, file]) =>
+      Effect.map(fs.readFileString(path.join(REPOS, name)), (text) => ({
+        name,
+        path: path.join(REPOS, name),
+        text,
+        lines: text.split("\n"),
+        test: isTestFile(file),
+      })),
+    { concurrency: 16 },
+  );
+  const samples = read.filter((sample) =>
+    changes.every((change) => fits(withoutComments(sample.lines, isNote), change(rules))),
+  );
+  const judged = new Set(samples.map((sample) => sample.name));
+  const kept = labels.filter((entry) => judged.has(nameOf(entry)));
+  return { rules, labels, files, samples, kept };
+});
+
+/**
+ * Asks each arm about the samples as `askJev` does, leaving out what is
+ * refused: the test files with the rules that judge test files, and the
+ * rest with the rest, as lint asks them. One run of both.
+ */
+export const judgeRepos = Effect.fn("eval.judgeRepos")(function* (
+  arms: ReadonlyArray<Arm>,
+  samples: ReadonlyArray<Sample & { readonly test: boolean }>,
+  rules: Rules,
+) {
+  const runs = yield* Effect.forEach([false, true], (test) => {
+    const group = samples.filter((sample) => sample.test === test);
+    return group.length === 0
+      ? Effect.succeed({ models: "", judgments: [], requests: [] })
+      : askJev(
+          arms,
+          group,
+          Record.filter(rules, (rule) => judgesFile(rule, test)),
+          true,
+        );
+  });
+  return {
+    models: [...new Set(runs.flatMap((r) => r.models.split(", ")).filter(Boolean))].join(", "),
+    judgments: runs.flatMap((r) => r.judgments),
+    requests: runs.flatMap((r) => r.requests),
+  } satisfies Run;
+});
+
+/** A rule's answers for one file in one arm: its judge question's, and its matchers'. */
+export interface Verdict {
+  judge: number;
+  readonly appliesTo: Array<number>;
+  readonly excludeIf: Array<number>;
+}
+
+/** Whether lint reports it at `threshold`: above it, and in the rule's scope by its matchers. */
+export const reported = (verdict: Verdict, threshold: number) =>
+  verdict.judge > threshold && inScope(verdict);
+
+/** Where `verdictsOf` keeps a rule's verdict for a file in an arm. */
+export const verdictKey = (arm: string, sample: string, rule: RuleId) =>
+  `${arm}\u0000${sample}\u0000${rule}`;
+
+/** Each rule's answers per arm and file, from a run's judgments. A matcher's key is `<kind>:<rule id>:<index>`. */
+export const verdictsOf = (run: Run): ReadonlyMap<string, Verdict> => {
+  const verdicts = new Map<string, Verdict>();
+  for (const judgment of run.judgments) {
+    const [kind = "", id] = judgment.rule.split(":");
+    const key = verdictKey(judgment.arm, judgment.sample, id ?? kind);
+    const verdict = verdicts.get(key) ?? { judge: Number.NaN, appliesTo: [], excludeIf: [] };
+    if (id === undefined) verdict.judge = judgment.probability;
+    else if (kind === "appliesTo") verdict.appliesTo.push(judgment.probability);
+    else verdict.excludeIf.push(judgment.probability);
+    verdicts.set(key, verdict);
+  }
+  return verdicts;
+};
+
+/** Each labeled finding an arm judged: whether it is real, its verdict, and how lint scores it, its judge score when it stands and 0 when not. */
+export const scoredIn = (
+  verdicts: ReadonlyMap<string, Verdict>,
+  arm: string,
+  entries: ReadonlyArray<RepoLabel>,
+) =>
+  entries.flatMap((entry) => {
+    const verdict = verdicts.get(verdictKey(arm, nameOf(entry), entry.rule));
+    return verdict === undefined || Number.isNaN(verdict.judge)
+      ? []
+      : [{ real: entry.label === "real", verdict, lint: reported(verdict, 0) ? verdict.judge : 0 }];
+  });
+type Scored = ReturnType<typeof scoredIn>[number];
+
+/** How well `score` ranks the real findings among `rows` above the false ones. */
+export const aucOf = (rows: ReadonlyArray<Scored>, score: (row: Scored) => number) =>
+  auc(
+    rows.filter((row) => row.real).map(score),
+    rows.filter((row) => !row.real).map(score),
+  ).toFixed(3);
+
+export const percent = (part: number, whole: number) =>
+  whole === 0 ? "–" : `${Math.round((100 * part) / whole)}%`;
+
+/** Real / false among the findings in `rows` lint reports at `threshold`, with precision: the share real. */
+export const countedAt = (rows: ReadonlyArray<Scored>, threshold: number) => {
+  const shown = rows.filter((row) => reported(row.verdict, threshold));
+  const real = shown.filter((row) => row.real).length;
+  return `${real} / ${shown.length - real} (${percent(real, shown.length)})`;
+};

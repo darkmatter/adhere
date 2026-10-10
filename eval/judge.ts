@@ -31,7 +31,7 @@ const inState: Ask = (model, lines, rules) => {
     model,
     state: { code: numbered(lines), rules: held },
     questions: Record.map(held, (rule, id) => ({
-      type: "noul",
+      type: "noul" as const,
       instructions:
         rule.reference === undefined
           ? `Does state.code contain the pattern shown in ${field(id, "avoid")}, which ${field(id, "description")} rules out? Answer no if nothing in this file resembles it.`
