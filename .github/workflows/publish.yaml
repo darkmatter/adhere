@@ -20,15 +20,11 @@ permissions:
 
 jobs:
   verify-macos:
-    name: macOS native reads (${{ matrix.runner }})
-    runs-on: ${{ matrix.runner }}
+    name: macOS native reads
+    runs-on: macos-latest
     timeout-minutes: 15
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [macos-15, macos-15-intel]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -91,6 +87,7 @@ jobs:
           gh release upload "$TAG_NAME" dist/release/* --clobber
       - name: Publish the platform packages
         run: |
+          # npm publishes from this Bun-managed checkout; --force bypasses its devEngines check.
           for directory in dist/npm/*/; do
             name="$(node -p "require('./${directory}package.json').name")"
             version="$(node -p "require('./${directory}package.json').version")"
@@ -98,7 +95,7 @@ jobs:
             if npm view "$name@$version" version >/dev/null 2>&1; then
               echo "$name@$version is already published."
             else
-              npm publish "$directory" --access public --provenance
+              npm publish "$directory" --force --access public --provenance
             fi
           done
       - name: Publish @drkmttr/adhere with the platform packages as optional dependencies
@@ -108,5 +105,5 @@ jobs:
             echo "@drkmttr/adhere@$version is already published."
           else
             bun scripts/npm-packages.ts pin
-            npm publish --access public --provenance
+            npm publish --force --access public --provenance
           fi
