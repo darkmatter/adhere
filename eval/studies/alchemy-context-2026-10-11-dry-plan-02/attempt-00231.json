@@ -1,0 +1,421 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/SimpleDB/Domain.ts",
+  "kind": "locate",
+  "ordinal": 231,
+  "artifact": "attempt-00231.json",
+  "started": "2026-10-11T03:20:43.448Z",
+  "estimatedTokens": 8847,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.11722999999983585,
+  "referencesPresent": false,
+  "bodyDigest": "fc1dd009cd3425774c653b3d9f7bce8a2145dad467bbcfc1dbfb945600f0725f",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "59",
+    "end:providers/idempotent-delete:2": "59",
+    "start:providers/idempotent-delete:3": "88",
+    "end:providers/idempotent-delete:3": "88",
+    "start:providers/idempotent-delete:4": "111",
+    "end:providers/idempotent-delete:4": "111",
+    "start:providers/idempotent-delete:5": "136",
+    "end:providers/idempotent-delete:5": "136",
+    "start:providers/idempotent-delete:6": "161",
+    "end:providers/idempotent-delete:6": "161",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as sdb from \"@distilled.cloud/aws/simpledb\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface DomainProps {\n\n\n\n\n\n  domainName?: string;\n}\n\nexport interface Domain extends Resource<\n  \"AWS.SimpleDB.Domain\",\n  DomainProps,\n  {\n    domainName: string;\n    domainArn: string;\n  },\n  {},\n  Providers\n> {}",
+        "2": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Domain = Resource<Domain>(\"AWS.SimpleDB.Domain\");\n\n\n\n\n\n\nconst retryWhileNoSuchDomain = <A, E extends { readonly _tag: string }, R>(\n  self: Effect.Effect<A, E, R>,\n): Effect.Effect<A, E, R> =>\n  Effect.retry(self, {\n    while: (e) => e._tag === \"NoSuchDomain\",\n    schedule: Schedule.max([Schedule.fixed(\"2 seconds\"), Schedule.recurs(10)]),\n  });\n\nexport const DomainProvider = () =>\n  Provider.effect(\n    Domain,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (id: string, props: DomainProps) {\n        return (\n          props.domainName ??\n          (yield* createPhysicalName({ id, maxLength: 255 }))\n        );\n      });\n\n      const domainArn = (region: string, accountId: string, name: string) =>\n        `arn:aws:sdb:${region}:${accountId}:domain/${name}`;",
+        "3": "\n      const observeDomain = Effect.fn(function* (name: string) {\n        return yield* sdb\n          .domainMetadata({ DomainName: name })\n          .pipe(\n            Effect.catchTag(\"NoSuchDomain\", () => Effect.succeed(undefined)),\n          );\n      });\n\n      return Domain.Provider.of({\n        stables: [\"domainName\", \"domainArn\"],\n\n        list: () =>\n          Effect.gen(function* () {\n            const { accountId, region } = yield* AWSEnvironment.current;\n            const names = yield* sdb.listDomains\n              .items({})\n              .pipe(Stream.runCollect);\n            return Array.from(names).map((name) => ({\n              domainName: name,\n              domainArn: domainArn(region, accountId, name),\n            }));\n          }),",
+        "4": "\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name =\n            output?.domainName ?? (yield* createName(id, olds ?? {}));\n          const metadata = yield* observeDomain(name);\n          if (metadata === undefined) {\n            return undefined;\n          }\n\n\n          return {\n            domainName: name,\n            domainArn: domainArn(region, accountId, name),\n          };\n        }),\n\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds ?? {});\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "5": "\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name = output?.domainName ?? (yield* createName(id, news));\n\n\n          const metadata = yield* observeDomain(name);\n\n\n\n          if (metadata === undefined) {\n            yield* sdb.createDomain({ DomainName: name });\n            yield* retryWhileNoSuchDomain(\n              sdb.domainMetadata({ DomainName: name }),\n            );\n          }\n\n\n\n          yield* session.note(name);\n          return {\n            domainName: name,\n            domainArn: domainArn(region, accountId, name),\n          };\n        }),",
+        "6": "\n        delete: Effect.fn(function* ({ output }) {\n\n          yield* sdb.deleteDomain({ DomainName: output.domainName });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as sdb from \"@distilled.cloud/aws/simpledb\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Schedule from \"effect/Schedule\";",
+          "4": "import * as Stream from \"effect/Stream\";",
+          "5": "import { isResolved } from \"../../Diff.ts\";",
+          "6": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "7": "import * as Provider from \"../../Provider.ts\";",
+          "8": "import { Resource } from \"../../Resource.ts\";",
+          "9": "import { AWSEnvironment } from \"../Environment.ts\";",
+          "10": "import type { Providers } from \"../Providers.ts\";",
+          "12": "export interface DomainProps {",
+          "18": "domainName?: string;",
+          "19": "}",
+          "21": "export interface Domain extends Resource<",
+          "22": "\"AWS.SimpleDB.Domain\",",
+          "23": "DomainProps,",
+          "24": "{",
+          "25": "domainName: string;",
+          "26": "domainArn: string;",
+          "27": "},",
+          "28": "{},",
+          "29": "Providers",
+          "30": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as sdb from \"@distilled.cloud/aws/simpledb\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Schedule from \"effect/Schedule\";",
+          "4": "import * as Stream from \"effect/Stream\";",
+          "5": "import { isResolved } from \"../../Diff.ts\";",
+          "6": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "7": "import * as Provider from \"../../Provider.ts\";",
+          "8": "import { Resource } from \"../../Resource.ts\";",
+          "9": "import { AWSEnvironment } from \"../Environment.ts\";",
+          "10": "import type { Providers } from \"../Providers.ts\";",
+          "12": "export interface DomainProps {",
+          "18": "domainName?: string;",
+          "19": "}",
+          "21": "export interface Domain extends Resource<",
+          "22": "\"AWS.SimpleDB.Domain\",",
+          "23": "DomainProps,",
+          "24": "{",
+          "25": "domainName: string;",
+          "26": "domainArn: string;",
+          "27": "},",
+          "28": "{},",
+          "29": "Providers",
+          "30": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "59": "export const Domain = Resource<Domain>(\"AWS.SimpleDB.Domain\");",
+          "66": "const retryWhileNoSuchDomain = <A, E extends { readonly _tag: string }, R>(",
+          "67": "self: Effect.Effect<A, E, R>,",
+          "68": "): Effect.Effect<A, E, R> =>",
+          "69": "Effect.retry(self, {",
+          "70": "while: (e) => e._tag === \"NoSuchDomain\",",
+          "71": "schedule: Schedule.max([Schedule.fixed(\"2 seconds\"), Schedule.recurs(10)]),",
+          "72": "});",
+          "74": "export const DomainProvider = () =>",
+          "75": "Provider.effect(",
+          "76": "Domain,",
+          "77": "Effect.gen(function* () {",
+          "78": "const createName = Effect.fn(function* (id: string, props: DomainProps) {",
+          "79": "return (",
+          "80": "props.domainName ??",
+          "81": "(yield* createPhysicalName({ id, maxLength: 255 }))",
+          "82": ");",
+          "83": "});",
+          "85": "const domainArn = (region: string, accountId: string, name: string) =>",
+          "86": "`arn:aws:sdb:${region}:${accountId}:domain/${name}`;"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "59": "export const Domain = Resource<Domain>(\"AWS.SimpleDB.Domain\");",
+          "66": "const retryWhileNoSuchDomain = <A, E extends { readonly _tag: string }, R>(",
+          "67": "self: Effect.Effect<A, E, R>,",
+          "68": "): Effect.Effect<A, E, R> =>",
+          "69": "Effect.retry(self, {",
+          "70": "while: (e) => e._tag === \"NoSuchDomain\",",
+          "71": "schedule: Schedule.max([Schedule.fixed(\"2 seconds\"), Schedule.recurs(10)]),",
+          "72": "});",
+          "74": "export const DomainProvider = () =>",
+          "75": "Provider.effect(",
+          "76": "Domain,",
+          "77": "Effect.gen(function* () {",
+          "78": "const createName = Effect.fn(function* (id: string, props: DomainProps) {",
+          "79": "return (",
+          "80": "props.domainName ??",
+          "81": "(yield* createPhysicalName({ id, maxLength: 255 }))",
+          "82": ");",
+          "83": "});",
+          "85": "const domainArn = (region: string, accountId: string, name: string) =>",
+          "86": "`arn:aws:sdb:${region}:${accountId}:domain/${name}`;"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "88": "const observeDomain = Effect.fn(function* (name: string) {",
+          "89": "return yield* sdb",
+          "90": ".domainMetadata({ DomainName: name })",
+          "91": ".pipe(",
+          "92": "Effect.catchTag(\"NoSuchDomain\", () => Effect.succeed(undefined)),",
+          "93": ");",
+          "94": "});",
+          "96": "return Domain.Provider.of({",
+          "97": "stables: [\"domainName\", \"domainArn\"],",
+          "99": "list: () =>",
+          "100": "Effect.gen(function* () {",
+          "101": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "102": "const names = yield* sdb.listDomains",
+          "103": ".items({})",
+          "104": ".pipe(Stream.runCollect);",
+          "105": "return Array.from(names).map((name) => ({",
+          "106": "domainName: name,",
+          "107": "domainArn: domainArn(region, accountId, name),",
+          "108": "}));",
+          "109": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "88": "const observeDomain = Effect.fn(function* (name: string) {",
+          "89": "return yield* sdb",
+          "90": ".domainMetadata({ DomainName: name })",
+          "91": ".pipe(",
+          "92": "Effect.catchTag(\"NoSuchDomain\", () => Effect.succeed(undefined)),",
+          "93": ");",
+          "94": "});",
+          "96": "return Domain.Provider.of({",
+          "97": "stables: [\"domainName\", \"domainArn\"],",
+          "99": "list: () =>",
+          "100": "Effect.gen(function* () {",
+          "101": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "102": "const names = yield* sdb.listDomains",
+          "103": ".items({})",
+          "104": ".pipe(Stream.runCollect);",
+          "105": "return Array.from(names).map((name) => ({",
+          "106": "domainName: name,",
+          "107": "domainArn: domainArn(region, accountId, name),",
+          "108": "}));",
+          "109": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "111": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "112": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "113": "const name =",
+          "114": "output?.domainName ?? (yield* createName(id, olds ?? {}));",
+          "115": "const metadata = yield* observeDomain(name);",
+          "116": "if (metadata === undefined) {",
+          "117": "return undefined;",
+          "118": "}",
+          "121": "return {",
+          "122": "domainName: name,",
+          "123": "domainArn: domainArn(region, accountId, name),",
+          "124": "};",
+          "125": "}),",
+          "127": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "128": "if (!isResolved(news)) return undefined;",
+          "129": "const oldName = yield* createName(id, olds ?? {});",
+          "130": "const newName = yield* createName(id, news);",
+          "131": "if (oldName !== newName) {",
+          "132": "return { action: \"replace\" } as const;",
+          "133": "}",
+          "134": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "111": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "112": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "113": "const name =",
+          "114": "output?.domainName ?? (yield* createName(id, olds ?? {}));",
+          "115": "const metadata = yield* observeDomain(name);",
+          "116": "if (metadata === undefined) {",
+          "117": "return undefined;",
+          "118": "}",
+          "121": "return {",
+          "122": "domainName: name,",
+          "123": "domainArn: domainArn(region, accountId, name),",
+          "124": "};",
+          "125": "}),",
+          "127": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "128": "if (!isResolved(news)) return undefined;",
+          "129": "const oldName = yield* createName(id, olds ?? {});",
+          "130": "const newName = yield* createName(id, news);",
+          "131": "if (oldName !== newName) {",
+          "132": "return { action: \"replace\" } as const;",
+          "133": "}",
+          "134": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "136": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "137": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "138": "const name = output?.domainName ?? (yield* createName(id, news));",
+          "141": "const metadata = yield* observeDomain(name);",
+          "145": "if (metadata === undefined) {",
+          "146": "yield* sdb.createDomain({ DomainName: name });",
+          "147": "yield* retryWhileNoSuchDomain(",
+          "148": "sdb.domainMetadata({ DomainName: name }),",
+          "149": ");",
+          "150": "}",
+          "154": "yield* session.note(name);",
+          "155": "return {",
+          "156": "domainName: name,",
+          "157": "domainArn: domainArn(region, accountId, name),",
+          "158": "};",
+          "159": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "136": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "137": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "138": "const name = output?.domainName ?? (yield* createName(id, news));",
+          "141": "const metadata = yield* observeDomain(name);",
+          "145": "if (metadata === undefined) {",
+          "146": "yield* sdb.createDomain({ DomainName: name });",
+          "147": "yield* retryWhileNoSuchDomain(",
+          "148": "sdb.domainMetadata({ DomainName: name }),",
+          "149": ");",
+          "150": "}",
+          "154": "yield* session.note(name);",
+          "155": "return {",
+          "156": "domainName: name,",
+          "157": "domainArn: domainArn(region, accountId, name),",
+          "158": "};",
+          "159": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "161": "delete: Effect.fn(function* ({ output }) {",
+          "163": "yield* sdb.deleteDomain({ DomainName: output.domainName });",
+          "164": "}),",
+          "165": "});",
+          "166": "}),",
+          "167": ");"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "161": "delete: Effect.fn(function* ({ output }) {",
+          "163": "yield* sdb.deleteDomain({ DomainName: output.domainName });",
+          "164": "}),",
+          "165": "});",
+          "166": "}),",
+          "167": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

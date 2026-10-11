@@ -1,0 +1,51 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/Config/AggregationAuthorization.ts",
+  "kind": "judge",
+  "ordinal": 174,
+  "artifact": "attempt-00174.json",
+  "started": "2026-10-11T03:20:41.334Z",
+  "estimatedTokens": 3606,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.03999599999951897,
+  "referencesPresent": false,
+  "bodyDigest": "1713bfaea63596f5a8ee8dccc1f75f2ff2afd60e51b5dfaf3529f79ffa868d0e",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as config from \"@distilled.cloud/aws/config-service\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport {\n  createInternalTags,\n  createTagsList,\n  diffTags,\n  hasAlchemyTags,\n} from \"../../Tags.ts\";\nimport type { Providers } from \"../Providers.ts\";",
+        "2": "\nexport interface AggregationAuthorizationProps {\n\n\n\n\n\n  authorizedAccountId: string;\n\n\n\n\n  authorizedAwsRegion: string;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "3": "\nexport interface AggregationAuthorization extends Resource<\n  \"AWS.Config.AggregationAuthorization\",\n  AggregationAuthorizationProps,\n  {\n\n    aggregationAuthorizationArn: string;\n\n    authorizedAccountId: string;\n\n    authorizedAwsRegion: string;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const AggregationAuthorization = Resource<AggregationAuthorization>(\n  \"AWS.Config.AggregationAuthorization\",\n);\n\nexport const AggregationAuthorizationProvider = () =>\n  Provider.effect(\n    AggregationAuthorization,\n    Effect.gen(function* () {\n\n\n      const observeAuthorization = Effect.fn(function* (\n        accountId: string,\n        region: string,\n      ) {\n        return yield* config.describeAggregationAuthorizations.items({}).pipe(\n          Stream.filter(\n            (auth) =>\n              auth.AuthorizedAccountId === accountId &&\n              auth.AuthorizedAwsRegion === region,\n          ),\n          Stream.runHead,\n          Effect.map((head) => (head._tag === \"Some\" ? head.value : undefined)),\n        );\n      });",
+        "5": "\n      const observedTags = (arn: string) =>\n        config.listTagsForResource({ ResourceArn: arn }).pipe(\n          Effect.map((r) =>\n            Object.fromEntries(\n              (r.Tags ?? []).flatMap((t) =>\n                t.Key !== undefined ? [[t.Key, t.Value ?? \"\"]] : [],\n              ),\n            ),\n          ),\n          Effect.catchTag(\"ResourceNotFoundException\", () =>\n            Effect.succeed({} as Record<string, string>),\n          ),\n        );\n\n      const toAttrs = (auth: config.AggregationAuthorization) => ({\n        aggregationAuthorizationArn: auth.AggregationAuthorizationArn!,\n        authorizedAccountId: auth.AuthorizedAccountId!,\n        authorizedAwsRegion: auth.AuthorizedAwsRegion!,\n      });\n\n      return AggregationAuthorization.Provider.of({\n        stables: [\n          \"aggregationAuthorizationArn\",\n          \"authorizedAccountId\",\n          \"authorizedAwsRegion\",\n        ],",
+        "6": "        list: () =>\n          config.describeAggregationAuthorizations.items({}).pipe(\n            Stream.runCollect,\n            Effect.map((auths) =>\n              Array.from(auths).flatMap((auth) =>\n                auth.AggregationAuthorizationArn &&\n                auth.AuthorizedAccountId &&\n                auth.AuthorizedAwsRegion\n                  ? [toAttrs(auth)]\n                  : [],\n              ),\n            ),\n          ),\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const accountId =\n            output?.authorizedAccountId ?? olds?.authorizedAccountId;\n          const region =\n            output?.authorizedAwsRegion ?? olds?.authorizedAwsRegion;\n          if (accountId === undefined || region === undefined) {\n            return undefined;\n          }\n          const auth = yield* observeAuthorization(accountId, region);\n          if (auth?.AggregationAuthorizationArn === undefined) {\n            return undefined;\n          }\n          const attrs = toAttrs(auth);\n          const tags = yield* observedTags(auth.AggregationAuthorizationArn);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),",
+        "7": "\n\n        diff: Effect.fn(function* ({ news, olds }) {\n          if (!isResolved(news)) return undefined;\n          if (\n            olds.authorizedAccountId !== news.authorizedAccountId ||\n            olds.authorizedAwsRegion !== news.authorizedAwsRegion\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n        reconcile: Effect.fn(function* ({ id, news, session }) {\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...news.tags, ...internalTags };\n\n\n          let live = yield* observeAuthorization(\n            news.authorizedAccountId,\n            news.authorizedAwsRegion,\n          );",
+        "8": "\n\n\n\n\n          if (live === undefined) {\n            live = yield* config\n              .putAggregationAuthorization({\n                AuthorizedAccountId: news.authorizedAccountId,\n                AuthorizedAwsRegion: news.authorizedAwsRegion,\n                Tags: createTagsList(desiredTags),\n              })\n              .pipe(Effect.map((r) => r.AggregationAuthorization));\n          }\n\n          const arn = live?.AggregationAuthorizationArn;\n          if (arn === undefined) {\n\n\n            live = yield* observeAuthorization(\n              news.authorizedAccountId,\n              news.authorizedAwsRegion,\n            );\n          }\n\n\n\n          const finalArn = live?.AggregationAuthorizationArn;",
+        "9": "          if (finalArn !== undefined) {\n            const currentTags = yield* observedTags(finalArn);\n            const { upsert, removed } = diffTags(currentTags, desiredTags);\n            if (upsert.length > 0) {\n              yield* config.tagResource({\n                ResourceArn: finalArn,\n                Tags: upsert,\n              });\n            }\n            if (removed.length > 0) {\n              yield* config.untagResource({\n                ResourceArn: finalArn,\n                TagKeys: removed,\n              });\n            }\n          }\n\n          yield* session.note(\n            `${news.authorizedAccountId}/${news.authorizedAwsRegion}`,\n          );\n          return {\n            aggregationAuthorizationArn: finalArn!,\n            authorizedAccountId: news.authorizedAccountId,\n            authorizedAwsRegion: news.authorizedAwsRegion,\n          };\n        }),",
+        "10": "\n\n        delete: Effect.fn(function* ({ output }) {\n          yield* config.deleteAggregationAuthorization({\n            AuthorizedAccountId: output.authorizedAccountId,\n            AuthorizedAwsRegion: output.authorizedAwsRegion,\n          });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,245 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Fly/WriteSecretHttp.ts",
+  "kind": "locate",
+  "ordinal": 291,
+  "artifact": "attempt-00291.json",
+  "started": "2026-10-11T03:20:45.689Z",
+  "estimatedTokens": 5111,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.08866599999964819,
+  "referencesPresent": false,
+  "bodyDigest": "00255b6fedbae39f2ca2ab2db2cf45b0835a4bc8541b9e13d148de99f84ae6ca",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "32",
+    "end:providers/idempotent-delete:2": "32",
+    "start:providers/idempotent-delete:3": "51",
+    "end:providers/idempotent-delete:3": "51",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as machines from \"@distilled.cloud/fly-io/machines\";\nimport * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport * as FetchHttpClient from \"effect/unstable/http/FetchHttpClient\";\nimport { CredentialsFromAmbientOrEnv } from \"./Credentials.ts\";\nimport type { Secret } from \"./Secret.ts\";\nimport {\n  type SecretAuth,\n  makeHttpSecretBinding,\n  unwrapSecretValue,\n} from \"./SecretHttp.ts\";\nimport { WriteSecret, type WriteSecretClient } from \"./WriteSecret.ts\";",
+        "2": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const WriteSecretHttp = Layer.effect(\n  WriteSecret,\n  Effect.suspend(() =>\n    makeHttpSecretBinding<Secret, WriteSecretClient>({\n      makeClient: secretWriteClient,\n    }),\n  ),\n).pipe(\n  Layer.provide(FetchHttpClient.layer),\n  Layer.provide(CredentialsFromAmbientOrEnv),\n);\n\n\nexport const secretWriteClient = (\n  auth: SecretAuth,\n  appName: Effect.Effect<string>,\n  _secretName: Effect.Effect<string>,\n): WriteSecretClient => {\n  const authorize = auth.authorize;",
+        "3": "  return {\n    create: Effect.fn(\"Fly.Secret.create\")(function* (name, value) {\n      return yield* authorize(\n        machines.createSecret({\n          app_name: yield* appName,\n          secret_name: name,\n          value: unwrapSecretValue(value),\n        }),\n      );\n    }),\n    update: Effect.fn(\"Fly.Secret.update\")(function* (name, value) {\n      return yield* authorize(\n        machines.updateSecrets({\n          app_name: yield* appName,\n          values: { [name]: unwrapSecretValue(value) },\n        }),\n      );\n    }),\n    delete: Effect.fn(\"Fly.Secret.delete\")(function* (name) {\n      return yield* authorize(\n        machines.deleteSecret({\n          app_name: yield* appName,\n          secret_name: name,\n        }),\n      );\n    }),\n  };\n};\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as machines from \"@distilled.cloud/fly-io/machines\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Layer from \"effect/Layer\";",
+          "4": "import * as FetchHttpClient from \"effect/unstable/http/FetchHttpClient\";",
+          "5": "import { CredentialsFromAmbientOrEnv } from \"./Credentials.ts\";",
+          "6": "import type { Secret } from \"./Secret.ts\";",
+          "7": "import {",
+          "8": "type SecretAuth,",
+          "9": "makeHttpSecretBinding,",
+          "10": "unwrapSecretValue,",
+          "11": "} from \"./SecretHttp.ts\";",
+          "12": "import { WriteSecret, type WriteSecretClient } from \"./WriteSecret.ts\";"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as machines from \"@distilled.cloud/fly-io/machines\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Layer from \"effect/Layer\";",
+          "4": "import * as FetchHttpClient from \"effect/unstable/http/FetchHttpClient\";",
+          "5": "import { CredentialsFromAmbientOrEnv } from \"./Credentials.ts\";",
+          "6": "import type { Secret } from \"./Secret.ts\";",
+          "7": "import {",
+          "8": "type SecretAuth,",
+          "9": "makeHttpSecretBinding,",
+          "10": "unwrapSecretValue,",
+          "11": "} from \"./SecretHttp.ts\";",
+          "12": "import { WriteSecret, type WriteSecretClient } from \"./WriteSecret.ts\";"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "32": "export const WriteSecretHttp = Layer.effect(",
+          "33": "WriteSecret,",
+          "34": "Effect.suspend(() =>",
+          "35": "makeHttpSecretBinding<Secret, WriteSecretClient>({",
+          "36": "makeClient: secretWriteClient,",
+          "37": "}),",
+          "38": "),",
+          "39": ").pipe(",
+          "40": "Layer.provide(FetchHttpClient.layer),",
+          "41": "Layer.provide(CredentialsFromAmbientOrEnv),",
+          "42": ");",
+          "45": "export const secretWriteClient = (",
+          "46": "auth: SecretAuth,",
+          "47": "appName: Effect.Effect<string>,",
+          "48": "_secretName: Effect.Effect<string>,",
+          "49": "): WriteSecretClient => {",
+          "50": "const authorize = auth.authorize;"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "32": "export const WriteSecretHttp = Layer.effect(",
+          "33": "WriteSecret,",
+          "34": "Effect.suspend(() =>",
+          "35": "makeHttpSecretBinding<Secret, WriteSecretClient>({",
+          "36": "makeClient: secretWriteClient,",
+          "37": "}),",
+          "38": "),",
+          "39": ").pipe(",
+          "40": "Layer.provide(FetchHttpClient.layer),",
+          "41": "Layer.provide(CredentialsFromAmbientOrEnv),",
+          "42": ");",
+          "45": "export const secretWriteClient = (",
+          "46": "auth: SecretAuth,",
+          "47": "appName: Effect.Effect<string>,",
+          "48": "_secretName: Effect.Effect<string>,",
+          "49": "): WriteSecretClient => {",
+          "50": "const authorize = auth.authorize;"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "51": "return {",
+          "52": "create: Effect.fn(\"Fly.Secret.create\")(function* (name, value) {",
+          "53": "return yield* authorize(",
+          "54": "machines.createSecret({",
+          "55": "app_name: yield* appName,",
+          "56": "secret_name: name,",
+          "57": "value: unwrapSecretValue(value),",
+          "58": "}),",
+          "59": ");",
+          "60": "}),",
+          "61": "update: Effect.fn(\"Fly.Secret.update\")(function* (name, value) {",
+          "62": "return yield* authorize(",
+          "63": "machines.updateSecrets({",
+          "64": "app_name: yield* appName,",
+          "65": "values: { [name]: unwrapSecretValue(value) },",
+          "66": "}),",
+          "67": ");",
+          "68": "}),",
+          "69": "delete: Effect.fn(\"Fly.Secret.delete\")(function* (name) {",
+          "70": "return yield* authorize(",
+          "71": "machines.deleteSecret({",
+          "72": "app_name: yield* appName,",
+          "73": "secret_name: name,",
+          "74": "}),",
+          "75": ");",
+          "76": "}),",
+          "77": "};",
+          "78": "};"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "51": "return {",
+          "52": "create: Effect.fn(\"Fly.Secret.create\")(function* (name, value) {",
+          "53": "return yield* authorize(",
+          "54": "machines.createSecret({",
+          "55": "app_name: yield* appName,",
+          "56": "secret_name: name,",
+          "57": "value: unwrapSecretValue(value),",
+          "58": "}),",
+          "59": ");",
+          "60": "}),",
+          "61": "update: Effect.fn(\"Fly.Secret.update\")(function* (name, value) {",
+          "62": "return yield* authorize(",
+          "63": "machines.updateSecrets({",
+          "64": "app_name: yield* appName,",
+          "65": "values: { [name]: unwrapSecretValue(value) },",
+          "66": "}),",
+          "67": ");",
+          "68": "}),",
+          "69": "delete: Effect.fn(\"Fly.Secret.delete\")(function* (name) {",
+          "70": "return yield* authorize(",
+          "71": "machines.deleteSecret({",
+          "72": "app_name: yield* appName,",
+          "73": "secret_name: name,",
+          "74": "}),",
+          "75": ");",
+          "76": "}),",
+          "77": "};",
+          "78": "};"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,363 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Cloudflare/Stream/StreamBinding.ts",
+  "kind": "locate",
+  "ordinal": 275,
+  "artifact": "attempt-00275.json",
+  "started": "2026-10-11T03:20:45.099Z",
+  "estimatedTokens": 7701,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.0918630000014673,
+  "referencesPresent": false,
+  "bodyDigest": "43d6dc67e97dbd479df4d95266f3d884a57c153073f8024381a01939a6a2ed99",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "30",
+    "end:providers/idempotent-delete:2": "30",
+    "start:providers/idempotent-delete:3": "40",
+    "end:providers/idempotent-delete:3": "40",
+    "start:providers/idempotent-delete:4": "69",
+    "end:providers/idempotent-delete:4": "69",
+    "start:providers/idempotent-delete:5": "98",
+    "end:providers/idempotent-delete:5": "98",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import type * as cf from \"@cloudflare/workers-types\";\nimport * as Effect from \"effect/Effect\";\nimport type { RuntimeContext } from \"../../RuntimeContext.ts\";\nimport type * as Binding from \"../Workers/Binding.ts\";\nimport { makeBindingLayer } from \"../Workers/BindingLayer.ts\";\nimport {\n  Stream,\n  StreamError,\n  type StreamClient,\n  type StreamVideoClient,\n} from \"./Stream.ts\";\n\n\nexport type StreamBinding = Binding.Binding<\n  Stream[\"key\"],\n  StreamClient,\n  Stream\n>;",
+        "2": "\n\n\n\n\n\n\n\n\n\n\nexport const StreamBinding = makeBindingLayer<\n  Stream,\n  cf.StreamBinding,\n  StreamClient\n>(Stream, (raw): StreamClient => {\n  const call = <T>(\n    fn: (binding: cf.StreamBinding) => Promise<T>,\n  ): Effect.Effect<T, StreamError, RuntimeContext> =>\n    raw.pipe(Effect.flatMap((binding) => tryPromise(() => fn(binding))));",
+        "3": "\n  const video = (id: string): StreamVideoClient => ({\n    id,\n    details: () => call((binding) => binding.video(id).details()),\n    update: (params) => call((binding) => binding.video(id).update(params)),\n    delete: () => call((binding) => binding.video(id).delete()),\n    generateToken: () => call((binding) => binding.video(id).generateToken()),\n    downloads: {\n      generate: (downloadType) =>\n        call((binding) => binding.video(id).downloads.generate(downloadType)),\n      get: () => call((binding) => binding.video(id).downloads.get()),\n      delete: (downloadType) =>\n        call((binding) => binding.video(id).downloads.delete(downloadType)),\n    },\n    captions: {\n      upload: (language, input) =>\n        call((binding) =>\n          binding\n            .video(id)\n            .captions.upload(language, input as unknown as cf.ReadableStream),\n        ),\n      generate: (language) =>\n        call((binding) => binding.video(id).captions.generate(language)),\n      list: (language) =>\n        call((binding) => binding.video(id).captions.list(language)),\n      delete: (language) =>\n        call((binding) => binding.video(id).captions.delete(language)),\n    },\n  });",
+        "4": "\n  return {\n    raw,\n    upload: (url, params) => call((binding) => binding.upload(url, params)),\n    createDirectUpload: (params) =>\n      call((binding) => binding.createDirectUpload(params)),\n    video,\n    videos: {\n      list: (params) => call((binding) => binding.videos.list(params)),\n    },\n    watermarks: {\n      generate: (input, params) =>\n        call((binding) =>\n\n\n          binding.watermarks.generate(\n            input as unknown as cf.ReadableStream,\n            params,\n          ),\n        ),\n      list: () => call((binding) => binding.watermarks.list()),\n      get: (watermarkId) =>\n        call((binding) => binding.watermarks.get(watermarkId)),\n      delete: (watermarkId) =>\n        call((binding) => binding.watermarks.delete(watermarkId)),\n    },\n  } satisfies StreamClient;\n});\n\nconst tryPromise = <T>(fn: () => Promise<T>): Effect.Effect<T, StreamError> =>",
+        "5": "  Effect.tryPromise({\n    try: fn,\n    catch: (error: any) =>\n      new StreamError({\n        message: error?.message ?? \"Unknown Cloudflare Stream error\",\n        code: typeof error?.code === \"number\" ? error.code : undefined,\n        statusCode:\n          typeof error?.statusCode === \"number\" ? error.statusCode : undefined,\n        cause: error,\n      }),\n  });\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import type * as cf from \"@cloudflare/workers-types\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import type { RuntimeContext } from \"../../RuntimeContext.ts\";",
+          "4": "import type * as Binding from \"../Workers/Binding.ts\";",
+          "5": "import { makeBindingLayer } from \"../Workers/BindingLayer.ts\";",
+          "6": "import {",
+          "7": "Stream,",
+          "8": "StreamError,",
+          "9": "type StreamClient,",
+          "10": "type StreamVideoClient,",
+          "11": "} from \"./Stream.ts\";",
+          "14": "export type StreamBinding = Binding.Binding<",
+          "15": "Stream[\"key\"],",
+          "16": "StreamClient,",
+          "17": "Stream",
+          "18": ">;"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import type * as cf from \"@cloudflare/workers-types\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import type { RuntimeContext } from \"../../RuntimeContext.ts\";",
+          "4": "import type * as Binding from \"../Workers/Binding.ts\";",
+          "5": "import { makeBindingLayer } from \"../Workers/BindingLayer.ts\";",
+          "6": "import {",
+          "7": "Stream,",
+          "8": "StreamError,",
+          "9": "type StreamClient,",
+          "10": "type StreamVideoClient,",
+          "11": "} from \"./Stream.ts\";",
+          "14": "export type StreamBinding = Binding.Binding<",
+          "15": "Stream[\"key\"],",
+          "16": "StreamClient,",
+          "17": "Stream",
+          "18": ">;"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "30": "export const StreamBinding = makeBindingLayer<",
+          "31": "Stream,",
+          "32": "cf.StreamBinding,",
+          "33": "StreamClient",
+          "34": ">(Stream, (raw): StreamClient => {",
+          "35": "const call = <T>(",
+          "36": "fn: (binding: cf.StreamBinding) => Promise<T>,",
+          "37": "): Effect.Effect<T, StreamError, RuntimeContext> =>",
+          "38": "raw.pipe(Effect.flatMap((binding) => tryPromise(() => fn(binding))));"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "30": "export const StreamBinding = makeBindingLayer<",
+          "31": "Stream,",
+          "32": "cf.StreamBinding,",
+          "33": "StreamClient",
+          "34": ">(Stream, (raw): StreamClient => {",
+          "35": "const call = <T>(",
+          "36": "fn: (binding: cf.StreamBinding) => Promise<T>,",
+          "37": "): Effect.Effect<T, StreamError, RuntimeContext> =>",
+          "38": "raw.pipe(Effect.flatMap((binding) => tryPromise(() => fn(binding))));"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "40": "const video = (id: string): StreamVideoClient => ({",
+          "41": "id,",
+          "42": "details: () => call((binding) => binding.video(id).details()),",
+          "43": "update: (params) => call((binding) => binding.video(id).update(params)),",
+          "44": "delete: () => call((binding) => binding.video(id).delete()),",
+          "45": "generateToken: () => call((binding) => binding.video(id).generateToken()),",
+          "46": "downloads: {",
+          "47": "generate: (downloadType) =>",
+          "48": "call((binding) => binding.video(id).downloads.generate(downloadType)),",
+          "49": "get: () => call((binding) => binding.video(id).downloads.get()),",
+          "50": "delete: (downloadType) =>",
+          "51": "call((binding) => binding.video(id).downloads.delete(downloadType)),",
+          "52": "},",
+          "53": "captions: {",
+          "54": "upload: (language, input) =>",
+          "55": "call((binding) =>",
+          "56": "binding",
+          "57": ".video(id)",
+          "58": ".captions.upload(language, input as unknown as cf.ReadableStream),",
+          "59": "),",
+          "60": "generate: (language) =>",
+          "61": "call((binding) => binding.video(id).captions.generate(language)),",
+          "62": "list: (language) =>",
+          "63": "call((binding) => binding.video(id).captions.list(language)),",
+          "64": "delete: (language) =>",
+          "65": "call((binding) => binding.video(id).captions.delete(language)),",
+          "66": "},",
+          "67": "});"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "40": "const video = (id: string): StreamVideoClient => ({",
+          "41": "id,",
+          "42": "details: () => call((binding) => binding.video(id).details()),",
+          "43": "update: (params) => call((binding) => binding.video(id).update(params)),",
+          "44": "delete: () => call((binding) => binding.video(id).delete()),",
+          "45": "generateToken: () => call((binding) => binding.video(id).generateToken()),",
+          "46": "downloads: {",
+          "47": "generate: (downloadType) =>",
+          "48": "call((binding) => binding.video(id).downloads.generate(downloadType)),",
+          "49": "get: () => call((binding) => binding.video(id).downloads.get()),",
+          "50": "delete: (downloadType) =>",
+          "51": "call((binding) => binding.video(id).downloads.delete(downloadType)),",
+          "52": "},",
+          "53": "captions: {",
+          "54": "upload: (language, input) =>",
+          "55": "call((binding) =>",
+          "56": "binding",
+          "57": ".video(id)",
+          "58": ".captions.upload(language, input as unknown as cf.ReadableStream),",
+          "59": "),",
+          "60": "generate: (language) =>",
+          "61": "call((binding) => binding.video(id).captions.generate(language)),",
+          "62": "list: (language) =>",
+          "63": "call((binding) => binding.video(id).captions.list(language)),",
+          "64": "delete: (language) =>",
+          "65": "call((binding) => binding.video(id).captions.delete(language)),",
+          "66": "},",
+          "67": "});"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "69": "return {",
+          "70": "raw,",
+          "71": "upload: (url, params) => call((binding) => binding.upload(url, params)),",
+          "72": "createDirectUpload: (params) =>",
+          "73": "call((binding) => binding.createDirectUpload(params)),",
+          "74": "video,",
+          "75": "videos: {",
+          "76": "list: (params) => call((binding) => binding.videos.list(params)),",
+          "77": "},",
+          "78": "watermarks: {",
+          "79": "generate: (input, params) =>",
+          "80": "call((binding) =>",
+          "83": "binding.watermarks.generate(",
+          "84": "input as unknown as cf.ReadableStream,",
+          "85": "params,",
+          "86": "),",
+          "87": "),",
+          "88": "list: () => call((binding) => binding.watermarks.list()),",
+          "89": "get: (watermarkId) =>",
+          "90": "call((binding) => binding.watermarks.get(watermarkId)),",
+          "91": "delete: (watermarkId) =>",
+          "92": "call((binding) => binding.watermarks.delete(watermarkId)),",
+          "93": "},",
+          "94": "} satisfies StreamClient;",
+          "95": "});",
+          "97": "const tryPromise = <T>(fn: () => Promise<T>): Effect.Effect<T, StreamError> =>"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "69": "return {",
+          "70": "raw,",
+          "71": "upload: (url, params) => call((binding) => binding.upload(url, params)),",
+          "72": "createDirectUpload: (params) =>",
+          "73": "call((binding) => binding.createDirectUpload(params)),",
+          "74": "video,",
+          "75": "videos: {",
+          "76": "list: (params) => call((binding) => binding.videos.list(params)),",
+          "77": "},",
+          "78": "watermarks: {",
+          "79": "generate: (input, params) =>",
+          "80": "call((binding) =>",
+          "83": "binding.watermarks.generate(",
+          "84": "input as unknown as cf.ReadableStream,",
+          "85": "params,",
+          "86": "),",
+          "87": "),",
+          "88": "list: () => call((binding) => binding.watermarks.list()),",
+          "89": "get: (watermarkId) =>",
+          "90": "call((binding) => binding.watermarks.get(watermarkId)),",
+          "91": "delete: (watermarkId) =>",
+          "92": "call((binding) => binding.watermarks.delete(watermarkId)),",
+          "93": "},",
+          "94": "} satisfies StreamClient;",
+          "95": "});",
+          "97": "const tryPromise = <T>(fn: () => Promise<T>): Effect.Effect<T, StreamError> =>"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "98": "Effect.tryPromise({",
+          "99": "try: fn,",
+          "100": "catch: (error: any) =>",
+          "101": "new StreamError({",
+          "102": "message: error?.message ?? \"Unknown Cloudflare Stream error\",",
+          "103": "code: typeof error?.code === \"number\" ? error.code : undefined,",
+          "104": "statusCode:",
+          "105": "typeof error?.statusCode === \"number\" ? error.statusCode : undefined,",
+          "106": "cause: error,",
+          "107": "}),",
+          "108": "});"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "98": "Effect.tryPromise({",
+          "99": "try: fn,",
+          "100": "catch: (error: any) =>",
+          "101": "new StreamError({",
+          "102": "message: error?.message ?? \"Unknown Cloudflare Stream error\",",
+          "103": "code: typeof error?.code === \"number\" ? error.code : undefined,",
+          "104": "statusCode:",
+          "105": "typeof error?.statusCode === \"number\" ? error.statusCode : undefined,",
+          "106": "cause: error,",
+          "107": "}),",
+          "108": "});"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

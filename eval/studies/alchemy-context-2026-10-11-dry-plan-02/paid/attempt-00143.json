@@ -1,0 +1,56 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/Glue/Job.ts",
+  "kind": "judge",
+  "ordinal": 143,
+  "artifact": "attempt-00143.json",
+  "started": "2026-10-11T03:27:41.329Z",
+  "estimatedTokens": 3714,
+  "reservedTokens": 64000,
+  "chargedTokens": 2285,
+  "outcome": "answered",
+  "milliseconds": 79.11207600000125,
+  "referencesPresent": false,
+  "bodyDigest": "c748744925668363cec5ae760fead83f402944eca0777676c3d665581efa54ad",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.93}},\"usage\":{\"input_tokens\":2285,\"output_tokens\":25}}",
+  "inputTokens": 2285,
+  "answers": {
+    "providers/idempotent-delete": 0.93
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as glue from \"@distilled.cloud/aws/glue\";\nimport type * as Duration from \"effect/Duration\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport { toWireMinutes } from \"../../Util/Duration.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport {\n  fetchObservedTags,\n  jobArn,\n  retryWhileRoleNotAssumable,\n  syncTags,\n} from \"./internal.ts\";",
+        "2": "\nexport interface JobCommand {\n\n\n\n\n  name: \"glueetl\" | \"pythonshell\" | \"gluestreaming\" | (string & {});\n\n  scriptLocation?: string;\n\n  pythonVersion?: string;\n\n  runtime?: string;\n}\n\nexport interface JobProps {\n\n\n\n\n\n  jobName?: string;\n\n\n\n  role: string;\n\n\n\n  command: JobCommand;",
+        "3": "\n\n\n  description?: string;\n\n\n\n\n  defaultArguments?: Record<string, string>;\n\n\n\n  nonOverridableArguments?: Record<string, string>;\n\n\n\n  connections?: string[];\n\n\n\n  maxRetries?: number;\n\n\n\n\n  timeout?: Duration.Input;\n\n\n\n\n  maxCapacity?: number;",
+        "4": "\n\n\n  glueVersion?: string;\n\n\n\n  numberOfWorkers?: number;\n\n\n\n\n  workerType?: string;\n\n\n\n  executionClass?: \"STANDARD\" | \"FLEX\";\n\n\n\n  executionProperty?: {\n\n    maxConcurrentRuns?: number;\n  };\n\n\n\n  tags?: Record<string, string>;\n}",
+        "5": "\nexport interface Job extends Resource<\n  \"AWS.Glue.Job\",\n  JobProps,\n  {\n\n    jobName: string;\n\n    jobArn: string;\n\n    role: string;\n  },\n  {},\n  Providers\n> {}",
+        "6": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Job = Resource<Job>(\"AWS.Glue.Job\");\n\nexport const JobProvider = () =>\n  Provider.effect(\n    Job,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: { jobName?: string | undefined },\n      ) {\n        return (\n          props.jobName ?? (yield* createPhysicalName({ id, maxLength: 255 }))\n        );\n      });\n\n      const observe = Effect.fn(function* (name: string) {\n        return yield* glue.getJob({ JobName: name }).pipe(\n          Effect.map((r) => r.Job),\n          Effect.catchTag(\"EntityNotFoundException\", () =>\n            Effect.succeed(undefined),\n          ),\n        );\n      });\n\n      const buildCommand = (command: JobCommand) => ({\n        Name: command.name,\n        ScriptLocation: command.scriptLocation,\n        PythonVersion: command.pythonVersion,\n        Runtime: command.runtime,\n      });",
+        "7": "\n      const buildDefinition = (props: JobProps) => ({\n        Role: props.role,\n        Command: buildCommand(props.command),\n        Description: props.description,\n        DefaultArguments: props.defaultArguments,\n        NonOverridableArguments: props.nonOverridableArguments,\n        Connections:\n          props.connections !== undefined\n            ? { Connections: props.connections }\n            : undefined,\n        MaxRetries: props.maxRetries,\n        Timeout: toWireMinutes(props.timeout),\n        MaxCapacity: props.maxCapacity,\n        GlueVersion: props.glueVersion,\n        NumberOfWorkers: props.numberOfWorkers,\n        WorkerType: props.workerType,\n        ExecutionClass: props.executionClass,\n        ExecutionProperty: props.executionProperty\n          ? { MaxConcurrentRuns: props.executionProperty.maxConcurrentRuns }\n          : undefined,\n      });\n\n      return Job.Provider.of({\n        stables: [\"jobName\", \"jobArn\"],",
+        "8": "\n        list: () =>\n          Effect.gen(function* () {\n            const { accountId, region } = yield* AWSEnvironment.current;\n            const pages = yield* glue.getJobs.pages({}).pipe(Stream.runCollect);\n            return Array.from(pages)\n              .flatMap((page) => page.Jobs ?? [])\n              .filter((j) => j.Name !== undefined)\n              .map((j) => ({\n                jobName: j.Name!,\n                jobArn: jobArn(region, accountId, j.Name!),\n                role: j.Role ?? \"\",\n              }));\n          }),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name = output?.jobName ?? (yield* createName(id, olds ?? {}));\n          const job = yield* observe(name);\n          if (job?.Name === undefined) return undefined;\n          const arn = jobArn(region, accountId, job.Name);\n          const attrs = {\n            jobName: job.Name,\n            jobArn: arn,\n            role: job.Role ?? \"\",\n          };\n          const tags = yield* fetchObservedTags(arn);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),",
+        "9": "\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) return { action: \"replace\" } as const;\n\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name = output?.jobName ?? (yield* createName(id, news));\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...news.tags, ...internalTags };\n          const arn = jobArn(region, accountId, name);\n\n\n          let job = yield* observe(name);",
+        "10": "\n\n          if (job === undefined) {\n            yield* retryWhileRoleNotAssumable(\n              glue.createJob({\n                Name: name,\n                ...buildDefinition(news),\n                Tags: desiredTags,\n              }),\n            ).pipe(\n              Effect.catchTag(\"AlreadyExistsException\", () => Effect.void),\n            );\n          } else {\n\n            yield* retryWhileRoleNotAssumable(\n              glue.updateJob({\n                JobName: name,\n                JobUpdate: buildDefinition(news),\n              }),\n            );\n          }\n\n\n          const observedTags = yield* fetchObservedTags(arn);\n          yield* syncTags(arn, observedTags, desiredTags);\n\n          job = yield* observe(name);\n\n          yield* session.note(name);",
+        "11": "          return {\n            jobName: name,\n            jobArn: arn,\n            role: job?.Role ?? news.role,\n          };\n        }),\n\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* glue.deleteJob({ JobName: output.jobName });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

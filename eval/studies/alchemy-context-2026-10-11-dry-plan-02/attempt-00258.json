@@ -1,0 +1,46 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Cloudflare/KV/WriteNamespaceHttp.ts",
+  "kind": "judge",
+  "ordinal": 258,
+  "artifact": "attempt-00258.json",
+  "started": "2026-10-11T03:20:44.468Z",
+  "estimatedTokens": 2384,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.014918000000761822,
+  "referencesPresent": false,
+  "bodyDigest": "0a289b8c0b57cb7d8355ee59732997bd99185c4bb00b2dcd197d51831f5ef142",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as kv from \"@distilled.cloud/cloudflare/kv\";\nimport * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport {\n  makeHttpKVNamespaceBinding,\n  makeKVAuth,\n  makeKVHttpScope,\n  toKVNamespaceError,\n  type KVAuth,\n} from \"./NamespaceHttp.ts\";\nimport { NamespaceError } from \"./NamespaceTypes.ts\";\nimport { WriteNamespace, type WriteNamespaceClient } from \"./WriteNamespace.ts\";\n\n\n\n\n\n\n\nexport const WriteNamespaceHttp = Layer.effect(\n  WriteNamespace,\n  Effect.suspend(() =>\n    makeHttpKVNamespaceBinding({\n      permissionGroups: [\"Workers KV Storage Write\"],\n      makeClient: (token, namespaceId) =>\n        makeWriteKVHttpClient(makeKVAuth(token), namespaceId),\n    }),\n  ),\n);",
+        "2": "\nexport const makeWriteKVHttpClient = (\n  auth: KVAuth,\n  namespaceId: Effect.Effect<string>,\n): WriteNamespaceClient => {\n  const { authorize } = auth;\n  const scope = makeKVHttpScope(auth, namespaceId);",
+        "3": "\n  return {\n    put: ((\n      key: string,\n      value: string | ArrayBuffer | ArrayBufferView | ReadableStream,\n      options?: KVNamespacePutOptions,\n    ) =>\n      scope.pipe(\n        Effect.flatMap(({ accountId, namespaceId }) =>\n          toKVBody(value).pipe(\n            Effect.flatMap((body) =>\n              authorize(\n                kv.putNamespaceValue({\n                  accountId,\n                  namespaceId,\n                  keyName: key,\n                  value: body,\n                  expiration: options?.expiration,\n                  expirationTtl: options?.expirationTtl,\n                  metadata: options?.metadata,\n                }),\n              ),\n            ),\n          ),\n        ),\n        Effect.mapError(toKVNamespaceError),\n        Effect.asVoid,\n      )) as any,",
+        "4": "    delete: ((key: string) =>\n      scope.pipe(\n        Effect.flatMap(({ accountId, namespaceId }) =>\n          authorize(\n            kv.deleteNamespaceValue({ accountId, namespaceId, keyName: key }),\n          ),\n        ),\n        Effect.mapError(toKVNamespaceError),\n        Effect.asVoid,\n      )) as any,\n  };\n};\n\n\nconst toKVBody = (\n  value: string | ArrayBuffer | ArrayBufferView | ReadableStream,\n): Effect.Effect<string | Blob, NamespaceError> =>",
+        "5": "  Effect.gen(function* () {\n    if (typeof value === \"string\") return value;\n    if (value instanceof Blob) return value;\n    if (value instanceof ArrayBuffer) return new Blob([value]);\n    if (value instanceof ReadableStream) {\n      const buffer = yield* Effect.tryPromise({\n        try: () => new Response(value as any).arrayBuffer(),\n        catch: toKVNamespaceError,\n      });\n      return new Blob([buffer]);\n    }\n    const view = value as ArrayBufferView;\n    const bytes = new Uint8Array(view.byteLength);\n    bytes.set(\n      new Uint8Array(\n        view.buffer as ArrayBuffer,\n        view.byteOffset,\n        view.byteLength,\n      ),\n    );\n    return new Blob([bytes]);\n  });\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

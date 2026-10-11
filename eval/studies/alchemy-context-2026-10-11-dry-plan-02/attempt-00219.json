@@ -1,0 +1,1121 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/MediaTailor/PlaybackConfiguration.ts",
+  "kind": "locate",
+  "ordinal": 219,
+  "artifact": "attempt-00219.json",
+  "started": "2026-10-11T03:20:43.012Z",
+  "estimatedTokens": 23380,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.2770410000011907,
+  "referencesPresent": false,
+  "bodyDigest": "6049c6b85e9e43784cfb7794d97d48ce2ead47e99c27dc5610b2d09fe3d87725",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "23",
+    "end:providers/idempotent-delete:2": "23",
+    "start:providers/idempotent-delete:3": "57",
+    "end:providers/idempotent-delete:3": "57",
+    "start:providers/idempotent-delete:4": "89",
+    "end:providers/idempotent-delete:4": "89",
+    "start:providers/idempotent-delete:5": "121",
+    "end:providers/idempotent-delete:5": "121",
+    "start:providers/idempotent-delete:6": "156",
+    "end:providers/idempotent-delete:6": "156",
+    "start:providers/idempotent-delete:7": "186",
+    "end:providers/idempotent-delete:7": "186",
+    "start:providers/idempotent-delete:8": "211",
+    "end:providers/idempotent-delete:8": "211",
+    "start:providers/idempotent-delete:9": "280",
+    "end:providers/idempotent-delete:9": "280",
+    "start:providers/idempotent-delete:10": "305",
+    "end:providers/idempotent-delete:10": "305",
+    "start:providers/idempotent-delete:11": "314",
+    "end:providers/idempotent-delete:11": "314",
+    "start:providers/idempotent-delete:12": "340",
+    "end:providers/idempotent-delete:12": "340",
+    "start:providers/idempotent-delete:13": "367",
+    "end:providers/idempotent-delete:13": "367",
+    "start:providers/idempotent-delete:14": "392",
+    "end:providers/idempotent-delete:14": "392",
+    "start:providers/idempotent-delete:15": "401",
+    "end:providers/idempotent-delete:15": "401",
+    "start:providers/idempotent-delete:16": "427",
+    "end:providers/idempotent-delete:16": "427",
+    "start:providers/idempotent-delete:17": "457",
+    "end:providers/idempotent-delete:17": "457",
+    "start:providers/idempotent-delete:18": "479",
+    "end:providers/idempotent-delete:18": "479",
+    "start:providers/idempotent-delete:19": "506",
+    "end:providers/idempotent-delete:19": "506",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as mediatailor from \"@distilled.cloud/aws/mediatailor\";\nimport * as Data from \"effect/Data\";\nimport type * as Duration from \"effect/Duration\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport {\n  createInternalTags,\n  diffTags,\n  hasAlchemyTags,\n  tagRecord,\n} from \"../../Tags.ts\";\nimport { toWireSeconds } from \"../../Util/Duration.ts\";\nimport type { Providers } from \"../Providers.ts\";",
+        "2": "\n\n\n\nexport interface PlaybackConfigurationCdn {\n\n\n\n\n\n  adSegmentUrlPrefix?: string;\n\n\n\n\n  contentSegmentUrlPrefix?: string;\n}\n\n\n\n\nexport interface PlaybackConfigurationDash {\n\n\n\n\n  mpdLocation?: string;\n\n\n\n\n\n  originManifestType?: \"SINGLE_PERIOD\" | \"MULTI_PERIOD\";\n}",
+        "3": "\n\n\n\nexport interface PlaybackConfigurationAvailSuppression {\n\n\n\n\n\n  mode?: \"OFF\" | \"BEHIND_LIVE_EDGE\" | \"AFTER_LIVE_EDGE\";\n\n\n\n\n  value?: string;\n\n\n\n\n  fillPolicy?: \"FULL_AVAIL_ONLY\" | \"PARTIAL_AVAIL\";\n}\n\n\n\n\nexport interface PlaybackConfigurationBumper {\n\n  startUrl?: string;\n\n  endUrl?: string;\n}",
+        "4": "\n\n\n\nexport interface PlaybackConfigurationLivePreRoll {\n\n  adDecisionServerUrl?: string;\n\n\n\n\n  maxDuration?: Duration.Input;\n}\n\n\n\n\n\nexport interface PlaybackConfigurationLogs {\n\n\n\n\n\n  percentEnabled: number;\n\n\n\n\n\n  enabledLoggingStrategies?: (\"LEGACY_CLOUDWATCH\" | \"VENDED_LOGS\")[];\n}",
+        "5": "\n\n\n\nexport interface PlaybackConfigurationManifestProcessingRules {\n\n\n\n\n\n  adMarkerPassthroughEnabled?: boolean;\n}\n\nexport interface PlaybackConfigurationProps {\n\n\n\n\n\n\n\n  name?: string;\n\n\n\n\n\n\n  adDecisionServerUrl: string;\n\n\n\n\n  videoContentSourceUrl: string;",
+        "6": "\n\n\n\n\n  slateAdUrl?: string;\n\n\n\n\n\n\n  personalizationThreshold?: Duration.Input;\n\n\n\n\n  transcodeProfileName?: string;\n\n\n\n\n\n  insertionMode?: \"STITCHED_ONLY\" | \"PLAYER_SELECT\";\n\n\n\n  cdnConfiguration?: PlaybackConfigurationCdn;\n\n\n\n  dashConfiguration?: PlaybackConfigurationDash;",
+        "7": "\n\n\n  availSuppression?: PlaybackConfigurationAvailSuppression;\n\n\n\n  bumper?: PlaybackConfigurationBumper;\n\n\n\n  livePreRollConfiguration?: PlaybackConfigurationLivePreRoll;\n\n\n\n  manifestProcessingRules?: PlaybackConfigurationManifestProcessingRules;\n\n\n\n\n  logConfiguration?: PlaybackConfigurationLogs;\n\n\n\n\n  tags?: Record<string, string>;\n}",
+        "8": "\nexport interface PlaybackConfiguration extends Resource<\n  \"AWS.MediaTailor.PlaybackConfiguration\",\n  PlaybackConfigurationProps,\n  {\n\n    name: string;\n\n    playbackConfigurationArn: string;\n\n    playbackEndpointPrefix: string;\n\n    sessionInitializationEndpointPrefix: string;\n\n    hlsManifestEndpointPrefix: string | undefined;\n\n    dashManifestEndpointPrefix: string | undefined;\n  },\n  never,\n  Providers\n> {}",
+        "9": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const PlaybackConfiguration = Resource<PlaybackConfiguration>(\n  \"AWS.MediaTailor.PlaybackConfiguration\",\n);\n\n\n\n\n\n\nexport class MediaTailorIncompletePlaybackConfiguration extends Data.TaggedError(\n  \"MediaTailorIncompletePlaybackConfiguration\",\n)<{ message: string }> {}\n\ntype PlaybackConfigurationAttributes = {\n  name: string;\n  playbackConfigurationArn: string;\n  playbackEndpointPrefix: string;\n  sessionInitializationEndpointPrefix: string;\n  hlsManifestEndpointPrefix: string | undefined;\n  dashManifestEndpointPrefix: string | undefined;\n};\n\nexport const PlaybackConfigurationProvider = () =>\n  Provider.effect(\n    PlaybackConfiguration,",
+        "10": "    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: Pick<PlaybackConfigurationProps, \"name\">,\n      ) {\n\n        return props.name ?? (yield* createPhysicalName({ id, maxLength: 64 }));\n      });",
+        "11": "\n      const toAttributes = Effect.fn(function* (\n        config: mediatailor.GetPlaybackConfigurationResponse,\n      ) {\n        if (\n          config.Name === undefined ||\n          config.PlaybackConfigurationArn === undefined ||\n          config.PlaybackEndpointPrefix === undefined ||\n          config.SessionInitializationEndpointPrefix === undefined\n        ) {\n          return yield* new MediaTailorIncompletePlaybackConfiguration({\n            message: `playback configuration '${config.Name}' is missing its ARN or endpoint prefixes`,\n          });\n        }\n        return {\n          name: config.Name,\n          playbackConfigurationArn: config.PlaybackConfigurationArn,\n          playbackEndpointPrefix: config.PlaybackEndpointPrefix,\n          sessionInitializationEndpointPrefix:\n            config.SessionInitializationEndpointPrefix,\n          hlsManifestEndpointPrefix:\n            config.HlsConfiguration?.ManifestEndpointPrefix,\n          dashManifestEndpointPrefix:\n            config.DashConfiguration?.ManifestEndpointPrefix,\n        } satisfies PlaybackConfigurationAttributes;\n      });",
+        "12": "\n      const observe = (name: string) =>\n        mediatailor.getPlaybackConfiguration({ Name: name }).pipe(\n          Effect.map(\n            (\n              config,\n            ): mediatailor.GetPlaybackConfigurationResponse | undefined =>\n              config,\n          ),\n\n          Effect.catchTag(\"PlaybackConfigurationNotFound\", () =>\n            Effect.succeed(undefined),\n          ),\n        );\n\n      const desiredRequest = (\n        name: string,\n        props: PlaybackConfigurationProps,\n      ): mediatailor.PutPlaybackConfigurationRequest => ({\n        Name: name,\n        AdDecisionServerUrl: props.adDecisionServerUrl,\n        VideoContentSourceUrl: props.videoContentSourceUrl,\n        SlateAdUrl: props.slateAdUrl,\n        PersonalizationThresholdSeconds: toWireSeconds(\n          props.personalizationThreshold,\n        ),\n        TranscodeProfileName: props.transcodeProfileName,\n        InsertionMode: props.insertionMode,",
+        "13": "        CdnConfiguration: props.cdnConfiguration && {\n          AdSegmentUrlPrefix: props.cdnConfiguration.adSegmentUrlPrefix,\n          ContentSegmentUrlPrefix:\n            props.cdnConfiguration.contentSegmentUrlPrefix,\n        },\n        DashConfiguration: props.dashConfiguration && {\n          MpdLocation: props.dashConfiguration.mpdLocation,\n          OriginManifestType: props.dashConfiguration.originManifestType,\n        },\n        AvailSuppression: props.availSuppression && {\n          Mode: props.availSuppression.mode,\n          Value: props.availSuppression.value,\n          FillPolicy: props.availSuppression.fillPolicy,\n        },\n        Bumper: props.bumper && {\n          StartUrl: props.bumper.startUrl,\n          EndUrl: props.bumper.endUrl,\n        },\n        LivePreRollConfiguration: props.livePreRollConfiguration && {\n          AdDecisionServerUrl:\n            props.livePreRollConfiguration.adDecisionServerUrl,\n          MaxDurationSeconds: toWireSeconds(\n            props.livePreRollConfiguration.maxDuration,\n          ),\n        },",
+        "14": "        ManifestProcessingRules: props.manifestProcessingRules && {\n          AdMarkerPassthrough: {\n            Enabled: props.manifestProcessingRules.adMarkerPassthroughEnabled,\n          },\n        },\n      });\n\n      return PlaybackConfiguration.Provider.of({\n        stables: [\"name\", \"playbackConfigurationArn\"],",
+        "15": "        list: () =>\n          Effect.gen(function* () {\n            const items = yield* mediatailor.listPlaybackConfigurations\n              .items({})\n              .pipe(Stream.runCollect);\n            return Array.from(items).flatMap((config) =>\n              config.Name !== undefined &&\n              config.PlaybackConfigurationArn !== undefined &&\n              config.PlaybackEndpointPrefix !== undefined &&\n              config.SessionInitializationEndpointPrefix !== undefined\n                ? [\n                    {\n                      name: config.Name,\n                      playbackConfigurationArn: config.PlaybackConfigurationArn,\n                      playbackEndpointPrefix: config.PlaybackEndpointPrefix,\n                      sessionInitializationEndpointPrefix:\n                        config.SessionInitializationEndpointPrefix,\n                      hlsManifestEndpointPrefix:\n                        config.HlsConfiguration?.ManifestEndpointPrefix,\n                      dashManifestEndpointPrefix:\n                        config.DashConfiguration?.ManifestEndpointPrefix,\n                    },\n                  ]\n                : [],\n            );\n          }),",
+        "16": "        read: Effect.fn(function* ({ id, olds, output }) {\n          const name = output?.name ?? (yield* createName(id, olds ?? {}));\n          const found = yield* observe(name);\n          if (found === undefined) return undefined;\n          const attrs = yield* toAttributes(found);\n          return (yield* hasAlchemyTags(id, tagRecord(found.Tags)))\n            ? attrs\n            : Unowned(attrs);\n        }),\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds ?? {});\n          const newName = yield* createName(id, news ?? {});\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n\n        }),\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const name = output?.name ?? (yield* createName(id, news));\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...news.tags, ...internalTags };",
+        "17": "\n\n\n\n\n\n\n\n          const put = yield* mediatailor.putPlaybackConfiguration({\n            ...desiredRequest(name, news),\n            Tags: desiredTags,\n          });\n          const attrs = yield* toAttributes(put);\n\n\n\n\n\n\n          const desiredLogs = news.logConfiguration;\n          const observedLogs = put.LogConfiguration;\n          const observedPercent = observedLogs?.PercentEnabled ?? 0;\n          const desiredPercent = desiredLogs?.percentEnabled ?? 0;\n          const observedStrategies = [\n            ...(observedLogs?.EnabledLoggingStrategies ?? []),\n          ].sort();\n          const desiredStrategies =\n            desiredLogs === undefined\n              ? observedStrategies\n              : [...(desiredLogs.enabledLoggingStrategies ?? [])].sort();",
+        "18": "          if (\n            observedPercent !== desiredPercent ||\n            observedStrategies.join(\",\") !== desiredStrategies.join(\",\")\n          ) {\n            yield* mediatailor.configureLogsForPlaybackConfiguration({\n              PlaybackConfigurationName: name,\n              PercentEnabled: desiredPercent,\n              ...(desiredLogs?.enabledLoggingStrategies\n                ? {\n                    EnabledLoggingStrategies:\n                      desiredLogs.enabledLoggingStrategies,\n                  }\n                : {}),\n            });\n          }\n\n\n\n\n          const currentTags = tagRecord(put.Tags);\n          const { upsert, removed } = diffTags(currentTags, desiredTags);\n          if (upsert.length > 0) {\n            yield* mediatailor.tagResource({\n              ResourceArn: attrs.playbackConfigurationArn,\n              Tags: Object.fromEntries(upsert.map((t) => [t.Key, t.Value])),\n            });\n          }",
+        "19": "          if (removed.length > 0) {\n            yield* mediatailor.untagResource({\n              ResourceArn: attrs.playbackConfigurationArn,\n              TagKeys: removed,\n            });\n          }\n\n          yield* session.note(name);\n          return attrs;\n        }),\n        delete: Effect.fn(function* ({ output }) {\n\n\n\n          yield* mediatailor.deletePlaybackConfiguration({\n            Name: output.name,\n          });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null,
+          "11": null,
+          "12": null,
+          "13": null,
+          "14": null,
+          "15": null,
+          "16": null,
+          "17": null,
+          "18": null,
+          "19": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as mediatailor from \"@distilled.cloud/aws/mediatailor\";",
+          "2": "import * as Data from \"effect/Data\";",
+          "3": "import type * as Duration from \"effect/Duration\";",
+          "4": "import * as Effect from \"effect/Effect\";",
+          "5": "import * as Stream from \"effect/Stream\";",
+          "6": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "7": "import { isResolved } from \"../../Diff.ts\";",
+          "8": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "9": "import * as Provider from \"../../Provider.ts\";",
+          "10": "import { Resource } from \"../../Resource.ts\";",
+          "11": "import {",
+          "12": "createInternalTags,",
+          "13": "diffTags,",
+          "14": "hasAlchemyTags,",
+          "15": "tagRecord,",
+          "16": "} from \"../../Tags.ts\";",
+          "17": "import { toWireSeconds } from \"../../Util/Duration.ts\";",
+          "18": "import type { Providers } from \"../Providers.ts\";"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as mediatailor from \"@distilled.cloud/aws/mediatailor\";",
+          "2": "import * as Data from \"effect/Data\";",
+          "3": "import type * as Duration from \"effect/Duration\";",
+          "4": "import * as Effect from \"effect/Effect\";",
+          "5": "import * as Stream from \"effect/Stream\";",
+          "6": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "7": "import { isResolved } from \"../../Diff.ts\";",
+          "8": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "9": "import * as Provider from \"../../Provider.ts\";",
+          "10": "import { Resource } from \"../../Resource.ts\";",
+          "11": "import {",
+          "12": "createInternalTags,",
+          "13": "diffTags,",
+          "14": "hasAlchemyTags,",
+          "15": "tagRecord,",
+          "16": "} from \"../../Tags.ts\";",
+          "17": "import { toWireSeconds } from \"../../Util/Duration.ts\";",
+          "18": "import type { Providers } from \"../Providers.ts\";"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "23": "export interface PlaybackConfigurationCdn {",
+          "29": "adSegmentUrlPrefix?: string;",
+          "34": "contentSegmentUrlPrefix?: string;",
+          "35": "}",
+          "40": "export interface PlaybackConfigurationDash {",
+          "45": "mpdLocation?: string;",
+          "51": "originManifestType?: \"SINGLE_PERIOD\" | \"MULTI_PERIOD\";",
+          "52": "}"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "23": "export interface PlaybackConfigurationCdn {",
+          "29": "adSegmentUrlPrefix?: string;",
+          "34": "contentSegmentUrlPrefix?: string;",
+          "35": "}",
+          "40": "export interface PlaybackConfigurationDash {",
+          "45": "mpdLocation?: string;",
+          "51": "originManifestType?: \"SINGLE_PERIOD\" | \"MULTI_PERIOD\";",
+          "52": "}"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "57": "export interface PlaybackConfigurationAvailSuppression {",
+          "63": "mode?: \"OFF\" | \"BEHIND_LIVE_EDGE\" | \"AFTER_LIVE_EDGE\";",
+          "68": "value?: string;",
+          "73": "fillPolicy?: \"FULL_AVAIL_ONLY\" | \"PARTIAL_AVAIL\";",
+          "74": "}",
+          "79": "export interface PlaybackConfigurationBumper {",
+          "81": "startUrl?: string;",
+          "83": "endUrl?: string;",
+          "84": "}"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "57": "export interface PlaybackConfigurationAvailSuppression {",
+          "63": "mode?: \"OFF\" | \"BEHIND_LIVE_EDGE\" | \"AFTER_LIVE_EDGE\";",
+          "68": "value?: string;",
+          "73": "fillPolicy?: \"FULL_AVAIL_ONLY\" | \"PARTIAL_AVAIL\";",
+          "74": "}",
+          "79": "export interface PlaybackConfigurationBumper {",
+          "81": "startUrl?: string;",
+          "83": "endUrl?: string;",
+          "84": "}"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "89": "export interface PlaybackConfigurationLivePreRoll {",
+          "91": "adDecisionServerUrl?: string;",
+          "96": "maxDuration?: Duration.Input;",
+          "97": "}",
+          "103": "export interface PlaybackConfigurationLogs {",
+          "109": "percentEnabled: number;",
+          "115": "enabledLoggingStrategies?: (\"LEGACY_CLOUDWATCH\" | \"VENDED_LOGS\")[];",
+          "116": "}"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "89": "export interface PlaybackConfigurationLivePreRoll {",
+          "91": "adDecisionServerUrl?: string;",
+          "96": "maxDuration?: Duration.Input;",
+          "97": "}",
+          "103": "export interface PlaybackConfigurationLogs {",
+          "109": "percentEnabled: number;",
+          "115": "enabledLoggingStrategies?: (\"LEGACY_CLOUDWATCH\" | \"VENDED_LOGS\")[];",
+          "116": "}"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "121": "export interface PlaybackConfigurationManifestProcessingRules {",
+          "127": "adMarkerPassthroughEnabled?: boolean;",
+          "128": "}",
+          "130": "export interface PlaybackConfigurationProps {",
+          "138": "name?: string;",
+          "145": "adDecisionServerUrl: string;",
+          "150": "videoContentSourceUrl: string;"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "121": "export interface PlaybackConfigurationManifestProcessingRules {",
+          "127": "adMarkerPassthroughEnabled?: boolean;",
+          "128": "}",
+          "130": "export interface PlaybackConfigurationProps {",
+          "138": "name?: string;",
+          "145": "adDecisionServerUrl: string;",
+          "150": "videoContentSourceUrl: string;"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "156": "slateAdUrl?: string;",
+          "163": "personalizationThreshold?: Duration.Input;",
+          "168": "transcodeProfileName?: string;",
+          "174": "insertionMode?: \"STITCHED_ONLY\" | \"PLAYER_SELECT\";",
+          "178": "cdnConfiguration?: PlaybackConfigurationCdn;",
+          "182": "dashConfiguration?: PlaybackConfigurationDash;"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "156": "slateAdUrl?: string;",
+          "163": "personalizationThreshold?: Duration.Input;",
+          "168": "transcodeProfileName?: string;",
+          "174": "insertionMode?: \"STITCHED_ONLY\" | \"PLAYER_SELECT\";",
+          "178": "cdnConfiguration?: PlaybackConfigurationCdn;",
+          "182": "dashConfiguration?: PlaybackConfigurationDash;"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "186": "availSuppression?: PlaybackConfigurationAvailSuppression;",
+          "190": "bumper?: PlaybackConfigurationBumper;",
+          "194": "livePreRollConfiguration?: PlaybackConfigurationLivePreRoll;",
+          "198": "manifestProcessingRules?: PlaybackConfigurationManifestProcessingRules;",
+          "203": "logConfiguration?: PlaybackConfigurationLogs;",
+          "208": "tags?: Record<string, string>;",
+          "209": "}"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "186": "availSuppression?: PlaybackConfigurationAvailSuppression;",
+          "190": "bumper?: PlaybackConfigurationBumper;",
+          "194": "livePreRollConfiguration?: PlaybackConfigurationLivePreRoll;",
+          "198": "manifestProcessingRules?: PlaybackConfigurationManifestProcessingRules;",
+          "203": "logConfiguration?: PlaybackConfigurationLogs;",
+          "208": "tags?: Record<string, string>;",
+          "209": "}"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "211": "export interface PlaybackConfiguration extends Resource<",
+          "212": "\"AWS.MediaTailor.PlaybackConfiguration\",",
+          "213": "PlaybackConfigurationProps,",
+          "214": "{",
+          "216": "name: string;",
+          "218": "playbackConfigurationArn: string;",
+          "220": "playbackEndpointPrefix: string;",
+          "222": "sessionInitializationEndpointPrefix: string;",
+          "224": "hlsManifestEndpointPrefix: string | undefined;",
+          "226": "dashManifestEndpointPrefix: string | undefined;",
+          "227": "},",
+          "228": "never,",
+          "229": "Providers",
+          "230": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "211": "export interface PlaybackConfiguration extends Resource<",
+          "212": "\"AWS.MediaTailor.PlaybackConfiguration\",",
+          "213": "PlaybackConfigurationProps,",
+          "214": "{",
+          "216": "name: string;",
+          "218": "playbackConfigurationArn: string;",
+          "220": "playbackEndpointPrefix: string;",
+          "222": "sessionInitializationEndpointPrefix: string;",
+          "224": "hlsManifestEndpointPrefix: string | undefined;",
+          "226": "dashManifestEndpointPrefix: string | undefined;",
+          "227": "},",
+          "228": "never,",
+          "229": "Providers",
+          "230": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "280": "export const PlaybackConfiguration = Resource<PlaybackConfiguration>(",
+          "281": "\"AWS.MediaTailor.PlaybackConfiguration\",",
+          "282": ");",
+          "289": "export class MediaTailorIncompletePlaybackConfiguration extends Data.TaggedError(",
+          "290": "\"MediaTailorIncompletePlaybackConfiguration\",",
+          "291": ")<{ message: string }> {}",
+          "293": "type PlaybackConfigurationAttributes = {",
+          "294": "name: string;",
+          "295": "playbackConfigurationArn: string;",
+          "296": "playbackEndpointPrefix: string;",
+          "297": "sessionInitializationEndpointPrefix: string;",
+          "298": "hlsManifestEndpointPrefix: string | undefined;",
+          "299": "dashManifestEndpointPrefix: string | undefined;",
+          "300": "};",
+          "302": "export const PlaybackConfigurationProvider = () =>",
+          "303": "Provider.effect(",
+          "304": "PlaybackConfiguration,"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "280": "export const PlaybackConfiguration = Resource<PlaybackConfiguration>(",
+          "281": "\"AWS.MediaTailor.PlaybackConfiguration\",",
+          "282": ");",
+          "289": "export class MediaTailorIncompletePlaybackConfiguration extends Data.TaggedError(",
+          "290": "\"MediaTailorIncompletePlaybackConfiguration\",",
+          "291": ")<{ message: string }> {}",
+          "293": "type PlaybackConfigurationAttributes = {",
+          "294": "name: string;",
+          "295": "playbackConfigurationArn: string;",
+          "296": "playbackEndpointPrefix: string;",
+          "297": "sessionInitializationEndpointPrefix: string;",
+          "298": "hlsManifestEndpointPrefix: string | undefined;",
+          "299": "dashManifestEndpointPrefix: string | undefined;",
+          "300": "};",
+          "302": "export const PlaybackConfigurationProvider = () =>",
+          "303": "Provider.effect(",
+          "304": "PlaybackConfiguration,"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "305": "Effect.gen(function* () {",
+          "306": "const createName = Effect.fn(function* (",
+          "307": "id: string,",
+          "308": "props: Pick<PlaybackConfigurationProps, \"name\">,",
+          "309": ") {",
+          "311": "return props.name ?? (yield* createPhysicalName({ id, maxLength: 64 }));",
+          "312": "});"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "305": "Effect.gen(function* () {",
+          "306": "const createName = Effect.fn(function* (",
+          "307": "id: string,",
+          "308": "props: Pick<PlaybackConfigurationProps, \"name\">,",
+          "309": ") {",
+          "311": "return props.name ?? (yield* createPhysicalName({ id, maxLength: 64 }));",
+          "312": "});"
+        }
+      },
+      "start:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "314": "const toAttributes = Effect.fn(function* (",
+          "315": "config: mediatailor.GetPlaybackConfigurationResponse,",
+          "316": ") {",
+          "317": "if (",
+          "318": "config.Name === undefined ||",
+          "319": "config.PlaybackConfigurationArn === undefined ||",
+          "320": "config.PlaybackEndpointPrefix === undefined ||",
+          "321": "config.SessionInitializationEndpointPrefix === undefined",
+          "322": ") {",
+          "323": "return yield* new MediaTailorIncompletePlaybackConfiguration({",
+          "324": "message: `playback configuration '${config.Name}' is missing its ARN or endpoint prefixes`,",
+          "325": "});",
+          "326": "}",
+          "327": "return {",
+          "328": "name: config.Name,",
+          "329": "playbackConfigurationArn: config.PlaybackConfigurationArn,",
+          "330": "playbackEndpointPrefix: config.PlaybackEndpointPrefix,",
+          "331": "sessionInitializationEndpointPrefix:",
+          "332": "config.SessionInitializationEndpointPrefix,",
+          "333": "hlsManifestEndpointPrefix:",
+          "334": "config.HlsConfiguration?.ManifestEndpointPrefix,",
+          "335": "dashManifestEndpointPrefix:",
+          "336": "config.DashConfiguration?.ManifestEndpointPrefix,",
+          "337": "} satisfies PlaybackConfigurationAttributes;",
+          "338": "});"
+        }
+      },
+      "end:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "314": "const toAttributes = Effect.fn(function* (",
+          "315": "config: mediatailor.GetPlaybackConfigurationResponse,",
+          "316": ") {",
+          "317": "if (",
+          "318": "config.Name === undefined ||",
+          "319": "config.PlaybackConfigurationArn === undefined ||",
+          "320": "config.PlaybackEndpointPrefix === undefined ||",
+          "321": "config.SessionInitializationEndpointPrefix === undefined",
+          "322": ") {",
+          "323": "return yield* new MediaTailorIncompletePlaybackConfiguration({",
+          "324": "message: `playback configuration '${config.Name}' is missing its ARN or endpoint prefixes`,",
+          "325": "});",
+          "326": "}",
+          "327": "return {",
+          "328": "name: config.Name,",
+          "329": "playbackConfigurationArn: config.PlaybackConfigurationArn,",
+          "330": "playbackEndpointPrefix: config.PlaybackEndpointPrefix,",
+          "331": "sessionInitializationEndpointPrefix:",
+          "332": "config.SessionInitializationEndpointPrefix,",
+          "333": "hlsManifestEndpointPrefix:",
+          "334": "config.HlsConfiguration?.ManifestEndpointPrefix,",
+          "335": "dashManifestEndpointPrefix:",
+          "336": "config.DashConfiguration?.ManifestEndpointPrefix,",
+          "337": "} satisfies PlaybackConfigurationAttributes;",
+          "338": "});"
+        }
+      },
+      "start:providers/idempotent-delete:12": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"12\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "340": "const observe = (name: string) =>",
+          "341": "mediatailor.getPlaybackConfiguration({ Name: name }).pipe(",
+          "342": "Effect.map(",
+          "343": "(",
+          "344": "config,",
+          "345": "): mediatailor.GetPlaybackConfigurationResponse | undefined =>",
+          "346": "config,",
+          "347": "),",
+          "349": "Effect.catchTag(\"PlaybackConfigurationNotFound\", () =>",
+          "350": "Effect.succeed(undefined),",
+          "351": "),",
+          "352": ");",
+          "354": "const desiredRequest = (",
+          "355": "name: string,",
+          "356": "props: PlaybackConfigurationProps,",
+          "357": "): mediatailor.PutPlaybackConfigurationRequest => ({",
+          "358": "Name: name,",
+          "359": "AdDecisionServerUrl: props.adDecisionServerUrl,",
+          "360": "VideoContentSourceUrl: props.videoContentSourceUrl,",
+          "361": "SlateAdUrl: props.slateAdUrl,",
+          "362": "PersonalizationThresholdSeconds: toWireSeconds(",
+          "363": "props.personalizationThreshold,",
+          "364": "),",
+          "365": "TranscodeProfileName: props.transcodeProfileName,",
+          "366": "InsertionMode: props.insertionMode,"
+        }
+      },
+      "end:providers/idempotent-delete:12": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"12\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "340": "const observe = (name: string) =>",
+          "341": "mediatailor.getPlaybackConfiguration({ Name: name }).pipe(",
+          "342": "Effect.map(",
+          "343": "(",
+          "344": "config,",
+          "345": "): mediatailor.GetPlaybackConfigurationResponse | undefined =>",
+          "346": "config,",
+          "347": "),",
+          "349": "Effect.catchTag(\"PlaybackConfigurationNotFound\", () =>",
+          "350": "Effect.succeed(undefined),",
+          "351": "),",
+          "352": ");",
+          "354": "const desiredRequest = (",
+          "355": "name: string,",
+          "356": "props: PlaybackConfigurationProps,",
+          "357": "): mediatailor.PutPlaybackConfigurationRequest => ({",
+          "358": "Name: name,",
+          "359": "AdDecisionServerUrl: props.adDecisionServerUrl,",
+          "360": "VideoContentSourceUrl: props.videoContentSourceUrl,",
+          "361": "SlateAdUrl: props.slateAdUrl,",
+          "362": "PersonalizationThresholdSeconds: toWireSeconds(",
+          "363": "props.personalizationThreshold,",
+          "364": "),",
+          "365": "TranscodeProfileName: props.transcodeProfileName,",
+          "366": "InsertionMode: props.insertionMode,"
+        }
+      },
+      "start:providers/idempotent-delete:13": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"13\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "367": "CdnConfiguration: props.cdnConfiguration && {",
+          "368": "AdSegmentUrlPrefix: props.cdnConfiguration.adSegmentUrlPrefix,",
+          "369": "ContentSegmentUrlPrefix:",
+          "370": "props.cdnConfiguration.contentSegmentUrlPrefix,",
+          "371": "},",
+          "372": "DashConfiguration: props.dashConfiguration && {",
+          "373": "MpdLocation: props.dashConfiguration.mpdLocation,",
+          "374": "OriginManifestType: props.dashConfiguration.originManifestType,",
+          "375": "},",
+          "376": "AvailSuppression: props.availSuppression && {",
+          "377": "Mode: props.availSuppression.mode,",
+          "378": "Value: props.availSuppression.value,",
+          "379": "FillPolicy: props.availSuppression.fillPolicy,",
+          "380": "},",
+          "381": "Bumper: props.bumper && {",
+          "382": "StartUrl: props.bumper.startUrl,",
+          "383": "EndUrl: props.bumper.endUrl,",
+          "384": "},",
+          "385": "LivePreRollConfiguration: props.livePreRollConfiguration && {",
+          "386": "AdDecisionServerUrl:",
+          "387": "props.livePreRollConfiguration.adDecisionServerUrl,",
+          "388": "MaxDurationSeconds: toWireSeconds(",
+          "389": "props.livePreRollConfiguration.maxDuration,",
+          "390": "),",
+          "391": "},"
+        }
+      },
+      "end:providers/idempotent-delete:13": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"13\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "367": "CdnConfiguration: props.cdnConfiguration && {",
+          "368": "AdSegmentUrlPrefix: props.cdnConfiguration.adSegmentUrlPrefix,",
+          "369": "ContentSegmentUrlPrefix:",
+          "370": "props.cdnConfiguration.contentSegmentUrlPrefix,",
+          "371": "},",
+          "372": "DashConfiguration: props.dashConfiguration && {",
+          "373": "MpdLocation: props.dashConfiguration.mpdLocation,",
+          "374": "OriginManifestType: props.dashConfiguration.originManifestType,",
+          "375": "},",
+          "376": "AvailSuppression: props.availSuppression && {",
+          "377": "Mode: props.availSuppression.mode,",
+          "378": "Value: props.availSuppression.value,",
+          "379": "FillPolicy: props.availSuppression.fillPolicy,",
+          "380": "},",
+          "381": "Bumper: props.bumper && {",
+          "382": "StartUrl: props.bumper.startUrl,",
+          "383": "EndUrl: props.bumper.endUrl,",
+          "384": "},",
+          "385": "LivePreRollConfiguration: props.livePreRollConfiguration && {",
+          "386": "AdDecisionServerUrl:",
+          "387": "props.livePreRollConfiguration.adDecisionServerUrl,",
+          "388": "MaxDurationSeconds: toWireSeconds(",
+          "389": "props.livePreRollConfiguration.maxDuration,",
+          "390": "),",
+          "391": "},"
+        }
+      },
+      "start:providers/idempotent-delete:14": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"14\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "392": "ManifestProcessingRules: props.manifestProcessingRules && {",
+          "393": "AdMarkerPassthrough: {",
+          "394": "Enabled: props.manifestProcessingRules.adMarkerPassthroughEnabled,",
+          "395": "},",
+          "396": "},",
+          "397": "});",
+          "399": "return PlaybackConfiguration.Provider.of({",
+          "400": "stables: [\"name\", \"playbackConfigurationArn\"],"
+        }
+      },
+      "end:providers/idempotent-delete:14": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"14\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "392": "ManifestProcessingRules: props.manifestProcessingRules && {",
+          "393": "AdMarkerPassthrough: {",
+          "394": "Enabled: props.manifestProcessingRules.adMarkerPassthroughEnabled,",
+          "395": "},",
+          "396": "},",
+          "397": "});",
+          "399": "return PlaybackConfiguration.Provider.of({",
+          "400": "stables: [\"name\", \"playbackConfigurationArn\"],"
+        }
+      },
+      "start:providers/idempotent-delete:15": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"15\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "401": "list: () =>",
+          "402": "Effect.gen(function* () {",
+          "403": "const items = yield* mediatailor.listPlaybackConfigurations",
+          "404": ".items({})",
+          "405": ".pipe(Stream.runCollect);",
+          "406": "return Array.from(items).flatMap((config) =>",
+          "407": "config.Name !== undefined &&",
+          "408": "config.PlaybackConfigurationArn !== undefined &&",
+          "409": "config.PlaybackEndpointPrefix !== undefined &&",
+          "410": "config.SessionInitializationEndpointPrefix !== undefined",
+          "411": "? [",
+          "412": "{",
+          "413": "name: config.Name,",
+          "414": "playbackConfigurationArn: config.PlaybackConfigurationArn,",
+          "415": "playbackEndpointPrefix: config.PlaybackEndpointPrefix,",
+          "416": "sessionInitializationEndpointPrefix:",
+          "417": "config.SessionInitializationEndpointPrefix,",
+          "418": "hlsManifestEndpointPrefix:",
+          "419": "config.HlsConfiguration?.ManifestEndpointPrefix,",
+          "420": "dashManifestEndpointPrefix:",
+          "421": "config.DashConfiguration?.ManifestEndpointPrefix,",
+          "422": "},",
+          "423": "]",
+          "424": ": [],",
+          "425": ");",
+          "426": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:15": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"15\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "401": "list: () =>",
+          "402": "Effect.gen(function* () {",
+          "403": "const items = yield* mediatailor.listPlaybackConfigurations",
+          "404": ".items({})",
+          "405": ".pipe(Stream.runCollect);",
+          "406": "return Array.from(items).flatMap((config) =>",
+          "407": "config.Name !== undefined &&",
+          "408": "config.PlaybackConfigurationArn !== undefined &&",
+          "409": "config.PlaybackEndpointPrefix !== undefined &&",
+          "410": "config.SessionInitializationEndpointPrefix !== undefined",
+          "411": "? [",
+          "412": "{",
+          "413": "name: config.Name,",
+          "414": "playbackConfigurationArn: config.PlaybackConfigurationArn,",
+          "415": "playbackEndpointPrefix: config.PlaybackEndpointPrefix,",
+          "416": "sessionInitializationEndpointPrefix:",
+          "417": "config.SessionInitializationEndpointPrefix,",
+          "418": "hlsManifestEndpointPrefix:",
+          "419": "config.HlsConfiguration?.ManifestEndpointPrefix,",
+          "420": "dashManifestEndpointPrefix:",
+          "421": "config.DashConfiguration?.ManifestEndpointPrefix,",
+          "422": "},",
+          "423": "]",
+          "424": ": [],",
+          "425": ");",
+          "426": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:16": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"16\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "427": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "428": "const name = output?.name ?? (yield* createName(id, olds ?? {}));",
+          "429": "const found = yield* observe(name);",
+          "430": "if (found === undefined) return undefined;",
+          "431": "const attrs = yield* toAttributes(found);",
+          "432": "return (yield* hasAlchemyTags(id, tagRecord(found.Tags)))",
+          "433": "? attrs",
+          "434": ": Unowned(attrs);",
+          "435": "}),",
+          "436": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "437": "if (!isResolved(news)) return undefined;",
+          "438": "const oldName = yield* createName(id, olds ?? {});",
+          "439": "const newName = yield* createName(id, news ?? {});",
+          "440": "if (oldName !== newName) {",
+          "441": "return { action: \"replace\" } as const;",
+          "442": "}",
+          "444": "}),",
+          "445": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "446": "const name = output?.name ?? (yield* createName(id, news));",
+          "447": "const internalTags = yield* createInternalTags(id);",
+          "448": "const desiredTags = { ...news.tags, ...internalTags };"
+        }
+      },
+      "end:providers/idempotent-delete:16": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"16\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "427": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "428": "const name = output?.name ?? (yield* createName(id, olds ?? {}));",
+          "429": "const found = yield* observe(name);",
+          "430": "if (found === undefined) return undefined;",
+          "431": "const attrs = yield* toAttributes(found);",
+          "432": "return (yield* hasAlchemyTags(id, tagRecord(found.Tags)))",
+          "433": "? attrs",
+          "434": ": Unowned(attrs);",
+          "435": "}),",
+          "436": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "437": "if (!isResolved(news)) return undefined;",
+          "438": "const oldName = yield* createName(id, olds ?? {});",
+          "439": "const newName = yield* createName(id, news ?? {});",
+          "440": "if (oldName !== newName) {",
+          "441": "return { action: \"replace\" } as const;",
+          "442": "}",
+          "444": "}),",
+          "445": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "446": "const name = output?.name ?? (yield* createName(id, news));",
+          "447": "const internalTags = yield* createInternalTags(id);",
+          "448": "const desiredTags = { ...news.tags, ...internalTags };"
+        }
+      },
+      "start:providers/idempotent-delete:17": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"17\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "457": "const put = yield* mediatailor.putPlaybackConfiguration({",
+          "458": "...desiredRequest(name, news),",
+          "459": "Tags: desiredTags,",
+          "460": "});",
+          "461": "const attrs = yield* toAttributes(put);",
+          "468": "const desiredLogs = news.logConfiguration;",
+          "469": "const observedLogs = put.LogConfiguration;",
+          "470": "const observedPercent = observedLogs?.PercentEnabled ?? 0;",
+          "471": "const desiredPercent = desiredLogs?.percentEnabled ?? 0;",
+          "472": "const observedStrategies = [",
+          "473": "...(observedLogs?.EnabledLoggingStrategies ?? []),",
+          "474": "].sort();",
+          "475": "const desiredStrategies =",
+          "476": "desiredLogs === undefined",
+          "477": "? observedStrategies",
+          "478": ": [...(desiredLogs.enabledLoggingStrategies ?? [])].sort();"
+        }
+      },
+      "end:providers/idempotent-delete:17": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"17\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "457": "const put = yield* mediatailor.putPlaybackConfiguration({",
+          "458": "...desiredRequest(name, news),",
+          "459": "Tags: desiredTags,",
+          "460": "});",
+          "461": "const attrs = yield* toAttributes(put);",
+          "468": "const desiredLogs = news.logConfiguration;",
+          "469": "const observedLogs = put.LogConfiguration;",
+          "470": "const observedPercent = observedLogs?.PercentEnabled ?? 0;",
+          "471": "const desiredPercent = desiredLogs?.percentEnabled ?? 0;",
+          "472": "const observedStrategies = [",
+          "473": "...(observedLogs?.EnabledLoggingStrategies ?? []),",
+          "474": "].sort();",
+          "475": "const desiredStrategies =",
+          "476": "desiredLogs === undefined",
+          "477": "? observedStrategies",
+          "478": ": [...(desiredLogs.enabledLoggingStrategies ?? [])].sort();"
+        }
+      },
+      "start:providers/idempotent-delete:18": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"18\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "479": "if (",
+          "480": "observedPercent !== desiredPercent ||",
+          "481": "observedStrategies.join(\",\") !== desiredStrategies.join(\",\")",
+          "482": ") {",
+          "483": "yield* mediatailor.configureLogsForPlaybackConfiguration({",
+          "484": "PlaybackConfigurationName: name,",
+          "485": "PercentEnabled: desiredPercent,",
+          "486": "...(desiredLogs?.enabledLoggingStrategies",
+          "487": "? {",
+          "488": "EnabledLoggingStrategies:",
+          "489": "desiredLogs.enabledLoggingStrategies,",
+          "490": "}",
+          "491": ": {}),",
+          "492": "});",
+          "493": "}",
+          "498": "const currentTags = tagRecord(put.Tags);",
+          "499": "const { upsert, removed } = diffTags(currentTags, desiredTags);",
+          "500": "if (upsert.length > 0) {",
+          "501": "yield* mediatailor.tagResource({",
+          "502": "ResourceArn: attrs.playbackConfigurationArn,",
+          "503": "Tags: Object.fromEntries(upsert.map((t) => [t.Key, t.Value])),",
+          "504": "});",
+          "505": "}"
+        }
+      },
+      "end:providers/idempotent-delete:18": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"18\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "479": "if (",
+          "480": "observedPercent !== desiredPercent ||",
+          "481": "observedStrategies.join(\",\") !== desiredStrategies.join(\",\")",
+          "482": ") {",
+          "483": "yield* mediatailor.configureLogsForPlaybackConfiguration({",
+          "484": "PlaybackConfigurationName: name,",
+          "485": "PercentEnabled: desiredPercent,",
+          "486": "...(desiredLogs?.enabledLoggingStrategies",
+          "487": "? {",
+          "488": "EnabledLoggingStrategies:",
+          "489": "desiredLogs.enabledLoggingStrategies,",
+          "490": "}",
+          "491": ": {}),",
+          "492": "});",
+          "493": "}",
+          "498": "const currentTags = tagRecord(put.Tags);",
+          "499": "const { upsert, removed } = diffTags(currentTags, desiredTags);",
+          "500": "if (upsert.length > 0) {",
+          "501": "yield* mediatailor.tagResource({",
+          "502": "ResourceArn: attrs.playbackConfigurationArn,",
+          "503": "Tags: Object.fromEntries(upsert.map((t) => [t.Key, t.Value])),",
+          "504": "});",
+          "505": "}"
+        }
+      },
+      "start:providers/idempotent-delete:19": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"19\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "506": "if (removed.length > 0) {",
+          "507": "yield* mediatailor.untagResource({",
+          "508": "ResourceArn: attrs.playbackConfigurationArn,",
+          "509": "TagKeys: removed,",
+          "510": "});",
+          "511": "}",
+          "513": "yield* session.note(name);",
+          "514": "return attrs;",
+          "515": "}),",
+          "516": "delete: Effect.fn(function* ({ output }) {",
+          "520": "yield* mediatailor.deletePlaybackConfiguration({",
+          "521": "Name: output.name,",
+          "522": "});",
+          "523": "}),",
+          "524": "});",
+          "525": "}),",
+          "526": ");"
+        }
+      },
+      "end:providers/idempotent-delete:19": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"19\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "506": "if (removed.length > 0) {",
+          "507": "yield* mediatailor.untagResource({",
+          "508": "ResourceArn: attrs.playbackConfigurationArn,",
+          "509": "TagKeys: removed,",
+          "510": "});",
+          "511": "}",
+          "513": "yield* session.note(name);",
+          "514": "return attrs;",
+          "515": "}),",
+          "516": "delete: Effect.fn(function* ({ output }) {",
+          "520": "yield* mediatailor.deletePlaybackConfiguration({",
+          "521": "Name: output.name,",
+          "522": "});",
+          "523": "}),",
+          "524": "});",
+          "525": "}),",
+          "526": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

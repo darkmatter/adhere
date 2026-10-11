@@ -1,0 +1,50 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Cloudflare/Stream/StreamBinding.ts",
+  "kind": "judge",
+  "ordinal": 239,
+  "artifact": "attempt-00239.json",
+  "started": "2026-10-11T03:27:56.946Z",
+  "estimatedTokens": 2513,
+  "reservedTokens": 64000,
+  "chargedTokens": 1440,
+  "outcome": "answered",
+  "milliseconds": 98.08054399999673,
+  "referencesPresent": false,
+  "bodyDigest": "7d262639c0615a7f93bee9d1e1d18194f98a1e4235fbd5a8d44df2f7da75ea9c",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.11}},\"usage\":{\"input_tokens\":1440,\"output_tokens\":25}}",
+  "inputTokens": 1440,
+  "answers": {
+    "providers/idempotent-delete": 0.11
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import type * as cf from \"@cloudflare/workers-types\";\nimport * as Effect from \"effect/Effect\";\nimport type { RuntimeContext } from \"../../RuntimeContext.ts\";\nimport type * as Binding from \"../Workers/Binding.ts\";\nimport { makeBindingLayer } from \"../Workers/BindingLayer.ts\";\nimport {\n  Stream,\n  StreamError,\n  type StreamClient,\n  type StreamVideoClient,\n} from \"./Stream.ts\";\n\n\nexport type StreamBinding = Binding.Binding<\n  Stream[\"key\"],\n  StreamClient,\n  Stream\n>;",
+        "2": "\n\n\n\n\n\n\n\n\n\n\nexport const StreamBinding = makeBindingLayer<\n  Stream,\n  cf.StreamBinding,\n  StreamClient\n>(Stream, (raw): StreamClient => {\n  const call = <T>(\n    fn: (binding: cf.StreamBinding) => Promise<T>,\n  ): Effect.Effect<T, StreamError, RuntimeContext> =>\n    raw.pipe(Effect.flatMap((binding) => tryPromise(() => fn(binding))));",
+        "3": "\n  const video = (id: string): StreamVideoClient => ({\n    id,\n    details: () => call((binding) => binding.video(id).details()),\n    update: (params) => call((binding) => binding.video(id).update(params)),\n    delete: () => call((binding) => binding.video(id).delete()),\n    generateToken: () => call((binding) => binding.video(id).generateToken()),\n    downloads: {\n      generate: (downloadType) =>\n        call((binding) => binding.video(id).downloads.generate(downloadType)),\n      get: () => call((binding) => binding.video(id).downloads.get()),\n      delete: (downloadType) =>\n        call((binding) => binding.video(id).downloads.delete(downloadType)),\n    },\n    captions: {\n      upload: (language, input) =>\n        call((binding) =>\n          binding\n            .video(id)\n            .captions.upload(language, input as unknown as cf.ReadableStream),\n        ),\n      generate: (language) =>\n        call((binding) => binding.video(id).captions.generate(language)),\n      list: (language) =>\n        call((binding) => binding.video(id).captions.list(language)),\n      delete: (language) =>\n        call((binding) => binding.video(id).captions.delete(language)),\n    },\n  });",
+        "4": "\n  return {\n    raw,\n    upload: (url, params) => call((binding) => binding.upload(url, params)),\n    createDirectUpload: (params) =>\n      call((binding) => binding.createDirectUpload(params)),\n    video,\n    videos: {\n      list: (params) => call((binding) => binding.videos.list(params)),\n    },\n    watermarks: {\n      generate: (input, params) =>\n        call((binding) =>\n\n\n          binding.watermarks.generate(\n            input as unknown as cf.ReadableStream,\n            params,\n          ),\n        ),\n      list: () => call((binding) => binding.watermarks.list()),\n      get: (watermarkId) =>\n        call((binding) => binding.watermarks.get(watermarkId)),\n      delete: (watermarkId) =>\n        call((binding) => binding.watermarks.delete(watermarkId)),\n    },\n  } satisfies StreamClient;\n});\n\nconst tryPromise = <T>(fn: () => Promise<T>): Effect.Effect<T, StreamError> =>",
+        "5": "  Effect.tryPromise({\n    try: fn,\n    catch: (error: any) =>\n      new StreamError({\n        message: error?.message ?? \"Unknown Cloudflare Stream error\",\n        code: typeof error?.code === \"number\" ? error.code : undefined,\n        statusCode:\n          typeof error?.statusCode === \"number\" ? error.statusCode : undefined,\n        cause: error,\n      }),\n  });\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/SES/ReceiptFilter.ts",
+  "kind": "judge",
+  "ordinal": 222,
+  "artifact": "attempt-00222.json",
+  "started": "2026-10-11T03:20:43.104Z",
+  "estimatedTokens": 2633,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.02667999999903259,
+  "referencesPresent": false,
+  "bodyDigest": "e137026e7e0eed012e6330f069c60dd1ecbe0621cf195d7106cad6fe5ce02e75",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as ses from \"@distilled.cloud/aws/ses\";\nimport * as Effect from \"effect/Effect\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\n\n\n\n\nexport type ReceiptFilterPolicy = ses.ReceiptFilterPolicy;\n\nexport interface ReceiptIpFilter {\n\n\n\n  policy: ReceiptFilterPolicy;\n\n\n\n\n  cidr: string;\n}",
+        "2": "\nexport interface ReceiptFilterProps {\n\n\n\n\n\n\n  filterName?: string;\n\n\n\n\n  ipFilter: ReceiptIpFilter;\n}\n\nexport interface ReceiptFilter extends Resource<\n  \"AWS.SES.ReceiptFilter\",\n  ReceiptFilterProps,\n  {\n\n    filterName: string;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ReceiptFilter = Resource<ReceiptFilter>(\"AWS.SES.ReceiptFilter\");\n\nexport const ReceiptFilterProvider = () =>\n  Provider.effect(\n    ReceiptFilter,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: Pick<ReceiptFilterProps, \"filterName\">,\n      ) {\n        return (\n          props.filterName ?? (yield* createPhysicalName({ id, maxLength: 64 }))\n        );\n      });\n\n      const findFilter = Effect.fn(function* (name: string) {\n        const filters = yield* ses\n          .listReceiptFilters({})\n          .pipe(Effect.map((response) => response.Filters ?? []));\n        return filters.find((filter) => filter.Name === name);\n      });\n\n      return ReceiptFilter.Provider.of({\n        stables: [\"filterName\"],",
+        "4": "\n\n\n        list: () =>\n          ses\n            .listReceiptFilters({})\n            .pipe(\n              Effect.map((response) =>\n                (response.Filters ?? []).flatMap((filter) =>\n                  filter.Name ? [{ filterName: filter.Name }] : [],\n                ),\n              ),\n            ),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name = output?.filterName ?? (yield* createName(id, olds));\n          const found = yield* findFilter(name);\n          return found ? { filterName: name } : undefined;\n        }),\n\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (\n            oldName !== newName ||\n            olds.ipFilter.policy !== news.ipFilter.policy ||\n            olds.ipFilter.cidr !== news.ipFilter.cidr\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "5": "\n        reconcile: Effect.fn(function* ({ id, news, output }) {\n          const name = output?.filterName ?? (yield* createName(id, news));\n\n\n          const observed = yield* findFilter(name);\n\n\n          if (observed === undefined) {\n            yield* ses\n              .createReceiptFilter({\n                Filter: {\n                  Name: name,\n                  IpFilter: {\n                    Policy: news.ipFilter.policy,\n                    Cidr: news.ipFilter.cidr,\n                  },\n                },\n              })\n              .pipe(\n                Effect.catchTag(\"AlreadyExistsException\", () =>\n                  Effect.succeed({}),\n                ),\n              );\n          }\n\n          return { filterName: name };\n        }),",
+        "6": "\n        delete: Effect.fn(function* ({ output }) {\n\n          yield* ses.deleteReceiptFilter({ FilterName: output.filterName });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

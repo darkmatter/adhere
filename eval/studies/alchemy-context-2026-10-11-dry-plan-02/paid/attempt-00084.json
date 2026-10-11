@@ -1,0 +1,56 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CodeDeploy/DeploymentConfig.ts",
+  "kind": "judge",
+  "ordinal": 84,
+  "artifact": "attempt-00084.json",
+  "started": "2026-10-11T03:27:30.959Z",
+  "estimatedTokens": 3940,
+  "reservedTokens": 64000,
+  "chargedTokens": 2445,
+  "outcome": "answered",
+  "milliseconds": 78.14012700000058,
+  "referencesPresent": false,
+  "bodyDigest": "beaf253f5be44b89a88ee92e51606561a6a9a887101cbc2ce9406b27b0f0f415",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.82}},\"usage\":{\"input_tokens\":2445,\"output_tokens\":25}}",
+  "inputTokens": 2445,
+  "answers": {
+    "providers/idempotent-delete": 0.82
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as codedeploy from \"@distilled.cloud/aws/codedeploy\";\nimport type * as Duration from \"effect/Duration\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { toWireSeconds } from \"../../Util/Duration.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";",
+        "2": "\n\n\n\n\n\n\nexport interface ZonalConfigProps {\n\n\n\n\n\n  firstZoneMonitorDuration?: Duration.Input;\n\n\n\n\n\n  monitorDuration?: Duration.Input;\n\n\n\n  minimumHealthyHostsPerZone?: codedeploy.MinimumHealthyHostsPerZone;\n}",
+        "3": "\n\nconst toWireZonalConfig = (\n  props: ZonalConfigProps | undefined,\n): codedeploy.ZonalConfig | undefined =>\n  props === undefined\n    ? undefined\n    : {\n        firstZoneMonitorDurationInSeconds: toWireSeconds(\n          props.firstZoneMonitorDuration,\n        ),\n        monitorDurationInSeconds: toWireSeconds(props.monitorDuration),\n        minimumHealthyHostsPerZone: props.minimumHealthyHostsPerZone,\n      };\n\nexport interface DeploymentConfigProps {\n\n\n\n\n\n  deploymentConfigName?: string;\n\n\n\n\n\n  computePlatform?: \"Server\" | \"Lambda\" | \"ECS\";",
+        "4": "\n\n\n\n  minimumHealthyHosts?: codedeploy.MinimumHealthyHosts;\n\n\n\n\n\n\n  trafficRoutingConfig?: codedeploy.TrafficRoutingConfig;\n\n\n\n\n  zonalConfig?: ZonalConfigProps;\n}",
+        "5": "\nexport interface DeploymentConfig extends Resource<\n  \"AWS.CodeDeploy.DeploymentConfig\",\n  DeploymentConfigProps,\n  {\n\n    deploymentConfigName: string;\n\n    deploymentConfigId: string;\n\n    deploymentConfigArn: string;\n\n    computePlatform: string;\n  },\n  never,\n  Providers\n> {}",
+        "6": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const DeploymentConfig = Resource<DeploymentConfig>(\n  \"AWS.CodeDeploy.DeploymentConfig\",\n);\n\n\nconst deploymentConfigArn = (\n  region: string,\n  account: string,\n  name: string,\n): string => `arn:aws:codedeploy:${region}:${account}:deploymentconfig:${name}`;\n\nexport const DeploymentConfigProvider = () =>\n  Provider.effect(\n    DeploymentConfig,\n    Effect.gen(function* () {\n      const toName = (id: string, props: Partial<DeploymentConfigProps>) =>\n        props.deploymentConfigName\n          ? Effect.succeed(props.deploymentConfigName)\n          : createPhysicalName({ id, maxLength: 100 });\n\n      const getConfig = Effect.fn(function* (name: string) {\n        const response = yield* codedeploy\n          .getDeploymentConfig({ deploymentConfigName: name })\n          .pipe(\n            Effect.catchTag(\"DeploymentConfigDoesNotExistException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n        return response?.deploymentConfigInfo;\n      });",
+        "7": "\n      return {\n        stables: [\n          \"deploymentConfigName\",\n          \"deploymentConfigId\",\n          \"computePlatform\",\n        ],\n\n        diff: Effect.fn(function* ({ id, olds, news }) {\n          if (!isResolved(news)) return undefined;\n          if (\n            (yield* toName(id, olds ?? {})) !== (yield* toName(id, news ?? {}))\n          ) {\n            return { action: \"replace\" } as const;\n          }\n\n\n          const key = (props: Partial<DeploymentConfigProps>) =>\n            JSON.stringify([\n              props.computePlatform ?? \"Server\",\n              props.minimumHealthyHosts,\n              props.trafficRoutingConfig,\n              toWireZonalConfig(props.zonalConfig),\n            ]);\n          if (key(olds ?? {}) !== key(news ?? {})) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "8": "\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name =\n            output?.deploymentConfigName ?? (yield* toName(id, olds ?? {}));\n          const config = yield* getConfig(name);\n          if (config?.deploymentConfigId === undefined) return undefined;\n\n\n          return {\n            deploymentConfigName: config.deploymentConfigName ?? name,\n            deploymentConfigId: config.deploymentConfigId,\n            deploymentConfigArn: deploymentConfigArn(region, accountId, name),\n            computePlatform: config.computePlatform ?? \"Server\",\n          };\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name =\n            output?.deploymentConfigName ?? (yield* toName(id, news));\n          const computePlatform = news.computePlatform ?? \"Server\";\n\n\n          let config = yield* getConfig(name);",
+        "9": "\n\n\n          if (config?.deploymentConfigId === undefined) {\n            yield* codedeploy\n              .createDeploymentConfig({\n                deploymentConfigName: name,\n                computePlatform,\n                minimumHealthyHosts: news.minimumHealthyHosts,\n                trafficRoutingConfig: news.trafficRoutingConfig,\n                zonalConfig: toWireZonalConfig(news.zonalConfig),\n              })\n              .pipe(\n                Effect.catchTag(\"DeploymentConfigAlreadyExistsException\", () =>\n                  Effect.succeed(undefined),\n                ),\n              );\n            config = yield* getConfig(name);\n          }\n\n\n          yield* session.note(name);\n          return {\n            deploymentConfigName: config?.deploymentConfigName ?? name,\n            deploymentConfigId: config?.deploymentConfigId ?? \"\",\n            deploymentConfigArn: deploymentConfigArn(region, accountId, name),\n            computePlatform: config?.computePlatform ?? computePlatform,\n          };\n        }),",
+        "10": "\n        delete: Effect.fn(function* ({ output }) {\n\n\n\n\n\n          yield* codedeploy\n            .deleteDeploymentConfig({\n              deploymentConfigName: output.deploymentConfigName,\n            })\n            .pipe(\n              Effect.retry({\n                while: (e): boolean =>\n                  e._tag === \"DeploymentConfigInUseException\",\n                schedule: Schedule.max([\n                  Schedule.fixed(3000),\n                  Schedule.recurs(10),\n                ]),\n              }),\n            );\n        }),",
+        "11": "\n        list: () =>\n          Effect.gen(function* () {\n            const { accountId, region } = yield* AWSEnvironment.current;\n            const names = yield* codedeploy.listDeploymentConfigs\n              .pages({})\n              .pipe(\n                Stream.runCollect,\n                Effect.map((chunk) =>\n                  Array.from(chunk).flatMap(\n                    (page) => page.deploymentConfigsList ?? [],\n                  ),\n                ),\n              );\n            return (\n              names\n\n\n                .filter((name) => !name.startsWith(\"CodeDeployDefault.\"))\n                .map((name) => ({\n                  deploymentConfigName: name,\n                  deploymentConfigId: \"\",\n                  deploymentConfigArn: deploymentConfigArn(\n                    region,\n                    accountId,\n                    name,\n                  ),\n                  computePlatform: \"\",\n                }))\n            );\n          }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

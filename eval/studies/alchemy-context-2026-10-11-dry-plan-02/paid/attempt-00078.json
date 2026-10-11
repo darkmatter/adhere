@@ -1,0 +1,55 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CodeDeploy/Application.ts",
+  "kind": "judge",
+  "ordinal": 78,
+  "artifact": "attempt-00078.json",
+  "started": "2026-10-11T03:27:29.976Z",
+  "estimatedTokens": 3805,
+  "reservedTokens": 64000,
+  "chargedTokens": 2290,
+  "outcome": "answered",
+  "milliseconds": 83.17869699999937,
+  "referencesPresent": false,
+  "bodyDigest": "3858a3798e972c3e06a435c293ce5c9d46231bf8da6aec2f154ebb524bf1b261",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.94}},\"usage\":{\"input_tokens\":2290,\"output_tokens\":25}}",
+  "inputTokens": 2290,
+  "answers": {
+    "providers/idempotent-delete": 0.94
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as codedeploy from \"@distilled.cloud/aws/codedeploy\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, diffTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface ApplicationProps {\n\n\n\n\n  applicationName?: string;\n\n\n\n\n\n  computePlatform?: \"Server\" | \"Lambda\" | \"ECS\";\n\n\n\n  tags?: Record<string, string>;\n}",
+        "2": "\nexport interface Application extends Resource<\n  \"AWS.CodeDeploy.Application\",\n  ApplicationProps,\n  {\n\n    applicationName: string;\n\n    applicationId: string;\n\n    applicationArn: string;\n\n    computePlatform: string;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Application = Resource<Application>(\"AWS.CodeDeploy.Application\");\n\n\nconst applicationArn = (\n  region: string,\n  account: string,\n  name: string,\n): string => `arn:aws:codedeploy:${region}:${account}:application:${name}`;\n\n\nconst toTagRecord = (\n  tags: ReadonlyArray<{ Key?: string; Value?: string }> | undefined,\n): Record<string, string> =>\n  Object.fromEntries(\n    (tags ?? [])\n      .filter(\n        (tag): tag is { Key: string; Value: string } =>\n          typeof tag.Key === \"string\" && typeof tag.Value === \"string\",\n      )\n      .map((tag) => [tag.Key, tag.Value]),\n  );\n\nexport const ApplicationProvider = () =>\n  Provider.effect(\n    Application,\n    Effect.gen(function* () {\n      const toName = (id: string, props: Partial<ApplicationProps>) =>\n        props.applicationName\n          ? Effect.succeed(props.applicationName)\n          : createPhysicalName({ id, maxLength: 100 });",
+        "4": "\n      const getApplication = Effect.fn(function* (name: string) {\n        const response = yield* codedeploy\n          .getApplication({ applicationName: name })\n          .pipe(\n            Effect.catchTag(\"ApplicationDoesNotExistException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n        return response?.application;\n      });",
+        "5": "\n      const syncTags = Effect.fn(function* (\n        arn: string,\n        desiredTags: Record<string, string>,\n      ) {\n        const observed = yield* codedeploy\n          .listTagsForResource({ ResourceArn: arn })\n          .pipe(Effect.catch(() => Effect.succeed(undefined)));\n        const { removed, upsert } = diffTags(\n          toTagRecord(observed?.Tags),\n          desiredTags,\n        );\n        if (upsert.length > 0) {\n          yield* codedeploy.tagResource({ ResourceArn: arn, Tags: upsert });\n        }\n        if (removed.length > 0) {\n          yield* codedeploy.untagResource({\n            ResourceArn: arn,\n            TagKeys: removed,\n          });\n        }\n      });\n\n      return {\n        stables: [\"applicationName\", \"applicationId\", \"computePlatform\"],",
+        "6": "\n        diff: Effect.fn(function* ({ id, olds, news }) {\n          if (!isResolved(news)) return undefined;\n          if (\n            (yield* toName(id, olds ?? {})) !== (yield* toName(id, news ?? {}))\n          ) {\n            return { action: \"replace\" } as const;\n          }\n\n          if (\n            (news?.computePlatform ?? \"Server\") !==\n            (olds?.computePlatform ?? \"Server\")\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "7": "\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name =\n            output?.applicationName ?? (yield* toName(id, olds ?? {}));\n          const application = yield* getApplication(name);\n          if (application?.applicationId === undefined) return undefined;\n          const arn = applicationArn(region, accountId, name);\n          const attrs = {\n            applicationName: application.applicationName ?? name,\n            applicationId: application.applicationId,\n            applicationArn: arn,\n            computePlatform: application.computePlatform ?? \"Server\",\n          };\n          const tags = yield* codedeploy\n            .listTagsForResource({ ResourceArn: arn })\n            .pipe(\n              Effect.map((res) => toTagRecord(res.Tags)),\n              Effect.catch(() => Effect.succeed({})),\n            );\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name = output?.applicationName ?? (yield* toName(id, news));\n          const arn = applicationArn(region, accountId, name);\n          const computePlatform = news.computePlatform ?? \"Server\";\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...internalTags, ...news.tags };",
+        "8": "\n\n          let application = yield* getApplication(name);\n\n\n          if (application?.applicationId === undefined) {\n            yield* codedeploy\n              .createApplication({\n                applicationName: name,\n                computePlatform,\n                tags: Object.entries(desiredTags).map(([Key, Value]) => ({\n                  Key,\n                  Value,\n                })),\n              })\n              .pipe(\n                Effect.catchTag(\"ApplicationAlreadyExistsException\", () =>\n                  Effect.succeed(undefined),\n                ),\n              );\n            application = yield* getApplication(name);\n          }\n\n\n          yield* syncTags(arn, desiredTags);\n\n\n          yield* session.note(name);",
+        "9": "          return {\n            applicationName: application?.applicationName ?? name,\n            applicationId: application?.applicationId ?? \"\",\n            applicationArn: arn,\n            computePlatform: application?.computePlatform ?? computePlatform,\n          };\n        }),\n\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* codedeploy.deleteApplication({\n            applicationName: output.applicationName,\n          });\n        }),",
+        "10": "\n        list: () =>\n          Effect.gen(function* () {\n            const { accountId, region } = yield* AWSEnvironment.current;\n            const names = yield* codedeploy.listApplications.pages({}).pipe(\n              Stream.runCollect,\n              Effect.map((chunk) =>\n                Array.from(chunk).flatMap((page) => page.applications ?? []),\n              ),\n            );\n            return names.map((name) => ({\n              applicationName: name,\n              applicationId: \"\",\n              applicationArn: applicationArn(region, accountId, name),\n              computePlatform: \"\",\n            }));\n          }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/Cloudflare/Stream/StreamBinding.ts",
+  "kind": "judge",
+  "ordinal": 276,
+  "artifact": "attempt-00276.json",
+  "started": "2026-10-11T03:20:45.119Z",
+  "estimatedTokens": 5500,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.05769800000052783,
+  "referencesPresent": false,
+  "bodyDigest": "e7f92686405ab1cbbede6fc15d40ae92526b32fbce65cac9d590d728d80d0abb",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "binding": "```typescript\ncf.StreamBinding\n```",
+        "Binding": "A Cloudflare **Worker-only binding** — the plain data value produced by\ncalling a Service (e.g. `Cloudflare.Images.Images(name)`).\n\nThese bindings (`Browser`, `Images`, `VersionMetadata`, `RateLimit`,\n`Artifacts.Namespace`, …) have **no backing cloud resou",
+        "call": "```typescript\n<T>(fn: (binding: cf.StreamBinding) => Promise<T>) => Effect.Effect<T, StreamError, RuntimeContext>\n```",
+        "captions": "```typescript\n{ upload: (language: string, input: ReadableStream<any>) => Effect.Effect<cf.StreamCaption, StreamError, RuntimeContext>; generate: (language: string) => Effect.Effect<cf.StreamCaption, StreamError, RuntimeContext>; list: (language: string | ",
+        "catch": "```typescript\n(error: any) => StreamError\n```",
+        "cause": "```typescript\nany\n```",
+        "code": "```typescript\nany\n```",
+        "createDirectUpload": "```typescript\n(params: cf.StreamDirectUploadCreateParams) => Effect.Effect<cf.StreamDirectUpload, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n(params: cf.StreamDirectUploadCreateParams) => Promise<cf.StreamDirectUpload>\n```\n\nCreates a direct uploa",
+        "delete": "```typescript\n() => Effect.Effect<void, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n() => Promise<void>\n```\n\nDeletes a video and its copies from Cloudflare Stream.\n\n**@returns** A promise that resolves when deletion completes.\n\n**@throws** {NotFou",
+        "details": "```typescript\n() => Effect.Effect<cf.StreamVideo, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n() => Promise<cf.StreamVideo>\n```\n\nGet a full videos details\n\n**@returns** The full video details.\n\n**@throws** {NotFoundError} if the video is not found",
+        "downloads": "```typescript\n{ generate: (downloadType: cf.StreamDownloadType | undefined) => Effect.Effect<cf.StreamDownloadGetResponse, StreamError, RuntimeContext>; get: () => Effect.Effect<cf.StreamDownloadGetResponse, StreamError, RuntimeContext>; delete: (downloadT",
+        "downloadType": "```typescript\ncf.StreamDownloadType | undefined\n```",
+        "Effect": "The `Effect` interface defines a value that lazily describes a workflow or\njob. The workflow requires some context `R`, and may fail with an error of\ntype `E`, or succeed with a value of type `A`.\n\n**When to use**\n\nUse when you need to represent a lazy, co",
+        "error": "```typescript\nany\n```",
+        "flatMap": "```typescript\n{ <A, B, E1, R1>(f: (a: A) => Effect.Effect<B, E1, R1>): <E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<B, E1 | E, R1 | R>; <A, E, R, B, E1, R1>(self: Effect.Effect<A, E, R>, f: (a: A) => Effect.Effect<B, E1, R1>): Effect.Effect<B, E |",
+        "fn": "```typescript\n(binding: cf.StreamBinding) => Promise<T>\n```\n\n---\n\n```typescript\n() => Promise<T>\n```",
+        "generate": "```typescript\n(downloadType: cf.StreamDownloadType | undefined) => Effect.Effect<cf.StreamDownloadGetResponse, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n(downloadType?: cf.StreamDownloadType) => Promise<cf.StreamDownloadGetResponse>\n```\n\nGenerat",
+        "generateToken": "```typescript\n() => Effect.Effect<string, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n() => Promise<string>\n```\n\nCreates a signed URL token for a video.\n\n**@returns** The signed token that was created.\n\n**@throws** {InternalError} if the signing k",
+        "get": "```typescript\n() => Effect.Effect<cf.StreamDownloadGetResponse, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n() => Promise<cf.StreamDownloadGetResponse>\n```\n\nLists the downloads created for a video.\n\n**@returns** The current downloads for the video",
+        "id": "```typescript\nstring\n```",
+        "input": "```typescript\nReadableStream<any>\n```\n\n---\n\n```typescript\nstring | ReadableStream<any>\n```",
+        "language": "```typescript\nstring\n```\n\n---\n\n```typescript\nstring | undefined\n```",
+        "list": "```typescript\n(language: string | undefined) => Effect.Effect<cf.StreamCaption[], StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n(language?: string) => Promise<cf.StreamCaption[]>\n```\n\nLists the captions or subtitles.\nUse the language parameter to fi",
+        "makeBindingLayer": "```typescript\n<Self, Runtime, Client>(tag: Self, makeClient: (raw: Effect.Effect<Runtime, never, RuntimeContext>, binding: Binding.Binding<string, Client, Self>) => Client) => import(\"effect/Layer\").Layer<Self, never, import(\"../index.ts\").WorkerEnvironmen",
+        "message": "```typescript\nany\n```",
+        "params": "```typescript\ncf.StreamUpdateVideoParams\n```\n\n---\n\n```typescript\ncf.StreamUrlUploadParams | undefined\n```\n\n---\n\n```typescript\ncf.StreamDirectUploadCreateParams\n```\n\n---\n\n```typescript\ncf.StreamVideosListParams | undefined\n```\n\n---\n\n```typescript\ncf.StreamW",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "raw": "```typescript\nEffect.Effect<cf.StreamBinding, never, RuntimeContext>\n```",
+        "ReadableStream": "The **`ReadableStream`** interface of the Streams API represents a readable stream of byte data. The Fetch API offers a concrete instance of a ReadableStream through the body property of a Response object.\n\n[MDN Reference](https://developer.mozilla.org/doc",
+        "RuntimeContext": "Context of the runtime environment.\n\nE.g. the context of a running Worker, Task, Process, Function",
+        "statusCode": "```typescript\nany\n```",
+        "Stream": "```typescript\nStream\n```\n\nA Cloudflare Stream binding for managing videos, captions, downloads and\nwatermarks from Workers — a Worker-only binding with no backing cloud\nresource.\n\n`Stream` is a single value that is at once the `Binding.Service` tag, the\nca",
+        "StreamBinding": "```typescript\nStreamBinding\n```\n\n```typescript\nimport(\"effect/Layer\").Layer<Stream, never, import(\"../index.ts\").WorkerEnvironment>\n```\n\nThe binding value produced by calling Stream (declared on `env` or `yield*`-ed).\nThe layer that provides the Effect-nat",
+        "StreamClient": "Effect-native client for a Cloudflare Stream binding. Mirrors the runtime\ncf.StreamBinding handle: each operation returns an Effect tagged with\nStreamError; `video(id)` returns a pure per-video handle.",
+        "StreamError": "```typescript\ntypeof StreamError\n```\n\nError produced by a StreamClient operation. Mirrors the runtime's\n`StreamBindingError` shape (`code` is the Cloudflare Stream error code,\n`statusCode` the HTTP status it maps to) when the failure crosses the\nbinding bo",
+        "StreamVideoClient": "Effect-native handle for operations scoped to a single Stream video.",
+        "try": "```typescript\n() => Promise<T>\n```",
+        "tryPromise": "```typescript\n<T>(fn: () => Promise<T>) => Effect.Effect<T, StreamError>\n```\n\n---\n\n```typescript\n{ <A>(options: (signal: AbortSignal) => PromiseLike<A>): Effect.Effect<A, import(\"effect/Cause\").UnknownError>; <A, E>(options: { readonly try: (signal: AbortS",
+        "update": "```typescript\n(params: cf.StreamUpdateVideoParams) => Effect.Effect<cf.StreamVideo, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n(params: cf.StreamUpdateVideoParams) => Promise<cf.StreamVideo>\n```\n\nUpdate details for a single video.\n\n**@param** par",
+        "upload": "```typescript\n(language: string, input: ReadableStream<any>) => Effect.Effect<cf.StreamCaption, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n(language: string, input: cf.ReadableStream) => Promise<cf.StreamCaption>\n```\n\nUploads the caption or subti",
+        "url": "```typescript\nstring\n```",
+        "video": "```typescript\n(id: string) => StreamVideoClient\n```\n\n---\n\n```typescript\n(id: string) => cf.StreamVideoHandle\n```\n\nReturns a handle scoped to a single video for per-video operations.\n\n**@param** id The unique identifier for the video.\n\n**@returns** A handle",
+        "videos": "```typescript\n{ list: (params: cf.StreamVideosListParams | undefined) => Effect.Effect<cf.StreamVideo[], StreamError, RuntimeContext>; }\n```\n\n---\n\n```typescript\ncf.StreamVideos\n```",
+        "watermarkId": "```typescript\nstring\n```",
+        "watermarks": "```typescript\n{ generate: (input: string | ReadableStream<any>, params: cf.StreamWatermarkCreateParams) => Effect.Effect<cf.StreamWatermark, StreamError, RuntimeContext>; list: () => Effect.Effect<cf.StreamWatermark[], StreamError, RuntimeContext>; get: (w"
+      },
+      "code": {
+        "1": "import type * as cf from \"@cloudflare/workers-types\";\nimport * as Effect from \"effect/Effect\";\nimport type { RuntimeContext } from \"../../RuntimeContext.ts\";\nimport type * as Binding from \"../Workers/Binding.ts\";\nimport { makeBindingLayer } from \"../Workers/BindingLayer.ts\";\nimport {\n  Stream,\n  StreamError,\n  type StreamClient,\n  type StreamVideoClient,\n} from \"./Stream.ts\";\n\n\nexport type StreamBinding = Binding.Binding<\n  Stream[\"key\"],\n  StreamClient,\n  Stream\n>;",
+        "2": "\n\n\n\n\n\n\n\n\n\n\nexport const StreamBinding = makeBindingLayer<\n  Stream,\n  cf.StreamBinding,\n  StreamClient\n>(Stream, (raw): StreamClient => {\n  const call = <T>(\n    fn: (binding: cf.StreamBinding) => Promise<T>,\n  ): Effect.Effect<T, StreamError, RuntimeContext> =>\n    raw.pipe(Effect.flatMap((binding) => tryPromise(() => fn(binding))));",
+        "3": "\n  const video = (id: string): StreamVideoClient => ({\n    id,\n    details: () => call((binding) => binding.video(id).details()),\n    update: (params) => call((binding) => binding.video(id).update(params)),\n    delete: () => call((binding) => binding.video(id).delete()),\n    generateToken: () => call((binding) => binding.video(id).generateToken()),\n    downloads: {\n      generate: (downloadType) =>\n        call((binding) => binding.video(id).downloads.generate(downloadType)),\n      get: () => call((binding) => binding.video(id).downloads.get()),\n      delete: (downloadType) =>\n        call((binding) => binding.video(id).downloads.delete(downloadType)),\n    },\n    captions: {\n      upload: (language, input) =>\n        call((binding) =>\n          binding\n            .video(id)\n            .captions.upload(language, input as unknown as cf.ReadableStream),\n        ),\n      generate: (language) =>\n        call((binding) => binding.video(id).captions.generate(language)),\n      list: (language) =>\n        call((binding) => binding.video(id).captions.list(language)),\n      delete: (language) =>\n        call((binding) => binding.video(id).captions.delete(language)),\n    },\n  });",
+        "4": "\n  return {\n    raw,\n    upload: (url, params) => call((binding) => binding.upload(url, params)),\n    createDirectUpload: (params) =>\n      call((binding) => binding.createDirectUpload(params)),\n    video,\n    videos: {\n      list: (params) => call((binding) => binding.videos.list(params)),\n    },\n    watermarks: {\n      generate: (input, params) =>\n        call((binding) =>\n\n\n          binding.watermarks.generate(\n            input as unknown as cf.ReadableStream,\n            params,\n          ),\n        ),\n      list: () => call((binding) => binding.watermarks.list()),\n      get: (watermarkId) =>\n        call((binding) => binding.watermarks.get(watermarkId)),\n      delete: (watermarkId) =>\n        call((binding) => binding.watermarks.delete(watermarkId)),\n    },\n  } satisfies StreamClient;\n});\n\nconst tryPromise = <T>(fn: () => Promise<T>): Effect.Effect<T, StreamError> =>",
+        "5": "  Effect.tryPromise({\n    try: fn,\n    catch: (error: any) =>\n      new StreamError({\n        message: error?.message ?? \"Unknown Cloudflare Stream error\",\n        code: typeof error?.code === \"number\" ? error.code : undefined,\n        statusCode:\n          typeof error?.statusCode === \"number\" ? error.statusCode : undefined,\n        cause: error,\n      }),\n  });\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

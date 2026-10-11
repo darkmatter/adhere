@@ -1,0 +1,56 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Cloudflare/SecurityTxt/SecurityTxt.ts",
+  "kind": "judge",
+  "ordinal": 233,
+  "artifact": "attempt-00233.json",
+  "started": "2026-10-11T03:27:55.930Z",
+  "estimatedTokens": 3618,
+  "reservedTokens": 64000,
+  "chargedTokens": 2339,
+  "outcome": "answered",
+  "milliseconds": 77.73877199999697,
+  "referencesPresent": false,
+  "bodyDigest": "a15dfe1f03daa3ef1d03f9ed53fc30906dbf6948dd0d2d3ca33cfcb3f495f62c",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.86}},\"usage\":{\"input_tokens\":2339,\"output_tokens\":25}}",
+  "inputTokens": 2339,
+  "answers": {
+    "providers/idempotent-delete": 0.86
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as securityTxt from \"@distilled.cloud/cloudflare/security-txt\";\nimport * as Effect from \"effect/Effect\";\nimport * as Predicate from \"effect/Predicate\";\n\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { CloudflareEnvironment } from \"../CloudflareEnvironment.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport { listAllZones } from \"../Zone/lookup.ts\";\n\nconst TypeId = \"Cloudflare.SecurityTxt.SecurityTxt\" as const;\ntype TypeId = typeof TypeId;\n\nexport type Props = {\n\n\n\n\n\n  zoneId: string;\n\n\n\n\n\n\n  enabled?: boolean;",
+        "2": "\n\n\n\n\n  contact: string[];\n\n\n\n\n\n\n  expires: string;\n\n\n\n\n  acknowledgments?: string[];\n\n\n\n\n  canonical?: string[];\n\n\n\n\n  encryption?: string[];\n\n\n\n\n  hiring?: string[];",
+        "3": "\n\n\n\n  policy?: string[];\n\n\n\n\n  preferredLanguages?: string;\n};\n\nexport type Attributes = {\n\n  zoneId: string;\n\n  enabled: boolean;\n\n  contact: string[];\n\n  expires: string;\n\n  acknowledgments: string[] | undefined;\n\n  canonical: string[] | undefined;\n\n  encryption: string[] | undefined;\n\n  hiring: string[] | undefined;\n\n  policy: string[] | undefined;\n\n  preferredLanguages: string | undefined;\n};",
+        "4": "\nexport type SecurityTxt = Resource<TypeId, Props, Attributes, never, Providers>;",
+        "5": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const SecurityTxt = Resource<SecurityTxt>(TypeId, {\n  aliases: [\"Cloudflare.SecurityTxt\"],\n});\n\n\n\n\nexport const isSecurityTxt = (value: unknown): value is SecurityTxt =>\n  Predicate.hasProperty(value, \"Type\") && value.Type === TypeId;\n\nexport const SecurityTxtProvider = () =>\n  Provider.succeed(SecurityTxt, {\n    stables: [\"zoneId\"],",
+        "6": "\n    list: Effect.fn(function* () {\n      const { accountId } = yield* yield* CloudflareEnvironment;\n\n\n\n\n\n      const allZones = yield* listAllZones(accountId);\n      const rows = yield* Effect.forEach(\n        allZones.map((zone) => zone.id),\n        (zoneId) =>\n          securityTxt\n            .getSecurityTxt({ zoneId })\n            .pipe(\n              Effect.map((observed) =>\n                typeof observed === \"string\"\n                  ? undefined\n                  : toAttributes(zoneId, observed),\n              ),\n            ),\n        { concurrency: 10 },\n      );\n      return rows.filter((row): row is Attributes => row !== undefined);\n    }),",
+        "7": "\n    diff: Effect.fn(function* ({ olds = {}, news, output }) {\n      const o = olds as Props;\n      const n = news as Props;\n\n      const oldZoneId =\n        output?.zoneId ?? (typeof o.zoneId === \"string\" ? o.zoneId : undefined);\n      if (\n        oldZoneId !== undefined &&\n        typeof n.zoneId === \"string\" &&\n        oldZoneId !== n.zoneId\n      ) {\n        return { action: \"replace\" } as const;\n      }\n      return undefined;\n    }),\n\n    read: Effect.fn(function* ({ output, olds }) {\n      const zoneId = output?.zoneId ?? (olds?.zoneId as string | undefined);\n      if (!zoneId) return undefined;\n      const observed = yield* securityTxt.getSecurityTxt({ zoneId });\n\n      if (typeof observed === \"string\") return undefined;\n      const attrs = toAttributes(zoneId, observed);\n\n\n\n\n      if (output === undefined) return Unowned(attrs);\n      return attrs;\n    }),",
+        "8": "\n    reconcile: Effect.fn(function* ({ news }) {\n\n      const zoneId = news.zoneId as string;\n      const desired = desiredAttributes(zoneId, news);\n\n\n\n      const observed = yield* securityTxt.getSecurityTxt({ zoneId });\n\n\n\n\n      if (\n        typeof observed !== \"string\" &&\n        attributesEqual(toAttributes(zoneId, observed), desired)\n      ) {\n        return toAttributes(zoneId, observed);\n      }\n      yield* securityTxt.putSecurityTxt({\n        zoneId,\n        enabled: desired.enabled,\n        contact: desired.contact,\n        expires: desired.expires,\n        acknowledgments: desired.acknowledgments,\n        canonical: desired.canonical,\n        encryption: desired.encryption,\n        hiring: desired.hiring,\n        policy: desired.policy,\n        preferredLanguages: desired.preferredLanguages,\n      });",
+        "9": "\n\n      const final = yield* securityTxt.getSecurityTxt({ zoneId });\n      return typeof final === \"string\" ? desired : toAttributes(zoneId, final);\n    }),\n\n    delete: Effect.fn(function* ({ output }) {\n\n\n      yield* securityTxt.deleteSecurityTxt({ zoneId: output.zoneId });\n    }),\n  });\n\n\nconst desiredAttributes = (zoneId: string, news: Props): Attributes => ({\n  zoneId,\n  enabled: news.enabled ?? true,\n  contact: [...news.contact],\n  expires: news.expires,\n  acknowledgments: nonEmpty(news.acknowledgments),\n  canonical: nonEmpty(news.canonical),\n  encryption: nonEmpty(news.encryption),\n  hiring: nonEmpty(news.hiring),\n  policy: nonEmpty(news.policy),\n  preferredLanguages:\n    news.preferredLanguages === \"\" ? undefined : news.preferredLanguages,\n});",
+        "10": "\n\nconst toAttributes = (\n  zoneId: string,\n  observed: Exclude<securityTxt.GetSecurityTxtResponse, string>,\n): Attributes => ({\n  zoneId,\n  enabled: observed.enabled ?? false,\n  contact: [...(observed.contact ?? [])],\n  expires: observed.expires ?? \"\",\n  acknowledgments: nonEmpty(observed.acknowledgments),\n  canonical: nonEmpty(observed.canonical),\n  encryption: nonEmpty(observed.encryption),\n  hiring: nonEmpty(observed.hiring),\n\n  policy: nonEmpty(observed.policy),\n  preferredLanguages:\n    observed.preferredLanguages === \"\"\n      ? undefined\n      : (observed.preferredLanguages ?? undefined),\n});\n\n\nconst nonEmpty = (\n  values: readonly string[] | null | undefined,\n): string[] | undefined =>\n  values === null || values === undefined || values.length === 0\n    ? undefined\n    : [...values];",
+        "11": "\nconst listEquals = (\n  a: string[] | undefined,\n  b: string[] | undefined,\n): boolean => {\n  if (a === undefined || b === undefined) return a === b;\n  return a.length === b.length && a.every((v, i) => v === b[i]);\n};\n\nconst attributesEqual = (a: Attributes, b: Attributes): boolean =>\n  a.zoneId === b.zoneId &&\n  a.enabled === b.enabled &&\n  a.expires === b.expires &&\n  a.preferredLanguages === b.preferredLanguages &&\n  listEquals(a.contact, b.contact) &&\n  listEquals(a.acknowledgments, b.acknowledgments) &&\n  listEquals(a.canonical, b.canonical) &&\n  listEquals(a.encryption, b.encryption) &&\n  listEquals(a.hiring, b.hiring) &&\n  listEquals(a.policy, b.policy);\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

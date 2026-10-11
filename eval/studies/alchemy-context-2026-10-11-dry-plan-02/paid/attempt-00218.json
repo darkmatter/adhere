@@ -1,0 +1,53 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/XRay/ResourcePolicy.ts",
+  "kind": "judge",
+  "ordinal": 218,
+  "artifact": "attempt-00218.json",
+  "started": "2026-10-11T03:27:53.981Z",
+  "estimatedTokens": 3128,
+  "reservedTokens": 64000,
+  "chargedTokens": 1817,
+  "outcome": "answered",
+  "milliseconds": 95.88058599999931,
+  "referencesPresent": false,
+  "bodyDigest": "8d9b4f7e0e0aa278b528dc8b225eeacd13d4a083a18306ea73a929c8f7bc7f4d",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.93}},\"usage\":{\"input_tokens\":1817,\"output_tokens\":25}}",
+  "inputTokens": 1817,
+  "answers": {
+    "providers/idempotent-delete": 0.93
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as xray from \"@distilled.cloud/aws/xray\";\nimport * as Effect from \"effect/Effect\";\nimport * as Option from \"effect/Option\";\nimport * as Stream from \"effect/Stream\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";",
+        "2": "\nexport interface ResourcePolicyProps {\n\n\n\n\n\n\n\n  policyName?: string;\n\n\n\n\n\n\n  policyDocument: string;\n\n\n\n\n\n  bypassPolicyLockoutCheck?: boolean;\n}",
+        "3": "\nexport interface ResourcePolicy extends Resource<\n  \"AWS.XRay.ResourcePolicy\",\n  ResourcePolicyProps,\n  {\n\n\n\n    policyName: string;\n\n\n\n    policyRevisionId: string | undefined;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ResourcePolicy = Resource<ResourcePolicy>(\n  \"AWS.XRay.ResourcePolicy\",\n);\n\n\nconst canonicalJson = (document: string): string => {\n  const sort = (value: unknown): unknown =>\n    Array.isArray(value)\n      ? value.map(sort)\n      : value !== null && typeof value === \"object\"\n        ? Object.fromEntries(\n            Object.entries(value as Record<string, unknown>)\n              .sort(([a], [b]) => a.localeCompare(b))\n              .map(([k, v]) => [k, sort(v)]),\n          )\n        : value;\n  try {\n    return JSON.stringify(sort(JSON.parse(document)));\n  } catch {\n    return document;\n  }\n};\n\nexport const ResourcePolicyProvider = () =>\n  Provider.effect(\n    ResourcePolicy,",
+        "5": "    Effect.gen(function* () {\n      const createPolicyName = Effect.fn(function* (\n        id: string,\n        props: Pick<ResourcePolicyProps, \"policyName\">,\n      ) {\n\n        return (\n          props.policyName ??\n          (yield* createPhysicalName({ id, maxLength: 128 }))\n        );\n      });\n\n\n\n      const observePolicy = (policyName: string) =>\n        xray.listResourcePolicies.items({}).pipe(\n          Stream.filter((policy) => policy.PolicyName === policyName),\n          Stream.runHead,\n          Effect.map(Option.getOrUndefined),\n        );\n\n      return ResourcePolicy.Provider.of({\n        stables: [\"policyName\"],",
+        "6": "        list: () =>\n          Effect.gen(function* () {\n            const policies = yield* xray.listResourcePolicies\n              .items({})\n              .pipe(Stream.runCollect);\n            return Array.from(policies).flatMap((policy) =>\n              policy.PolicyName\n                ? [\n                    {\n                      policyName: policy.PolicyName,\n                      policyRevisionId: policy.PolicyRevisionId,\n                    },\n                  ]\n                : [],\n            );\n          }),\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const policyName =\n            output?.policyName ?? (yield* createPolicyName(id, olds ?? {}));\n          const found = yield* observePolicy(policyName);\n          if (found === undefined) return undefined;\n\n\n          return { policyName, policyRevisionId: found.PolicyRevisionId };\n        }),",
+        "7": "        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createPolicyName(id, olds ?? {});\n          const newName = yield* createPolicyName(id, news ?? {});\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n\n        }),\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const policyName =\n            output?.policyName ?? (yield* createPolicyName(id, news));\n\n\n          const existing = yield* observePolicy(policyName);\n\n\n\n\n\n\n          const putPolicy = (revisionId: string | undefined) =>\n            xray\n              .putResourcePolicy({\n                PolicyName: policyName,\n                PolicyDocument: news.policyDocument,\n                PolicyRevisionId: revisionId,\n                BypassPolicyLockoutCheck: news.bypassPolicyLockoutCheck,\n              })\n              .pipe(Effect.map((r) => r.ResourcePolicy));",
+        "8": "\n          const policy =\n            existing?.PolicyDocument !== undefined &&\n            canonicalJson(existing.PolicyDocument) ===\n              canonicalJson(news.policyDocument)\n              ? existing\n              : yield* putPolicy(existing?.PolicyRevisionId).pipe(\n                  Effect.catchTag(\"InvalidPolicyRevisionIdException\", () =>\n                    observePolicy(policyName).pipe(\n                      Effect.flatMap((observed) =>\n                        putPolicy(observed?.PolicyRevisionId),\n                      ),\n                    ),\n                  ),\n                );\n\n          yield* session.note(policyName);\n          return { policyName, policyRevisionId: policy?.PolicyRevisionId };\n        }),\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* xray.deleteResourcePolicy({\n            PolicyName: output.policyName,\n          });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

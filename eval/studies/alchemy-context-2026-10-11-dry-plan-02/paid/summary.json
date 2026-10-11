@@ -1,0 +1,1040 @@
+{
+  "mode": "paid",
+  "model": "jev-1.13.0",
+  "thresholdPolicy": "strictly greater than 0.8 plus shipped matchers; absence never means zero/clean",
+  "labels": {
+    "real": 9,
+    "false": 42,
+    "debatable": 0
+  },
+  "summaries": [
+    {
+      "arm": "code-only",
+      "answered": 51,
+      "known": 51,
+      "tp": 9,
+      "fp": 30,
+      "fn": 0,
+      "tn": 12,
+      "precision": 0.23076923076923078,
+      "knownPositiveCoverage": 1,
+      "unansweredKnownPositives": 0,
+      "auc": 0.4444444444444444,
+      "skipped": 0,
+      "blocked": 0,
+      "missing": 0,
+      "unanswered": 0,
+      "failedAttempts": 0,
+      "missingUsageAttempts": 0,
+      "errors": 0,
+      "referenceDrops": 0,
+      "requests": 90,
+      "estimatedTokens": 781633,
+      "inputTokens": 726561,
+      "conservativeDollars": 0.030515562,
+      "worstCaseRetryTokens": 23040000,
+      "milliseconds": 12116.248061999995
+    },
+    {
+      "arm": "symbols",
+      "answered": 51,
+      "known": 51,
+      "tp": 9,
+      "fp": 30,
+      "fn": 0,
+      "tn": 12,
+      "precision": 0.23076923076923078,
+      "knownPositiveCoverage": 1,
+      "unansweredKnownPositives": 0,
+      "auc": 0.4074074074074074,
+      "skipped": 0,
+      "blocked": 0,
+      "missing": 0,
+      "unanswered": 0,
+      "failedAttempts": 0,
+      "missingUsageAttempts": 0,
+      "errors": 0,
+      "referenceDrops": 0,
+      "requests": 90,
+      "estimatedTokens": 1213452,
+      "inputTokens": 1113095,
+      "conservativeDollars": 0.046749990000000005,
+      "worstCaseRetryTokens": 23040000,
+      "milliseconds": 14012.45926999999
+    },
+    {
+      "arm": "symbols+references",
+      "answered": 51,
+      "known": 51,
+      "tp": 8,
+      "fp": 30,
+      "fn": 1,
+      "tn": 12,
+      "precision": 0.21052631578947367,
+      "knownPositiveCoverage": 0.8888888888888888,
+      "unansweredKnownPositives": 0,
+      "auc": 0.41798941798941797,
+      "skipped": 0,
+      "blocked": 0,
+      "missing": 0,
+      "unanswered": 0,
+      "failedAttempts": 0,
+      "missingUsageAttempts": 0,
+      "errors": 0,
+      "referenceDrops": 0,
+      "requests": 89,
+      "estimatedTokens": 1977929,
+      "inputTokens": 1712179,
+      "conservativeDollars": 0.071911518,
+      "worstCaseRetryTokens": 22784000,
+      "milliseconds": 17467.06731199998
+    }
+  ],
+  "commonAnswered": 51,
+  "paired": [
+    {
+      "file": "packages/alchemy/src/ACME/Certificate.ts",
+      "gold": "false",
+      "codeOnly": 0.8,
+      "symbols": 0.75,
+      "both": 0.58,
+      "symbolsMinusCode": -0.050000000000000044,
+      "bothMinusCode": -0.22000000000000008,
+      "bothMinusSymbols": -0.17000000000000004
+    },
+    {
+      "file": "packages/alchemy/src/AWS/ApiGateway/DeleteUsagePlanKeyHttp.ts",
+      "gold": "false",
+      "codeOnly": 0.32,
+      "symbols": 0.12,
+      "both": 0.11,
+      "symbolsMinusCode": -0.2,
+      "bothMinusCode": -0.21000000000000002,
+      "bothMinusSymbols": -0.009999999999999995
+    },
+    {
+      "file": "packages/alchemy/src/AWS/ApplicationSignals/GroupingConfiguration.ts",
+      "gold": "false",
+      "codeOnly": 0.88,
+      "symbols": 0.89,
+      "both": 0.91,
+      "symbolsMinusCode": 0.010000000000000009,
+      "bothMinusCode": 0.030000000000000027,
+      "bothMinusSymbols": 0.020000000000000018
+    },
+    {
+      "file": "packages/alchemy/src/AWS/Athena/WorkGroup.ts",
+      "gold": "false",
+      "codeOnly": 0.89,
+      "symbols": 0.92,
+      "both": 0.93,
+      "symbolsMinusCode": 0.030000000000000027,
+      "bothMinusCode": 0.040000000000000036,
+      "bothMinusSymbols": 0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/AutoScaling/LifecycleHook.ts",
+      "gold": "real",
+      "codeOnly": 0.82,
+      "symbols": 0.86,
+      "both": 0.88,
+      "symbolsMinusCode": 0.040000000000000036,
+      "bothMinusCode": 0.06000000000000005,
+      "bothMinusSymbols": 0.020000000000000018
+    },
+    {
+      "file": "packages/alchemy/src/AWS/AutoScaling/ScalingPolicy.ts",
+      "gold": "real",
+      "codeOnly": 0.92,
+      "symbols": 0.94,
+      "both": 0.93,
+      "symbolsMinusCode": 0.019999999999999907,
+      "bothMinusCode": 0.010000000000000009,
+      "bothMinusSymbols": -0.009999999999999898
+    },
+    {
+      "file": "packages/alchemy/src/AWS/AutoScaling/ScheduledAction.ts",
+      "gold": "real",
+      "codeOnly": 0.83,
+      "symbols": 0.88,
+      "both": 0.89,
+      "symbolsMinusCode": 0.050000000000000044,
+      "bothMinusCode": 0.06000000000000005,
+      "bothMinusSymbols": 0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CloudWatch/Alarm.ts",
+      "gold": "false",
+      "codeOnly": 0.87,
+      "symbols": 0.93,
+      "both": 0.92,
+      "symbolsMinusCode": 0.06000000000000005,
+      "bothMinusCode": 0.050000000000000044,
+      "bothMinusSymbols": -0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CloudWatch/AlarmMuteRule.ts",
+      "gold": "false",
+      "codeOnly": 0.91,
+      "symbols": 0.94,
+      "both": 0.94,
+      "symbolsMinusCode": 0.029999999999999916,
+      "bothMinusCode": 0.029999999999999916,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CloudWatch/CompositeAlarm.ts",
+      "gold": "false",
+      "codeOnly": 0.85,
+      "symbols": 0.92,
+      "both": 0.89,
+      "symbolsMinusCode": 0.07000000000000006,
+      "bothMinusCode": 0.040000000000000036,
+      "bothMinusSymbols": -0.030000000000000027
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CloudWatch/Dashboard.ts",
+      "gold": "false",
+      "codeOnly": 0.89,
+      "symbols": 0.89,
+      "both": 0.9,
+      "symbolsMinusCode": 0,
+      "bothMinusCode": 0.010000000000000009,
+      "bothMinusSymbols": 0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeArtifact/Domain.ts",
+      "gold": "false",
+      "codeOnly": 0.87,
+      "symbols": 0.9,
+      "both": 0.9,
+      "symbolsMinusCode": 0.030000000000000027,
+      "bothMinusCode": 0.030000000000000027,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeBuild/Project.ts",
+      "gold": "false",
+      "codeOnly": 0.95,
+      "symbols": 0.93,
+      "both": 0.94,
+      "symbolsMinusCode": -0.019999999999999907,
+      "bothMinusCode": -0.010000000000000009,
+      "bothMinusSymbols": 0.009999999999999898
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeBuild/ReportGroup.ts",
+      "gold": "false",
+      "codeOnly": 0.93,
+      "symbols": 0.92,
+      "both": 0.93,
+      "symbolsMinusCode": -0.010000000000000009,
+      "bothMinusCode": 0,
+      "bothMinusSymbols": 0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeDeploy/Application.ts",
+      "gold": "false",
+      "codeOnly": 0.94,
+      "symbols": 0.94,
+      "both": 0.94,
+      "symbolsMinusCode": 0,
+      "bothMinusCode": 0,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeDeploy/DeploymentConfig.ts",
+      "gold": "false",
+      "codeOnly": 0.82,
+      "symbols": 0.86,
+      "both": 0.86,
+      "symbolsMinusCode": 0.040000000000000036,
+      "bothMinusCode": 0.040000000000000036,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeDeploy/DeploymentGroup.ts",
+      "gold": "false",
+      "codeOnly": 0.91,
+      "symbols": 0.9,
+      "both": 0.9,
+      "symbolsMinusCode": -0.010000000000000009,
+      "bothMinusCode": -0.010000000000000009,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodePipeline/Pipeline.ts",
+      "gold": "false",
+      "codeOnly": 0.92,
+      "symbols": 0.93,
+      "both": 0.93,
+      "symbolsMinusCode": 0.010000000000000009,
+      "bothMinusCode": 0.010000000000000009,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/Config/AggregationAuthorization.ts",
+      "gold": "false",
+      "codeOnly": 0.9,
+      "symbols": 0.92,
+      "both": 0.92,
+      "symbolsMinusCode": 0.020000000000000018,
+      "bothMinusCode": 0.020000000000000018,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EC2/FlowLog.ts",
+      "gold": "real",
+      "codeOnly": 0.9,
+      "symbols": 0.85,
+      "both": 0.88,
+      "symbolsMinusCode": -0.050000000000000044,
+      "bothMinusCode": -0.020000000000000018,
+      "bothMinusSymbols": 0.030000000000000027
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EC2/KeyPair.ts",
+      "gold": "false",
+      "codeOnly": 0.93,
+      "symbols": 0.94,
+      "both": 0.94,
+      "symbolsMinusCode": 0.009999999999999898,
+      "bothMinusCode": 0.009999999999999898,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EntityResolution/IdMappingWorkflow.ts",
+      "gold": "real",
+      "codeOnly": 0.86,
+      "symbols": 0.85,
+      "both": 0.82,
+      "symbolsMinusCode": -0.010000000000000009,
+      "bothMinusCode": -0.040000000000000036,
+      "bothMinusSymbols": -0.030000000000000027
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EntityResolution/IdNamespace.ts",
+      "gold": "real",
+      "codeOnly": 0.81,
+      "symbols": 0.85,
+      "both": 0.84,
+      "symbolsMinusCode": 0.039999999999999925,
+      "bothMinusCode": 0.029999999999999916,
+      "bothMinusSymbols": -0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EntityResolution/MatchingWorkflow.ts",
+      "gold": "real",
+      "codeOnly": 0.81,
+      "symbols": 0.84,
+      "both": 0.83,
+      "symbolsMinusCode": 0.029999999999999916,
+      "bothMinusCode": 0.019999999999999907,
+      "bothMinusSymbols": -0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EntityResolution/SchemaMapping.ts",
+      "gold": "real",
+      "codeOnly": 0.83,
+      "symbols": 0.82,
+      "both": 0.8,
+      "symbolsMinusCode": -0.010000000000000009,
+      "bothMinusCode": -0.029999999999999916,
+      "bothMinusSymbols": -0.019999999999999907
+    },
+    {
+      "file": "packages/alchemy/src/AWS/Glue/Job.ts",
+      "gold": "false",
+      "codeOnly": 0.93,
+      "symbols": 0.93,
+      "both": 0.93,
+      "symbolsMinusCode": 0,
+      "bothMinusCode": 0,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/MailManager/AddonInstance.ts",
+      "gold": "false",
+      "codeOnly": 0.93,
+      "symbols": 0.92,
+      "both": 0.93,
+      "symbolsMinusCode": -0.010000000000000009,
+      "bothMinusCode": 0,
+      "bothMinusSymbols": 0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/MailManager/AddonSubscription.ts",
+      "gold": "false",
+      "codeOnly": 0.9,
+      "symbols": 0.92,
+      "both": 0.92,
+      "symbolsMinusCode": 0.020000000000000018,
+      "bothMinusCode": 0.020000000000000018,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/MediaPackageV2/OriginEndpoint.ts",
+      "gold": "false",
+      "codeOnly": 0.69,
+      "symbols": 0.82,
+      "both": 0.87,
+      "symbolsMinusCode": 0.13,
+      "bothMinusCode": 0.18000000000000005,
+      "bothMinusSymbols": 0.050000000000000044
+    },
+    {
+      "file": "packages/alchemy/src/AWS/MediaTailor/PlaybackConfiguration.ts",
+      "gold": "false",
+      "codeOnly": 0.89,
+      "symbols": 0.93,
+      "both": 0.93,
+      "symbolsMinusCode": 0.040000000000000036,
+      "bothMinusCode": 0.040000000000000036,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/SES/ReceiptFilter.ts",
+      "gold": "false",
+      "codeOnly": 0.92,
+      "symbols": 0.92,
+      "both": 0.92,
+      "symbolsMinusCode": 0,
+      "bothMinusCode": 0,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/SES/ReceiptRuleSet.ts",
+      "gold": "false",
+      "codeOnly": 0.92,
+      "symbols": 0.92,
+      "both": 0.94,
+      "symbolsMinusCode": 0,
+      "bothMinusCode": 0.019999999999999907,
+      "bothMinusSymbols": 0.019999999999999907
+    },
+    {
+      "file": "packages/alchemy/src/AWS/SimpleDB/Domain.ts",
+      "gold": "false",
+      "codeOnly": 0.94,
+      "symbols": 0.93,
+      "both": 0.94,
+      "symbolsMinusCode": -0.009999999999999898,
+      "bothMinusCode": 0,
+      "bothMinusSymbols": 0.009999999999999898
+    },
+    {
+      "file": "packages/alchemy/src/AWS/SNS/PlatformApplication.ts",
+      "gold": "false",
+      "codeOnly": 0.92,
+      "symbols": 0.95,
+      "both": 0.94,
+      "symbolsMinusCode": 0.029999999999999916,
+      "bothMinusCode": 0.019999999999999907,
+      "bothMinusSymbols": -0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/SSMIncidents/ResponsePlan.ts",
+      "gold": "false",
+      "codeOnly": 0.9,
+      "symbols": 0.91,
+      "both": 0.91,
+      "symbolsMinusCode": 0.010000000000000009,
+      "bothMinusCode": 0.010000000000000009,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/StepFunctions/Activity.ts",
+      "gold": "false",
+      "codeOnly": 0.94,
+      "symbols": 0.94,
+      "both": 0.94,
+      "symbolsMinusCode": 0,
+      "bothMinusCode": 0,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/AWS/StepFunctions/StateMachine.ts",
+      "gold": "false",
+      "codeOnly": 0.84,
+      "symbols": 0.8,
+      "both": 0.79,
+      "symbolsMinusCode": -0.039999999999999925,
+      "bothMinusCode": -0.04999999999999993,
+      "bothMinusSymbols": -0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/VerifiedPermissions/PolicyStore.ts",
+      "gold": "false",
+      "codeOnly": 0.92,
+      "symbols": 0.95,
+      "both": 0.94,
+      "symbolsMinusCode": 0.029999999999999916,
+      "bothMinusCode": 0.019999999999999907,
+      "bothMinusSymbols": -0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/AWS/XRay/ResourcePolicy.ts",
+      "gold": "real",
+      "codeOnly": 0.93,
+      "symbols": 0.92,
+      "both": 0.94,
+      "symbolsMinusCode": -0.010000000000000009,
+      "bothMinusCode": 0.009999999999999898,
+      "bothMinusSymbols": 0.019999999999999907
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/KV/WriteNamespaceHttp.ts",
+      "gold": "false",
+      "codeOnly": 0.13,
+      "symbols": 0.12,
+      "both": 0.16,
+      "symbolsMinusCode": -0.010000000000000009,
+      "bothMinusCode": 0.03,
+      "bothMinusSymbols": 0.04000000000000001
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/R2/WriteBucketBinding.ts",
+      "gold": "false",
+      "codeOnly": 0.11,
+      "symbols": 0.15,
+      "both": 0.17,
+      "symbolsMinusCode": 0.039999999999999994,
+      "bothMinusCode": 0.06000000000000001,
+      "bothMinusSymbols": 0.020000000000000018
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/SecretsStore/LocalSecretsStoreGateway.ts",
+      "gold": "false",
+      "codeOnly": 0.13,
+      "symbols": 0.16,
+      "both": 0.16,
+      "symbolsMinusCode": 0.03,
+      "bothMinusCode": 0.03,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/SecurityTxt/SecurityTxt.ts",
+      "gold": "false",
+      "codeOnly": 0.86,
+      "symbols": 0.89,
+      "both": 0.9,
+      "symbolsMinusCode": 0.030000000000000027,
+      "bothMinusCode": 0.040000000000000036,
+      "bothMinusSymbols": 0.010000000000000009
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/Stream/StreamBinding.ts",
+      "gold": "false",
+      "codeOnly": 0.11,
+      "symbols": 0.19,
+      "both": 0.1,
+      "symbolsMinusCode": 0.08,
+      "bothMinusCode": -0.009999999999999995,
+      "bothMinusSymbols": -0.09
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/Tags/AccountResourceTags.ts",
+      "gold": "false",
+      "codeOnly": 0.92,
+      "symbols": 0.92,
+      "both": 0.92,
+      "symbolsMinusCode": 0,
+      "bothMinusCode": 0,
+      "bothMinusSymbols": 0
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/Tags/ZoneResourceTags.ts",
+      "gold": "false",
+      "codeOnly": 0.92,
+      "symbols": 0.94,
+      "both": 0.92,
+      "symbolsMinusCode": 0.019999999999999907,
+      "bothMinusCode": 0,
+      "bothMinusSymbols": -0.019999999999999907
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/Tunnel/WriteTunnel.ts",
+      "gold": "false",
+      "codeOnly": 0.2,
+      "symbols": 0.27,
+      "both": 0.11,
+      "symbolsMinusCode": 0.07,
+      "bothMinusCode": -0.09000000000000001,
+      "bothMinusSymbols": -0.16000000000000003
+    },
+    {
+      "file": "packages/alchemy/src/Fly/WriteSecretHttp.ts",
+      "gold": "false",
+      "codeOnly": 0.43,
+      "symbols": 0.19,
+      "both": 0.11,
+      "symbolsMinusCode": -0.24,
+      "bothMinusCode": -0.32,
+      "bothMinusSymbols": -0.08
+    },
+    {
+      "file": "packages/alchemy/src/Neon/Storage.ts",
+      "gold": "false",
+      "codeOnly": 0.1,
+      "symbols": 0.15,
+      "both": 0.14,
+      "symbolsMinusCode": 0.04999999999999999,
+      "bothMinusCode": 0.04000000000000001,
+      "bothMinusSymbols": -0.009999999999999981
+    },
+    {
+      "file": "packages/alchemy/src/Server/SQSQueueEventSource.ts",
+      "gold": "false",
+      "codeOnly": 0.08,
+      "symbols": 0.08,
+      "both": 0.09,
+      "symbolsMinusCode": 0,
+      "bothMinusCode": 0.009999999999999995,
+      "bothMinusSymbols": 0.009999999999999995
+    },
+    {
+      "file": "packages/cloudflare-runtime/src/core/bindings/cache/Cache.worker.ts",
+      "gold": "false",
+      "codeOnly": 0.12,
+      "symbols": 0.18,
+      "both": 0.13,
+      "symbolsMinusCode": 0.06,
+      "bothMinusCode": 0.010000000000000009,
+      "bothMinusSymbols": -0.04999999999999999
+    }
+  ],
+  "questionVariants": [
+    {
+      "file": "packages/alchemy/src/ACME/Certificate.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/ApiGateway/DeleteUsagePlanKeyHttp.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/ApplicationSignals/GroupingConfiguration.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/Athena/WorkGroup.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/AutoScaling/LifecycleHook.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/AutoScaling/ScalingPolicy.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/AutoScaling/ScheduledAction.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CloudWatch/Alarm.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CloudWatch/AlarmMuteRule.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CloudWatch/CompositeAlarm.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CloudWatch/Dashboard.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeArtifact/Domain.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeBuild/Project.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeBuild/ReportGroup.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeDeploy/Application.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeDeploy/DeploymentConfig.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodeDeploy/DeploymentGroup.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/CodePipeline/Pipeline.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/Config/AggregationAuthorization.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EC2/FlowLog.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EC2/KeyPair.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EntityResolution/IdMappingWorkflow.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EntityResolution/IdNamespace.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EntityResolution/MatchingWorkflow.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/EntityResolution/SchemaMapping.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/Glue/Job.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/MailManager/AddonInstance.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/MailManager/AddonSubscription.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/MediaPackageV2/OriginEndpoint.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/MediaTailor/PlaybackConfiguration.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/SES/ReceiptFilter.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/SES/ReceiptRuleSet.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/SimpleDB/Domain.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/SNS/PlatformApplication.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/SSMIncidents/ResponsePlan.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/StepFunctions/Activity.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/StepFunctions/StateMachine.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/VerifiedPermissions/PolicyStore.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/AWS/XRay/ResourcePolicy.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/KV/WriteNamespaceHttp.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/R2/WriteBucketBinding.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/SecretsStore/LocalSecretsStoreGateway.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/SecurityTxt/SecurityTxt.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/Stream/StreamBinding.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/Tags/AccountResourceTags.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/Tags/ZoneResourceTags.ts",
+      "sufficiency": {
+        "code-only": "1566ebb3e5ba9b4870090c6400081ae33b4e869140d4af590aac7e000590ba08",
+        "symbols": "02f75cb0c9c4a152a308d23af7f2fb590d128c7d351d09c5bf600e8b22cfd86a",
+        "symbols+references": "6b9ef6a9d6380730a44d1d26ec998a5252f17362d2d0d706c6215a9bbc1b0e33"
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Cloudflare/Tunnel/WriteTunnel.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Fly/WriteSecretHttp.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Neon/Storage.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/alchemy/src/Server/SQSQueueEventSource.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    },
+    {
+      "file": "packages/cloudflare-runtime/src/core/bindings/cache/Cache.worker.ts",
+      "sufficiency": {
+        "code-only": null,
+        "symbols": null,
+        "symbols+references": null
+      }
+    }
+  ],
+  "preparationMilliseconds": 10182.015890999997,
+  "totalMilliseconds": 44647.803769,
+  "actualPaidRequests": 269,
+  "inputTokens": 3551835,
+  "estimatedNoRetryDollars": 0.166866588,
+  "maximumCapacityNoRetryDollars": 0.723072,
+  "pairedMeanDeltas": {
+    "symbolsMinusCode": 0.008823529411764702,
+    "bothMinusCode": 0.0003921568627450932,
+    "bothMinusSymbols": -0.00843137254901961
+  },
+  "conservativeDollars": 0.14917707,
+  "estimatedWorstCaseRetryDollars": 2.892288,
+  "gitStatusBefore": " M package.json\n M pnpm-lock.yaml\n?? .adhere/\n?? vite.config.ts\n",
+  "gitStatusAfter": " M package.json\n M pnpm-lock.yaml\n?? .adhere/\n?? vite.config.ts\n",
+  "limitations": [
+    "Known-set case-control results are not population accuracy",
+    "Locate sufficiency wording varies with context in production",
+    "Simulator token counts are estimates, not provider measurements",
+    "Worst-case locating assumes every judgment is in-scope above threshold",
+    "No automatic resume: a paid-once marker prevents budget reset after interruption",
+    "FN/TN are among answered judgments only; unavailable positives are reported separately and reduce known-positive coverage",
+    "The $1 cap can stop the study before all arms complete if failures/retries consume the reserve"
+  ]
+}

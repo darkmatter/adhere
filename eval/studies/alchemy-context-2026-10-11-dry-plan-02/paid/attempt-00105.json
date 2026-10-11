@@ -1,0 +1,740 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/AWS/Config/AggregationAuthorization.ts",
+  "kind": "locate",
+  "ordinal": 105,
+  "artifact": "attempt-00105.json",
+  "started": "2026-10-11T03:27:34.831Z",
+  "estimatedTokens": 17961,
+  "reservedTokens": 64000,
+  "chargedTokens": 17555,
+  "outcome": "answered",
+  "milliseconds": 157.37721800000145,
+  "referencesPresent": false,
+  "bodyDigest": "3aa1adcf8b877c006fb89adf3f11102428f21892858419a0a63cccc38937f676",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"choice\",\"choice\":\"10\",\"confidence\":0.98,\"probabilities\":{\"1\":0.0,\"2\":0.0,\"3\":0.0,\"4\":0.0,\"5\":0.0,\"6\":0.0,\"7\":0.0,\"8\":0.0,\"9\":0.02,\"10\":0.98}},\"start:providers/idempotent-delete:1\":{\"type\":\"choice\",\"choice\":\"10\",\"confidence\":0.22,\"probabilities\":{\"1\":0.1,\"2\":0.01,\"3\":0.01,\"4\":0.03,\"5\":0.01,\"6\":0.01,\"7\":0.04,\"8\":0.04,\"9\":0.22,\"10\":0.28,\"11\":0.07,\"12\":0.03,\"13\":0.07,\"14\":0.08}},\"end:providers/idempotent-delete:1\":{\"type\":\"choice\",\"choice\":\"10\",\"confidence\":0.33,\"probabilities\":{\"1\":0.14,\"2\":0.01,\"3\":0.01,\"4\":0.01,\"5\":0.01,\"6\":0.01,\"7\":0.02,\"8\":0.02,\"9\":0.07,\"10\":0.38,\"11\":0.05,\"12\":0.02,\"13\":0.09,\"14\":0.16}},\"start:providers/idempotent-delete:2\":{\"type\":\"choice\",\"choice\":\"32\",\"confidence\":0.16,\"probabilities\":{\"16\":0.12,\"22\":0.18,\"27\":0.15,\"31\":0.22,\"32\":0.33}},\"end:providers/idempotent-delete:2\":{\"type\":\"choice\",\"choice\":\"32\",\"confidence\":0.39,\"probabilities\":{\"16\":0.04,\"22\":0.05,\"27\":0.09,\"31\":0.31,\"32\":0.51}},\"start:providers/idempotent-delete:3\":{\"type\":\"choice\",\"choice\":\"47\",\"confidence\":0.23,\"probabilities\":{\"34\":0.15,\"35\":0.05,\"36\":0.03,\"37\":0.04,\"39\":0.04,\"41\":0.04,\"43\":0.06,\"44\":0.1,\"45\":0.1,\"46\":0.09,\"47\":0.3}},\"end:providers/idempotent-delete:3\":{\"type\":\"choice\",\"choice\":\"47\",\"confidence\":0.4,\"probabilities\":{\"34\":0.09,\"35\":0.04,\"36\":0.03,\"37\":0.03,\"39\":0.02,\"41\":0.03,\"43\":0.08,\"44\":0.1,\"45\":0.06,\"46\":0.07,\"47\":0.45}},\"start:providers/idempotent-delete:4\":{\"type\":\"choice\",\"choice\":\"95\",\"confidence\":0.17,\"probabilities\":{\"72\":0.03,\"73\":0.01,\"74\":0.06,\"76\":0.05,\"77\":0.03,\"78\":0.02,\"79\":0.06,\"82\":0.06,\"83\":0.01,\"84\":0.03,\"85\":0.04,\"86\":0.08,\"87\":0.01,\"88\":0.03,\"89\":0.01,\"90\":0.03,\"91\":0.03,\"92\":0.03,\"93\":0.06,\"94\":0.11,\"95\":0.21}},\"end:providers/idempotent-delete:4\":{\"type\":\"choice\",\"choice\":\"95\",\"confidence\":0.23,\"probabilities\":{\"72\":0.01,\"73\":0.02,\"74\":0.07,\"76\":0.02,\"77\":0.01,\"78\":0.01,\"79\":0.04,\"82\":0.03,\"83\":0.01,\"84\":0.02,\"85\":0.03,\"86\":0.04,\"87\":0.01,\"88\":0.03,\"89\":0.01,\"90\":0.02,\"91\":0.04,\"92\":0.02,\"93\":0.15,\"94\":0.14,\"95\":0.27}},\"start:providers/idempotent-delete:5\":{\"type\":\"choice\",\"choice\":\"122\",\"confidence\":0.11,\"probabilities\":{\"97\":0.07,\"98\":0.04,\"99\":0.02,\"100\":0.01,\"101\":0.02,\"102\":0.01,\"103\":0.02,\"104\":0.02,\"105\":0.02,\"106\":0.13,\"107\":0.05,\"108\":0.02,\"109\":0.04,\"111\":0.06,\"112\":0.06,\"113\":0.01,\"114\":0.03,\"115\":0.07,\"117\":0.06,\"118\":0.02,\"119\":0.02,\"120\":0.01,\"121\":0.04,\"122\":0.15}},\"end:providers/idempotent-delete:5\":{\"type\":\"choice\",\"choice\":\"122\",\"confidence\":0.15,\"probabilities\":{\"97\":0.04,\"98\":0.02,\"99\":0.02,\"100\":0.02,\"101\":0.02,\"102\":0.01,\"103\":0.02,\"104\":0.02,\"105\":0.04,\"106\":0.06,\"107\":0.05,\"108\":0.04,\"109\":0.06,\"111\":0.04,\"112\":0.04,\"113\":0.01,\"114\":0.05,\"115\":0.13,\"117\":0.04,\"118\":0.02,\"119\":0.02,\"120\":0.01,\"121\":0.03,\"122\":0.19}},\"start:providers/idempotent-delete:6\":{\"type\":\"choice\",\"choice\":\"151\",\"confidence\":0.32,\"probabilities\":{\"123\":0.07,\"124\":0.03,\"125\":0.01,\"126\":0.01,\"127\":0.01,\"128\":0.01,\"129\":0.01,\"130\":0.01,\"131\":0.01,\"132\":0.01,\"133\":0.03,\"134\":0.03,\"135\":0.02,\"136\":0.05,\"137\":0.01,\"138\":0.02,\"139\":0.01,\"140\":0.03,\"141\":0.01,\"142\":0.01,\"143\":0.03,\"144\":0.01,\"145\":0.01,\"146\":0.02,\"147\":0.05,\"148\":0.01,\"149\":0.02,\"150\":0.11,\"151\":0.34}},\"end:providers/idempotent-delete:6\":{\"type\":\"choice\",\"choice\":\"151\",\"confidence\":0.29,\"probabilities\":{\"123\":0.05,\"124\":0.02,\"125\":0.01,\"126\":0.01,\"127\":0.01,\"128\":0.01,\"129\":0.01,\"130\":0.01,\"131\":0.01,\"132\":0.01,\"133\":0.05,\"134\":0.05,\"135\":0.06,\"136\":0.02,\"137\":0.01,\"138\":0.01,\"139\":0.01,\"140\":0.02,\"141\":0.01,\"142\":0.02,\"143\":0.04,\"144\":0.01,\"145\":0.01,\"146\":0.02,\"147\":0.05,\"148\":0.01,\"149\":0.02,\"150\":0.12,\"151\":0.31}},\"start:providers/idempotent-delete:7\":{\"type\":\"choice\",\"choice\":\"163\",\"confidence\":0.14,\"probabilities\":{\"154\":0.13,\"155\":0.03,\"156\":0.04,\"157\":0.05,\"158\":0.03,\"159\":0.04,\"160\":0.03,\"161\":0.07,\"162\":0.14,\"163\":0.19,\"164\":0.03,\"165\":0.02,\"168\":0.05,\"169\":0.02,\"170\":0.02,\"171\":0.11}},\"end:providers/idempotent-delete:7\":{\"type\":\"choice\",\"choice\":\"162\",\"confidence\":0.19,\"probabilities\":{\"154\":0.1,\"155\":0.03,\"156\":0.02,\"157\":0.03,\"158\":0.03,\"159\":0.04,\"160\":0.04,\"161\":0.1,\"162\":0.24,\"163\":0.12,\"164\":0.02,\"165\":0.02,\"168\":0.03,\"169\":0.02,\"170\":0.03,\"171\":0.13}},\"start:providers/idempotent-delete:8\":{\"type\":\"choice\",\"choice\":\"199\",\"confidence\":0.11,\"probabilities\":{\"177\":0.08,\"178\":0.05,\"179\":0.03,\"180\":0.03,\"181\":0.03,\"182\":0.02,\"183\":0.09,\"184\":0.04,\"185\":0.09,\"187\":0.04,\"188\":0.08,\"191\":0.03,\"192\":0.02,\"193\":0.03,\"194\":0.08,\"195\":0.1,\"199\":0.16}},\"end:providers/idempotent-delete:8\":{\"type\":\"choice\",\"choice\":\"199\",\"confidence\":0.12,\"probabilities\":{\"177\":0.04,\"178\":0.03,\"179\":0.03,\"180\":0.02,\"181\":0.03,\"182\":0.02,\"183\":0.12,\"184\":0.03,\"185\":0.12,\"187\":0.02,\"188\":0.05,\"191\":0.03,\"192\":0.02,\"193\":0.03,\"194\":0.11,\"195\":0.13,\"199\":0.17}},\"start:providers/idempotent-delete:9\":{\"type\":\"choice\",\"choice\":\"225\",\"confidence\":0.27,\"probabilities\":{\"200\":0.08,\"201\":0.02,\"202\":0.01,\"203\":0.01,\"204\":0.02,\"205\":0.01,\"206\":0.01,\"207\":0.02,\"208\":0.02,\"209\":0.01,\"210\":0.06,\"211\":0.02,\"212\":0.01,\"213\":0.04,\"214\":0.04,\"215\":0.06,\"217\":0.04,\"218\":0.02,\"219\":0.04,\"220\":0.03,\"221\":0.03,\"222\":0.01,\"223\":0.02,\"224\":0.07,\"225\":0.3}},\"end:providers/idempotent-delete:9\":{\"type\":\"choice\",\"choice\":\"225\",\"confidence\":0.29,\"probabilities\":{\"200\":0.06,\"201\":0.01,\"202\":0.01,\"203\":0.01,\"204\":0.01,\"205\":0.01,\"206\":0.01,\"207\":0.02,\"208\":0.03,\"209\":0.01,\"210\":0.06,\"211\":0.01,\"212\":0.01,\"213\":0.06,\"214\":0.05,\"215\":0.04,\"217\":0.02,\"218\":0.01,\"219\":0.08,\"220\":0.02,\"221\":0.03,\"222\":0.01,\"223\":0.02,\"224\":0.08,\"225\":0.32}},\"start:providers/idempotent-delete:10\":{\"type\":\"choice\",\"choice\":\"229\",\"confidence\":0.72,\"probabilities\":{\"228\":0.17,\"229\":0.75,\"230\":0.01,\"231\":0.02,\"232\":0.04,\"233\":0.01,\"234\":0.0,\"235\":0.0,\"236\":0.0}},\"end:providers/idempotent-delete:10\":{\"type\":\"choice\",\"choice\":\"232\",\"confidence\":0.19,\"probabilities\":{\"228\":0.03,\"229\":0.1,\"230\":0.01,\"231\":0.11,\"232\":0.28,\"233\":0.18,\"234\":0.1,\"235\":0.09,\"236\":0.1}},\"sufficient:providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.66}},\"usage\":{\"input_tokens\":17555,\"output_tokens\":3588}}",
+  "inputTokens": 17555,
+  "answers": {
+    "providers/idempotent-delete": "10",
+    "start:providers/idempotent-delete:1": "10",
+    "end:providers/idempotent-delete:1": "10",
+    "start:providers/idempotent-delete:2": "32",
+    "end:providers/idempotent-delete:2": "32",
+    "start:providers/idempotent-delete:3": "47",
+    "end:providers/idempotent-delete:3": "47",
+    "start:providers/idempotent-delete:4": "95",
+    "end:providers/idempotent-delete:4": "95",
+    "start:providers/idempotent-delete:5": "122",
+    "end:providers/idempotent-delete:5": "122",
+    "start:providers/idempotent-delete:6": "151",
+    "end:providers/idempotent-delete:6": "151",
+    "start:providers/idempotent-delete:7": "163",
+    "end:providers/idempotent-delete:7": "162",
+    "start:providers/idempotent-delete:8": "199",
+    "end:providers/idempotent-delete:8": "199",
+    "start:providers/idempotent-delete:9": "225",
+    "end:providers/idempotent-delete:9": "225",
+    "start:providers/idempotent-delete:10": "229",
+    "end:providers/idempotent-delete:10": "232",
+    "sufficient:providers/idempotent-delete": 0.66
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "_tag": "```typescript\n\"None\" | \"Some\"\n```",
+        "accountId": "```typescript\nstring\n```",
+        "action": "```typescript\n\"replace\"\n```",
+        "AggregationAuthorization": "```typescript\nimport(\"../../Resource.ts\").ResourceClass<AggregationAuthorization>\n```\n\nAn AWS Config aggregation authorization that grants an aggregator account\nin a specific region permission to collect AWS Config configuration and\ncompliance data from th",
+        "aggregationAuthorizationArn": "```typescript\nstring\n```\n\nARN of the aggregation authorization.\n\n---\n\n```typescript\nstring\n```",
+        "AggregationAuthorizationArn": "```typescript\nstring | undefined\n```\n\n```typescript\nstring\n```",
+        "AggregationAuthorizationProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<AggregationAuthorization>, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient | import(\"../../Stack.ts\").Stack | import(\"..",
+        "arn": "```typescript\nstring\n```\n\n---\n\n```typescript\nstring | undefined\n```",
+        "attrs": "```typescript\n{ aggregationAuthorizationArn: string; authorizedAccountId: string; authorizedAwsRegion: string; }\n```",
+        "auth": "```typescript\nconfig.AggregationAuthorization\n```\n\n---\n\n```typescript\nconfig.AggregationAuthorization | undefined\n```\n\n```typescript\nconfig.AggregationAuthorization\n```",
+        "authorizedAccountId": "```typescript\nstring\n```\n\n---\n\n```typescript\nstring | undefined\n```\n\n```typescript\nstring\n```\n\nThe aggregator account authorized to collect data.\n\n---\n\n```typescript\nstring\n```\n\nThe 12-digit account ID of the aggregator account that is authorized to\ncollec",
+        "AuthorizedAccountId": "```typescript\nstring | undefined\n```\n\n---\n\n```typescript\nstring\n```",
+        "authorizedAwsRegion": "```typescript\nstring\n```\n\n---\n\n```typescript\nstring | undefined\n```\n\n```typescript\nstring\n```\n\nThe aggregator region authorized to collect data.\n\n---\n\n```typescript\nstring\n```\n\nThe region of the aggregator account that is authorized to collect AWS\nConfig d",
+        "AuthorizedAwsRegion": "```typescript\nstring | undefined\n```\n\n---\n\n```typescript\nstring\n```",
+        "auths": "```typescript\nconfig.AggregationAuthorization[]\n```",
+        "catchTag": "```typescript\n{ <const K extends import(\"effect/Types\").Tags<E> | import(\"effect/Array\").NonEmptyReadonlyArray<import(\"effect/Types\").Tags<E>>, E, A1, E1, R1, A2 = import(\"effect/Types\").unassigned, E2 = never, R2 = never>(k: K, f: (e: import(\"effect/Types",
+        "config": "```typescript\ntypeof config\n```",
+        "createInternalTags": "```typescript\n(id: string) => Effect.Effect<{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy::id\": string; }, never, import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```",
+        "createTagsList": "```typescript\n(tags: import(\"../../Tags.ts\").Tags) => { Key: string; Value: string; }[]\n```",
+        "currentTags": "```typescript\nRecord<string, string> | { [k: string]: string; }\n```",
+        "delete": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: AggregationAuthorizationProps; output: { aggregationAuthorizationArn: string; authorizedAccountId: string; authorizedAwsRegion: string; }; session: import(\"../../Report.ts\").Scoped",
+        "deleteAggregationAuthorization": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<config.DeleteAggregationAuthorizationRequest, config.DeleteAggregationAuthorizationResponse, config.DeleteAggregationAuthorizationError, import(\"@distilled.cloud/aws/Credentials\").Credential",
+        "describeAggregationAuthorizations": "```typescript\nimport(\"@distilled.cloud/core/api\").PaginatedOperationMethod<config.DescribeAggregationAuthorizationsRequest, config.DescribeAggregationAuthorizationsResponse, config.DescribeAggregationAuthorizationsError, import(\"@distilled.cloud/aws/Creden",
+        "desiredTags": "```typescript\n{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy::id\": string; }\n```",
+        "diff": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: AggregationAuthorizationProps; news: import(\"../../Input.ts\").Input<AggregationAuthorizationProps>; oldBindings: import(\"../../Resource.ts\").ResourceBinding<never>[]; newBindings: ",
+        "diffTags": "```typescript\n(oldTags: Record<string, string>, newTags: Record<string, string>) => { added: { Key: string; Value: string; }[]; removed: string[]; updated: { Key: string; Value: string; }[]; upsert: { Key: string; Value: string; }[]; }\n```",
+        "effect": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike, Req = never, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../../Resource.",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "filter": "```typescript\n{ <A, B extends A>(refinement: import(\"effect/Predicate\").Refinement<import(\"effect/Types\").NoInfer<A>, B>): <E, R>(self: Stream.Stream<A, E, R>) => Stream.Stream<B, E, R>; <A>(predicate: import(\"effect/Predicate\").Predicate<import(\"effect/Ty",
+        "finalArn": "```typescript\nstring | undefined\n```\n\n```typescript\nstring\n```",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "hasAlchemyTags": "```typescript\n(id: string, tags: import(\"../../Tags.ts\").Tags | undefined) => Effect.Effect<boolean, never, import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```\n\nChecks if a resource has the expected alchemy tags for this app/stage/id.",
+        "head": "```typescript\nimport(\"effect/Option\").Option<config.AggregationAuthorization>\n```\n\n```typescript\nimport(\"effect/Option\").Some<config.AggregationAuthorization>\n```",
+        "id": "```typescript\nstring\n```",
+        "internalTags": "```typescript\n{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy::id\": string; }\n```",
+        "isResolved": "```typescript\n<T>(value: import(\"../../Input.ts\").Input<T>) => value is T\n```",
+        "items": "```typescript\n(input: config.DescribeAggregationAuthorizationsRequest) => Stream.Stream<config.AggregationAuthorization, config.DescribeAggregationAuthorizationsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/Ht",
+        "Key": "```typescript\nstring | undefined\n```\n\n```typescript\nstring\n```",
+        "list": "```typescript\n() => Effect.Effect<{ aggregationAuthorizationArn: string; authorizedAccountId: string; authorizedAwsRegion: string; }[], config.DescribeAggregationAuthorizationsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/u",
+        "listTagsForResource": "```typescript\nimport(\"@distilled.cloud/core/api\").PaginatedOperationMethod<config.ListTagsForResourceRequest, config.ListTagsForResourceResponse, config.ListTagsForResourceError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unsta",
+        "live": "```typescript\nconfig.AggregationAuthorization | undefined\n```",
+        "map": "```typescript\n{ <A, B>(f: (a: A) => B): <E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<B, E, R>; <A, E, R, B>(self: Effect.Effect<A, E, R>, f: (a: A) => B): Effect.Effect<B, E, R>; }\n```\n\nTransforms the value inside an effect by applying a function ",
+        "news": "```typescript\nimport(\"../../Input.ts\").Input<AggregationAuthorizationProps>\n```\n\n```typescript\nAggregationAuthorizationProps\n```\n\n---\n\n```typescript\nAggregationAuthorizationProps\n```",
+        "note": "```typescript\n(note: string, options?: { readonly kind?: import(\"../../Report.ts\").NoteKind; }) => Effect.Effect<void>\n```",
+        "observeAuthorization": "```typescript\n(accountId: string, region: string) => Effect.Effect<config.AggregationAuthorization | undefined, config.DescribeAggregationAuthorizationsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\"",
+        "observedTags": "```typescript\n(arn: string) => Effect.Effect<Record<string, string> | { [k: string]: string; }, config.InvalidLimitException | config.InvalidNextTokenException | config.ValidationException | import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@dist",
+        "of": "```typescript\n<ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(service: Omit<Provider.ProviderService<AggregationAuthorization, ReadReq, DiffReq, PrecreateR",
+        "olds": "```typescript\nAggregationAuthorizationProps\n```",
+        "output": "```typescript\n{ aggregationAuthorizationArn: string; authorizedAccountId: string; authorizedAwsRegion: string; } | undefined\n```\n\n---\n\n```typescript\n{ aggregationAuthorizationArn: string; authorizedAccountId: string; authorizedAwsRegion: string; }\n```",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "Provider": "```typescript\ntypeof Provider\n```\n\n---\n\n```typescript\nProvider.Provider<AggregationAuthorization>\n```",
+        "putAggregationAuthorization": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<config.PutAggregationAuthorizationRequest, config.PutAggregationAuthorizationResponse, config.PutAggregationAuthorizationError, import(\"@distilled.cloud/aws/Credentials\").Credentials | impor",
+        "r": "```typescript\nconfig.ListTagsForResourceResponse\n```\n\n---\n\n```typescript\nconfig.PutAggregationAuthorizationResponse\n```",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: AggregationAuthorizationProps; output: { aggregationAuthorizationArn: string; authorizedAccountId: string; authorizedAwsRegion: string; } | undefined; }) => Effect.Effect<{ aggrega",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: AggregationAuthorizationProps; olds: AggregationAuthorizationProps | undefined; output: { aggregationAuthorizationArn: string; authorizedAccountId: string; authorizedAwsRegion: str",
+        "region": "```typescript\nstring\n```",
+        "removed": "```typescript\nstring[]\n```",
+        "Resource": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../../Resource.ts\").ResourceOptions) => import(\"../../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nTh",
+        "ResourceArn": "```typescript\nstring\n```",
+        "runCollect": "```typescript\n<A, E, R>(self: Stream.Stream<A, E, R>) => Effect.Effect<Array<A>, E, R>\n```\n\nRuns the stream and collects all elements into an array.\n\n**Example** (Collecting stream values)\n\n```ts import.meta.vitest\nimport { Effect, Stream } from \"effect\"\n\n",
+        "runHead": "```typescript\n<A, E, R>(self: Stream.Stream<A, E, R>) => Effect.Effect<import(\"effect/Option\").Option<A>, E, R>\n```\n\nRuns the stream and returns the first element as an `Option`.\n\n**Example** (Getting the first stream value)\n\n```ts import.meta.vitest\nimpor",
+        "session": "```typescript\nimport(\"../../Report.ts\").ScopedPlanStatusSession\n```",
+        "stables": "```typescript\n(\"aggregationAuthorizationArn\" | \"authorizedAccountId\" | \"authorizedAwsRegion\")[]\n```",
+        "Stream": "```typescript\ntypeof Stream\n```",
+        "succeed": "```typescript\n<A>(value: A) => Effect.Effect<A>\n```\n\nCreates an `Effect` that always succeeds with a given value.\n\n**When to use**\n\nUse when an effect should complete successfully with a specific value without any errors\nor external dependencies.\n\n**Exampl",
+        "t": "```typescript\nconfig.Tag\n```",
+        "TagKeys": "```typescript\nstring[]\n```",
+        "tagResource": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<config.TagResourceRequest, config.TagResourceResponse, config.TagResourceError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>",
+        "tags": "```typescript\nRecord<string, string> | { [k: string]: string; }\n```\n\n---\n\n```typescript\nRecord<string, string> | undefined\n```\n\nTags to apply to the authorization. Merged with internal Alchemy tags.",
+        "Tags": "```typescript\nconfig.Tag[] | undefined\n```\n\n---\n\n```typescript\n{ Key: string; Value: string; }[]\n```",
+        "toAttrs": "```typescript\n(auth: config.AggregationAuthorization) => { aggregationAuthorizationArn: string; authorizedAccountId: string; authorizedAwsRegion: string; }\n```",
+        "Unowned": "```typescript\n{ <T extends object>(attrs: T): T; is: (value: unknown) => boolean; }\n```\n\nBrand a `read` return value as belonging to a different owner.\n\nUse this in a provider's `read` implementation when the resource exists in\nthe cloud but a positive own",
+        "untagResource": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<config.UntagResourceRequest, config.UntagResourceResponse, config.UntagResourceError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpC",
+        "upsert": "```typescript\n{ Key: string; Value: string; }[]\n```",
+        "value": "```typescript\nconfig.AggregationAuthorization\n```",
+        "Value": "```typescript\nstring | undefined\n```"
+      },
+      "code": {
+        "1": "import * as config from \"@distilled.cloud/aws/config-service\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport {\n  createInternalTags,\n  createTagsList,\n  diffTags,\n  hasAlchemyTags,\n} from \"../../Tags.ts\";\nimport type { Providers } from \"../Providers.ts\";",
+        "2": "\nexport interface AggregationAuthorizationProps {\n\n\n\n\n\n  authorizedAccountId: string;\n\n\n\n\n  authorizedAwsRegion: string;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "3": "\nexport interface AggregationAuthorization extends Resource<\n  \"AWS.Config.AggregationAuthorization\",\n  AggregationAuthorizationProps,\n  {\n\n    aggregationAuthorizationArn: string;\n\n    authorizedAccountId: string;\n\n    authorizedAwsRegion: string;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const AggregationAuthorization = Resource<AggregationAuthorization>(\n  \"AWS.Config.AggregationAuthorization\",\n);\n\nexport const AggregationAuthorizationProvider = () =>\n  Provider.effect(\n    AggregationAuthorization,\n    Effect.gen(function* () {\n\n\n      const observeAuthorization = Effect.fn(function* (\n        accountId: string,\n        region: string,\n      ) {\n        return yield* config.describeAggregationAuthorizations.items({}).pipe(\n          Stream.filter(\n            (auth) =>\n              auth.AuthorizedAccountId === accountId &&\n              auth.AuthorizedAwsRegion === region,\n          ),\n          Stream.runHead,\n          Effect.map((head) => (head._tag === \"Some\" ? head.value : undefined)),\n        );\n      });",
+        "5": "\n      const observedTags = (arn: string) =>\n        config.listTagsForResource({ ResourceArn: arn }).pipe(\n          Effect.map((r) =>\n            Object.fromEntries(\n              (r.Tags ?? []).flatMap((t) =>\n                t.Key !== undefined ? [[t.Key, t.Value ?? \"\"]] : [],\n              ),\n            ),\n          ),\n          Effect.catchTag(\"ResourceNotFoundException\", () =>\n            Effect.succeed({} as Record<string, string>),\n          ),\n        );\n\n      const toAttrs = (auth: config.AggregationAuthorization) => ({\n        aggregationAuthorizationArn: auth.AggregationAuthorizationArn!,\n        authorizedAccountId: auth.AuthorizedAccountId!,\n        authorizedAwsRegion: auth.AuthorizedAwsRegion!,\n      });\n\n      return AggregationAuthorization.Provider.of({\n        stables: [\n          \"aggregationAuthorizationArn\",\n          \"authorizedAccountId\",\n          \"authorizedAwsRegion\",\n        ],",
+        "6": "        list: () =>\n          config.describeAggregationAuthorizations.items({}).pipe(\n            Stream.runCollect,\n            Effect.map((auths) =>\n              Array.from(auths).flatMap((auth) =>\n                auth.AggregationAuthorizationArn &&\n                auth.AuthorizedAccountId &&\n                auth.AuthorizedAwsRegion\n                  ? [toAttrs(auth)]\n                  : [],\n              ),\n            ),\n          ),\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const accountId =\n            output?.authorizedAccountId ?? olds?.authorizedAccountId;\n          const region =\n            output?.authorizedAwsRegion ?? olds?.authorizedAwsRegion;\n          if (accountId === undefined || region === undefined) {\n            return undefined;\n          }\n          const auth = yield* observeAuthorization(accountId, region);\n          if (auth?.AggregationAuthorizationArn === undefined) {\n            return undefined;\n          }\n          const attrs = toAttrs(auth);\n          const tags = yield* observedTags(auth.AggregationAuthorizationArn);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),",
+        "7": "\n\n        diff: Effect.fn(function* ({ news, olds }) {\n          if (!isResolved(news)) return undefined;\n          if (\n            olds.authorizedAccountId !== news.authorizedAccountId ||\n            olds.authorizedAwsRegion !== news.authorizedAwsRegion\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n        reconcile: Effect.fn(function* ({ id, news, session }) {\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...news.tags, ...internalTags };\n\n\n          let live = yield* observeAuthorization(\n            news.authorizedAccountId,\n            news.authorizedAwsRegion,\n          );",
+        "8": "\n\n\n\n\n          if (live === undefined) {\n            live = yield* config\n              .putAggregationAuthorization({\n                AuthorizedAccountId: news.authorizedAccountId,\n                AuthorizedAwsRegion: news.authorizedAwsRegion,\n                Tags: createTagsList(desiredTags),\n              })\n              .pipe(Effect.map((r) => r.AggregationAuthorization));\n          }\n\n          const arn = live?.AggregationAuthorizationArn;\n          if (arn === undefined) {\n\n\n            live = yield* observeAuthorization(\n              news.authorizedAccountId,\n              news.authorizedAwsRegion,\n            );\n          }\n\n\n\n          const finalArn = live?.AggregationAuthorizationArn;",
+        "9": "          if (finalArn !== undefined) {\n            const currentTags = yield* observedTags(finalArn);\n            const { upsert, removed } = diffTags(currentTags, desiredTags);\n            if (upsert.length > 0) {\n              yield* config.tagResource({\n                ResourceArn: finalArn,\n                Tags: upsert,\n              });\n            }\n            if (removed.length > 0) {\n              yield* config.untagResource({\n                ResourceArn: finalArn,\n                TagKeys: removed,\n              });\n            }\n          }\n\n          yield* session.note(\n            `${news.authorizedAccountId}/${news.authorizedAwsRegion}`,\n          );\n          return {\n            aggregationAuthorizationArn: finalArn!,\n            authorizedAccountId: news.authorizedAccountId,\n            authorizedAwsRegion: news.authorizedAwsRegion,\n          };\n        }),",
+        "10": "\n\n        delete: Effect.fn(function* ({ output }) {\n          yield* config.deleteAggregationAuthorization({\n            AuthorizedAccountId: output.authorizedAccountId,\n            AuthorizedAwsRegion: output.authorizedAwsRegion,\n          });\n        }),\n      });\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as config from \"@distilled.cloud/aws/config-service\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Stream from \"effect/Stream\";",
+          "4": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "5": "import { isResolved } from \"../../Diff.ts\";",
+          "6": "import * as Provider from \"../../Provider.ts\";",
+          "7": "import { Resource } from \"../../Resource.ts\";",
+          "8": "import {",
+          "9": "createInternalTags,",
+          "10": "createTagsList,",
+          "11": "diffTags,",
+          "12": "hasAlchemyTags,",
+          "13": "} from \"../../Tags.ts\";",
+          "14": "import type { Providers } from \"../Providers.ts\";"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as config from \"@distilled.cloud/aws/config-service\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Stream from \"effect/Stream\";",
+          "4": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "5": "import { isResolved } from \"../../Diff.ts\";",
+          "6": "import * as Provider from \"../../Provider.ts\";",
+          "7": "import { Resource } from \"../../Resource.ts\";",
+          "8": "import {",
+          "9": "createInternalTags,",
+          "10": "createTagsList,",
+          "11": "diffTags,",
+          "12": "hasAlchemyTags,",
+          "13": "} from \"../../Tags.ts\";",
+          "14": "import type { Providers } from \"../Providers.ts\";"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "16": "export interface AggregationAuthorizationProps {",
+          "22": "authorizedAccountId: string;",
+          "27": "authorizedAwsRegion: string;",
+          "31": "tags?: Record<string, string>;",
+          "32": "}"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "16": "export interface AggregationAuthorizationProps {",
+          "22": "authorizedAccountId: string;",
+          "27": "authorizedAwsRegion: string;",
+          "31": "tags?: Record<string, string>;",
+          "32": "}"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "34": "export interface AggregationAuthorization extends Resource<",
+          "35": "\"AWS.Config.AggregationAuthorization\",",
+          "36": "AggregationAuthorizationProps,",
+          "37": "{",
+          "39": "aggregationAuthorizationArn: string;",
+          "41": "authorizedAccountId: string;",
+          "43": "authorizedAwsRegion: string;",
+          "44": "},",
+          "45": "never,",
+          "46": "Providers",
+          "47": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "34": "export interface AggregationAuthorization extends Resource<",
+          "35": "\"AWS.Config.AggregationAuthorization\",",
+          "36": "AggregationAuthorizationProps,",
+          "37": "{",
+          "39": "aggregationAuthorizationArn: string;",
+          "41": "authorizedAccountId: string;",
+          "43": "authorizedAwsRegion: string;",
+          "44": "},",
+          "45": "never,",
+          "46": "Providers",
+          "47": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "72": "export const AggregationAuthorization = Resource<AggregationAuthorization>(",
+          "73": "\"AWS.Config.AggregationAuthorization\",",
+          "74": ");",
+          "76": "export const AggregationAuthorizationProvider = () =>",
+          "77": "Provider.effect(",
+          "78": "AggregationAuthorization,",
+          "79": "Effect.gen(function* () {",
+          "82": "const observeAuthorization = Effect.fn(function* (",
+          "83": "accountId: string,",
+          "84": "region: string,",
+          "85": ") {",
+          "86": "return yield* config.describeAggregationAuthorizations.items({}).pipe(",
+          "87": "Stream.filter(",
+          "88": "(auth) =>",
+          "89": "auth.AuthorizedAccountId === accountId &&",
+          "90": "auth.AuthorizedAwsRegion === region,",
+          "91": "),",
+          "92": "Stream.runHead,",
+          "93": "Effect.map((head) => (head._tag === \"Some\" ? head.value : undefined)),",
+          "94": ");",
+          "95": "});"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "72": "export const AggregationAuthorization = Resource<AggregationAuthorization>(",
+          "73": "\"AWS.Config.AggregationAuthorization\",",
+          "74": ");",
+          "76": "export const AggregationAuthorizationProvider = () =>",
+          "77": "Provider.effect(",
+          "78": "AggregationAuthorization,",
+          "79": "Effect.gen(function* () {",
+          "82": "const observeAuthorization = Effect.fn(function* (",
+          "83": "accountId: string,",
+          "84": "region: string,",
+          "85": ") {",
+          "86": "return yield* config.describeAggregationAuthorizations.items({}).pipe(",
+          "87": "Stream.filter(",
+          "88": "(auth) =>",
+          "89": "auth.AuthorizedAccountId === accountId &&",
+          "90": "auth.AuthorizedAwsRegion === region,",
+          "91": "),",
+          "92": "Stream.runHead,",
+          "93": "Effect.map((head) => (head._tag === \"Some\" ? head.value : undefined)),",
+          "94": ");",
+          "95": "});"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "97": "const observedTags = (arn: string) =>",
+          "98": "config.listTagsForResource({ ResourceArn: arn }).pipe(",
+          "99": "Effect.map((r) =>",
+          "100": "Object.fromEntries(",
+          "101": "(r.Tags ?? []).flatMap((t) =>",
+          "102": "t.Key !== undefined ? [[t.Key, t.Value ?? \"\"]] : [],",
+          "103": "),",
+          "104": "),",
+          "105": "),",
+          "106": "Effect.catchTag(\"ResourceNotFoundException\", () =>",
+          "107": "Effect.succeed({} as Record<string, string>),",
+          "108": "),",
+          "109": ");",
+          "111": "const toAttrs = (auth: config.AggregationAuthorization) => ({",
+          "112": "aggregationAuthorizationArn: auth.AggregationAuthorizationArn!,",
+          "113": "authorizedAccountId: auth.AuthorizedAccountId!,",
+          "114": "authorizedAwsRegion: auth.AuthorizedAwsRegion!,",
+          "115": "});",
+          "117": "return AggregationAuthorization.Provider.of({",
+          "118": "stables: [",
+          "119": "\"aggregationAuthorizationArn\",",
+          "120": "\"authorizedAccountId\",",
+          "121": "\"authorizedAwsRegion\",",
+          "122": "],"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "97": "const observedTags = (arn: string) =>",
+          "98": "config.listTagsForResource({ ResourceArn: arn }).pipe(",
+          "99": "Effect.map((r) =>",
+          "100": "Object.fromEntries(",
+          "101": "(r.Tags ?? []).flatMap((t) =>",
+          "102": "t.Key !== undefined ? [[t.Key, t.Value ?? \"\"]] : [],",
+          "103": "),",
+          "104": "),",
+          "105": "),",
+          "106": "Effect.catchTag(\"ResourceNotFoundException\", () =>",
+          "107": "Effect.succeed({} as Record<string, string>),",
+          "108": "),",
+          "109": ");",
+          "111": "const toAttrs = (auth: config.AggregationAuthorization) => ({",
+          "112": "aggregationAuthorizationArn: auth.AggregationAuthorizationArn!,",
+          "113": "authorizedAccountId: auth.AuthorizedAccountId!,",
+          "114": "authorizedAwsRegion: auth.AuthorizedAwsRegion!,",
+          "115": "});",
+          "117": "return AggregationAuthorization.Provider.of({",
+          "118": "stables: [",
+          "119": "\"aggregationAuthorizationArn\",",
+          "120": "\"authorizedAccountId\",",
+          "121": "\"authorizedAwsRegion\",",
+          "122": "],"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "123": "list: () =>",
+          "124": "config.describeAggregationAuthorizations.items({}).pipe(",
+          "125": "Stream.runCollect,",
+          "126": "Effect.map((auths) =>",
+          "127": "Array.from(auths).flatMap((auth) =>",
+          "128": "auth.AggregationAuthorizationArn &&",
+          "129": "auth.AuthorizedAccountId &&",
+          "130": "auth.AuthorizedAwsRegion",
+          "131": "? [toAttrs(auth)]",
+          "132": ": [],",
+          "133": "),",
+          "134": "),",
+          "135": "),",
+          "136": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "137": "const accountId =",
+          "138": "output?.authorizedAccountId ?? olds?.authorizedAccountId;",
+          "139": "const region =",
+          "140": "output?.authorizedAwsRegion ?? olds?.authorizedAwsRegion;",
+          "141": "if (accountId === undefined || region === undefined) {",
+          "142": "return undefined;",
+          "143": "}",
+          "144": "const auth = yield* observeAuthorization(accountId, region);",
+          "145": "if (auth?.AggregationAuthorizationArn === undefined) {",
+          "146": "return undefined;",
+          "147": "}",
+          "148": "const attrs = toAttrs(auth);",
+          "149": "const tags = yield* observedTags(auth.AggregationAuthorizationArn);",
+          "150": "return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);",
+          "151": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "123": "list: () =>",
+          "124": "config.describeAggregationAuthorizations.items({}).pipe(",
+          "125": "Stream.runCollect,",
+          "126": "Effect.map((auths) =>",
+          "127": "Array.from(auths).flatMap((auth) =>",
+          "128": "auth.AggregationAuthorizationArn &&",
+          "129": "auth.AuthorizedAccountId &&",
+          "130": "auth.AuthorizedAwsRegion",
+          "131": "? [toAttrs(auth)]",
+          "132": ": [],",
+          "133": "),",
+          "134": "),",
+          "135": "),",
+          "136": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "137": "const accountId =",
+          "138": "output?.authorizedAccountId ?? olds?.authorizedAccountId;",
+          "139": "const region =",
+          "140": "output?.authorizedAwsRegion ?? olds?.authorizedAwsRegion;",
+          "141": "if (accountId === undefined || region === undefined) {",
+          "142": "return undefined;",
+          "143": "}",
+          "144": "const auth = yield* observeAuthorization(accountId, region);",
+          "145": "if (auth?.AggregationAuthorizationArn === undefined) {",
+          "146": "return undefined;",
+          "147": "}",
+          "148": "const attrs = toAttrs(auth);",
+          "149": "const tags = yield* observedTags(auth.AggregationAuthorizationArn);",
+          "150": "return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);",
+          "151": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "154": "diff: Effect.fn(function* ({ news, olds }) {",
+          "155": "if (!isResolved(news)) return undefined;",
+          "156": "if (",
+          "157": "olds.authorizedAccountId !== news.authorizedAccountId ||",
+          "158": "olds.authorizedAwsRegion !== news.authorizedAwsRegion",
+          "159": ") {",
+          "160": "return { action: \"replace\" } as const;",
+          "161": "}",
+          "162": "}),",
+          "163": "reconcile: Effect.fn(function* ({ id, news, session }) {",
+          "164": "const internalTags = yield* createInternalTags(id);",
+          "165": "const desiredTags = { ...news.tags, ...internalTags };",
+          "168": "let live = yield* observeAuthorization(",
+          "169": "news.authorizedAccountId,",
+          "170": "news.authorizedAwsRegion,",
+          "171": ");"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "154": "diff: Effect.fn(function* ({ news, olds }) {",
+          "155": "if (!isResolved(news)) return undefined;",
+          "156": "if (",
+          "157": "olds.authorizedAccountId !== news.authorizedAccountId ||",
+          "158": "olds.authorizedAwsRegion !== news.authorizedAwsRegion",
+          "159": ") {",
+          "160": "return { action: \"replace\" } as const;",
+          "161": "}",
+          "162": "}),",
+          "163": "reconcile: Effect.fn(function* ({ id, news, session }) {",
+          "164": "const internalTags = yield* createInternalTags(id);",
+          "165": "const desiredTags = { ...news.tags, ...internalTags };",
+          "168": "let live = yield* observeAuthorization(",
+          "169": "news.authorizedAccountId,",
+          "170": "news.authorizedAwsRegion,",
+          "171": ");"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "177": "if (live === undefined) {",
+          "178": "live = yield* config",
+          "179": ".putAggregationAuthorization({",
+          "180": "AuthorizedAccountId: news.authorizedAccountId,",
+          "181": "AuthorizedAwsRegion: news.authorizedAwsRegion,",
+          "182": "Tags: createTagsList(desiredTags),",
+          "183": "})",
+          "184": ".pipe(Effect.map((r) => r.AggregationAuthorization));",
+          "185": "}",
+          "187": "const arn = live?.AggregationAuthorizationArn;",
+          "188": "if (arn === undefined) {",
+          "191": "live = yield* observeAuthorization(",
+          "192": "news.authorizedAccountId,",
+          "193": "news.authorizedAwsRegion,",
+          "194": ");",
+          "195": "}",
+          "199": "const finalArn = live?.AggregationAuthorizationArn;"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "177": "if (live === undefined) {",
+          "178": "live = yield* config",
+          "179": ".putAggregationAuthorization({",
+          "180": "AuthorizedAccountId: news.authorizedAccountId,",
+          "181": "AuthorizedAwsRegion: news.authorizedAwsRegion,",
+          "182": "Tags: createTagsList(desiredTags),",
+          "183": "})",
+          "184": ".pipe(Effect.map((r) => r.AggregationAuthorization));",
+          "185": "}",
+          "187": "const arn = live?.AggregationAuthorizationArn;",
+          "188": "if (arn === undefined) {",
+          "191": "live = yield* observeAuthorization(",
+          "192": "news.authorizedAccountId,",
+          "193": "news.authorizedAwsRegion,",
+          "194": ");",
+          "195": "}",
+          "199": "const finalArn = live?.AggregationAuthorizationArn;"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "200": "if (finalArn !== undefined) {",
+          "201": "const currentTags = yield* observedTags(finalArn);",
+          "202": "const { upsert, removed } = diffTags(currentTags, desiredTags);",
+          "203": "if (upsert.length > 0) {",
+          "204": "yield* config.tagResource({",
+          "205": "ResourceArn: finalArn,",
+          "206": "Tags: upsert,",
+          "207": "});",
+          "208": "}",
+          "209": "if (removed.length > 0) {",
+          "210": "yield* config.untagResource({",
+          "211": "ResourceArn: finalArn,",
+          "212": "TagKeys: removed,",
+          "213": "});",
+          "214": "}",
+          "215": "}",
+          "217": "yield* session.note(",
+          "218": "`${news.authorizedAccountId}/${news.authorizedAwsRegion}`,",
+          "219": ");",
+          "220": "return {",
+          "221": "aggregationAuthorizationArn: finalArn!,",
+          "222": "authorizedAccountId: news.authorizedAccountId,",
+          "223": "authorizedAwsRegion: news.authorizedAwsRegion,",
+          "224": "};",
+          "225": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "200": "if (finalArn !== undefined) {",
+          "201": "const currentTags = yield* observedTags(finalArn);",
+          "202": "const { upsert, removed } = diffTags(currentTags, desiredTags);",
+          "203": "if (upsert.length > 0) {",
+          "204": "yield* config.tagResource({",
+          "205": "ResourceArn: finalArn,",
+          "206": "Tags: upsert,",
+          "207": "});",
+          "208": "}",
+          "209": "if (removed.length > 0) {",
+          "210": "yield* config.untagResource({",
+          "211": "ResourceArn: finalArn,",
+          "212": "TagKeys: removed,",
+          "213": "});",
+          "214": "}",
+          "215": "}",
+          "217": "yield* session.note(",
+          "218": "`${news.authorizedAccountId}/${news.authorizedAwsRegion}`,",
+          "219": ");",
+          "220": "return {",
+          "221": "aggregationAuthorizationArn: finalArn!,",
+          "222": "authorizedAccountId: news.authorizedAccountId,",
+          "223": "authorizedAwsRegion: news.authorizedAwsRegion,",
+          "224": "};",
+          "225": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "228": "delete: Effect.fn(function* ({ output }) {",
+          "229": "yield* config.deleteAggregationAuthorization({",
+          "230": "AuthorizedAccountId: output.authorizedAccountId,",
+          "231": "AuthorizedAwsRegion: output.authorizedAwsRegion,",
+          "232": "});",
+          "233": "}),",
+          "234": "});",
+          "235": "}),",
+          "236": ");"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "228": "delete: Effect.fn(function* ({ output }) {",
+          "229": "yield* config.deleteAggregationAuthorization({",
+          "230": "AuthorizedAccountId: output.authorizedAccountId,",
+          "231": "AuthorizedAwsRegion: output.authorizedAwsRegion,",
+          "232": "});",
+          "233": "}),",
+          "234": "});",
+          "235": "}),",
+          "236": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

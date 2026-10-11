@@ -1,0 +1,109 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/AWS/SES/ReceiptFilter.ts",
+  "kind": "judge",
+  "ordinal": 174,
+  "artifact": "attempt-00174.json",
+  "started": "2026-10-11T03:27:46.795Z",
+  "estimatedTokens": 5685,
+  "reservedTokens": 64000,
+  "chargedTokens": 4219,
+  "outcome": "answered",
+  "milliseconds": 127.66463600000134,
+  "referencesPresent": false,
+  "bodyDigest": "5b9a877df14dd3c94282daf184b8c5b80e0df8ad571e69fb092ced72c826ff76",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":4219,\"output_tokens\":25}}",
+  "inputTokens": 4219,
+  "answers": {
+    "providers/idempotent-delete": 0.92
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "action": "```typescript\n\"replace\"\n```",
+        "catchTag": "```typescript\n{ <const K extends import(\"effect/Types\").Tags<E> | import(\"effect/Array\").NonEmptyReadonlyArray<import(\"effect/Types\").Tags<E>>, E, A1, E1, R1, A2 = import(\"effect/Types\").unassigned, E2 = never, R2 = never>(k: K, f: (e: import(\"effect/Types",
+        "cidr": "```typescript\nstring\n```\n\nA single IPv4 address (e.g. `1.2.3.4`) or CIDR range (e.g. `1.2.3.0/24`)\nthe filter applies to.",
+        "Cidr": "```typescript\nstring\n```",
+        "createName": "```typescript\n(id: string, props: Pick<ReceiptFilterProps, \"filterName\">) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").InstanceId | import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```",
+        "createPhysicalName": "```typescript\n(args_0: { id: string; prefix?: string; instanceId?: string; suffixLength?: number; maxLength?: number; delimiter?: string; lowercase?: boolean; forbiddenPrefixes?: string[]; }) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").In",
+        "createReceiptFilter": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.CreateReceiptFilterRequest, ses.CreateReceiptFilterResponse, ses.CreateReceiptFilterError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClien",
+        "delete": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: ReceiptFilterProps; output: { filterName: string; }; session: import(\"../../Report.ts\").ScopedPlanStatusSession; bindings: import(\"../../Resource.ts\").ResourceBinding<never>[]; for",
+        "deleteReceiptFilter": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.DeleteReceiptFilterRequest, ses.DeleteReceiptFilterResponse, import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/u",
+        "diff": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: ReceiptFilterProps; news: import(\"../../Input.ts\").Input<ReceiptFilterProps>; oldBindings: import(\"../../Resource.ts\").ResourceBinding<never>[]; newBindings: import(\"../../Input.ts",
+        "effect": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike, Req = never, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../../Resource.",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "filter": "```typescript\nses.ReceiptFilter\n```",
+        "Filter": "```typescript\n{ Name: string; IpFilter: { Policy: ses.ReceiptFilterPolicy; Cidr: string; }; }\n```",
+        "filterName": "```typescript\nstring | undefined\n```\n\nName of the IP address filter. May contain letters, numbers, dashes and\nunderscores, up to 64 characters, and must start and end with a letter or\nnumber. If omitted, a deterministic physical name is generated from the\n",
+        "FilterName": "```typescript\nstring\n```",
+        "filters": "```typescript\nses.ReceiptFilter[]\n```",
+        "Filters": "```typescript\nses.ReceiptFilter[] | undefined\n```",
+        "findFilter": "```typescript\n(name: string) => Effect.Effect<ses.ReceiptFilter | undefined, import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "found": "```typescript\nses.ReceiptFilter | undefined\n```",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "id": "```typescript\nstring\n```",
+        "ipFilter": "```typescript\nReceiptIpFilter\n```\n\nThe IP filtering rule — an allow or block decision for a CIDR range.\nChanging it replaces the filter (SES has no update operation for filters).",
+        "IpFilter": "```typescript\n{ Policy: ses.ReceiptFilterPolicy; Cidr: string; }\n```",
+        "isResolved": "```typescript\n<T>(value: import(\"../../Input.ts\").Input<T>) => value is T\n```",
+        "list": "```typescript\n() => Effect.Effect<{ filterName: string; }[], import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "listReceiptFilters": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.ListReceiptFiltersRequest, ses.ListReceiptFiltersResponse, import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/uns",
+        "map": "```typescript\n{ <A, B>(f: (a: A) => B): <E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<B, E, R>; <A, E, R, B>(self: Effect.Effect<A, E, R>, f: (a: A) => B): Effect.Effect<B, E, R>; }\n```\n\nTransforms the value inside an effect by applying a function ",
+        "maxLength": "```typescript\nnumber\n```",
+        "name": "```typescript\nstring\n```",
+        "Name": "```typescript\nstring\n```",
+        "newName": "```typescript\nstring\n```",
+        "news": "```typescript\nimport(\"../../Input.ts\").Input<ReceiptFilterProps>\n```\n\n```typescript\nReceiptFilterProps\n```\n\n---\n\n```typescript\nReceiptFilterProps\n```",
+        "observed": "```typescript\nses.ReceiptFilter | undefined\n```",
+        "of": "```typescript\n<ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(service: Omit<Provider.ProviderService<ReceiptFilter, ReadReq, DiffReq, PrecreateReq, Reconci",
+        "oldName": "```typescript\nstring\n```",
+        "olds": "```typescript\nReceiptFilterProps\n```",
+        "output": "```typescript\n{ filterName: string; } | undefined\n```\n\n---\n\n```typescript\n{ filterName: string; }\n```",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "policy": "```typescript\nses.ReceiptFilterPolicy\n```\n\nWhether to allow or block mail from the CIDR range.",
+        "Policy": "```typescript\nses.ReceiptFilterPolicy\n```",
+        "props": "```typescript\nPick<ReceiptFilterProps, \"filterName\">\n```",
+        "Provider": "```typescript\ntypeof Provider\n```\n\n---\n\n```typescript\nProvider.Provider<ReceiptFilter>\n```",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: ReceiptFilterProps; output: { filterName: string; } | undefined; }) => Effect.Effect<{ filterName: string; } | undefined, import(\"@distilled.cloud/aws/Errors\").CommonErrors, import",
+        "ReceiptFilter": "```typescript\nimport(\"../../Resource.ts\").ResourceClass<ReceiptFilter>\n```\n\nAn Amazon SES receipt IP address filter — an account-level allow/block rule\nfor the source IP of inbound mail. Block filters take precedence over allow\nfilters.\n\nFilters are immuta",
+        "ReceiptFilterPolicy": "Whether the filter permits (`Allow`) or blocks (`Block`) mail from the\nmatching IP range.",
+        "ReceiptFilterProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<ReceiptFilter>, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient | import(\"../../Stack.ts\").Stack | import(\"../../Stage.t",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: ReceiptFilterProps; olds: ReceiptFilterProps | undefined; output: { filterName: string; } | undefined; session: import(\"../../Report.ts\").ScopedPlanStatusSession; bindings: import(",
+        "Resource": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../../Resource.ts\").ResourceOptions) => import(\"../../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nTh",
+        "response": "```typescript\nses.ListReceiptFiltersResponse\n```",
+        "ses": "```typescript\ntypeof ses\n```",
+        "stables": "```typescript\n\"filterName\"[]\n```",
+        "succeed": "```typescript\n<A>(value: A) => Effect.Effect<A>\n```\n\nCreates an `Effect` that always succeeds with a given value.\n\n**When to use**\n\nUse when an effect should complete successfully with a specific value without any errors\nor external dependencies.\n\n**Exampl"
+      },
+      "code": {
+        "1": "import * as ses from \"@distilled.cloud/aws/ses\";\nimport * as Effect from \"effect/Effect\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\n\n\n\n\nexport type ReceiptFilterPolicy = ses.ReceiptFilterPolicy;\n\nexport interface ReceiptIpFilter {\n\n\n\n  policy: ReceiptFilterPolicy;\n\n\n\n\n  cidr: string;\n}",
+        "2": "\nexport interface ReceiptFilterProps {\n\n\n\n\n\n\n  filterName?: string;\n\n\n\n\n  ipFilter: ReceiptIpFilter;\n}\n\nexport interface ReceiptFilter extends Resource<\n  \"AWS.SES.ReceiptFilter\",\n  ReceiptFilterProps,\n  {\n\n    filterName: string;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ReceiptFilter = Resource<ReceiptFilter>(\"AWS.SES.ReceiptFilter\");\n\nexport const ReceiptFilterProvider = () =>\n  Provider.effect(\n    ReceiptFilter,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: Pick<ReceiptFilterProps, \"filterName\">,\n      ) {\n        return (\n          props.filterName ?? (yield* createPhysicalName({ id, maxLength: 64 }))\n        );\n      });\n\n      const findFilter = Effect.fn(function* (name: string) {\n        const filters = yield* ses\n          .listReceiptFilters({})\n          .pipe(Effect.map((response) => response.Filters ?? []));\n        return filters.find((filter) => filter.Name === name);\n      });\n\n      return ReceiptFilter.Provider.of({\n        stables: [\"filterName\"],",
+        "4": "\n\n\n        list: () =>\n          ses\n            .listReceiptFilters({})\n            .pipe(\n              Effect.map((response) =>\n                (response.Filters ?? []).flatMap((filter) =>\n                  filter.Name ? [{ filterName: filter.Name }] : [],\n                ),\n              ),\n            ),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name = output?.filterName ?? (yield* createName(id, olds));\n          const found = yield* findFilter(name);\n          return found ? { filterName: name } : undefined;\n        }),\n\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (\n            oldName !== newName ||\n            olds.ipFilter.policy !== news.ipFilter.policy ||\n            olds.ipFilter.cidr !== news.ipFilter.cidr\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "5": "\n        reconcile: Effect.fn(function* ({ id, news, output }) {\n          const name = output?.filterName ?? (yield* createName(id, news));\n\n\n          const observed = yield* findFilter(name);\n\n\n          if (observed === undefined) {\n            yield* ses\n              .createReceiptFilter({\n                Filter: {\n                  Name: name,\n                  IpFilter: {\n                    Policy: news.ipFilter.policy,\n                    Cidr: news.ipFilter.cidr,\n                  },\n                },\n              })\n              .pipe(\n                Effect.catchTag(\"AlreadyExistsException\", () =>\n                  Effect.succeed({}),\n                ),\n              );\n          }\n\n          return { filterName: name };\n        }),",
+        "6": "\n        delete: Effect.fn(function* ({ output }) {\n\n          yield* ses.deleteReceiptFilter({ FilterName: output.filterName });\n        }),\n      });\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

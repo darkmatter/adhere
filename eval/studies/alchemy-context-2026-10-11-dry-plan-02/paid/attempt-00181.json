@@ -1,0 +1,431 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/AWS/SES/ReceiptRuleSet.ts",
+  "kind": "locate",
+  "ordinal": 181,
+  "artifact": "attempt-00181.json",
+  "started": "2026-10-11T03:27:47.737Z",
+  "estimatedTokens": 10486,
+  "reservedTokens": 64000,
+  "chargedTokens": 9971,
+  "outcome": "answered",
+  "milliseconds": 118.35820600000079,
+  "referencesPresent": false,
+  "bodyDigest": "17c21f6e72274da749967d50cdadefa5df53b7dc6490388f572b4a4add015bba",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"choice\",\"choice\":\"5\",\"confidence\":1.0,\"probabilities\":{\"1\":0.0,\"2\":0.0,\"3\":0.0,\"4\":0.0,\"5\":1.0}},\"start:providers/idempotent-delete:1\":{\"type\":\"choice\",\"choice\":\"5\",\"confidence\":0.3,\"probabilities\":{\"1\":0.05,\"2\":0.01,\"3\":0.01,\"4\":0.03,\"5\":0.33999999999999997,\"6\":0.03,\"7\":0.02,\"9\":0.02,\"17\":0.03,\"18\":0.04,\"20\":0.02,\"21\":0.02,\"22\":0.01,\"23\":0.02,\"25\":0.04,\"26\":0.05,\"27\":0.02,\"28\":0.06,\"29\":0.18}},\"end:providers/idempotent-delete:1\":{\"type\":\"choice\",\"choice\":\"5\",\"confidence\":0.44,\"probabilities\":{\"1\":0.01,\"2\":0.0,\"3\":0.0,\"4\":0.02,\"5\":0.47000000000000003,\"6\":0.02,\"7\":0.01,\"9\":0.01,\"17\":0.01,\"18\":0.04,\"20\":0.02,\"21\":0.01,\"22\":0.01,\"23\":0.01,\"25\":0.04,\"26\":0.06,\"27\":0.02,\"28\":0.07,\"29\":0.17}},\"start:providers/idempotent-delete:2\":{\"type\":\"choice\",\"choice\":\"95\",\"confidence\":0.23,\"probabilities\":{\"66\":0.05,\"67\":0.02,\"68\":0.05,\"70\":0.04,\"71\":0.03,\"72\":0.02,\"73\":0.02,\"74\":0.03,\"75\":0.01,\"76\":0.01,\"77\":0.03,\"78\":0.02,\"79\":0.02,\"80\":0.03,\"81\":0.02,\"82\":0.05,\"84\":0.02,\"85\":0.02,\"86\":0.01,\"87\":0.01,\"88\":0.04,\"89\":0.01,\"90\":0.03,\"91\":0.02,\"92\":0.04,\"94\":0.09,\"95\":0.26}},\"end:providers/idempotent-delete:2\":{\"type\":\"choice\",\"choice\":\"95\",\"confidence\":0.21,\"probabilities\":{\"66\":0.05,\"67\":0.02,\"68\":0.08,\"70\":0.04,\"71\":0.02,\"72\":0.02,\"73\":0.01,\"74\":0.02,\"75\":0.01,\"76\":0.01,\"77\":0.03,\"78\":0.01,\"79\":0.01,\"80\":0.03,\"81\":0.03,\"82\":0.07,\"84\":0.01,\"85\":0.02,\"86\":0.01,\"87\":0.01,\"88\":0.04,\"89\":0.02,\"90\":0.04,\"91\":0.04,\"92\":0.06,\"94\":0.05,\"95\":0.24000000000000002}},\"start:providers/idempotent-delete:3\":{\"type\":\"choice\",\"choice\":\"123\",\"confidence\":0.22,\"probabilities\":{\"100\":0.07,\"101\":0.04,\"102\":0.06,\"103\":0.03,\"104\":0.02,\"105\":0.02,\"106\":0.01,\"107\":0.02,\"108\":0.01,\"109\":0.01,\"110\":0.03,\"111\":0.01,\"112\":0.02,\"113\":0.02,\"114\":0.06,\"116\":0.07,\"117\":0.05,\"118\":0.05,\"122\":0.14,\"123\":0.26}},\"end:providers/idempotent-delete:3\":{\"type\":\"choice\",\"choice\":\"123\",\"confidence\":0.34,\"probabilities\":{\"100\":0.04,\"101\":0.02,\"102\":0.03,\"103\":0.02,\"104\":0.02,\"105\":0.01,\"106\":0.01,\"107\":0.04,\"108\":0.01,\"109\":0.01,\"110\":0.03,\"111\":0.01,\"112\":0.02,\"113\":0.02,\"114\":0.06,\"116\":0.04,\"117\":0.03,\"118\":0.05,\"122\":0.16,\"123\":0.37}},\"start:providers/idempotent-delete:4\":{\"type\":\"choice\",\"choice\":\"142\",\"confidence\":0.26,\"probabilities\":{\"125\":0.03,\"126\":0.01,\"127\":0.01,\"128\":0.01,\"129\":0.02,\"130\":0.01,\"131\":0.02,\"132\":0.03,\"134\":0.02,\"135\":0.03,\"138\":0.02,\"141\":0.02,\"142\":0.29,\"143\":0.02,\"144\":0.01,\"145\":0.02,\"146\":0.01,\"147\":0.05,\"148\":0.08,\"149\":0.09,\"153\":0.04,\"154\":0.16}},\"end:providers/idempotent-delete:4\":{\"type\":\"choice\",\"choice\":\"154\",\"confidence\":0.29,\"probabilities\":{\"125\":0.02,\"126\":0.01,\"127\":0.01,\"128\":0.01,\"129\":0.02,\"130\":0.02,\"131\":0.04,\"132\":0.05,\"134\":0.01,\"135\":0.01,\"138\":0.01,\"141\":0.01,\"142\":0.05,\"143\":0.02,\"144\":0.01,\"145\":0.01,\"146\":0.01,\"147\":0.06,\"148\":0.17,\"149\":0.09,\"153\":0.04,\"154\":0.32}},\"start:providers/idempotent-delete:5\":{\"type\":\"choice\",\"choice\":\"159\",\"confidence\":0.63,\"probabilities\":{\"156\":0.2,\"159\":0.68,\"160\":0.05,\"161\":0.03,\"162\":0.02,\"163\":0.01,\"164\":0.0,\"165\":0.0}},\"end:providers/idempotent-delete:5\":{\"type\":\"choice\",\"choice\":\"161\",\"confidence\":0.11,\"probabilities\":{\"156\":0.04,\"159\":0.11,\"160\":0.17,\"161\":0.22,\"162\":0.17,\"163\":0.11,\"164\":0.05,\"165\":0.13}},\"sufficient:providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.68}},\"usage\":{\"input_tokens\":9971,\"output_tokens\":1959}}",
+  "inputTokens": 9971,
+  "answers": {
+    "providers/idempotent-delete": "5",
+    "start:providers/idempotent-delete:1": "5",
+    "end:providers/idempotent-delete:1": "5",
+    "start:providers/idempotent-delete:2": "95",
+    "end:providers/idempotent-delete:2": "95",
+    "start:providers/idempotent-delete:3": "123",
+    "end:providers/idempotent-delete:3": "123",
+    "start:providers/idempotent-delete:4": "142",
+    "end:providers/idempotent-delete:4": "154",
+    "start:providers/idempotent-delete:5": "159",
+    "end:providers/idempotent-delete:5": "161",
+    "sufficient:providers/idempotent-delete": 0.68
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "action": "```typescript\n\"replace\"\n```",
+        "catchTag": "```typescript\n{ <const K extends import(\"effect/Types\").Tags<E> | import(\"effect/Array\").NonEmptyReadonlyArray<import(\"effect/Types\").Tags<E>>, E, A1, E1, R1, A2 = import(\"effect/Types\").unassigned, E2 = never, R2 = never>(k: K, f: (e: import(\"effect/Types",
+        "createName": "```typescript\n(id: string, props: Pick<ReceiptRuleSetProps, \"ruleSetName\">) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").InstanceId | import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```",
+        "createPhysicalName": "```typescript\n(args_0: { id: string; prefix?: string; instanceId?: string; suffixLength?: number; maxLength?: number; delimiter?: string; lowercase?: boolean; forbiddenPrefixes?: string[]; }) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").In",
+        "createReceiptRuleSet": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.CreateReceiptRuleSetRequest, ses.CreateReceiptRuleSetResponse, ses.CreateReceiptRuleSetError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpCl",
+        "delete": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: ReceiptRuleSetProps; output: { ruleSetName: string; }; session: import(\"../../Report.ts\").ScopedPlanStatusSession; bindings: import(\"../../Resource.ts\").ResourceBinding<never>[]; f",
+        "deleteReceiptRuleSet": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.DeleteReceiptRuleSetRequest, ses.DeleteReceiptRuleSetResponse, ses.DeleteReceiptRuleSetError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpCl",
+        "describe": "```typescript\n(name: string) => Effect.Effect<ses.DescribeReceiptRuleSetResponse | undefined, import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>",
+        "describeReceiptRuleSet": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.DescribeReceiptRuleSetRequest, ses.DescribeReceiptRuleSetResponse, ses.DescribeReceiptRuleSetError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/",
+        "diff": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: ReceiptRuleSetProps; news: import(\"../../Input.ts\").Input<ReceiptRuleSetProps>; oldBindings: import(\"../../Resource.ts\").ResourceBinding<never>[]; newBindings: import(\"../../Input.",
+        "effect": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike, Req = never, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../../Resource.",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "found": "```typescript\nses.DescribeReceiptRuleSetResponse | undefined\n```",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "id": "```typescript\nstring\n```",
+        "isResolved": "```typescript\n<T>(value: import(\"../../Input.ts\").Input<T>) => value is T\n```",
+        "list": "```typescript\n() => Effect.Effect<{ ruleSetName: string; }[], import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "listReceiptRuleSets": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.ListReceiptRuleSetsRequest, ses.ListReceiptRuleSetsResponse, import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/u",
+        "maxLength": "```typescript\nnumber\n```",
+        "name": "```typescript\nstring\n```",
+        "Name": "```typescript\nstring | undefined\n```\n\n```typescript\nstring\n```",
+        "newName": "```typescript\nstring\n```",
+        "news": "```typescript\nimport(\"../../Input.ts\").Input<ReceiptRuleSetProps>\n```\n\n```typescript\nReceiptRuleSetProps\n```\n\n---\n\n```typescript\nReceiptRuleSetProps\n```",
+        "nextToken": "```typescript\nstring | undefined\n```",
+        "NextToken": "```typescript\nstring | undefined\n```",
+        "observed": "```typescript\nses.DescribeReceiptRuleSetResponse | undefined\n```",
+        "of": "```typescript\n<ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(service: Omit<Provider.ProviderService<ReceiptRuleSet, ReadReq, DiffReq, PrecreateReq, Reconc",
+        "oldName": "```typescript\nstring\n```",
+        "olds": "```typescript\nReceiptRuleSetProps\n```",
+        "output": "```typescript\n{ ruleSetName: string; } | undefined\n```\n\n---\n\n```typescript\n{ ruleSetName: string; }\n```",
+        "page": "```typescript\nses.ListReceiptRuleSetsResponse\n```",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "props": "```typescript\nPick<ReceiptRuleSetProps, \"ruleSetName\">\n```",
+        "Provider": "```typescript\ntypeof Provider\n```\n\n---\n\n```typescript\nProvider.Provider<ReceiptRuleSet>\n```",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: ReceiptRuleSetProps; output: { ruleSetName: string; } | undefined; }) => Effect.Effect<{ ruleSetName: string; } | undefined, import(\"@distilled.cloud/aws/Errors\").CommonErrors, imp",
+        "ReceiptRuleSet": "```typescript\nimport(\"../../Resource.ts\").ResourceClass<ReceiptRuleSet>\n```\n\nAn Amazon SES receipt rule set — the ordered container for the receipt rules\nthat decide what happens to inbound email (deliver to S3, invoke a Lambda,\npublish to SNS, bounce, etc",
+        "ReceiptRuleSetProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<ReceiptRuleSet>, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient | import(\"../../Stack.ts\").Stack | import(\"../../Stage.",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: ReceiptRuleSetProps; olds: ReceiptRuleSetProps | undefined; output: { ruleSetName: string; } | undefined; session: import(\"../../Report.ts\").ScopedPlanStatusSession; bindings: impo",
+        "Resource": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../../Resource.ts\").ResourceOptions) => import(\"../../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nTh",
+        "rows": "```typescript\n{ ruleSetName: string; }[]\n```",
+        "ruleSetName": "```typescript\nstring | undefined\n```\n\nName of the receipt rule set. May contain letters, numbers, dashes,\nunderscores and periods, up to 64 characters, and must start and end with\na letter or number. If omitted, a deterministic physical name is generated\nf",
+        "RuleSetName": "```typescript\nstring\n```",
+        "RuleSets": "```typescript\nses.ReceiptRuleSetMetadata[] | undefined\n```",
+        "ses": "```typescript\ntypeof ses\n```",
+        "set": "```typescript\nses.ReceiptRuleSetMetadata\n```",
+        "stables": "```typescript\n\"ruleSetName\"[]\n```",
+        "succeed": "```typescript\n<A>(value: A) => Effect.Effect<A>\n```\n\nCreates an `Effect` that always succeeds with a given value.\n\n**When to use**\n\nUse when an effect should complete successfully with a specific value without any errors\nor external dependencies.\n\n**Exampl"
+      },
+      "code": {
+        "1": "import * as ses from \"@distilled.cloud/aws/ses\";\nimport * as Effect from \"effect/Effect\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface ReceiptRuleSetProps {\n\n\n\n\n\n\n\n  ruleSetName?: string;\n}\n\nexport interface ReceiptRuleSet extends Resource<\n  \"AWS.SES.ReceiptRuleSet\",\n  ReceiptRuleSetProps,\n  {\n\n    ruleSetName: string;\n  },\n  never,\n  Providers\n> {}",
+        "2": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ReceiptRuleSet = Resource<ReceiptRuleSet>(\n  \"AWS.SES.ReceiptRuleSet\",\n);\n\nexport const ReceiptRuleSetProvider = () =>\n  Provider.effect(\n    ReceiptRuleSet,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: Pick<ReceiptRuleSetProps, \"ruleSetName\">,\n      ) {\n        return (\n          props.ruleSetName ??\n          (yield* createPhysicalName({ id, maxLength: 64 }))\n        );\n      });\n\n      const describe = Effect.fn(function* (name: string) {\n        return yield* ses\n          .describeReceiptRuleSet({ RuleSetName: name })\n          .pipe(\n            Effect.catchTag(\"RuleSetDoesNotExistException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n      });\n\n      return ReceiptRuleSet.Provider.of({\n        stables: [\"ruleSetName\"],",
+        "3": "\n\n\n\n        list: () =>\n          Effect.gen(function* () {\n            const rows: { ruleSetName: string }[] = [];\n            let nextToken: string | undefined;\n            do {\n              const page = yield* ses.listReceiptRuleSets({\n                NextToken: nextToken,\n              });\n              for (const set of page.RuleSets ?? []) {\n                if (set.Name) rows.push({ ruleSetName: set.Name });\n              }\n              nextToken = page.NextToken;\n            } while (nextToken);\n            return rows;\n          }),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name = output?.ruleSetName ?? (yield* createName(id, olds));\n          const found = yield* describe(name);\n\n\n\n          return found ? { ruleSetName: name } : undefined;\n        }),",
+        "4": "\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output }) {\n          const name = output?.ruleSetName ?? (yield* createName(id, news));\n\n\n          const observed = yield* describe(name);\n\n\n          if (observed === undefined) {\n            yield* ses\n              .createReceiptRuleSet({ RuleSetName: name })\n              .pipe(\n                Effect.catchTag(\"AlreadyExistsException\", () =>\n                  Effect.succeed({}),\n                ),\n              );\n          }\n\n\n\n          return { ruleSetName: name };\n        }),",
+        "5": "\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* ses.deleteReceiptRuleSet({\n            RuleSetName: output.ruleSetName,\n          });\n        }),\n      });\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as ses from \"@distilled.cloud/aws/ses\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import { isResolved } from \"../../Diff.ts\";",
+          "4": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "5": "import * as Provider from \"../../Provider.ts\";",
+          "6": "import { Resource } from \"../../Resource.ts\";",
+          "7": "import type { Providers } from \"../Providers.ts\";",
+          "9": "export interface ReceiptRuleSetProps {",
+          "17": "ruleSetName?: string;",
+          "18": "}",
+          "20": "export interface ReceiptRuleSet extends Resource<",
+          "21": "\"AWS.SES.ReceiptRuleSet\",",
+          "22": "ReceiptRuleSetProps,",
+          "23": "{",
+          "25": "ruleSetName: string;",
+          "26": "},",
+          "27": "never,",
+          "28": "Providers",
+          "29": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as ses from \"@distilled.cloud/aws/ses\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import { isResolved } from \"../../Diff.ts\";",
+          "4": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "5": "import * as Provider from \"../../Provider.ts\";",
+          "6": "import { Resource } from \"../../Resource.ts\";",
+          "7": "import type { Providers } from \"../Providers.ts\";",
+          "9": "export interface ReceiptRuleSetProps {",
+          "17": "ruleSetName?: string;",
+          "18": "}",
+          "20": "export interface ReceiptRuleSet extends Resource<",
+          "21": "\"AWS.SES.ReceiptRuleSet\",",
+          "22": "ReceiptRuleSetProps,",
+          "23": "{",
+          "25": "ruleSetName: string;",
+          "26": "},",
+          "27": "never,",
+          "28": "Providers",
+          "29": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "66": "export const ReceiptRuleSet = Resource<ReceiptRuleSet>(",
+          "67": "\"AWS.SES.ReceiptRuleSet\",",
+          "68": ");",
+          "70": "export const ReceiptRuleSetProvider = () =>",
+          "71": "Provider.effect(",
+          "72": "ReceiptRuleSet,",
+          "73": "Effect.gen(function* () {",
+          "74": "const createName = Effect.fn(function* (",
+          "75": "id: string,",
+          "76": "props: Pick<ReceiptRuleSetProps, \"ruleSetName\">,",
+          "77": ") {",
+          "78": "return (",
+          "79": "props.ruleSetName ??",
+          "80": "(yield* createPhysicalName({ id, maxLength: 64 }))",
+          "81": ");",
+          "82": "});",
+          "84": "const describe = Effect.fn(function* (name: string) {",
+          "85": "return yield* ses",
+          "86": ".describeReceiptRuleSet({ RuleSetName: name })",
+          "87": ".pipe(",
+          "88": "Effect.catchTag(\"RuleSetDoesNotExistException\", () =>",
+          "89": "Effect.succeed(undefined),",
+          "90": "),",
+          "91": ");",
+          "92": "});",
+          "94": "return ReceiptRuleSet.Provider.of({",
+          "95": "stables: [\"ruleSetName\"],"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "66": "export const ReceiptRuleSet = Resource<ReceiptRuleSet>(",
+          "67": "\"AWS.SES.ReceiptRuleSet\",",
+          "68": ");",
+          "70": "export const ReceiptRuleSetProvider = () =>",
+          "71": "Provider.effect(",
+          "72": "ReceiptRuleSet,",
+          "73": "Effect.gen(function* () {",
+          "74": "const createName = Effect.fn(function* (",
+          "75": "id: string,",
+          "76": "props: Pick<ReceiptRuleSetProps, \"ruleSetName\">,",
+          "77": ") {",
+          "78": "return (",
+          "79": "props.ruleSetName ??",
+          "80": "(yield* createPhysicalName({ id, maxLength: 64 }))",
+          "81": ");",
+          "82": "});",
+          "84": "const describe = Effect.fn(function* (name: string) {",
+          "85": "return yield* ses",
+          "86": ".describeReceiptRuleSet({ RuleSetName: name })",
+          "87": ".pipe(",
+          "88": "Effect.catchTag(\"RuleSetDoesNotExistException\", () =>",
+          "89": "Effect.succeed(undefined),",
+          "90": "),",
+          "91": ");",
+          "92": "});",
+          "94": "return ReceiptRuleSet.Provider.of({",
+          "95": "stables: [\"ruleSetName\"],"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "100": "list: () =>",
+          "101": "Effect.gen(function* () {",
+          "102": "const rows: { ruleSetName: string }[] = [];",
+          "103": "let nextToken: string | undefined;",
+          "104": "do {",
+          "105": "const page = yield* ses.listReceiptRuleSets({",
+          "106": "NextToken: nextToken,",
+          "107": "});",
+          "108": "for (const set of page.RuleSets ?? []) {",
+          "109": "if (set.Name) rows.push({ ruleSetName: set.Name });",
+          "110": "}",
+          "111": "nextToken = page.NextToken;",
+          "112": "} while (nextToken);",
+          "113": "return rows;",
+          "114": "}),",
+          "116": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "117": "const name = output?.ruleSetName ?? (yield* createName(id, olds));",
+          "118": "const found = yield* describe(name);",
+          "122": "return found ? { ruleSetName: name } : undefined;",
+          "123": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "100": "list: () =>",
+          "101": "Effect.gen(function* () {",
+          "102": "const rows: { ruleSetName: string }[] = [];",
+          "103": "let nextToken: string | undefined;",
+          "104": "do {",
+          "105": "const page = yield* ses.listReceiptRuleSets({",
+          "106": "NextToken: nextToken,",
+          "107": "});",
+          "108": "for (const set of page.RuleSets ?? []) {",
+          "109": "if (set.Name) rows.push({ ruleSetName: set.Name });",
+          "110": "}",
+          "111": "nextToken = page.NextToken;",
+          "112": "} while (nextToken);",
+          "113": "return rows;",
+          "114": "}),",
+          "116": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "117": "const name = output?.ruleSetName ?? (yield* createName(id, olds));",
+          "118": "const found = yield* describe(name);",
+          "122": "return found ? { ruleSetName: name } : undefined;",
+          "123": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "125": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "126": "if (!isResolved(news)) return undefined;",
+          "127": "const oldName = yield* createName(id, olds);",
+          "128": "const newName = yield* createName(id, news);",
+          "129": "if (oldName !== newName) {",
+          "130": "return { action: \"replace\" } as const;",
+          "131": "}",
+          "132": "}),",
+          "134": "reconcile: Effect.fn(function* ({ id, news, output }) {",
+          "135": "const name = output?.ruleSetName ?? (yield* createName(id, news));",
+          "138": "const observed = yield* describe(name);",
+          "141": "if (observed === undefined) {",
+          "142": "yield* ses",
+          "143": ".createReceiptRuleSet({ RuleSetName: name })",
+          "144": ".pipe(",
+          "145": "Effect.catchTag(\"AlreadyExistsException\", () =>",
+          "146": "Effect.succeed({}),",
+          "147": "),",
+          "148": ");",
+          "149": "}",
+          "153": "return { ruleSetName: name };",
+          "154": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "125": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "126": "if (!isResolved(news)) return undefined;",
+          "127": "const oldName = yield* createName(id, olds);",
+          "128": "const newName = yield* createName(id, news);",
+          "129": "if (oldName !== newName) {",
+          "130": "return { action: \"replace\" } as const;",
+          "131": "}",
+          "132": "}),",
+          "134": "reconcile: Effect.fn(function* ({ id, news, output }) {",
+          "135": "const name = output?.ruleSetName ?? (yield* createName(id, news));",
+          "138": "const observed = yield* describe(name);",
+          "141": "if (observed === undefined) {",
+          "142": "yield* ses",
+          "143": ".createReceiptRuleSet({ RuleSetName: name })",
+          "144": ".pipe(",
+          "145": "Effect.catchTag(\"AlreadyExistsException\", () =>",
+          "146": "Effect.succeed({}),",
+          "147": "),",
+          "148": ");",
+          "149": "}",
+          "153": "return { ruleSetName: name };",
+          "154": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "156": "delete: Effect.fn(function* ({ output }) {",
+          "159": "yield* ses.deleteReceiptRuleSet({",
+          "160": "RuleSetName: output.ruleSetName,",
+          "161": "});",
+          "162": "}),",
+          "163": "});",
+          "164": "}),",
+          "165": ");"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "156": "delete: Effect.fn(function* ({ output }) {",
+          "159": "yield* ses.deleteReceiptRuleSet({",
+          "160": "RuleSetName: output.ruleSetName,",
+          "161": "});",
+          "162": "}),",
+          "163": "});",
+          "164": "}),",
+          "165": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

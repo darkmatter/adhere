@@ -1,0 +1,793 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/AutoScaling/ScheduledAction.ts",
+  "kind": "locate",
+  "ordinal": 127,
+  "artifact": "attempt-00127.json",
+  "started": "2026-10-11T03:20:39.710Z",
+  "estimatedTokens": 15836,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.22201700000005076,
+  "referencesPresent": false,
+  "bodyDigest": "b873e5843b0926018cdf04ad2721c9abefe877cec14f71bca9875b1f3d2dd416",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "33",
+    "end:providers/idempotent-delete:2": "33",
+    "start:providers/idempotent-delete:3": "59",
+    "end:providers/idempotent-delete:3": "59",
+    "start:providers/idempotent-delete:4": "91",
+    "end:providers/idempotent-delete:4": "91",
+    "start:providers/idempotent-delete:5": "133",
+    "end:providers/idempotent-delete:5": "133",
+    "start:providers/idempotent-delete:6": "162",
+    "end:providers/idempotent-delete:6": "162",
+    "start:providers/idempotent-delete:7": "185",
+    "end:providers/idempotent-delete:7": "185",
+    "start:providers/idempotent-delete:8": "213",
+    "end:providers/idempotent-delete:8": "213",
+    "start:providers/idempotent-delete:9": "222",
+    "end:providers/idempotent-delete:9": "222",
+    "start:providers/idempotent-delete:10": "249",
+    "end:providers/idempotent-delete:10": "249",
+    "start:providers/idempotent-delete:11": "278",
+    "end:providers/idempotent-delete:11": "278",
+    "start:providers/idempotent-delete:12": "307",
+    "end:providers/idempotent-delete:12": "307",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as autoscaling from \"@distilled.cloud/aws/auto-scaling\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { deepEqual, isResolved } from \"../../Diff.ts\";\nimport type { Input } from \"../../Input.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport type { AutoScalingGroup as AutoScalingGroupResource } from \"./AutoScalingGroup.ts\";\n\nexport type ScheduledActionName = string;\n\nexport interface ScheduledActionProps {\n\n\n\n  scheduledActionName?: string;\n\n\n\n  autoScalingGroup: Input<string> | AutoScalingGroupResource;\n\n\n\n\n  recurrence?: string;",
+        "2": "\n\n\n\n  startTime?: string;\n\n\n\n  endTime?: string;\n\n\n\n  timeZone?: string;\n\n\n\n  minSize?: number;\n\n\n\n  maxSize?: number;\n\n\n\n  desiredCapacity?: number;\n}\n\nexport interface ScheduledAction extends Resource<\n  \"AWS.AutoScaling.ScheduledAction\",\n  ScheduledActionProps,",
+        "3": "  {\n\n\n\n    scheduledActionName: ScheduledActionName;\n\n\n\n    scheduledActionARN: string;\n\n\n\n    autoScalingGroupName: string;\n\n\n\n    recurrence?: string;\n\n\n\n    startTime?: string;\n\n\n\n    endTime?: string;\n\n\n\n    timeZone?: string;",
+        "4": "\n\n\n    minSize?: number;\n\n\n\n    maxSize?: number;\n\n\n\n    desiredCapacity?: number;\n  },\n  never,\n  Providers\n> {}",
+        "5": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ScheduledAction = Resource<ScheduledAction>(\n  \"AWS.AutoScaling.ScheduledAction\",\n);\n\n\n\nconst toAutoScalingGroupName = (\n  input: ScheduledActionProps[\"autoScalingGroup\"] | undefined,\n): string | undefined =>\n  typeof input === \"string\"\n    ? input\n    : typeof (input as { autoScalingGroupName?: unknown } | undefined)\n          ?.autoScalingGroupName === \"string\"\n      ? (input as unknown as { autoScalingGroupName: string })\n          .autoScalingGroupName\n      : undefined;\n\nexport const ScheduledActionProvider = () =>\n  Provider.effect(\n    ScheduledAction,\n    Effect.gen(function* () {\n      const toName = (\n        id: string,\n        props: { scheduledActionName?: string } = {},\n      ) =>\n        props.scheduledActionName\n          ? Effect.succeed(props.scheduledActionName)\n          : createPhysicalName({ id, maxLength: 255, lowercase: true });",
+        "6": "\n      const describeAction = ({\n        autoScalingGroupName,\n        scheduledActionName,\n      }: {\n        autoScalingGroupName: string | undefined;\n        scheduledActionName: string;\n      }) =>\n        autoscaling\n          .describeScheduledActions({\n            AutoScalingGroupName: autoScalingGroupName,\n            ScheduledActionNames: [scheduledActionName],\n          } as any)\n          .pipe(\n            Effect.map((result) => result.ScheduledUpdateGroupActions?.[0]),\n\n\n\n\n            Effect.catchTag(\"AutoScalingGroupNotFound\", () =>\n              Effect.succeed(undefined),\n            ),\n          );",
+        "7": "\n      const toAttributes = (\n        action: autoscaling.ScheduledUpdateGroupAction,\n      ): ScheduledAction[\"Attributes\"] => ({\n        scheduledActionName: action.ScheduledActionName!,\n        scheduledActionARN: action.ScheduledActionARN!,\n        autoScalingGroupName: action.AutoScalingGroupName!,\n        recurrence: action.Recurrence,\n        startTime: action.StartTime\n          ? new Date(action.StartTime).toISOString()\n          : undefined,\n        endTime: action.EndTime\n          ? new Date(action.EndTime).toISOString()\n          : undefined,\n        timeZone: action.TimeZone,\n        minSize: action.MinSize,\n        maxSize: action.MaxSize,\n        desiredCapacity: action.DesiredCapacity,\n      });\n\n      return {\n        stables: [\n          \"scheduledActionName\",\n          \"scheduledActionARN\",\n          \"autoScalingGroupName\",\n        ],",
+        "8": "\n\n\n        list: () =>\n          autoscaling.describeScheduledActions.pages({} as any).pipe(\n            Stream.runCollect,\n            Effect.map((chunk) =>\n              Array.from(chunk).flatMap((page) =>\n                (page.ScheduledUpdateGroupActions ?? []).map(toAttributes),\n              ),\n            ),\n          ),",
+        "9": "        diff: Effect.fn(function* ({ id, olds, news: _news }) {\n          if (!isResolved(_news)) return undefined;\n          const news = _news as typeof olds;\n          const oldName = yield* toName(id, olds ?? {});\n          const newName = yield* toName(id, news ?? {});\n          const oldGroup = toAutoScalingGroupName(olds.autoScalingGroup);\n          const newGroup = toAutoScalingGroupName(news.autoScalingGroup);\n          if (\n            oldName !== newName ||\n            (oldGroup !== undefined &&\n              newGroup !== undefined &&\n              oldGroup !== newGroup)\n          ) {\n            return { action: \"replace\" } as const;\n          }\n\n          if (!deepEqual(olds, news)) {\n            return {\n              action: \"update\",\n              stables: [\n                \"scheduledActionName\",\n                \"scheduledActionARN\",\n                \"autoScalingGroupName\",\n              ],\n            } as const;\n          }\n        }),",
+        "10": "        read: Effect.fn(function* ({ id, olds, output }) {\n          const autoScalingGroupName =\n            output?.autoScalingGroupName ??\n            toAutoScalingGroupName(olds?.autoScalingGroup);\n          const scheduledActionName =\n            output?.scheduledActionName ?? (yield* toName(id, olds ?? {}));\n          const action = yield* describeAction({\n            autoScalingGroupName,\n            scheduledActionName,\n          });\n          return action ? toAttributes(action) : undefined;\n        }),\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const autoScalingGroupName =\n            output?.autoScalingGroupName ??\n            toAutoScalingGroupName(news.autoScalingGroup);\n          if (!autoScalingGroupName) {\n            return yield* Effect.die(\n              new Error(\n                \"ScheduledAction requires a resolvable autoScalingGroup name\",\n              ),\n            );\n          }\n          const scheduledActionName =\n            output?.scheduledActionName ?? (yield* toName(id, news));",
+        "11": "\n\n\n\n          yield* autoscaling.putScheduledUpdateGroupAction({\n            AutoScalingGroupName: autoScalingGroupName,\n            ScheduledActionName: scheduledActionName,\n            Recurrence: news.recurrence,\n            StartTime: news.startTime ? new Date(news.startTime) : undefined,\n            EndTime: news.endTime ? new Date(news.endTime) : undefined,\n            TimeZone: news.timeZone,\n            MinSize: news.minSize,\n            MaxSize: news.maxSize,\n            DesiredCapacity: news.desiredCapacity,\n          } as any);\n\n          const action = yield* describeAction({\n            autoScalingGroupName,\n            scheduledActionName,\n          }).pipe(\n            Effect.flatMap((action) =>\n              action\n                ? Effect.succeed(action)\n                : Effect.fail(\n                    new Error(\n                      `Scheduled action '${scheduledActionName}' was not readable after reconcile`,\n                    ),\n                  ),\n            ),\n          );\n          yield* session.note(scheduledActionName);\n          return toAttributes(action);\n        }),",
+        "12": "        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* autoscaling\n            .deleteScheduledAction({\n              AutoScalingGroupName: output.autoScalingGroupName,\n              ScheduledActionName: output.scheduledActionName,\n            } as any)\n            .pipe(\n              Effect.retry({\n                while: (error) => error._tag === \"ResourceContentionFault\",\n                schedule: Schedule.max([\n                  Schedule.recurs(5),\n                  Schedule.exponential(\"250 millis\"),\n                ]),\n              }),\n            );\n        }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null,
+          "11": null,
+          "12": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as autoscaling from \"@distilled.cloud/aws/auto-scaling\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Schedule from \"effect/Schedule\";",
+          "4": "import * as Stream from \"effect/Stream\";",
+          "5": "import { deepEqual, isResolved } from \"../../Diff.ts\";",
+          "6": "import type { Input } from \"../../Input.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import type { Providers } from \"../Providers.ts\";",
+          "11": "import type { AutoScalingGroup as AutoScalingGroupResource } from \"./AutoScalingGroup.ts\";",
+          "13": "export type ScheduledActionName = string;",
+          "15": "export interface ScheduledActionProps {",
+          "19": "scheduledActionName?: string;",
+          "23": "autoScalingGroup: Input<string> | AutoScalingGroupResource;",
+          "28": "recurrence?: string;"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as autoscaling from \"@distilled.cloud/aws/auto-scaling\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Schedule from \"effect/Schedule\";",
+          "4": "import * as Stream from \"effect/Stream\";",
+          "5": "import { deepEqual, isResolved } from \"../../Diff.ts\";",
+          "6": "import type { Input } from \"../../Input.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import type { Providers } from \"../Providers.ts\";",
+          "11": "import type { AutoScalingGroup as AutoScalingGroupResource } from \"./AutoScalingGroup.ts\";",
+          "13": "export type ScheduledActionName = string;",
+          "15": "export interface ScheduledActionProps {",
+          "19": "scheduledActionName?: string;",
+          "23": "autoScalingGroup: Input<string> | AutoScalingGroupResource;",
+          "28": "recurrence?: string;"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "33": "startTime?: string;",
+          "37": "endTime?: string;",
+          "41": "timeZone?: string;",
+          "45": "minSize?: number;",
+          "49": "maxSize?: number;",
+          "53": "desiredCapacity?: number;",
+          "54": "}",
+          "56": "export interface ScheduledAction extends Resource<",
+          "57": "\"AWS.AutoScaling.ScheduledAction\",",
+          "58": "ScheduledActionProps,"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "33": "startTime?: string;",
+          "37": "endTime?: string;",
+          "41": "timeZone?: string;",
+          "45": "minSize?: number;",
+          "49": "maxSize?: number;",
+          "53": "desiredCapacity?: number;",
+          "54": "}",
+          "56": "export interface ScheduledAction extends Resource<",
+          "57": "\"AWS.AutoScaling.ScheduledAction\",",
+          "58": "ScheduledActionProps,"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "59": "{",
+          "63": "scheduledActionName: ScheduledActionName;",
+          "67": "scheduledActionARN: string;",
+          "71": "autoScalingGroupName: string;",
+          "75": "recurrence?: string;",
+          "79": "startTime?: string;",
+          "83": "endTime?: string;",
+          "87": "timeZone?: string;"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "59": "{",
+          "63": "scheduledActionName: ScheduledActionName;",
+          "67": "scheduledActionARN: string;",
+          "71": "autoScalingGroupName: string;",
+          "75": "recurrence?: string;",
+          "79": "startTime?: string;",
+          "83": "endTime?: string;",
+          "87": "timeZone?: string;"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "91": "minSize?: number;",
+          "95": "maxSize?: number;",
+          "99": "desiredCapacity?: number;",
+          "100": "},",
+          "101": "never,",
+          "102": "Providers",
+          "103": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "91": "minSize?: number;",
+          "95": "maxSize?: number;",
+          "99": "desiredCapacity?: number;",
+          "100": "},",
+          "101": "never,",
+          "102": "Providers",
+          "103": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "133": "export const ScheduledAction = Resource<ScheduledAction>(",
+          "134": "\"AWS.AutoScaling.ScheduledAction\",",
+          "135": ");",
+          "139": "const toAutoScalingGroupName = (",
+          "140": "input: ScheduledActionProps[\"autoScalingGroup\"] | undefined,",
+          "141": "): string | undefined =>",
+          "142": "typeof input === \"string\"",
+          "143": "? input",
+          "144": ": typeof (input as { autoScalingGroupName?: unknown } | undefined)",
+          "145": "?.autoScalingGroupName === \"string\"",
+          "146": "? (input as unknown as { autoScalingGroupName: string })",
+          "147": ".autoScalingGroupName",
+          "148": ": undefined;",
+          "150": "export const ScheduledActionProvider = () =>",
+          "151": "Provider.effect(",
+          "152": "ScheduledAction,",
+          "153": "Effect.gen(function* () {",
+          "154": "const toName = (",
+          "155": "id: string,",
+          "156": "props: { scheduledActionName?: string } = {},",
+          "157": ") =>",
+          "158": "props.scheduledActionName",
+          "159": "? Effect.succeed(props.scheduledActionName)",
+          "160": ": createPhysicalName({ id, maxLength: 255, lowercase: true });"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "133": "export const ScheduledAction = Resource<ScheduledAction>(",
+          "134": "\"AWS.AutoScaling.ScheduledAction\",",
+          "135": ");",
+          "139": "const toAutoScalingGroupName = (",
+          "140": "input: ScheduledActionProps[\"autoScalingGroup\"] | undefined,",
+          "141": "): string | undefined =>",
+          "142": "typeof input === \"string\"",
+          "143": "? input",
+          "144": ": typeof (input as { autoScalingGroupName?: unknown } | undefined)",
+          "145": "?.autoScalingGroupName === \"string\"",
+          "146": "? (input as unknown as { autoScalingGroupName: string })",
+          "147": ".autoScalingGroupName",
+          "148": ": undefined;",
+          "150": "export const ScheduledActionProvider = () =>",
+          "151": "Provider.effect(",
+          "152": "ScheduledAction,",
+          "153": "Effect.gen(function* () {",
+          "154": "const toName = (",
+          "155": "id: string,",
+          "156": "props: { scheduledActionName?: string } = {},",
+          "157": ") =>",
+          "158": "props.scheduledActionName",
+          "159": "? Effect.succeed(props.scheduledActionName)",
+          "160": ": createPhysicalName({ id, maxLength: 255, lowercase: true });"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "162": "const describeAction = ({",
+          "163": "autoScalingGroupName,",
+          "164": "scheduledActionName,",
+          "165": "}: {",
+          "166": "autoScalingGroupName: string | undefined;",
+          "167": "scheduledActionName: string;",
+          "168": "}) =>",
+          "169": "autoscaling",
+          "170": ".describeScheduledActions({",
+          "171": "AutoScalingGroupName: autoScalingGroupName,",
+          "172": "ScheduledActionNames: [scheduledActionName],",
+          "173": "} as any)",
+          "174": ".pipe(",
+          "175": "Effect.map((result) => result.ScheduledUpdateGroupActions?.[0]),",
+          "180": "Effect.catchTag(\"AutoScalingGroupNotFound\", () =>",
+          "181": "Effect.succeed(undefined),",
+          "182": "),",
+          "183": ");"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "162": "const describeAction = ({",
+          "163": "autoScalingGroupName,",
+          "164": "scheduledActionName,",
+          "165": "}: {",
+          "166": "autoScalingGroupName: string | undefined;",
+          "167": "scheduledActionName: string;",
+          "168": "}) =>",
+          "169": "autoscaling",
+          "170": ".describeScheduledActions({",
+          "171": "AutoScalingGroupName: autoScalingGroupName,",
+          "172": "ScheduledActionNames: [scheduledActionName],",
+          "173": "} as any)",
+          "174": ".pipe(",
+          "175": "Effect.map((result) => result.ScheduledUpdateGroupActions?.[0]),",
+          "180": "Effect.catchTag(\"AutoScalingGroupNotFound\", () =>",
+          "181": "Effect.succeed(undefined),",
+          "182": "),",
+          "183": ");"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "185": "const toAttributes = (",
+          "186": "action: autoscaling.ScheduledUpdateGroupAction,",
+          "187": "): ScheduledAction[\"Attributes\"] => ({",
+          "188": "scheduledActionName: action.ScheduledActionName!,",
+          "189": "scheduledActionARN: action.ScheduledActionARN!,",
+          "190": "autoScalingGroupName: action.AutoScalingGroupName!,",
+          "191": "recurrence: action.Recurrence,",
+          "192": "startTime: action.StartTime",
+          "193": "? new Date(action.StartTime).toISOString()",
+          "194": ": undefined,",
+          "195": "endTime: action.EndTime",
+          "196": "? new Date(action.EndTime).toISOString()",
+          "197": ": undefined,",
+          "198": "timeZone: action.TimeZone,",
+          "199": "minSize: action.MinSize,",
+          "200": "maxSize: action.MaxSize,",
+          "201": "desiredCapacity: action.DesiredCapacity,",
+          "202": "});",
+          "204": "return {",
+          "205": "stables: [",
+          "206": "\"scheduledActionName\",",
+          "207": "\"scheduledActionARN\",",
+          "208": "\"autoScalingGroupName\",",
+          "209": "],"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "185": "const toAttributes = (",
+          "186": "action: autoscaling.ScheduledUpdateGroupAction,",
+          "187": "): ScheduledAction[\"Attributes\"] => ({",
+          "188": "scheduledActionName: action.ScheduledActionName!,",
+          "189": "scheduledActionARN: action.ScheduledActionARN!,",
+          "190": "autoScalingGroupName: action.AutoScalingGroupName!,",
+          "191": "recurrence: action.Recurrence,",
+          "192": "startTime: action.StartTime",
+          "193": "? new Date(action.StartTime).toISOString()",
+          "194": ": undefined,",
+          "195": "endTime: action.EndTime",
+          "196": "? new Date(action.EndTime).toISOString()",
+          "197": ": undefined,",
+          "198": "timeZone: action.TimeZone,",
+          "199": "minSize: action.MinSize,",
+          "200": "maxSize: action.MaxSize,",
+          "201": "desiredCapacity: action.DesiredCapacity,",
+          "202": "});",
+          "204": "return {",
+          "205": "stables: [",
+          "206": "\"scheduledActionName\",",
+          "207": "\"scheduledActionARN\",",
+          "208": "\"autoScalingGroupName\",",
+          "209": "],"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "213": "list: () =>",
+          "214": "autoscaling.describeScheduledActions.pages({} as any).pipe(",
+          "215": "Stream.runCollect,",
+          "216": "Effect.map((chunk) =>",
+          "217": "Array.from(chunk).flatMap((page) =>",
+          "218": "(page.ScheduledUpdateGroupActions ?? []).map(toAttributes),",
+          "219": "),",
+          "220": "),",
+          "221": "),"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "213": "list: () =>",
+          "214": "autoscaling.describeScheduledActions.pages({} as any).pipe(",
+          "215": "Stream.runCollect,",
+          "216": "Effect.map((chunk) =>",
+          "217": "Array.from(chunk).flatMap((page) =>",
+          "218": "(page.ScheduledUpdateGroupActions ?? []).map(toAttributes),",
+          "219": "),",
+          "220": "),",
+          "221": "),"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "222": "diff: Effect.fn(function* ({ id, olds, news: _news }) {",
+          "223": "if (!isResolved(_news)) return undefined;",
+          "224": "const news = _news as typeof olds;",
+          "225": "const oldName = yield* toName(id, olds ?? {});",
+          "226": "const newName = yield* toName(id, news ?? {});",
+          "227": "const oldGroup = toAutoScalingGroupName(olds.autoScalingGroup);",
+          "228": "const newGroup = toAutoScalingGroupName(news.autoScalingGroup);",
+          "229": "if (",
+          "230": "oldName !== newName ||",
+          "231": "(oldGroup !== undefined &&",
+          "232": "newGroup !== undefined &&",
+          "233": "oldGroup !== newGroup)",
+          "234": ") {",
+          "235": "return { action: \"replace\" } as const;",
+          "236": "}",
+          "238": "if (!deepEqual(olds, news)) {",
+          "239": "return {",
+          "240": "action: \"update\",",
+          "241": "stables: [",
+          "242": "\"scheduledActionName\",",
+          "243": "\"scheduledActionARN\",",
+          "244": "\"autoScalingGroupName\",",
+          "245": "],",
+          "246": "} as const;",
+          "247": "}",
+          "248": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "222": "diff: Effect.fn(function* ({ id, olds, news: _news }) {",
+          "223": "if (!isResolved(_news)) return undefined;",
+          "224": "const news = _news as typeof olds;",
+          "225": "const oldName = yield* toName(id, olds ?? {});",
+          "226": "const newName = yield* toName(id, news ?? {});",
+          "227": "const oldGroup = toAutoScalingGroupName(olds.autoScalingGroup);",
+          "228": "const newGroup = toAutoScalingGroupName(news.autoScalingGroup);",
+          "229": "if (",
+          "230": "oldName !== newName ||",
+          "231": "(oldGroup !== undefined &&",
+          "232": "newGroup !== undefined &&",
+          "233": "oldGroup !== newGroup)",
+          "234": ") {",
+          "235": "return { action: \"replace\" } as const;",
+          "236": "}",
+          "238": "if (!deepEqual(olds, news)) {",
+          "239": "return {",
+          "240": "action: \"update\",",
+          "241": "stables: [",
+          "242": "\"scheduledActionName\",",
+          "243": "\"scheduledActionARN\",",
+          "244": "\"autoScalingGroupName\",",
+          "245": "],",
+          "246": "} as const;",
+          "247": "}",
+          "248": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "249": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "250": "const autoScalingGroupName =",
+          "251": "output?.autoScalingGroupName ??",
+          "252": "toAutoScalingGroupName(olds?.autoScalingGroup);",
+          "253": "const scheduledActionName =",
+          "254": "output?.scheduledActionName ?? (yield* toName(id, olds ?? {}));",
+          "255": "const action = yield* describeAction({",
+          "256": "autoScalingGroupName,",
+          "257": "scheduledActionName,",
+          "258": "});",
+          "259": "return action ? toAttributes(action) : undefined;",
+          "260": "}),",
+          "261": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "262": "const autoScalingGroupName =",
+          "263": "output?.autoScalingGroupName ??",
+          "264": "toAutoScalingGroupName(news.autoScalingGroup);",
+          "265": "if (!autoScalingGroupName) {",
+          "266": "return yield* Effect.die(",
+          "267": "new Error(",
+          "268": "\"ScheduledAction requires a resolvable autoScalingGroup name\",",
+          "269": "),",
+          "270": ");",
+          "271": "}",
+          "272": "const scheduledActionName =",
+          "273": "output?.scheduledActionName ?? (yield* toName(id, news));"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "249": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "250": "const autoScalingGroupName =",
+          "251": "output?.autoScalingGroupName ??",
+          "252": "toAutoScalingGroupName(olds?.autoScalingGroup);",
+          "253": "const scheduledActionName =",
+          "254": "output?.scheduledActionName ?? (yield* toName(id, olds ?? {}));",
+          "255": "const action = yield* describeAction({",
+          "256": "autoScalingGroupName,",
+          "257": "scheduledActionName,",
+          "258": "});",
+          "259": "return action ? toAttributes(action) : undefined;",
+          "260": "}),",
+          "261": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "262": "const autoScalingGroupName =",
+          "263": "output?.autoScalingGroupName ??",
+          "264": "toAutoScalingGroupName(news.autoScalingGroup);",
+          "265": "if (!autoScalingGroupName) {",
+          "266": "return yield* Effect.die(",
+          "267": "new Error(",
+          "268": "\"ScheduledAction requires a resolvable autoScalingGroup name\",",
+          "269": "),",
+          "270": ");",
+          "271": "}",
+          "272": "const scheduledActionName =",
+          "273": "output?.scheduledActionName ?? (yield* toName(id, news));"
+        }
+      },
+      "start:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "278": "yield* autoscaling.putScheduledUpdateGroupAction({",
+          "279": "AutoScalingGroupName: autoScalingGroupName,",
+          "280": "ScheduledActionName: scheduledActionName,",
+          "281": "Recurrence: news.recurrence,",
+          "282": "StartTime: news.startTime ? new Date(news.startTime) : undefined,",
+          "283": "EndTime: news.endTime ? new Date(news.endTime) : undefined,",
+          "284": "TimeZone: news.timeZone,",
+          "285": "MinSize: news.minSize,",
+          "286": "MaxSize: news.maxSize,",
+          "287": "DesiredCapacity: news.desiredCapacity,",
+          "288": "} as any);",
+          "290": "const action = yield* describeAction({",
+          "291": "autoScalingGroupName,",
+          "292": "scheduledActionName,",
+          "293": "}).pipe(",
+          "294": "Effect.flatMap((action) =>",
+          "295": "action",
+          "296": "? Effect.succeed(action)",
+          "297": ": Effect.fail(",
+          "298": "new Error(",
+          "299": "`Scheduled action '${scheduledActionName}' was not readable after reconcile`,",
+          "300": "),",
+          "301": "),",
+          "302": "),",
+          "303": ");",
+          "304": "yield* session.note(scheduledActionName);",
+          "305": "return toAttributes(action);",
+          "306": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "278": "yield* autoscaling.putScheduledUpdateGroupAction({",
+          "279": "AutoScalingGroupName: autoScalingGroupName,",
+          "280": "ScheduledActionName: scheduledActionName,",
+          "281": "Recurrence: news.recurrence,",
+          "282": "StartTime: news.startTime ? new Date(news.startTime) : undefined,",
+          "283": "EndTime: news.endTime ? new Date(news.endTime) : undefined,",
+          "284": "TimeZone: news.timeZone,",
+          "285": "MinSize: news.minSize,",
+          "286": "MaxSize: news.maxSize,",
+          "287": "DesiredCapacity: news.desiredCapacity,",
+          "288": "} as any);",
+          "290": "const action = yield* describeAction({",
+          "291": "autoScalingGroupName,",
+          "292": "scheduledActionName,",
+          "293": "}).pipe(",
+          "294": "Effect.flatMap((action) =>",
+          "295": "action",
+          "296": "? Effect.succeed(action)",
+          "297": ": Effect.fail(",
+          "298": "new Error(",
+          "299": "`Scheduled action '${scheduledActionName}' was not readable after reconcile`,",
+          "300": "),",
+          "301": "),",
+          "302": "),",
+          "303": ");",
+          "304": "yield* session.note(scheduledActionName);",
+          "305": "return toAttributes(action);",
+          "306": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:12": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"12\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "307": "delete: Effect.fn(function* ({ output }) {",
+          "310": "yield* autoscaling",
+          "311": ".deleteScheduledAction({",
+          "312": "AutoScalingGroupName: output.autoScalingGroupName,",
+          "313": "ScheduledActionName: output.scheduledActionName,",
+          "314": "} as any)",
+          "315": ".pipe(",
+          "316": "Effect.retry({",
+          "317": "while: (error) => error._tag === \"ResourceContentionFault\",",
+          "318": "schedule: Schedule.max([",
+          "319": "Schedule.recurs(5),",
+          "320": "Schedule.exponential(\"250 millis\"),",
+          "321": "]),",
+          "322": "}),",
+          "323": ");",
+          "324": "}),",
+          "325": "};",
+          "326": "}),",
+          "327": ");"
+        }
+      },
+      "end:providers/idempotent-delete:12": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"12\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "307": "delete: Effect.fn(function* ({ output }) {",
+          "310": "yield* autoscaling",
+          "311": ".deleteScheduledAction({",
+          "312": "AutoScalingGroupName: output.autoScalingGroupName,",
+          "313": "ScheduledActionName: output.scheduledActionName,",
+          "314": "} as any)",
+          "315": ".pipe(",
+          "316": "Effect.retry({",
+          "317": "while: (error) => error._tag === \"ResourceContentionFault\",",
+          "318": "schedule: Schedule.max([",
+          "319": "Schedule.recurs(5),",
+          "320": "Schedule.exponential(\"250 millis\"),",
+          "321": "]),",
+          "322": "}),",
+          "323": ");",
+          "324": "}),",
+          "325": "};",
+          "326": "}),",
+          "327": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

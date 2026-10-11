@@ -1,0 +1,50 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Cloudflare/Tunnel/WriteTunnel.ts",
+  "kind": "judge",
+  "ordinal": 254,
+  "artifact": "attempt-00254.json",
+  "started": "2026-10-11T03:27:59.376Z",
+  "estimatedTokens": 2613,
+  "reservedTokens": 64000,
+  "chargedTokens": 1684,
+  "outcome": "answered",
+  "milliseconds": 95.90310699999827,
+  "referencesPresent": false,
+  "bodyDigest": "b7815015e482cc468e018d37f4305158e336a8c9b516c502d4ebae629b59778d",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.2}},\"usage\":{\"input_tokens\":1684,\"output_tokens\":25}}",
+  "inputTokens": 1684,
+  "answers": {
+    "providers/idempotent-delete": 0.2
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import type {\n  CreateTunnelCloudflaredError,\n  CreateTunnelCloudflaredRequest,\n  CreateTunnelCloudflaredResponse,\n  DeleteTunnelCloudflaredError,\n  DeleteTunnelCloudflaredResponse,\n  PatchTunnelCloudflaredError,\n  PatchTunnelCloudflaredRequest,\n  PatchTunnelCloudflaredResponse,\n  PutTunnelCloudflaredConfigurationError,\n  PutTunnelCloudflaredConfigurationRequest,\n  PutTunnelCloudflaredConfigurationResponse,\n} from \"@distilled.cloud/cloudflare/zero-trust\";\nimport * as zeroTrust from \"@distilled.cloud/cloudflare/zero-trust\";\nimport * as Effect from \"effect/Effect\";\nimport * as Binding from \"../../Binding.ts\";\nimport type { Worker } from \"../Workers/Worker.ts\";\nimport type { CloudflareEnvironment } from \"../CloudflareEnvironment.ts\";\nimport type { RuntimeContext } from \"../../RuntimeContext.ts\";\nimport { type TunnelAuth } from \"./TunnelBinding.ts\";",
+        "2": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport interface WriteTunnel extends Binding.Service<\n  WriteTunnel,\n  \"Cloudflare.Tunnel.WriteTunnel\",\n  () => Effect.Effect<WriteTunnelClient, never, Worker | CloudflareEnvironment>\n> {}\n\nexport const WriteTunnel = Binding.Service<WriteTunnel>(\n  \"Cloudflare.Tunnel.WriteTunnel\",\n);\n\n\nexport type CreateTunnelRequest = Omit<\n  CreateTunnelCloudflaredRequest,\n  \"accountId\"\n>;\n\n\nexport type UpdateTunnelRequest = Omit<\n  PatchTunnelCloudflaredRequest,\n  \"accountId\" | \"tunnelId\"\n>;\n\n\nexport type ConfigurationBody = NonNullable<\n  PutTunnelCloudflaredConfigurationRequest[\"config\"]\n>;",
+        "3": "\n\n\n\n\nexport interface WriteTunnelClient {\n\n  create(\n    request: CreateTunnelRequest,\n  ): Effect.Effect<\n    CreateTunnelCloudflaredResponse,\n    CreateTunnelCloudflaredError,\n    RuntimeContext\n  >;\n\n  update(\n    tunnelId: string,\n    request: UpdateTunnelRequest,\n  ): Effect.Effect<\n    PatchTunnelCloudflaredResponse,\n    PatchTunnelCloudflaredError,\n    RuntimeContext\n  >;\n\n  delete(\n    tunnelId: string,\n  ): Effect.Effect<\n    DeleteTunnelCloudflaredResponse,\n    DeleteTunnelCloudflaredError,\n    RuntimeContext\n  >;",
+        "4": "\n  putConfiguration(\n    tunnelId: string,\n    config: ConfigurationBody,\n  ): Effect.Effect<\n    PutTunnelCloudflaredConfigurationResponse,\n    PutTunnelCloudflaredConfigurationError,\n    RuntimeContext\n  >;\n}\n\n\nexport const writeClient = (auth: TunnelAuth): WriteTunnelClient => {\n  const { authorize } = auth;\n  return {\n    create: Effect.fn(\"Cloudflare.Tunnel.create\")(function* (request) {\n      const accountId = yield* auth.accountId;\n      return yield* authorize(\n        zeroTrust.createTunnelCloudflared({ accountId, ...request }),\n      );\n    }),\n    update: Effect.fn(\"Cloudflare.Tunnel.update\")(\n      function* (tunnelId, request) {\n        const accountId = yield* auth.accountId;\n        return yield* authorize(\n          zeroTrust.patchTunnelCloudflared({ accountId, tunnelId, ...request }),\n        );\n      },\n    ),",
+        "5": "    delete: Effect.fn(\"Cloudflare.Tunnel.delete\")(function* (tunnelId) {\n      const accountId = yield* auth.accountId;\n      return yield* authorize(\n        zeroTrust.deleteTunnelCloudflared({ accountId, tunnelId }),\n      );\n    }),\n    putConfiguration: Effect.fn(\"Cloudflare.Tunnel.putConfiguration\")(\n      function* (tunnelId, config) {\n        const accountId = yield* auth.accountId;\n        return yield* authorize(\n          zeroTrust.putTunnelCloudflaredConfiguration({\n            accountId,\n            tunnelId,\n            config,\n          }),\n        );\n      },\n    ),\n  };\n};\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

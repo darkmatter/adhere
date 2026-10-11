@@ -1,0 +1,53 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CloudWatch/Dashboard.ts",
+  "kind": "judge",
+  "ordinal": 142,
+  "artifact": "attempt-00142.json",
+  "started": "2026-10-11T03:20:40.188Z",
+  "estimatedTokens": 3893,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.024235000000771834,
+  "referencesPresent": false,
+  "bodyDigest": "0b80cc3cf3f0efc99ac7d82677604d1b44cb884764230938ad3967565a087b33",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as cloudwatch from \"@distilled.cloud/aws/cloudwatch\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { isResolved } from \"../../Diff.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { AWSEnvironment, type AccountID } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport { createName, retryConcurrent } from \"./common.ts\";\n\nexport type DashboardName = string;\nexport type DashboardArn =\n  `arn:aws:cloudwatch::${AccountID}:dashboard/${string}`;\n\nexport type DashboardPeriodOverride = \"inherit\" | \"auto\";\nexport type DashboardMetricRow = (string | number | boolean | null)[];\n\nexport interface DashboardMetricWidgetProperties {\n  title?: string;\n  region?: string;\n  stat?: string;\n  period?: number;\n  view?: \"timeSeries\" | \"singleValue\" | \"gauge\" | \"bar\" | \"pie\";\n  stacked?: boolean;\n  metrics: DashboardMetricRow[];\n  annotations?: Record<string, unknown>;\n  yAxis?: Record<string, unknown>;\n  legend?: Record<string, unknown>;\n  [key: string]: unknown;\n}",
+        "2": "\nexport interface DashboardTextWidgetProperties {\n  markdown: string;\n  [key: string]: unknown;\n}\n\nexport interface DashboardAlarmStatusWidgetProperties {\n  alarms: string[];\n  title?: string;\n  sortBy?: string;\n  states?: string[];\n  [key: string]: unknown;\n}\n\nexport interface DashboardLogWidgetProperties {\n  query: string;\n  region?: string;\n  title?: string;\n  view?: \"table\" | \"timeSeries\" | \"bar\" | \"pie\";\n  [key: string]: unknown;\n}\n\nexport interface DashboardMetricWidget {\n  type: \"metric\";\n  x?: number;\n  y?: number;\n  width?: number;\n  height?: number;\n  properties: DashboardMetricWidgetProperties;\n}",
+        "3": "\nexport interface DashboardTextWidget {\n  type: \"text\";\n  x?: number;\n  y?: number;\n  width?: number;\n  height?: number;\n  properties: DashboardTextWidgetProperties;\n}\n\nexport interface DashboardAlarmStatusWidget {\n  type: \"alarm\";\n  x?: number;\n  y?: number;\n  width?: number;\n  height?: number;\n  properties: DashboardAlarmStatusWidgetProperties;\n}\n\nexport interface DashboardLogWidget {\n  type: \"log\";\n  x?: number;\n  y?: number;\n  width?: number;\n  height?: number;\n  properties: DashboardLogWidgetProperties;\n}",
+        "4": "\nexport type DashboardWidget =\n  | DashboardMetricWidget\n  | DashboardTextWidget\n  | DashboardAlarmStatusWidget\n  | DashboardLogWidget;\n\nexport interface DashboardBody {\n  start?: string;\n  end?: string;\n  periodOverride?: DashboardPeriodOverride;\n  widgets: DashboardWidget[];\n  variables?: Record<string, unknown>[];\n}",
+        "5": "\nexport interface DashboardProps extends Omit<\n  cloudwatch.PutDashboardInput,\n  \"DashboardName\" | \"DashboardBody\"\n> {\n\n\n\n  name?: DashboardName;\n\n\n\n\n  DashboardBody: DashboardBody;\n\n\n\n\n\n\n\n  tags?: Record<string, string>;\n}",
+        "6": "\nexport interface Dashboard extends Resource<\n  \"AWS.CloudWatch.Dashboard\",\n  DashboardProps,\n  {\n\n    dashboardName: DashboardName;\n\n    dashboardArn: DashboardArn;\n\n    dashboardBody: DashboardBody | undefined;\n\n    tags: Record<string, string>;\n  },\n  never,\n  Providers\n> {}",
+        "7": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Dashboard = Resource<Dashboard>(\"AWS.CloudWatch.Dashboard\");\n\nconst serializeDashboardBody = (body: DashboardBody) => JSON.stringify(body);\n\nconst parseDashboardBody = (body: string | undefined) => {\n  if (!body) {\n    return undefined;\n  }\n  return JSON.parse(body) as DashboardBody;\n};\n\nexport const DashboardProvider = () =>\n  Provider.effect(\n    Dashboard,\n    Effect.gen(function* () {\n      const createDashboardName = (id: string, props: { name?: string } = {}) =>\n        createName(id, props.name, 255);\n\n      const dashboardArn = (dashboardName: string) =>\n        AWSEnvironment.current.pipe(\n          Effect.map(\n            (env) =>\n              `arn:aws:cloudwatch::${env.accountId}:dashboard/${dashboardName}` as DashboardArn,\n          ),\n        );",
+        "8": "\n      const readDashboard = Effect.fn(function* (dashboardName: string) {\n        const output = yield* cloudwatch\n          .getDashboard({\n            DashboardName: dashboardName,\n          })\n          .pipe(\n            Effect.catchTag(\"DashboardNotFoundError\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n\n        if (!output?.DashboardName) {\n          return undefined;\n        }\n\n        return {\n          dashboardName: output.DashboardName,\n          dashboardArn: yield* dashboardArn(output.DashboardName),\n          dashboardBody: parseDashboardBody(output.DashboardBody),\n          tags: {},\n        };\n      });\n\n      return {\n        stables: [\"dashboardName\", \"dashboardArn\"],",
+        "9": "        diff: Effect.fn(function* ({\n          id,\n          olds = {},\n          news = {} as DashboardProps,\n        }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createDashboardName(id, olds);\n          const newName = yield* createDashboardName(id, news);\n\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name =\n            output?.dashboardName ??\n            (yield* createDashboardName(id, olds ?? {}));\n          return yield* readDashboard(name);\n        }),\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n\n\n\n          const name =\n            output?.dashboardName ?? (yield* createDashboardName(id, news));",
+        "10": "\n\n\n\n          yield* retryConcurrent(\n            cloudwatch.putDashboard({\n              DashboardName: name,\n              DashboardBody: serializeDashboardBody(news.DashboardBody),\n            }),\n          );\n\n          yield* session.note(yield* dashboardArn(name));\n\n          const state = yield* readDashboard(name);\n          if (!state) {\n            return yield* Effect.fail(\n              new Error(`failed to read reconciled dashboard '${name}'`),\n            );\n          }\n\n\n\n          return {\n            ...state,\n            tags: {},\n          };\n        }),",
+        "11": "        delete: Effect.fn(function* ({ output }) {\n\n\n\n          yield* retryConcurrent(\n            cloudwatch.deleteDashboards({\n              DashboardNames: [output.dashboardName],\n            }),\n          );\n        }),",
+        "12": "        list: () =>\n          Effect.gen(function* () {\n\n\n\n            const names = yield* cloudwatch.listDashboards.pages({}).pipe(\n              Stream.runCollect,\n              Effect.map((chunk) =>\n                Array.from(chunk).flatMap((page) =>\n                  (page.DashboardEntries ?? [])\n                    .map((entry) => entry.DashboardName)\n                    .filter((name): name is string => name != null),\n                ),\n              ),\n            );\n\n            const states = yield* Effect.forEach(\n              names,\n              (name) => readDashboard(name),\n              { concurrency: 10 },\n            );\n\n            return states.filter(\n              (state): state is NonNullable<typeof state> =>\n                state !== undefined,\n            );\n          }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/AWS/SES/ReceiptRuleSet.ts",
+  "kind": "judge",
+  "ordinal": 180,
+  "artifact": "attempt-00180.json",
+  "started": "2026-10-11T03:27:47.643Z",
+  "estimatedTokens": 5415,
+  "reservedTokens": 64000,
+  "chargedTokens": 3977,
+  "outcome": "answered",
+  "milliseconds": 78.38761299999896,
+  "referencesPresent": false,
+  "bodyDigest": "95b175195b5f728a6292692b074211debb0670f3018955a3550a2c3ffa28399f",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":3977,\"output_tokens\":25}}",
+  "inputTokens": 3977,
+  "answers": {
+    "providers/idempotent-delete": 0.92
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "action": "```typescript\n\"replace\"\n```",
+        "catchTag": "```typescript\n{ <const K extends import(\"effect/Types\").Tags<E> | import(\"effect/Array\").NonEmptyReadonlyArray<import(\"effect/Types\").Tags<E>>, E, A1, E1, R1, A2 = import(\"effect/Types\").unassigned, E2 = never, R2 = never>(k: K, f: (e: import(\"effect/Types",
+        "createName": "```typescript\n(id: string, props: Pick<ReceiptRuleSetProps, \"ruleSetName\">) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").InstanceId | import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```",
+        "createPhysicalName": "```typescript\n(args_0: { id: string; prefix?: string; instanceId?: string; suffixLength?: number; maxLength?: number; delimiter?: string; lowercase?: boolean; forbiddenPrefixes?: string[]; }) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").In",
+        "createReceiptRuleSet": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.CreateReceiptRuleSetRequest, ses.CreateReceiptRuleSetResponse, ses.CreateReceiptRuleSetError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpCl",
+        "delete": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: ReceiptRuleSetProps; output: { ruleSetName: string; }; session: import(\"../../Report.ts\").ScopedPlanStatusSession; bindings: import(\"../../Resource.ts\").ResourceBinding<never>[]; f",
+        "deleteReceiptRuleSet": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.DeleteReceiptRuleSetRequest, ses.DeleteReceiptRuleSetResponse, ses.DeleteReceiptRuleSetError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpCl",
+        "describe": "```typescript\n(name: string) => Effect.Effect<ses.DescribeReceiptRuleSetResponse | undefined, import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>",
+        "describeReceiptRuleSet": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.DescribeReceiptRuleSetRequest, ses.DescribeReceiptRuleSetResponse, ses.DescribeReceiptRuleSetError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/",
+        "diff": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: ReceiptRuleSetProps; news: import(\"../../Input.ts\").Input<ReceiptRuleSetProps>; oldBindings: import(\"../../Resource.ts\").ResourceBinding<never>[]; newBindings: import(\"../../Input.",
+        "effect": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike, Req = never, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../../Resource.",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "found": "```typescript\nses.DescribeReceiptRuleSetResponse | undefined\n```",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "id": "```typescript\nstring\n```",
+        "isResolved": "```typescript\n<T>(value: import(\"../../Input.ts\").Input<T>) => value is T\n```",
+        "list": "```typescript\n() => Effect.Effect<{ ruleSetName: string; }[], import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "listReceiptRuleSets": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ses.ListReceiptRuleSetsRequest, ses.ListReceiptRuleSetsResponse, import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/u",
+        "maxLength": "```typescript\nnumber\n```",
+        "name": "```typescript\nstring\n```",
+        "Name": "```typescript\nstring | undefined\n```\n\n```typescript\nstring\n```",
+        "newName": "```typescript\nstring\n```",
+        "news": "```typescript\nimport(\"../../Input.ts\").Input<ReceiptRuleSetProps>\n```\n\n```typescript\nReceiptRuleSetProps\n```\n\n---\n\n```typescript\nReceiptRuleSetProps\n```",
+        "nextToken": "```typescript\nstring | undefined\n```",
+        "NextToken": "```typescript\nstring | undefined\n```",
+        "observed": "```typescript\nses.DescribeReceiptRuleSetResponse | undefined\n```",
+        "of": "```typescript\n<ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(service: Omit<Provider.ProviderService<ReceiptRuleSet, ReadReq, DiffReq, PrecreateReq, Reconc",
+        "oldName": "```typescript\nstring\n```",
+        "olds": "```typescript\nReceiptRuleSetProps\n```",
+        "output": "```typescript\n{ ruleSetName: string; } | undefined\n```\n\n---\n\n```typescript\n{ ruleSetName: string; }\n```",
+        "page": "```typescript\nses.ListReceiptRuleSetsResponse\n```",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "props": "```typescript\nPick<ReceiptRuleSetProps, \"ruleSetName\">\n```",
+        "Provider": "```typescript\ntypeof Provider\n```\n\n---\n\n```typescript\nProvider.Provider<ReceiptRuleSet>\n```",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: ReceiptRuleSetProps; output: { ruleSetName: string; } | undefined; }) => Effect.Effect<{ ruleSetName: string; } | undefined, import(\"@distilled.cloud/aws/Errors\").CommonErrors, imp",
+        "ReceiptRuleSet": "```typescript\nimport(\"../../Resource.ts\").ResourceClass<ReceiptRuleSet>\n```\n\nAn Amazon SES receipt rule set — the ordered container for the receipt rules\nthat decide what happens to inbound email (deliver to S3, invoke a Lambda,\npublish to SNS, bounce, etc",
+        "ReceiptRuleSetProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<ReceiptRuleSet>, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient | import(\"../../Stack.ts\").Stack | import(\"../../Stage.",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: ReceiptRuleSetProps; olds: ReceiptRuleSetProps | undefined; output: { ruleSetName: string; } | undefined; session: import(\"../../Report.ts\").ScopedPlanStatusSession; bindings: impo",
+        "Resource": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../../Resource.ts\").ResourceOptions) => import(\"../../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nTh",
+        "rows": "```typescript\n{ ruleSetName: string; }[]\n```",
+        "ruleSetName": "```typescript\nstring | undefined\n```\n\nName of the receipt rule set. May contain letters, numbers, dashes,\nunderscores and periods, up to 64 characters, and must start and end with\na letter or number. If omitted, a deterministic physical name is generated\nf",
+        "RuleSetName": "```typescript\nstring\n```",
+        "RuleSets": "```typescript\nses.ReceiptRuleSetMetadata[] | undefined\n```",
+        "ses": "```typescript\ntypeof ses\n```",
+        "set": "```typescript\nses.ReceiptRuleSetMetadata\n```",
+        "stables": "```typescript\n\"ruleSetName\"[]\n```",
+        "succeed": "```typescript\n<A>(value: A) => Effect.Effect<A>\n```\n\nCreates an `Effect` that always succeeds with a given value.\n\n**When to use**\n\nUse when an effect should complete successfully with a specific value without any errors\nor external dependencies.\n\n**Exampl"
+      },
+      "code": {
+        "1": "import * as ses from \"@distilled.cloud/aws/ses\";\nimport * as Effect from \"effect/Effect\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface ReceiptRuleSetProps {\n\n\n\n\n\n\n\n  ruleSetName?: string;\n}\n\nexport interface ReceiptRuleSet extends Resource<\n  \"AWS.SES.ReceiptRuleSet\",\n  ReceiptRuleSetProps,\n  {\n\n    ruleSetName: string;\n  },\n  never,\n  Providers\n> {}",
+        "2": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ReceiptRuleSet = Resource<ReceiptRuleSet>(\n  \"AWS.SES.ReceiptRuleSet\",\n);\n\nexport const ReceiptRuleSetProvider = () =>\n  Provider.effect(\n    ReceiptRuleSet,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: Pick<ReceiptRuleSetProps, \"ruleSetName\">,\n      ) {\n        return (\n          props.ruleSetName ??\n          (yield* createPhysicalName({ id, maxLength: 64 }))\n        );\n      });\n\n      const describe = Effect.fn(function* (name: string) {\n        return yield* ses\n          .describeReceiptRuleSet({ RuleSetName: name })\n          .pipe(\n            Effect.catchTag(\"RuleSetDoesNotExistException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n      });\n\n      return ReceiptRuleSet.Provider.of({\n        stables: [\"ruleSetName\"],",
+        "3": "\n\n\n\n        list: () =>\n          Effect.gen(function* () {\n            const rows: { ruleSetName: string }[] = [];\n            let nextToken: string | undefined;\n            do {\n              const page = yield* ses.listReceiptRuleSets({\n                NextToken: nextToken,\n              });\n              for (const set of page.RuleSets ?? []) {\n                if (set.Name) rows.push({ ruleSetName: set.Name });\n              }\n              nextToken = page.NextToken;\n            } while (nextToken);\n            return rows;\n          }),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name = output?.ruleSetName ?? (yield* createName(id, olds));\n          const found = yield* describe(name);\n\n\n\n          return found ? { ruleSetName: name } : undefined;\n        }),",
+        "4": "\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output }) {\n          const name = output?.ruleSetName ?? (yield* createName(id, news));\n\n\n          const observed = yield* describe(name);\n\n\n          if (observed === undefined) {\n            yield* ses\n              .createReceiptRuleSet({ RuleSetName: name })\n              .pipe(\n                Effect.catchTag(\"AlreadyExistsException\", () =>\n                  Effect.succeed({}),\n                ),\n              );\n          }\n\n\n\n          return { ruleSetName: name };\n        }),",
+        "5": "\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* ses.deleteReceiptRuleSet({\n            RuleSetName: output.ruleSetName,\n          });\n        }),\n      });\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

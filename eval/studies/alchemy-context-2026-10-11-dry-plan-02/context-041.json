@@ -1,0 +1,37 @@
+{
+  "symbols": {
+    "admin": "```typescript\n(props: { binding: string; storeId: string; }) => import(\"@alchemy.run/cloudflare-runtime/core\").BindingHook<SecretsStore.SecretsStore>\n```\n\nBind a local Secrets Store *store* as a raw KV namespace\n(`env.<binding>.put(secretName, value)` / `.",
+    "binding": "```typescript\nstring\n```",
+    "bindings": "```typescript\nimport(\"@alchemy.run/cloudflare-runtime/core\").BindingHook<SecretsStore.SecretsStore>[]\n```",
+    "catch": "```typescript\n(cause: unknown) => LocalSecretsStoreError\n```",
+    "cause": "```typescript\nunknown\n```",
+    "Data": "```typescript\ntypeof Data\n```",
+    "delete": "```typescript\n(key: string) => Promise<void>\n```",
+    "deleteLocalSecret": "```typescript\n(storeId: string, secretName: string) => Effect.Effect<void, LocalSecretsStoreError | import(\"@alchemy.run/cloudflare-runtime/core\").RuntimeError, import(\"@alchemy.run/cloudflare-runtime/core\").Runtime | SecretsStore.SecretsStore>\n```\n\nRemove",
+    "Effect": "The `Effect` interface defines a value that lazily describes a workflow or\njob. The workflow requires some context `R`, and may fail with an error of\ntype `E`, or succeed with a value of type `A`.\n\n**When to use**\n\nUse when you need to represent a lazy, co",
+    "env": "```typescript\nRecord<string, unknown>\n```\n\nEnvironment object containing the instance's bindings.",
+    "gatewayName": "```typescript\n(prefix: string, id: string) => string\n```\n\nSanitize an id into a workerd instance-name-safe suffix.",
+    "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+    "LocalSecretsStoreError": "```typescript\ntypeof LocalSecretsStoreError\n```",
+    "message": "```typescript\nstring\n```",
+    "name": "```typescript\nstring\n```",
+    "open": "```typescript\n<B extends import(\"@alchemy.run/cloudflare-runtime/core\").BindingHooks, Env = Record<string, unknown>>(options: import(\"@alchemy.run/cloudflare-runtime/core/platform-proxy\").PlatformProxyOptions<B>) => Effect.Effect<import(\"@alchemy.run/cloud",
+    "proxy": "```typescript\nimport(\"@alchemy.run/cloudflare-runtime/core/platform-proxy\").PlatformProxyInstance<Record<string, unknown>>\n```",
+    "put": "```typescript\n(key: string, value: string | ArrayBuffer | ArrayBufferView | runtime.ReadableStream, options?: runtime.KVNamespacePutOptions) => Promise<void>\n```",
+    "scoped": "```typescript\n<A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E, Exclude<R, import(\"effect/Scope\").Scope>>\n```\n\nRuns an effect with a scope that closes when the effect completes.\n\n**When to use**\n\nUse to acquire scoped resources for the duratio",
+    "secretName": "```typescript\nstring\n```",
+    "SecretsStore": "```typescript\ntypeof SecretsStore\n```",
+    "seedLocalSecret": "```typescript\n(storeId: string, secretName: string, value: string) => Effect.Effect<void, LocalSecretsStoreError | import(\"@alchemy.run/cloudflare-runtime/core\").RuntimeError, import(\"@alchemy.run/cloudflare-runtime/core\").Runtime | SecretsStore.SecretsSto",
+    "store": "```typescript\nruntime.KVNamespace<string>\n```",
+    "storeId": "```typescript\nstring\n```",
+    "TaggedError": "```typescript\n<Tag extends string>(tag: Tag) => new <A extends Record<string, any> = {}>(args: import(\"effect/Types\").VoidIfEmpty<{ readonly [P in keyof A as P extends \"_tag\" ? never : P]: A[P]; }>) => import(\"effect/Cause\").YieldableError & { readonly _ta",
+    "try": "```typescript\n() => Promise<void>\n```",
+    "tryPromise": "```typescript\n{ <A>(options: (signal: AbortSignal) => PromiseLike<A>): Effect.Effect<A, import(\"effect/Cause\").UnknownError>; <A, E>(options: { readonly try: (signal: AbortSignal) => PromiseLike<A>; readonly catch: (error: unknown) => E; }): Effect.Effect<",
+    "use": "```typescript\n(store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>\n```",
+    "value": "```typescript\nstring\n```",
+    "withLocalSecretsStore": "```typescript\n<A, E, R>(storeId: string, use: (store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>) => Effect.Effect<A, E | import(\"@alchemy.run/cloudflare-runtime/core\").RuntimeError, import(\"@alchemy.run/cloudflare-runtime/core\").Runtime | Secr"
+  },
+  "references": {
+    "gatewayName:packages/alchemy/src/Cloudflare/LocalGateway.ts": "export const gatewayName = (prefix: string, id: string) =>\n  `${prefix}-${id.replace(/[^a-zA-Z0-9_-]/g, \"-\")}`;"
+  }
+}

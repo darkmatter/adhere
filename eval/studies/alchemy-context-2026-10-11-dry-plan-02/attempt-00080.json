@@ -1,0 +1,108 @@
+{
+  "arm": "symbols+references",
+  "file": "packages/alchemy/src/Cloudflare/R2/WriteBucketBinding.ts",
+  "kind": "judge",
+  "ordinal": 80,
+  "artifact": "attempt-00080.json",
+  "started": "2026-10-11T03:20:36.253Z",
+  "estimatedTokens": 6970,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.10485700000026554,
+  "referencesPresent": true,
+  "bodyDigest": "0d2d0d6b4ad9c7944847f5b1c889ff74ff2bfdcfc391400145e2c0ecb1c62e92",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "abort": "```typescript\n() => Effect.Effect<void, import(\"./BucketTypes.ts\").R2Error, never>\n```\n\n---\n\n```typescript\n() => Promise<void>\n```",
+        "Blob": "The **`Blob`** interface represents a blob, which is a file-like object of immutable, raw data; they can be read as text or binary data, or converted into a ReadableStream so its methods can be used for processing the data.\n\n[MDN Reference](https://develop",
+        "complete": "```typescript\n(uploadedParts: UploadedPart[]) => Effect.Effect<import(\"./BucketTypes.ts\").R2Object, import(\"./BucketTypes.ts\").R2Error, never>\n```\n\n---\n\n```typescript\n(uploadedParts: runtime.R2UploadedPart[]) => Promise<runtime.R2Object>\n```",
+        "contentLength": "```typescript\nnumber | undefined\n```\n\n---\n\n```typescript\nnumber | undefined\n```\n\n```typescript\nnumber\n```",
+        "createMultipartUpload": "```typescript\n(key: string, options?: MultipartOptions) => Effect.Effect<MultipartUpload, import(\"./BucketTypes.ts\").R2Error, never>\n```\n\n---\n\n```typescript\n(key: string, options?: runtime.R2MultipartOptions) => Promise<runtime.R2MultipartUpload>\n```",
+        "delete": "```typescript\n(keys: string | string[]) => Effect.Effect<void, import(\"./BucketTypes.ts\").R2Error, never>\n```\n\n---\n\n```typescript\n(keys: string | string[]) => Promise<void>\n```",
+        "effect": "```typescript\n{ <I, S>(service: import(\"effect/Context\").Key<I, S>): <E, R>(effect: Effect.Effect<S, E, R>) => Layer.Layer<I, E, Exclude<R, import(\"effect/Scope\").Scope>>; <I, S, E, R>(service: import(\"effect/Context\").Key<I, S>, effect: Effect.Effect<impo",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "Error": "```typescript\nErrorConstructor\n```",
+        "FixedLengthStream": "```typescript\ntypeof FixedLengthStream\n```",
+        "getRawStream": "```typescript\n(stream: Stream.Stream<any, any, any>) => ReadableStream | undefined\n```",
+        "isStream": "```typescript\n(u: unknown) => u is Stream.Stream<unknown, unknown, unknown>\n```\n\nChecks whether a value is a Stream.\n\n**Example** (Checking whether a value is a Stream)\n\n```ts import.meta.vitest\nimport { Stream } from \"effect\"\n\nStream.isStream(Stream.make(",
+        "key": "```typescript\nstring\n```",
+        "keys": "```typescript\nstring | string[]\n```",
+        "Layer": "```typescript\ntypeof Layer\n```",
+        "makeBucketBinding": "```typescript\n<Client>(options: { makeClient: (helpers: ReturnType<typeof makeHelpers>) => Client; }) => Effect.Effect<(bucket: import(\"./Bucket.ts\").Bucket) => Effect.Effect<Client, never, never>, never, import(\"../index.ts\").WorkerEnvironment | import(\".",
+        "makeClient": "```typescript\n({ raw, use, tryPromise, wrapR2Object, wrapR2ObjectOrBody, }: ReturnType<typeof makeHelpers>) => WriteBucketClient\n```",
+        "makeHelpers": "```typescript\n(env: Record<string, any>, bucket: import(\"./Bucket.ts\").Bucket) => { raw: Effect.Effect<runtime.R2Bucket, never, never>; use: <T>(fn: (raw: runtime.R2Bucket) => Promise<T>) => Effect.Effect<T, import(\"./BucketTypes.ts\").R2Error>; tryPromise:",
+        "makeWrite": "```typescript\n({ raw, use, tryPromise, wrapR2Object, wrapR2ObjectOrBody, }: ReturnType<typeof makeHelpers>) => WriteBucketClient\n```\n\nBuild the write half of the binding client.",
+        "map": "```typescript\n{ <A, B>(f: (a: A) => B): <E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<B, E, R>; <A, E, R, B>(self: Effect.Effect<A, E, R>, f: (a: A) => B): Effect.Effect<B, E, R>; }\n```\n\nTransforms the value inside an effect by applying a function ",
+        "onlyIf": "```typescript\nHeaders | runtime.R2Conditional\n```",
+        "options": "```typescript\nUploadPartOptions | undefined\n```\n\n---\n\n```typescript\n(runtime.R2PutOptions & { contentLength?: number; } & { onlyIf: Conditional | Headers; contentLength?: number; }) | undefined\n```\n\n---\n\n```typescript\nruntime.R2MultipartOptions | undefined",
+        "partNumber": "```typescript\nnumber\n```",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "put": "```typescript\n(key: string, value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null | Blob | Stream.Stream<Uint8Array>, options?: PutOptions & { onlyIf: Conditional | Headers; contentLength?: number; }) => any\n```\n\n---\n\n```typescript\n{ (key: ",
+        "r2Options": "```typescript\n{} | { onlyIf: (runtime.Headers | runtime.R2Conditional | undefined) & (Headers | runtime.R2Conditional); httpMetadata?: runtime.R2HTTPMetadata | runtime.Headers; customMetadata?: Record<string, string>; md5?: (ArrayBuffer | ArrayBufferView) ",
+        "raw": "```typescript\nruntime.R2MultipartUpload\n```\n\n---\n\n```typescript\nruntime.R2Bucket\n```\n\n---\n\n```typescript\nEffect.Effect<runtime.R2Bucket, never, never>\n```",
+        "rawStream": "```typescript\nReadableStream<any> | undefined\n```\n\n```typescript\nReadableStream<any>\n```",
+        "readable": "```typescript\nReadableStream<Uint8Array<ArrayBufferLike>>\n```",
+        "resumeMultipartUpload": "```typescript\n(key: string, uploadId: string) => Effect.Effect<MultipartUpload, never, never>\n```\n\n---\n\n```typescript\n(key: string, uploadId: string) => runtime.R2MultipartUpload\n```",
+        "Stream": "A `Stream<A, E, R>` describes a program that can emit many `A` values, fail\nwith `E`, and require `R`.\n\n**Details**\n\nStreams are pull-based with backpressure and emit chunks to amortize effect\nevaluation. They support monadic composition and error handling",
+        "suspend": "```typescript\n<A, E, R>(effect: import(\"effect/Function\").LazyArg<Effect.Effect<A, E, R>>) => Effect.Effect<A, E, R>\n```\n\nCreates an `Effect` lazily, delaying construction until it is needed.\n\n**When to use**\n\nUse when you need to defer the evaluation of a",
+        "toReadableStream": "```typescript\n{ <A>(options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): <E>(self: Stream.Stream<A, E>) => ReadableStream<A>; <A, E>(self: Stream.Stream<A, E>, options?: { readonly strategy?: QueuingStrategy<A> | undefined; }): ReadableStrea",
+        "tryPromise": "```typescript\n<T>(fn: () => Promise<T>) => Effect.Effect<T, import(\"./BucketTypes.ts\").R2Error>\n```",
+        "upload": "```typescript\nruntime.R2MultipartUpload\n```",
+        "uploadedParts": "```typescript\nruntime.R2UploadedPart[]\n```",
+        "uploadId": "```typescript\nstring\n```",
+        "uploadPart": "```typescript\n(partNumber: number, value: ReadableStream | ArrayBuffer | ArrayBufferView | string | Blob | Stream.Stream<Uint8Array>, options?: UploadPartOptions) => Effect.Effect<runtime.R2UploadedPart, import(\"./BucketTypes.ts\").R2Error, never>\n```\n\n---\n",
+        "use": "```typescript\n<T>(fn: (raw: runtime.R2Bucket) => Promise<T>) => Effect.Effect<T, import(\"./BucketTypes.ts\").R2Error>\n```",
+        "value": "```typescript\nstring | ArrayBuffer | ArrayBufferView<ArrayBufferLike> | Blob | ReadableStream<any> | Stream.Stream<Uint8Array<ArrayBufferLike>, never, never>\n```\n\n```typescript\nStream.Stream<Uint8Array<ArrayBufferLike>, never, never>\n```\n\n```typescript\nstr",
+        "wrapR2MultipartUpload": "```typescript\n(upload: runtime.R2MultipartUpload) => MultipartUpload\n```",
+        "wrapR2Object": "```typescript\n(object: runtime.R2Object) => import(\"./BucketTypes.ts\").R2Object\n```",
+        "wrapR2ObjectOrBody": "```typescript\n(object: runtime.R2Object | runtime.R2ObjectBody | null) => import(\"./BucketTypes.ts\").R2Object | import(\"./BucketTypes.ts\").ObjectBody | null\n```",
+        "WriteBucket": "```typescript\nWriteBucket\n```\n\n**@binding**\n\n**@product** R2\n\n**@category** Storage & Databases",
+        "WriteBucketBinding": "```typescript\nLayer.Layer<WriteBucket, never, import(\"../index.ts\").WorkerEnvironment | import(\"../index.ts\").Worker<any>>\n```\n\nImplementation of the WriteBucket binding that uses a Worker binding."
+      },
+      "references": {
+        "__comment": "Declarations of symbols used in `code`. Each key is `symbol:pathname`: the symbol name as used in `code` followed by its repository-relative declaration path. Each value is a complete declaration excerpt.",
+        "Conditional:packages/alchemy/src/Cloudflare/R2/BucketTypes.ts": "export type Conditional = runtime.R2Conditional;",
+        "getRawStream:packages/alchemy/src/Util/Stream.ts": "export const getRawStream = (\n  stream: Stream.Stream<any, any, any>,\n): ReadableStream | undefined =>\n  streamHasRaw(stream) ? stream.raw : undefined;",
+        "makeBucketBinding:packages/alchemy/src/Cloudflare/R2/BucketBinding.ts": "export const makeBucketBinding = <Client>(options: {\n  makeClient: (helpers: ReturnType<typeof makeHelpers>) => Client;\n}) =>\n  Effect.gen(function* () {\n    const env = yield* WorkerEnvironment;\n    const host = yield* Worker;\n\n    return Effect.fn(function* (bucket: Bucket) {\n      if (!globalThis.__ALCHEMY_RUNTIME__) {\n        yield* host.bind`${bucket}`({\n          bindings: [\n            {\n              type: \"r2_bucket\",\n              name: bucket.LogicalId,\n              bucketName: bucket.bucketName,\n              jurisdiction: bucket.jurisdiction.pipe(\n                Output.map((jurisdiction) =>\n                  jurisdiction === \"default\" ? undefined : jurisdiction,\n                ),\n              ),\n            },\n          ],\n        });\n      }\n\n      return options.makeClient(makeHelpers(env, bucket));\n    });\n  });",
+        "makeHelpers:packages/alchemy/src/Cloudflare/R2/BucketBinding.ts": "export const makeHelpers = (env: Record<string, any>, bucket: Bucket) => {\n  const raw = Effect.sync(\n    () => (env as Record<string, runtime.R2Bucket>)[bucket.LogicalId]!,\n  );\n  const tryPromise = <T>(fn: () => Promise<T>): Effect.Effect<T, R2Error> =>\n    Effect.tryPromise({\n      try: fn,\n      catch: (error: any) =>\n        new R2Error({\n          message: error.message ?? \"Unknown error\",\n          cause: error,\n        }),\n    });\n\n  const use = <T>(\n    fn: (raw: runtime.R2Bucket) => Promise<T>,\n  ): Effect.Effect<T, R2Error> =>\n    raw.pipe(Effect.flatMap((raw) => tryPromise(() => fn(raw))));\n\n  return {\n    raw,\n    use,\n    tryPromise,\n    ...makeR2ObjectWrappers(tryPromise),\n  };\n};",
+        "MultipartOptions:packages/alchemy/src/Cloudflare/R2/BucketTypes.ts": "export type MultipartOptions = runtime.R2MultipartOptions;",
+        "MultipartUpload:packages/alchemy/src/Cloudflare/R2/BucketTypes.ts": "export interface MultipartUpload {\n  raw: runtime.R2MultipartUpload;\n  readonly key: string;\n  readonly uploadId: string;\n  uploadPart(\n    partNumber: number,\n    value: ReadableStream | (ArrayBuffer | ArrayBufferView) | string | Blob,\n    options?: UploadPartOptions,\n  ): Effect.Effect<UploadedPart, R2Error>;\n  abort(): Effect.Effect<void, R2Error>;\n  complete(uploadedParts: UploadedPart[]): Effect.Effect<R2Object, R2Error>;\n}",
+        "PutOptions:packages/alchemy/src/Cloudflare/R2/BucketTypes.ts": "export type PutOptions = runtime.R2PutOptions & {\n  contentLength?: number;\n};",
+        "UploadedPart:packages/alchemy/src/Cloudflare/R2/BucketTypes.ts": "export type UploadedPart = runtime.R2UploadedPart;",
+        "UploadPartOptions:packages/alchemy/src/Cloudflare/R2/BucketTypes.ts": "export interface UploadPartOptions extends runtime.R2UploadPartOptions {}",
+        "WriteBucket:packages/alchemy/src/Cloudflare/R2/WriteBucket.ts": "export interface WriteBucket extends Binding.Service<\n  WriteBucket,\n  \"Cloudflare.R2.WriteBucket\",\n  (bucket: Bucket) => Effect.Effect<WriteBucketClient>\n> {}\n…\nexport const WriteBucket = Binding.Service<WriteBucket>(\n  \"Cloudflare.R2.WriteBucket\",\n);",
+        "WriteBucketClient:packages/alchemy/src/Cloudflare/R2/WriteBucket.ts": "export interface WriteBucketClient {\n  put<Err = never>(\n    key: string,\n    value:\n      | ReadableStream\n      | ArrayBuffer\n      | ArrayBufferView\n      | string\n      | null\n      | Blob\n      | Stream.Stream<Uint8Array, Err>,\n    options?: PutOptions & {\n      onlyIf: Conditional | Headers;\n      contentLength?: number;\n    },\n  ): Effect.Effect<R2Object | null, R2Error | Err, RuntimeContext>;\n  put<Err = never>(\n    key: string,\n    value:\n      | ReadableStream\n      | ArrayBuffer\n      | ArrayBufferView\n      | string\n      | null\n      | Blob,\n    options?: PutOptions,\n  ): Effect.Effect<R2Object, R2Error | Err, RuntimeContext>;\n  put<Err = never>(\n    key: string,\n    value:\n      | ReadableStream\n      | ArrayBuffer\n      | ArrayBufferView\n      | string\n      | null\n      | Blob\n      | Stream.Stream<Uint8Array, Err>,\n    options: PutOptions & {\n      contentLength: number;\n    },\n  ): Effect.Effect<R2Object, R2Error | Err, RuntimeContext>;\n  delete(keys: string | string[]): Effect.Effect<void, R2Error, RuntimeContext>;\n  createMultipartUpload(\n    key: string,\n    options?: MultipartOptions,\n  ): Effect.Effect<MultipartUpload, R2Error, RuntimeContext>;\n  resumeMultipartUpload(\n    key: string,\n    uploadId: string,\n  ): Effect.Effect<MultipartUpload, R2Error, RuntimeContext>;\n}"
+      },
+      "code": {
+        "1": "import type * as runtime from \"@cloudflare/workers-types\";\nimport * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport * as Stream from \"effect/Stream\";\nimport { getRawStream } from \"../../Util/Stream.ts\";\nimport { makeBucketBinding, makeHelpers } from \"./BucketBinding.ts\";\nimport type {\n  Conditional,\n  MultipartOptions,\n  MultipartUpload,\n  PutOptions,\n  UploadPartOptions,\n  UploadedPart,\n} from \"./BucketTypes.ts\";\nimport { WriteBucket, type WriteBucketClient } from \"./WriteBucket.ts\";\n\n\n\n\nexport const WriteBucketBinding = Layer.effect(\n  WriteBucket,\n  Effect.suspend(() => makeBucketBinding({ makeClient: makeWrite })),\n);",
+        "2": "\n\nexport const makeWrite = ({\n  raw,\n  use,\n  tryPromise,\n  wrapR2Object,\n  wrapR2ObjectOrBody,\n}: ReturnType<typeof makeHelpers>): WriteBucketClient => {\n  const wrapR2MultipartUpload = (\n    upload: runtime.R2MultipartUpload,\n  ): MultipartUpload => ({\n    ...upload,\n    raw: upload,\n    uploadId: upload.uploadId,\n    abort: () => tryPromise(() => upload.abort()),\n    complete: (uploadedParts: UploadedPart[]) =>\n      tryPromise(() => upload.complete(uploadedParts)).pipe(\n        Effect.map(wrapR2Object),\n      ),\n    uploadPart: (\n      partNumber: number,\n      value:\n        | ReadableStream\n        | ArrayBuffer\n        | ArrayBufferView\n        | string\n        | Blob\n        | Stream.Stream<Uint8Array>,\n      options?: UploadPartOptions,\n    ) =>\n      tryPromise(() =>\n        upload.uploadPart(\n          partNumber,\n          Stream.isStream(value)\n            ? value.pipe(Stream.toReadableStream())\n            : (value as any),\n          options,\n        ),\n      ),\n  });",
+        "3": "\n  return {\n\n    put: (\n      key: string,\n      value:\n        | ReadableStream\n        | ArrayBuffer\n        | ArrayBufferView\n        | string\n        | null\n        | Blob\n        | Stream.Stream<Uint8Array>,\n      options?: PutOptions & {\n        onlyIf: Conditional | Headers;\n        contentLength?: number;\n      },\n    ) =>\n      use((raw) => {\n        if (Stream.isStream(value)) {\n\n\n          const { contentLength, ...r2Options } = options ?? {};\n          const rawStream = getRawStream(value);\n          if (rawStream) {\n            return raw.put(key, rawStream as any, r2Options);\n          } else if (!contentLength) {\n            throw new Error(\"Content length is required\");\n          }\n\n\n          const readable = Stream.toReadableStream(value).pipeThrough(\n            new FixedLengthStream(contentLength),\n          );\n          return raw.put(key, readable as any, r2Options);\n        }\n        return raw.put(key, value as any, options);\n      }).pipe(Effect.map(wrapR2ObjectOrBody)) as any,",
+        "4": "    delete: (keys: string | string[]) => use((raw) => raw.delete(keys)),\n    createMultipartUpload: (key: string, options?: MultipartOptions) =>\n      use((raw) => raw.createMultipartUpload(key, options)).pipe(\n        Effect.map(wrapR2MultipartUpload),\n      ),\n    resumeMultipartUpload: (key: string, uploadId: string) =>\n      raw.pipe(\n        Effect.map((raw) => raw.resumeMultipartUpload(key, uploadId)),\n        Effect.map(wrapR2MultipartUpload),\n      ),\n  };\n};\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

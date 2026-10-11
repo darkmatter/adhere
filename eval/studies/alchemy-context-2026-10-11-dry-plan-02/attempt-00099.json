@@ -1,0 +1,378 @@
+{
+  "arm": "symbols+references",
+  "file": "packages/alchemy/src/Server/SQSQueueEventSource.ts",
+  "kind": "locate",
+  "ordinal": 99,
+  "artifact": "attempt-00099.json",
+  "started": "2026-10-11T03:20:38.486Z",
+  "estimatedTokens": 10906,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.15631399999983842,
+  "referencesPresent": true,
+  "bodyDigest": "02363aaa6b0ba49c2bdfc0693e903a9f7a91ee82b5f0c1d068dc0707d5cd03bc",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "29",
+    "end:providers/idempotent-delete:2": "29",
+    "start:providers/idempotent-delete:3": "45",
+    "end:providers/idempotent-delete:3": "45",
+    "start:providers/idempotent-delete:4": "69",
+    "end:providers/idempotent-delete:4": "69",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "ApproximateFirstReceiveTimestamp": "```typescript\nstring\n```",
+        "ApproximateReceiveCount": "```typescript\nstring\n```",
+        "attributes": "```typescript\n{ ApproximateReceiveCount: string; SentTimestamp: string; SenderId: string; ApproximateFirstReceiveTimestamp: string; }\n```",
+        "Attributes": "```typescript\n{ [key: string]: string | undefined; } | undefined\n```",
+        "awsRegion": "```typescript\nstring\n```",
+        "batchSize": "```typescript\nnumber | undefined\n```\n\nThe maximum number of records in each batch that Lambda pulls from the queue.\n\n**@default** 10",
+        "body": "```typescript\nstring\n```",
+        "Body": "```typescript\nstring | undefined\n```",
+        "deleteMessageBatch": "```typescript\n(request: SQS.DeleteMessageBatchRequest) => Effect.Effect<import(\"@distilled.cloud/aws/sqs\").DeleteMessageBatchResult, import(\"@distilled.cloud/aws/sqs\").DeleteMessageBatchError>\n```",
+        "DeleteMessageBatch": "```typescript\nSQS.DeleteMessageBatch\n```\n\nRuntime binding for `sqs:DeleteMessageBatch`.\n\nBind this operation to a Queue inside a function runtime to delete\nup to 10 received messages per call with per-entry success/failure results.\nThe binding grants the h",
+        "effect": "```typescript\n{ <I, S>(service: import(\"effect/Context\").Key<I, S>): <E, R>(effect: Effect.Effect<S, E, R>) => Layer.Layer<I, E, Exclude<R, import(\"effect/Scope\").Scope>>; <I, S, E, R>(service: import(\"effect/Context\").Key<I, S>, effect: Effect.Effect<impo",
+        "Effect": "```typescript\ntypeof Effect\n```\n\n---\n\nThe `Effect` interface defines a value that lazily describes a workflow or\njob. The workflow requires some context `R`, and may fail with an error of\ntype `E`, or succeed with a value of type `A`.\n\n**When to use**\n\nUse",
+        "Entries": "```typescript\n{ Id: string; ReceiptHandle: string; }[]\n```",
+        "eventSource": "```typescript\nstring\n```",
+        "eventSourceARN": "```typescript\n`arn:aws:sqs:${string}:${string}:${string}`\n```",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "forever": "```typescript\n<Arg extends Effect.Effect<any, any, any> | { readonly disableYield?: boolean | undefined; } | undefined = { readonly disableYield?: boolean | undefined; }>(effectOrOptions?: Arg, options?: { readonly disableYield?: boolean | undefined; } | u",
+        "fromArray": "```typescript\n<A>(array: ReadonlyArray<A>) => Stream.Stream<A>\n```\n\nCreates a stream from an array of values.\n\n**Example** (Creating a stream from an array of values)\n\n```ts import.meta.vitest\nimport { Effect, Stream } from \"effect\"\n\nconst program = Effect",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "i": "```typescript\nnumber\n```",
+        "Id": "```typescript\nstring\n```",
+        "Layer": "```typescript\ntypeof Layer\n```",
+        "maximumBatchingWindow": "```typescript\nimport(\"effect/Duration\").Input | undefined\n```\n\nThe maximum amount of time that Lambda spends gathering records before\ninvoking the function (e.g. `\"5 seconds\"`). Rounded to whole seconds on\nthe wire.\n\n**@default** 0",
+        "maxNumberOfMessages": "```typescript\nnumber | undefined\n```\n\nMaximum number of messages to receive per poll when using the process (run) path.\n\n**@default** 10",
+        "MaxNumberOfMessages": "```typescript\nnumber\n```",
+        "md5OfBody": "```typescript\nstring\n```",
+        "MD5OfBody": "```typescript\nstring | undefined\n```",
+        "messageAttributes": "```typescript\n{}\n```",
+        "messageId": "```typescript\nstring\n```",
+        "MessageId": "```typescript\nstring | undefined\n```",
+        "messages": "```typescript\nimport(\"@distilled.cloud/aws/sqs\").Message[]\n```",
+        "Messages": "```typescript\nimport(\"@distilled.cloud/aws/sqs\").Message[] | undefined\n```",
+        "msg": "```typescript\nimport(\"@distilled.cloud/aws/sqs\").Message\n```",
+        "orDie": "```typescript\n<A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, never, R>\n```\n\nConverts typed failures from the error channel into defects, removing the\nerror type from the returned effect.\n\n**When to use**\n\nUse when you need to turn an `Effect` ",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "process": "```typescript\n(stream: Stream.Stream<SQS.SQSRecord, never, StreamReq>) => Effect.Effect<void, never, Req | StreamReq>\n```",
+        "props": "```typescript\nSQS.MessagesProps\n```",
+        "queue": "```typescript\nSQS.Queue\n```",
+        "Queue": "An Amazon SQS queue for reliable, decoupled message processing.\n\n`Queue` owns the lifecycle of a standard or FIFO SQS queue. A queue name\nis auto-generated from the app, stage, and logical ID unless you provide\none explicitly. The `.fifo` suffix follows th",
+        "queueArn": "```typescript\nimport(\"../Output.ts\").Output<`arn:aws:sqs:${string}:${string}:${string}`, never>\n```\n\n---\n\n```typescript\n`arn:aws:sqs:${string}:${string}:${string}`\n```",
+        "QueueArn": "```typescript\nimport(\"../Output.ts\").Accessor<`arn:aws:sqs:${string}:${string}:${string}`>\n```",
+        "QueueEventSource": "```typescript\nSQS.QueueEventSource\n```\n\nEvent source connecting an SQS Queue to the hosting compute\n(Lambda function or ServerHost process).\n\nThe contract is a `Binding.Service`; the host-specific implementation\nlayers are `Lambda.QueueEventSource` (event-",
+        "receiptHandle": "```typescript\nstring\n```",
+        "ReceiptHandle": "```typescript\nstring | undefined\n```\n\n---\n\n```typescript\nstring\n```",
+        "receiveMessage": "```typescript\n(request: SQS.ReceiveMessageRequest) => Effect.Effect<import(\"@distilled.cloud/aws/sqs\").ReceiveMessageResult, import(\"@distilled.cloud/aws/sqs\").ReceiveMessageError>\n```",
+        "ReceiveMessage": "```typescript\nSQS.ReceiveMessage\n```\n\nRuntime binding for `sqs:ReceiveMessage`.\n\nBind this operation to a Queue inside a function runtime to poll\nmessages on demand. The binding grants the host function\n`sqs:ReceiveMessage` on the queue. Provide the `Recei",
+        "region": "```typescript\nstring\n```",
+        "result": "```typescript\nimport(\"@distilled.cloud/aws/sqs\").ReceiveMessageResult\n```",
+        "run": "```typescript\n<Req = never, RunReq = never>(effect: Effect.Effect<void, never, RunReq>) => Effect.Effect<void, never, Req | RunReq>\n```",
+        "SenderId": "```typescript\nstring\n```",
+        "SentTimestamp": "```typescript\nstring\n```",
+        "ServerHost": "```typescript\ntypeof ServerHost\n```\n\nLong-running host loop registration (`run`). Provided by `Platform` when the\nexecution context implements ProcessContext (i.e. carries `run`).\n\n`Platform` wires this automatically for every host runtime context that\nimp",
+        "SQS": "```typescript\ntypeof SQS\n```",
+        "SQSQueueEventSource": "```typescript\nLayer.Layer<SQS.QueueEventSource, never, SQS.DeleteMessageBatch | SQS.ReceiveMessage | ServerHost>\n```",
+        "stream": "```typescript\nStream.Stream<import(\"aws-lambda\").SQSRecord, never, StreamReq>\n```",
+        "Stream": "A `Stream<A, E, R>` describes a program that can emit many `A` values, fail\nwith `E`, and require `R`.\n\n**Details**\n\nStreams are pull-based with backpressure and emit chunks to amortize effect\nevaluation. They support monadic composition and error handling",
+        "toWireSeconds": "```typescript\n(input: import(\"effect/Duration\").Input | undefined) => number | undefined\n```\n\nConvert a Duration.Input to whole seconds for a wire/API field,\nnormalizing any persisted-state `Duration` JSON first. Returns `undefined`\nwhen `input` is `undefi",
+        "waitTime": "```typescript\nimport(\"effect/Duration\").Input | undefined\n```\n\nHow long each `ReceiveMessage` long-polls for messages when using the\nprocess (run) path (e.g. `\"20 seconds\"`). Rounded to whole seconds on\nthe wire.\n\n**@default** 20 seconds",
+        "WaitTimeSeconds": "```typescript\nnumber | undefined\n```"
+      },
+      "references": {
+        "__comment": "Declarations of symbols used in `code`. Each key is `symbol:pathname`: the symbol name as used in `code` followed by its repository-relative declaration path. Each value is a complete declaration excerpt.",
+        "batchSize:packages/alchemy/src/AWS/SQS/QueueEventSource.ts": "  batchSize?: number;",
+        "DeleteMessageBatch:packages/alchemy/src/AWS/SQS/DeleteMessageBatch.ts": "export interface DeleteMessageBatch extends Binding.Service<\n  DeleteMessageBatch,\n  \"AWS.SQS.DeleteMessageBatch\",\n  (\n    queue: Queue,\n  ) => Effect.Effect<\n    (\n      request: DeleteMessageBatchRequest,\n    ) => Effect.Effect<\n      sqs.DeleteMessageBatchResult,\n      sqs.DeleteMessageBatchError\n    >\n  >\n> {}\n…\nexport const DeleteMessageBatch = Binding.Service<DeleteMessageBatch>(\n  \"AWS.SQS.DeleteMessageBatch\",\n);",
+        "maximumBatchingWindow:packages/alchemy/src/AWS/SQS/QueueEventSource.ts": "  maximumBatchingWindow?: Duration.Input;",
+        "maxNumberOfMessages:packages/alchemy/src/AWS/SQS/QueueEventSource.ts": "  maxNumberOfMessages?: number;",
+        "MessagesProps:packages/alchemy/src/AWS/SQS/QueueEventSource.ts": "export interface MessagesProps extends QueueEventSourceProps {\n\n\n\n\n\n\n  waitTime?: Duration.Input;\n\n\n\n\n  maxNumberOfMessages?: number;\n}",
+        "Queue:packages/alchemy/src/AWS/SQS/Queue.ts": "export interface Queue extends Resource<\n  \"AWS.SQS.Queue\",\n  QueueProps,\n  {\n    queueUrl: string;\n    queueName: QueueName;\n    queueArn: QueueArn;\n  },\n  {\n    policyStatements: PolicyStatement[];\n  },\n  Providers\n> {}\n…\nexport const Queue = Resource<Queue>(\"AWS.SQS.Queue\");",
+        "queueArn:packages/alchemy/src/AWS/SQS/Queue.ts": "    queueArn: QueueArn;",
+        "QueueEventSource:packages/alchemy/src/AWS/SQS/QueueEventSource.ts": "export interface QueueEventSource extends Binding.Service<\n  QueueEventSource,\n  \"AWS.SQS.QueueEventSource\",\n  QueueEventSourceService\n> {}\n…\nexport const QueueEventSource = Binding.Service<QueueEventSource>(\n  \"AWS.SQS.QueueEventSource\",\n);",
+        "QueueEventSourceService:packages/alchemy/src/AWS/SQS/QueueEventSource.ts": "export type QueueEventSourceService = <Req = never>(\n  bucket: Queue,\n  props: MessagesProps,\n  process: (\n    stream: Stream.Stream<SQSRecord>,\n  ) => Effect.Effect<void, never, Req>,\n) => Effect.Effect<void, never, never>;",
+        "ReceiveMessage:packages/alchemy/src/AWS/SQS/ReceiveMessage.ts": "export interface ReceiveMessage extends Binding.Service<\n  ReceiveMessage,\n  \"AWS.SQS.ReceiveMessage\",\n  (\n    queue: Queue,\n  ) => Effect.Effect<\n    (\n      request: ReceiveMessageRequest,\n    ) => Effect.Effect<sqs.ReceiveMessageResult, sqs.ReceiveMessageError>\n  >\n> {}\n…\nexport const ReceiveMessage = Binding.Service<ReceiveMessage>(\n  \"AWS.SQS.ReceiveMessage\",\n);",
+        "ServerHost:packages/alchemy/src/Server/Process.ts": "export class ServerHost extends Context.Service<\n  ServerHost,\n  Pick<ProcessContext, \"run\">\n>()(\"Alchemy::ServerHost\") {}",
+        "SQS:packages/alchemy/src/AWS/SQS/index.ts": "export * from \"./CancelMessageMoveTask.ts\";\nexport * from \"./CancelMessageMoveTaskHttp.ts\";\nexport * from \"./ChangeMessageVisibility.ts\";\nexport * from \"./ChangeMessageVisibilityBatch.ts\";\nexport * from \"./ChangeMessageVisibilityBatchHttp.ts\";\nexport * from \"./ChangeMessageVisibilityHttp.ts\";\nexport * from \"./DeleteMessage.ts\";\nexport * from \"./DeleteMessageBatch.ts\";\nexport * from \"./DeleteMessageBatchHttp.ts\";\nexport * from \"./DeleteMessageHttp.ts\";\nexport * from \"./GetQueueAttributes.ts\";\nexport * from \"./GetQueueAttributesHttp.ts\";\nexport * from \"./ListDeadLetterSourceQueues.ts\";\nexport * from \"./ListDeadLetterSourceQueuesHttp.ts\";\nexport * from \"./ListMessageMoveTasks.ts\";\nexport * from \"./ListMessageMoveTasksHttp.ts\";\nexport * from \"./PurgeQueue.ts\";\nexport * from \"./PurgeQueueHttp.ts\";\nexport * from \"./Queue.ts\";\nexport * from \"./QueueEventSource.ts\";\nexport * from \"./QueueSink.ts\";\nexport * from \"./QueueSinkHttp.ts\";\nexport * from \"./ReceiveMessage.ts\";\nexport * from \"./ReceiveMessageHttp.ts\";\nexport * from \"./SendMessage.ts\";\nexport * from \"./SendMessageBatch.ts\";\nexport * from \"./SendMessageBatchHttp.ts\";\nexport * from \"./SendMessageHttp.ts\";\nexport * from \"./StartMessageMoveTask.ts\";\nexport * from \"./StartMessageMoveTaskHttp.ts\";",
+        "SQSRecord:packages/alchemy/src/AWS/SQS/QueueEventSource.ts": "export type SQSRecord = lambda.SQSRecord;",
+        "toWireSeconds:packages/alchemy/src/Util/Duration.ts": "export const toWireSeconds = wire(Duration.toSeconds);",
+        "waitTime:packages/alchemy/src/AWS/SQS/QueueEventSource.ts": "  waitTime?: Duration.Input;"
+      },
+      "code": {
+        "1": "import * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport * as Stream from \"effect/Stream\";\n\nimport * as SQS from \"../AWS/SQS/index.ts\";\nimport { toWireSeconds } from \"../Util/Duration.ts\";\nimport { ServerHost } from \"./Process.ts\";\n\nexport const SQSQueueEventSource = Layer.effect(\n  SQS.QueueEventSource,\n  Effect.gen(function* () {\n    const { run } = yield* ServerHost;\n\n    const ReceiveMessage = yield* SQS.ReceiveMessage;\n    const DeleteMessageBatch = yield* SQS.DeleteMessageBatch;\n\n    return Effect.fn(function* <StreamReq = never, Req = never>(\n      queue: SQS.Queue,\n      props: SQS.MessagesProps,\n      process: (\n        stream: Stream.Stream<SQS.SQSRecord, never, StreamReq>,\n      ) => Effect.Effect<void, never, Req | StreamReq>,\n    ) {\n      const QueueArn = yield* queue.queueArn;\n\n      const receiveMessage = yield* ReceiveMessage(queue);\n      const deleteMessageBatch = yield* DeleteMessageBatch(queue);",
+        "2": "\n      yield* run(\n        Effect.forever(\n          Effect.gen(function* () {\n            const queueArn = yield* QueueArn;\n            const region = queueArn.split(\":\")[3]!;\n            const result = yield* receiveMessage({\n              MaxNumberOfMessages:\n                props.maxNumberOfMessages ?? props.batchSize ?? 10,\n              WaitTimeSeconds:\n                toWireSeconds(props.waitTime) ??\n                toWireSeconds(props.maximumBatchingWindow),\n            });\n\n            const messages = result.Messages ?? [];\n            if (messages.length === 0) return;",
+        "3": "\n            yield* process(\n              Stream.fromArray(\n                messages.map((msg) => ({\n                  messageId: msg.MessageId!,\n                  receiptHandle: msg.ReceiptHandle!,\n                  body: msg.Body!,\n                  attributes: {\n                    ApproximateReceiveCount:\n                      msg.Attributes?.ApproximateReceiveCount!,\n                    SentTimestamp: msg.Attributes?.SentTimestamp!,\n                    SenderId: msg.Attributes?.SenderId!,\n                    ApproximateFirstReceiveTimestamp:\n                      msg.Attributes?.ApproximateFirstReceiveTimestamp!,\n                  },\n                  messageAttributes: {},\n                  md5OfBody: msg.MD5OfBody!,\n                  eventSource: \"aws:sqs\",\n                  eventSourceARN: queueArn,\n                  awsRegion: region,\n                })),\n              ),\n            ).pipe(Effect.orDie);",
+        "4": "\n\n            yield* deleteMessageBatch({\n              Entries: messages.map((msg, i) => ({\n                Id: msg.MessageId ?? String(i),\n                ReceiptHandle: msg.ReceiptHandle!,\n              })),\n            });\n          }),\n        ).pipe(Effect.orDie),\n      );\n    }) as SQS.QueueEventSourceService;\n  }),\n);\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as Effect from \"effect/Effect\";",
+          "2": "import * as Layer from \"effect/Layer\";",
+          "3": "import * as Stream from \"effect/Stream\";",
+          "5": "import * as SQS from \"../AWS/SQS/index.ts\";",
+          "6": "import { toWireSeconds } from \"../Util/Duration.ts\";",
+          "7": "import { ServerHost } from \"./Process.ts\";",
+          "9": "export const SQSQueueEventSource = Layer.effect(",
+          "10": "SQS.QueueEventSource,",
+          "11": "Effect.gen(function* () {",
+          "12": "const { run } = yield* ServerHost;",
+          "14": "const ReceiveMessage = yield* SQS.ReceiveMessage;",
+          "15": "const DeleteMessageBatch = yield* SQS.DeleteMessageBatch;",
+          "17": "return Effect.fn(function* <StreamReq = never, Req = never>(",
+          "18": "queue: SQS.Queue,",
+          "19": "props: SQS.MessagesProps,",
+          "20": "process: (",
+          "21": "stream: Stream.Stream<SQS.SQSRecord, never, StreamReq>,",
+          "22": ") => Effect.Effect<void, never, Req | StreamReq>,",
+          "23": ") {",
+          "24": "const QueueArn = yield* queue.queueArn;",
+          "26": "const receiveMessage = yield* ReceiveMessage(queue);",
+          "27": "const deleteMessageBatch = yield* DeleteMessageBatch(queue);"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as Effect from \"effect/Effect\";",
+          "2": "import * as Layer from \"effect/Layer\";",
+          "3": "import * as Stream from \"effect/Stream\";",
+          "5": "import * as SQS from \"../AWS/SQS/index.ts\";",
+          "6": "import { toWireSeconds } from \"../Util/Duration.ts\";",
+          "7": "import { ServerHost } from \"./Process.ts\";",
+          "9": "export const SQSQueueEventSource = Layer.effect(",
+          "10": "SQS.QueueEventSource,",
+          "11": "Effect.gen(function* () {",
+          "12": "const { run } = yield* ServerHost;",
+          "14": "const ReceiveMessage = yield* SQS.ReceiveMessage;",
+          "15": "const DeleteMessageBatch = yield* SQS.DeleteMessageBatch;",
+          "17": "return Effect.fn(function* <StreamReq = never, Req = never>(",
+          "18": "queue: SQS.Queue,",
+          "19": "props: SQS.MessagesProps,",
+          "20": "process: (",
+          "21": "stream: Stream.Stream<SQS.SQSRecord, never, StreamReq>,",
+          "22": ") => Effect.Effect<void, never, Req | StreamReq>,",
+          "23": ") {",
+          "24": "const QueueArn = yield* queue.queueArn;",
+          "26": "const receiveMessage = yield* ReceiveMessage(queue);",
+          "27": "const deleteMessageBatch = yield* DeleteMessageBatch(queue);"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "29": "yield* run(",
+          "30": "Effect.forever(",
+          "31": "Effect.gen(function* () {",
+          "32": "const queueArn = yield* QueueArn;",
+          "33": "const region = queueArn.split(\":\")[3]!;",
+          "34": "const result = yield* receiveMessage({",
+          "35": "MaxNumberOfMessages:",
+          "36": "props.maxNumberOfMessages ?? props.batchSize ?? 10,",
+          "37": "WaitTimeSeconds:",
+          "38": "toWireSeconds(props.waitTime) ??",
+          "39": "toWireSeconds(props.maximumBatchingWindow),",
+          "40": "});",
+          "42": "const messages = result.Messages ?? [];",
+          "43": "if (messages.length === 0) return;"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "29": "yield* run(",
+          "30": "Effect.forever(",
+          "31": "Effect.gen(function* () {",
+          "32": "const queueArn = yield* QueueArn;",
+          "33": "const region = queueArn.split(\":\")[3]!;",
+          "34": "const result = yield* receiveMessage({",
+          "35": "MaxNumberOfMessages:",
+          "36": "props.maxNumberOfMessages ?? props.batchSize ?? 10,",
+          "37": "WaitTimeSeconds:",
+          "38": "toWireSeconds(props.waitTime) ??",
+          "39": "toWireSeconds(props.maximumBatchingWindow),",
+          "40": "});",
+          "42": "const messages = result.Messages ?? [];",
+          "43": "if (messages.length === 0) return;"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "45": "yield* process(",
+          "46": "Stream.fromArray(",
+          "47": "messages.map((msg) => ({",
+          "48": "messageId: msg.MessageId!,",
+          "49": "receiptHandle: msg.ReceiptHandle!,",
+          "50": "body: msg.Body!,",
+          "51": "attributes: {",
+          "52": "ApproximateReceiveCount:",
+          "53": "msg.Attributes?.ApproximateReceiveCount!,",
+          "54": "SentTimestamp: msg.Attributes?.SentTimestamp!,",
+          "55": "SenderId: msg.Attributes?.SenderId!,",
+          "56": "ApproximateFirstReceiveTimestamp:",
+          "57": "msg.Attributes?.ApproximateFirstReceiveTimestamp!,",
+          "58": "},",
+          "59": "messageAttributes: {},",
+          "60": "md5OfBody: msg.MD5OfBody!,",
+          "61": "eventSource: \"aws:sqs\",",
+          "62": "eventSourceARN: queueArn,",
+          "63": "awsRegion: region,",
+          "64": "})),",
+          "65": "),",
+          "66": ").pipe(Effect.orDie);"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "45": "yield* process(",
+          "46": "Stream.fromArray(",
+          "47": "messages.map((msg) => ({",
+          "48": "messageId: msg.MessageId!,",
+          "49": "receiptHandle: msg.ReceiptHandle!,",
+          "50": "body: msg.Body!,",
+          "51": "attributes: {",
+          "52": "ApproximateReceiveCount:",
+          "53": "msg.Attributes?.ApproximateReceiveCount!,",
+          "54": "SentTimestamp: msg.Attributes?.SentTimestamp!,",
+          "55": "SenderId: msg.Attributes?.SenderId!,",
+          "56": "ApproximateFirstReceiveTimestamp:",
+          "57": "msg.Attributes?.ApproximateFirstReceiveTimestamp!,",
+          "58": "},",
+          "59": "messageAttributes: {},",
+          "60": "md5OfBody: msg.MD5OfBody!,",
+          "61": "eventSource: \"aws:sqs\",",
+          "62": "eventSourceARN: queueArn,",
+          "63": "awsRegion: region,",
+          "64": "})),",
+          "65": "),",
+          "66": ").pipe(Effect.orDie);"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "69": "yield* deleteMessageBatch({",
+          "70": "Entries: messages.map((msg, i) => ({",
+          "71": "Id: msg.MessageId ?? String(i),",
+          "72": "ReceiptHandle: msg.ReceiptHandle!,",
+          "73": "})),",
+          "74": "});",
+          "75": "}),",
+          "76": ").pipe(Effect.orDie),",
+          "77": ");",
+          "78": "}) as SQS.QueueEventSourceService;",
+          "79": "}),",
+          "80": ");"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "69": "yield* deleteMessageBatch({",
+          "70": "Entries: messages.map((msg, i) => ({",
+          "71": "Id: msg.MessageId ?? String(i),",
+          "72": "ReceiptHandle: msg.ReceiptHandle!,",
+          "73": "})),",
+          "74": "});",
+          "75": "}),",
+          "76": ").pipe(Effect.orDie),",
+          "77": ");",
+          "78": "}) as SQS.QueueEventSourceService;",
+          "79": "}),",
+          "80": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols` and `references`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` and `references` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` and `references` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

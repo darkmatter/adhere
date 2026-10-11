@@ -1,0 +1,52 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/AutoScaling/LifecycleHook.ts",
+  "kind": "judge",
+  "ordinal": 118,
+  "artifact": "attempt-00118.json",
+  "started": "2026-10-11T03:20:39.394Z",
+  "estimatedTokens": 4162,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.031319000001531094,
+  "referencesPresent": false,
+  "bodyDigest": "89591e8c2483eb42536c0ab90597fc4d31b66a7c06dd784bc8340c2c21e7b985",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as autoscaling from \"@distilled.cloud/aws/auto-scaling\";\nimport type * as Duration from \"effect/Duration\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport { deepEqual, isResolved } from \"../../Diff.ts\";\nimport type { Input } from \"../../Input.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { toSeconds } from \"../../Util/Duration.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport type { AutoScalingGroup as AutoScalingGroupResource } from \"./AutoScalingGroup.ts\";\n\nexport type LifecycleHookName = string;\n\n\n\n\n\n\nexport type LifecycleTransition =\n  | \"LAUNCHING\"\n  | \"TERMINATING\"\n  | \"autoscaling:EC2_INSTANCE_LAUNCHING\"\n  | \"autoscaling:EC2_INSTANCE_TERMINATING\";\n\nexport type LifecycleActionResult = \"CONTINUE\" | \"ABANDON\";",
+        "2": "\nexport const normalizeTransition = (transition: LifecycleTransition): string =>\n  transition === \"LAUNCHING\"\n    ? \"autoscaling:EC2_INSTANCE_LAUNCHING\"\n    : transition === \"TERMINATING\"\n      ? \"autoscaling:EC2_INSTANCE_TERMINATING\"\n      : transition;\n\nexport interface LifecycleHookProps {\n\n\n\n  lifecycleHookName?: string;\n\n\n\n  autoScalingGroup: Input<string> | AutoScalingGroupResource;\n\n\n\n\n\n  lifecycleTransition: LifecycleTransition;\n\n\n\n\n\n\n  heartbeatTimeout?: Duration.Input;",
+        "3": "\n\n\n\n\n  defaultResult?: LifecycleActionResult;\n\n\n\n\n  notificationTargetARN?: string;\n\n\n\n\n  roleARN?: string;\n\n\n\n  notificationMetadata?: string;\n}\n\nexport interface LifecycleHook extends Resource<\n  \"AWS.AutoScaling.LifecycleHook\",\n  LifecycleHookProps,\n  {\n\n\n\n    lifecycleHookName: LifecycleHookName;\n\n\n\n    autoScalingGroupName: string;",
+        "4": "\n\n\n    lifecycleTransition: string;\n\n\n\n    heartbeatTimeout: number;\n\n\n\n\n    globalTimeout: number;\n\n\n\n    defaultResult: string;\n\n\n\n    notificationTargetARN?: string;\n\n\n\n    roleARN?: string;\n\n\n\n    notificationMetadata?: string;\n  },\n  never,\n  Providers\n> {}",
+        "5": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const LifecycleHook = Resource<LifecycleHook>(\n  \"AWS.AutoScaling.LifecycleHook\",\n);\n\n\n\n\n\nconst toAutoScalingGroupName = (\n  input: LifecycleHookProps[\"autoScalingGroup\"] | undefined,\n): string | undefined =>\n  typeof input === \"string\"\n    ? input\n    : typeof (input as { autoScalingGroupName?: unknown } | undefined)\n          ?.autoScalingGroupName === \"string\"\n      ? (input as unknown as { autoScalingGroupName: string })\n          .autoScalingGroupName\n      : undefined;\n\nexport const LifecycleHookProvider = () =>\n  Provider.effect(\n    LifecycleHook,\n    Effect.gen(function* () {\n      const toName = (\n        id: string,\n        props: { lifecycleHookName?: string } = {},\n      ) =>\n        props.lifecycleHookName\n          ? Effect.succeed(props.lifecycleHookName)\n          : createPhysicalName({ id, maxLength: 255, lowercase: true });",
+        "6": "\n      const describeHook = ({\n        autoScalingGroupName,\n        lifecycleHookName,\n      }: {\n        autoScalingGroupName: string;\n        lifecycleHookName: string;\n      }) =>\n        autoscaling\n          .describeLifecycleHooks({\n            AutoScalingGroupName: autoScalingGroupName,\n            LifecycleHookNames: [lifecycleHookName],\n          } as any)\n          .pipe(\n            Effect.map((result) => result.LifecycleHooks?.[0]),\n\n\n\n\n            Effect.catchTag(\"AutoScalingGroupNotFound\", () =>\n              Effect.succeed(undefined),\n            ),\n          );",
+        "7": "\n      const toAttributes = (\n        hook: autoscaling.LifecycleHook,\n      ): LifecycleHook[\"Attributes\"] => ({\n        lifecycleHookName: hook.LifecycleHookName!,\n        autoScalingGroupName: hook.AutoScalingGroupName!,\n        lifecycleTransition: hook.LifecycleTransition!,\n        heartbeatTimeout: hook.HeartbeatTimeout ?? 0,\n        globalTimeout: hook.GlobalTimeout ?? 0,\n        defaultResult: hook.DefaultResult ?? \"ABANDON\",\n        notificationTargetARN: hook.NotificationTargetARN,\n        roleARN: hook.RoleARN,\n        notificationMetadata: hook.NotificationMetadata,\n      });\n\n      return {\n        stables: [\"lifecycleHookName\", \"autoScalingGroupName\"],\n\n\n\n        list: () => Effect.succeed([]),",
+        "8": "        diff: Effect.fn(function* ({ id, olds, news: _news }) {\n          if (!isResolved(_news)) return undefined;\n          const news = _news as typeof olds;\n          const oldName = yield* toName(id, olds ?? {});\n          const newName = yield* toName(id, news ?? {});\n          const oldGroup = toAutoScalingGroupName(olds.autoScalingGroup);\n          const newGroup = toAutoScalingGroupName(news.autoScalingGroup);\n\n\n\n          if (\n            oldName !== newName ||\n            (oldGroup !== undefined &&\n              newGroup !== undefined &&\n              oldGroup !== newGroup)\n          ) {\n            return { action: \"replace\", deleteFirst: true } as const;\n          }\n\n          if (!deepEqual(olds, news)) {\n            return {\n              action: \"update\",\n              stables: [\"lifecycleHookName\", \"autoScalingGroupName\"],\n            } as const;\n          }\n        }),",
+        "9": "        read: Effect.fn(function* ({ id, olds, output }) {\n          const autoScalingGroupName =\n            output?.autoScalingGroupName ??\n            toAutoScalingGroupName(olds?.autoScalingGroup);\n          const lifecycleHookName =\n            output?.lifecycleHookName ?? (yield* toName(id, olds ?? {}));\n          if (!autoScalingGroupName) return undefined;\n          const hook = yield* describeHook({\n            autoScalingGroupName,\n            lifecycleHookName,\n          });\n          return hook ? toAttributes(hook) : undefined;\n        }),\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const autoScalingGroupName =\n            output?.autoScalingGroupName ??\n            toAutoScalingGroupName(news.autoScalingGroup);\n          if (!autoScalingGroupName) {\n            return yield* Effect.die(\n              new Error(\n                \"LifecycleHook requires a resolvable autoScalingGroup name\",\n              ),\n            );\n          }\n          const lifecycleHookName =\n            output?.lifecycleHookName ?? (yield* toName(id, news));",
+        "10": "\n\n\n\n          yield* autoscaling.putLifecycleHook({\n            LifecycleHookName: lifecycleHookName,\n            AutoScalingGroupName: autoScalingGroupName,\n            LifecycleTransition: normalizeTransition(news.lifecycleTransition),\n            HeartbeatTimeout: toSeconds(news.heartbeatTimeout),\n            DefaultResult: news.defaultResult,\n            NotificationTargetARN: news.notificationTargetARN,\n            RoleARN: news.roleARN,\n            NotificationMetadata: news.notificationMetadata,\n          } as any);\n\n          const hook = yield* describeHook({\n            autoScalingGroupName,\n            lifecycleHookName,\n          }).pipe(\n            Effect.flatMap((hook) =>\n              hook\n                ? Effect.succeed(hook)\n                : Effect.fail(\n                    new Error(\n                      `Lifecycle hook '${lifecycleHookName}' was not readable after reconcile`,\n                    ),\n                  ),\n            ),\n          );\n          yield* session.note(lifecycleHookName);\n          return toAttributes(hook);\n        }),",
+        "11": "        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* autoscaling\n            .deleteLifecycleHook({\n              AutoScalingGroupName: output.autoScalingGroupName,\n              LifecycleHookName: output.lifecycleHookName,\n            } as any)\n            .pipe(\n              Effect.retry({\n                while: (error) => error._tag === \"ResourceContentionFault\",\n                schedule: Schedule.max([\n                  Schedule.recurs(5),\n                  Schedule.exponential(\"250 millis\"),\n                ]),\n              }),\n            );\n        }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

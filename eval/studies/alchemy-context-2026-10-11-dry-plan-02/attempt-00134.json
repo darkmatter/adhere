@@ -1,0 +1,49 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CloudWatch/AlarmMuteRule.ts",
+  "kind": "judge",
+  "ordinal": 134,
+  "artifact": "attempt-00134.json",
+  "started": "2026-10-11T03:20:39.915Z",
+  "estimatedTokens": 3267,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.020367999999507447,
+  "referencesPresent": false,
+  "bodyDigest": "a18c690d74b8893cc4f0be737d303b717274d9a0f88700d07de7f333e2463816",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as cloudwatch from \"@distilled.cloud/aws/cloudwatch\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { isResolved } from \"../../Diff.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { AWSEnvironment, type AccountID } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport type { RegionID } from \"../Region.ts\";\nimport { createManagedTags, createName, retryConcurrent } from \"./common.ts\";\n\nexport type AlarmMuteRuleName = string;\nexport type AlarmMuteRuleArn =\n  `arn:aws:cloudwatch:${RegionID}:${AccountID}:alarm-mute-rule:${string}`;\n\nexport interface AlarmMuteRuleProps extends Omit<\n  cloudwatch.PutAlarmMuteRuleInput,\n  \"Name\" | \"Tags\"\n> {\n\n\n\n  name?: AlarmMuteRuleName;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "2": "\nexport interface AlarmMuteRule extends Resource<\n  \"AWS.CloudWatch.AlarmMuteRule\",\n  AlarmMuteRuleProps,\n  {\n\n    alarmMuteRuleName: AlarmMuteRuleName;\n\n    alarmMuteRuleArn: AlarmMuteRuleArn;\n\n    status: string | undefined;\n\n    muteType: string | undefined;\n\n    alarmMuteRule: cloudwatch.GetAlarmMuteRuleOutput;\n\n    tags: Record<string, string>;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const AlarmMuteRule = Resource<AlarmMuteRule>(\n  \"AWS.CloudWatch.AlarmMuteRule\",\n);\n\nexport const AlarmMuteRuleProvider = () =>\n  Provider.effect(\n    AlarmMuteRule,\n    Effect.gen(function* () {\n      const createMuteRuleName = (id: string, props: { name?: string } = {}) =>\n        createName(id, props.name, 255);\n\n      const alarmMuteRuleArn = (name: string) =>\n        AWSEnvironment.current.pipe(\n          Effect.map(\n            (env) =>\n              `arn:aws:cloudwatch:${env.region}:${env.accountId}:alarm-mute-rule:${name}` as AlarmMuteRuleArn,\n          ),\n        );",
+        "4": "\n      const readAlarmMuteRule = Effect.fn(function* (name: string) {\n        const output = yield* cloudwatch\n          .getAlarmMuteRule({\n            AlarmMuteRuleName: name,\n          })\n          .pipe(\n            Effect.catchTag(\"ResourceNotFoundException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n\n        if (!output?.Name || !output.AlarmMuteRuleArn) {\n          return undefined;\n        }\n\n        return {\n          alarmMuteRuleName: output.Name,\n          alarmMuteRuleArn: output.AlarmMuteRuleArn as AlarmMuteRuleArn,\n          status: output.Status,\n          muteType: output.MuteType,\n          alarmMuteRule: output,\n          tags: {},\n        };\n      });\n\n      return {\n        stables: [\"alarmMuteRuleName\", \"alarmMuteRuleArn\"],",
+        "5": "        diff: Effect.fn(function* ({ id, olds = {}, news = {} }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createMuteRuleName(id, olds);\n          const newName = yield* createMuteRuleName(id, news);\n\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name =\n            output?.alarmMuteRuleName ??\n            (yield* createMuteRuleName(id, olds ?? {}));\n          return yield* readAlarmMuteRule(name);\n        }),",
+        "6": "\n\n\n\n        list: () =>\n          Effect.gen(function* () {\n            const summaries = yield* cloudwatch.listAlarmMuteRules\n              .pages({})\n              .pipe(\n                Stream.runCollect,\n                Effect.map((chunk) =>\n                  Array.from(chunk).flatMap(\n                    (page) => page.AlarmMuteRuleSummaries ?? [],\n                  ),\n                ),\n              );\n\n            const rows = yield* Effect.forEach(\n              summaries,\n              (summary) => {\n                const name =\n                  summary.AlarmMuteRuleArn?.split(\":alarm-mute-rule:\")[1];\n                if (!name) {\n                  return Effect.succeed(undefined);\n                }\n                return readAlarmMuteRule(name);\n              },\n              { concurrency: 10 },\n            );\n\n            return rows.filter(\n              (row): row is NonNullable<typeof row> => row !== undefined,\n            );\n          }),",
+        "7": "        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n\n\n          const name =\n            output?.alarmMuteRuleName ?? (yield* createMuteRuleName(id, news));\n\n\n\n\n          const tags = yield* createManagedTags(id, news.tags);\n\n          yield* retryConcurrent(\n            cloudwatch.putAlarmMuteRule({\n              ...news,\n              Name: name,\n              Tags: Object.entries(tags).map(([Key, Value]) => ({\n                Key,\n                Value,\n              })),\n            }),\n          );\n\n          yield* session.note(yield* alarmMuteRuleArn(name));\n\n          const state = yield* readAlarmMuteRule(name);\n          if (!state) {\n            return yield* Effect.fail(\n              new Error(`failed to read reconciled alarm mute rule '${name}'`),\n            );\n          }",
+        "8": "\n          return {\n            ...state,\n            tags,\n          };\n        }),\n        delete: Effect.fn(function* ({ output }) {\n          yield* retryConcurrent(\n            cloudwatch.deleteAlarmMuteRule({\n              AlarmMuteRuleName: output.alarmMuteRuleName,\n            }),\n          );\n        }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

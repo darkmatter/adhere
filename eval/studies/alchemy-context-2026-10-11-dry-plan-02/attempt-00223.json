@@ -1,0 +1,411 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/SES/ReceiptFilter.ts",
+  "kind": "locate",
+  "ordinal": 223,
+  "artifact": "attempt-00223.json",
+  "started": "2026-10-11T03:20:43.156Z",
+  "estimatedTokens": 8331,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.12454499999876134,
+  "referencesPresent": false,
+  "bodyDigest": "bec7c7175914a37fa9b061f02fc0b2ef7a5caa432eb34b9e6c15f8002ba0ed41",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "27",
+    "end:providers/idempotent-delete:2": "27",
+    "start:providers/idempotent-delete:3": "79",
+    "end:providers/idempotent-delete:3": "79",
+    "start:providers/idempotent-delete:4": "106",
+    "end:providers/idempotent-delete:4": "106",
+    "start:providers/idempotent-delete:5": "136",
+    "end:providers/idempotent-delete:5": "136",
+    "start:providers/idempotent-delete:6": "164",
+    "end:providers/idempotent-delete:6": "164",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as ses from \"@distilled.cloud/aws/ses\";\nimport * as Effect from \"effect/Effect\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\n\n\n\n\nexport type ReceiptFilterPolicy = ses.ReceiptFilterPolicy;\n\nexport interface ReceiptIpFilter {\n\n\n\n  policy: ReceiptFilterPolicy;\n\n\n\n\n  cidr: string;\n}",
+        "2": "\nexport interface ReceiptFilterProps {\n\n\n\n\n\n\n  filterName?: string;\n\n\n\n\n  ipFilter: ReceiptIpFilter;\n}\n\nexport interface ReceiptFilter extends Resource<\n  \"AWS.SES.ReceiptFilter\",\n  ReceiptFilterProps,\n  {\n\n    filterName: string;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ReceiptFilter = Resource<ReceiptFilter>(\"AWS.SES.ReceiptFilter\");\n\nexport const ReceiptFilterProvider = () =>\n  Provider.effect(\n    ReceiptFilter,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: Pick<ReceiptFilterProps, \"filterName\">,\n      ) {\n        return (\n          props.filterName ?? (yield* createPhysicalName({ id, maxLength: 64 }))\n        );\n      });\n\n      const findFilter = Effect.fn(function* (name: string) {\n        const filters = yield* ses\n          .listReceiptFilters({})\n          .pipe(Effect.map((response) => response.Filters ?? []));\n        return filters.find((filter) => filter.Name === name);\n      });\n\n      return ReceiptFilter.Provider.of({\n        stables: [\"filterName\"],",
+        "4": "\n\n\n        list: () =>\n          ses\n            .listReceiptFilters({})\n            .pipe(\n              Effect.map((response) =>\n                (response.Filters ?? []).flatMap((filter) =>\n                  filter.Name ? [{ filterName: filter.Name }] : [],\n                ),\n              ),\n            ),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name = output?.filterName ?? (yield* createName(id, olds));\n          const found = yield* findFilter(name);\n          return found ? { filterName: name } : undefined;\n        }),\n\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (\n            oldName !== newName ||\n            olds.ipFilter.policy !== news.ipFilter.policy ||\n            olds.ipFilter.cidr !== news.ipFilter.cidr\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "5": "\n        reconcile: Effect.fn(function* ({ id, news, output }) {\n          const name = output?.filterName ?? (yield* createName(id, news));\n\n\n          const observed = yield* findFilter(name);\n\n\n          if (observed === undefined) {\n            yield* ses\n              .createReceiptFilter({\n                Filter: {\n                  Name: name,\n                  IpFilter: {\n                    Policy: news.ipFilter.policy,\n                    Cidr: news.ipFilter.cidr,\n                  },\n                },\n              })\n              .pipe(\n                Effect.catchTag(\"AlreadyExistsException\", () =>\n                  Effect.succeed({}),\n                ),\n              );\n          }\n\n          return { filterName: name };\n        }),",
+        "6": "\n        delete: Effect.fn(function* ({ output }) {\n\n          yield* ses.deleteReceiptFilter({ FilterName: output.filterName });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as ses from \"@distilled.cloud/aws/ses\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import { isResolved } from \"../../Diff.ts\";",
+          "4": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "5": "import * as Provider from \"../../Provider.ts\";",
+          "6": "import { Resource } from \"../../Resource.ts\";",
+          "7": "import type { Providers } from \"../Providers.ts\";",
+          "13": "export type ReceiptFilterPolicy = ses.ReceiptFilterPolicy;",
+          "15": "export interface ReceiptIpFilter {",
+          "19": "policy: ReceiptFilterPolicy;",
+          "24": "cidr: string;",
+          "25": "}"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as ses from \"@distilled.cloud/aws/ses\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import { isResolved } from \"../../Diff.ts\";",
+          "4": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "5": "import * as Provider from \"../../Provider.ts\";",
+          "6": "import { Resource } from \"../../Resource.ts\";",
+          "7": "import type { Providers } from \"../Providers.ts\";",
+          "13": "export type ReceiptFilterPolicy = ses.ReceiptFilterPolicy;",
+          "15": "export interface ReceiptIpFilter {",
+          "19": "policy: ReceiptFilterPolicy;",
+          "24": "cidr: string;",
+          "25": "}"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "27": "export interface ReceiptFilterProps {",
+          "34": "filterName?: string;",
+          "39": "ipFilter: ReceiptIpFilter;",
+          "40": "}",
+          "42": "export interface ReceiptFilter extends Resource<",
+          "43": "\"AWS.SES.ReceiptFilter\",",
+          "44": "ReceiptFilterProps,",
+          "45": "{",
+          "47": "filterName: string;",
+          "48": "},",
+          "49": "never,",
+          "50": "Providers",
+          "51": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "27": "export interface ReceiptFilterProps {",
+          "34": "filterName?: string;",
+          "39": "ipFilter: ReceiptIpFilter;",
+          "40": "}",
+          "42": "export interface ReceiptFilter extends Resource<",
+          "43": "\"AWS.SES.ReceiptFilter\",",
+          "44": "ReceiptFilterProps,",
+          "45": "{",
+          "47": "filterName: string;",
+          "48": "},",
+          "49": "never,",
+          "50": "Providers",
+          "51": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "79": "export const ReceiptFilter = Resource<ReceiptFilter>(\"AWS.SES.ReceiptFilter\");",
+          "81": "export const ReceiptFilterProvider = () =>",
+          "82": "Provider.effect(",
+          "83": "ReceiptFilter,",
+          "84": "Effect.gen(function* () {",
+          "85": "const createName = Effect.fn(function* (",
+          "86": "id: string,",
+          "87": "props: Pick<ReceiptFilterProps, \"filterName\">,",
+          "88": ") {",
+          "89": "return (",
+          "90": "props.filterName ?? (yield* createPhysicalName({ id, maxLength: 64 }))",
+          "91": ");",
+          "92": "});",
+          "94": "const findFilter = Effect.fn(function* (name: string) {",
+          "95": "const filters = yield* ses",
+          "96": ".listReceiptFilters({})",
+          "97": ".pipe(Effect.map((response) => response.Filters ?? []));",
+          "98": "return filters.find((filter) => filter.Name === name);",
+          "99": "});",
+          "101": "return ReceiptFilter.Provider.of({",
+          "102": "stables: [\"filterName\"],"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "79": "export const ReceiptFilter = Resource<ReceiptFilter>(\"AWS.SES.ReceiptFilter\");",
+          "81": "export const ReceiptFilterProvider = () =>",
+          "82": "Provider.effect(",
+          "83": "ReceiptFilter,",
+          "84": "Effect.gen(function* () {",
+          "85": "const createName = Effect.fn(function* (",
+          "86": "id: string,",
+          "87": "props: Pick<ReceiptFilterProps, \"filterName\">,",
+          "88": ") {",
+          "89": "return (",
+          "90": "props.filterName ?? (yield* createPhysicalName({ id, maxLength: 64 }))",
+          "91": ");",
+          "92": "});",
+          "94": "const findFilter = Effect.fn(function* (name: string) {",
+          "95": "const filters = yield* ses",
+          "96": ".listReceiptFilters({})",
+          "97": ".pipe(Effect.map((response) => response.Filters ?? []));",
+          "98": "return filters.find((filter) => filter.Name === name);",
+          "99": "});",
+          "101": "return ReceiptFilter.Provider.of({",
+          "102": "stables: [\"filterName\"],"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "106": "list: () =>",
+          "107": "ses",
+          "108": ".listReceiptFilters({})",
+          "109": ".pipe(",
+          "110": "Effect.map((response) =>",
+          "111": "(response.Filters ?? []).flatMap((filter) =>",
+          "112": "filter.Name ? [{ filterName: filter.Name }] : [],",
+          "113": "),",
+          "114": "),",
+          "115": "),",
+          "117": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "118": "const name = output?.filterName ?? (yield* createName(id, olds));",
+          "119": "const found = yield* findFilter(name);",
+          "120": "return found ? { filterName: name } : undefined;",
+          "121": "}),",
+          "123": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "124": "if (!isResolved(news)) return undefined;",
+          "125": "const oldName = yield* createName(id, olds);",
+          "126": "const newName = yield* createName(id, news);",
+          "127": "if (",
+          "128": "oldName !== newName ||",
+          "129": "olds.ipFilter.policy !== news.ipFilter.policy ||",
+          "130": "olds.ipFilter.cidr !== news.ipFilter.cidr",
+          "131": ") {",
+          "132": "return { action: \"replace\" } as const;",
+          "133": "}",
+          "134": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "106": "list: () =>",
+          "107": "ses",
+          "108": ".listReceiptFilters({})",
+          "109": ".pipe(",
+          "110": "Effect.map((response) =>",
+          "111": "(response.Filters ?? []).flatMap((filter) =>",
+          "112": "filter.Name ? [{ filterName: filter.Name }] : [],",
+          "113": "),",
+          "114": "),",
+          "115": "),",
+          "117": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "118": "const name = output?.filterName ?? (yield* createName(id, olds));",
+          "119": "const found = yield* findFilter(name);",
+          "120": "return found ? { filterName: name } : undefined;",
+          "121": "}),",
+          "123": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "124": "if (!isResolved(news)) return undefined;",
+          "125": "const oldName = yield* createName(id, olds);",
+          "126": "const newName = yield* createName(id, news);",
+          "127": "if (",
+          "128": "oldName !== newName ||",
+          "129": "olds.ipFilter.policy !== news.ipFilter.policy ||",
+          "130": "olds.ipFilter.cidr !== news.ipFilter.cidr",
+          "131": ") {",
+          "132": "return { action: \"replace\" } as const;",
+          "133": "}",
+          "134": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "136": "reconcile: Effect.fn(function* ({ id, news, output }) {",
+          "137": "const name = output?.filterName ?? (yield* createName(id, news));",
+          "140": "const observed = yield* findFilter(name);",
+          "143": "if (observed === undefined) {",
+          "144": "yield* ses",
+          "145": ".createReceiptFilter({",
+          "146": "Filter: {",
+          "147": "Name: name,",
+          "148": "IpFilter: {",
+          "149": "Policy: news.ipFilter.policy,",
+          "150": "Cidr: news.ipFilter.cidr,",
+          "151": "},",
+          "152": "},",
+          "153": "})",
+          "154": ".pipe(",
+          "155": "Effect.catchTag(\"AlreadyExistsException\", () =>",
+          "156": "Effect.succeed({}),",
+          "157": "),",
+          "158": ");",
+          "159": "}",
+          "161": "return { filterName: name };",
+          "162": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "136": "reconcile: Effect.fn(function* ({ id, news, output }) {",
+          "137": "const name = output?.filterName ?? (yield* createName(id, news));",
+          "140": "const observed = yield* findFilter(name);",
+          "143": "if (observed === undefined) {",
+          "144": "yield* ses",
+          "145": ".createReceiptFilter({",
+          "146": "Filter: {",
+          "147": "Name: name,",
+          "148": "IpFilter: {",
+          "149": "Policy: news.ipFilter.policy,",
+          "150": "Cidr: news.ipFilter.cidr,",
+          "151": "},",
+          "152": "},",
+          "153": "})",
+          "154": ".pipe(",
+          "155": "Effect.catchTag(\"AlreadyExistsException\", () =>",
+          "156": "Effect.succeed({}),",
+          "157": "),",
+          "158": ");",
+          "159": "}",
+          "161": "return { filterName: name };",
+          "162": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "164": "delete: Effect.fn(function* ({ output }) {",
+          "166": "yield* ses.deleteReceiptFilter({ FilterName: output.filterName });",
+          "167": "}),",
+          "168": "});",
+          "169": "}),",
+          "170": ");"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "164": "delete: Effect.fn(function* ({ output }) {",
+          "166": "yield* ses.deleteReceiptFilter({ FilterName: output.filterName });",
+          "167": "}),",
+          "168": "});",
+          "169": "}),",
+          "170": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}
