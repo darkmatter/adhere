@@ -261,6 +261,54 @@ describe("native TypeScript compiler and declaration reads", () => {
     expect(result.symbols!.explicit).toBe("```typescript\nany\n```");
   });
 
+  it("keeps declaration references and filename casing under case-insensitive native paths", async () => {
+    const declaration = [
+      "export function twice(value: number): number {",
+      "\treturn value * 2;",
+      "}",
+    ].join("\n");
+    const files = {
+      "MixedCaseRoot/Library.ts": [
+        "export const outsideBefore = 0;",
+        "/** Double a number. */",
+        declaration,
+        "export const outsideAfter = 0;",
+      ].join("\n"),
+      "MixedCaseRoot/caller.ts":
+        'import { twice as scale } from "./Library";\nexport const result = scale(2);',
+      "MixedCaseRoot/tsconfig.json": JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          types: [],
+          module: "Preserve",
+          moduleResolution: "Bundler",
+        },
+        files: ["Library.ts", "caller.ts"],
+      }),
+    };
+    const { root: temporary, read } = await fixture(files, false);
+    const root = join(temporary, "MixedCaseRoot");
+    const api = new API({ cwd: root, useCaseSensitiveFileNames: false });
+    // The standalone SDK exposes the native host's case policy; adapt only the connection boundary.
+    vi.spyOn(NativeLsp, "open").mockResolvedValue({
+      api,
+      openDocument: () => Promise.resolve(),
+      closeDocument: () => Promise.resolve(),
+      snapshot: () => api.createSnapshot({ openFiles: [join(root, "caller.ts")] }),
+      sdk: <A>(_phase: string, work: () => Promise<A>) => work(),
+      close: () => api.close(),
+    } as unknown as NativeLsp);
+    try {
+      const result = await run(root, read("MixedCaseRoot/caller.ts"));
+      expect(api.getCanonicalFileName(root)).not.toBe(root);
+      expect(result.symbols!.scale).toContain("(value: number) => number");
+      expect(result.symbols!.scale).toContain("Double a number.");
+      expect(result.references).toEqual({ scale: { "Library.ts": declaration } });
+    } finally {
+      await api.close();
+    }
+  });
+
   it("returns complete declarations, separates distinct scopes and omits unused/self/external targets", async () => {
     const { root, read } = await fixture();
     const result = await run(root, read("use.ts"));

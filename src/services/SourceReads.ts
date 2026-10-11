@@ -77,9 +77,12 @@ async function readOf(
     throw new Error(
       `${file.path} changed between the source walk and native TypeScript snapshot. Rerun lint after saving files so the judged code and semantic context match.`,
     );
+  // Compare compiler identity paths canonically, but preserve source spelling in display paths.
+  const canonicalOf = (path: string) => native.api.getCanonicalFileName(path);
+  const canonicalRoot = canonicalOf(root);
   const pathnameOf = (path: string) => relative(root, path).split(sep).join("/");
   const owned = (path: string) => {
-    const pathname = pathnameOf(path);
+    const pathname = relative(canonicalRoot, canonicalOf(path)).split(sep).join("/");
     return (
       !isAbsolute(pathname) &&
       pathname !== ".." &&
@@ -170,7 +173,8 @@ async function readOf(
     if (!target) continue;
     for (const declaration of await definitionsOf(target)) {
       const linked = declaration.getSourceFile();
-      if (linked.fileName === source.fileName || !owned(linked.fileName)) continue;
+      if (canonicalOf(linked.fileName) === canonicalOf(source.fileName) || !owned(linked.fileName))
+        continue;
       let scope = declaration;
       while (
         ast.isBindingElement(scope) ||
