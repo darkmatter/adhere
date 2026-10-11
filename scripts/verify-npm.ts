@@ -12,6 +12,9 @@ import { createRequire } from "node:module";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import packageJson from "../package.json";
+import library from "./fixtures/verify-npm-library.ts.txt" with { type: "text" };
+import caller from "./fixtures/verify-npm-caller.ts.txt" with { type: "text" };
+import declarationExcerpt from "./fixtures/verify-npm-declaration.ts.txt" with { type: "text" };
 import configTemplate from "./fixtures/verify-npm-config.ts.txt" with { type: "text" };
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
@@ -68,32 +71,6 @@ const run = Effect.fn("verifyNpm.run")(
   Effect.timeout("90 seconds"),
 );
 
-const library = [
-  "export const outsideBefore = 0;",
-  "",
-  "export const firstPadding = 1;",
-  "export const secondPadding = 2;",
-  "export const thirdPadding = 3;",
-  "/** Double a number. */",
-  "export function twice(value: number): number {",
-  "\treturn value * 2;",
-  "}",
-  "",
-  "export const outsideAfter = 0;",
-  "",
-].join("\n");
-const declarationExcerpt = [
-  "export function twice(value: number): number {",
-  "\treturn value * 2;",
-  "}",
-].join("\n");
-const caller = [
-  'import { twice as scale } from "@adhere-smoke/library";',
-  "export const first = scale(1);",
-  "\texport const second = scale(2);",
-  "  export const third = scale(3);",
-  "",
-].join("\n");
 const config = (marker: string) =>
   configTemplate
     .replace("__ADHERE_CALLER__", JSON.stringify(caller))

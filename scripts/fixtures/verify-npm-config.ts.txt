@@ -3,6 +3,7 @@ import { basename } from "node:path";
 import { defineConfig } from "@drkmttr/adhere";
 
 export default defineConfig({
+  typeAware: true,
   rules: {
     nativeSmoke: {
       description: "Exported functions must keep their callers type-safe.",

@@ -1,0 +1,4 @@
+import { twice as scale } from "@adhere-smoke/library";
+export const first = scale(1);
+	export const second = scale(2);
+  export const third = scale(3);
