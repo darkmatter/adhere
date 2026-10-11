@@ -80,7 +80,13 @@
     },
     "npm": {
       "allowSameVersion": true,
-      "publish": false
+      "publish": false,
+      "versionArgs": [
+        "--force"
+      ]
     }
-  }
+  },
+  "versionArgs": [
+    "--force"
+  ]
 }
