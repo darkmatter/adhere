@@ -25,7 +25,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { isNote, withoutComments } from "#comments.ts";
 import type { Rule } from "#config.ts";
 import { type Range, sectionsOf } from "#excerpt.ts";
@@ -210,7 +210,16 @@ const aboutCode = (rule: Rule) => {
   };
 };
 
-type Answers = Record<string, { noul?: number; choice?: string }>;
+const Response = Schema.Struct({
+  answers: Schema.Record(
+    Schema.String,
+    Schema.Struct({
+      noul: Schema.optionalKey(Schema.Finite),
+      choice: Schema.optionalKey(Schema.String),
+    }),
+  ),
+});
+type Answers = typeof Response.Type.answers;
 
 const ask = async (key: string, body: unknown): Promise<Answers> => {
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -218,8 +227,9 @@ const ask = async (key: string, body: unknown): Promise<Answers> => {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
     });
-    if (response.ok) return ((await response.json()) as { answers: Answers }).answers;
+    if (response.ok) return Schema.decodeUnknownSync(Response)(await response.json()).answers;
     if (response.status !== 429 && response.status < 500) {
       throw new Error(`HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`);
     }

@@ -572,11 +572,42 @@ finding its matchers dropped, with their scores.
 
 Beside the file's code, Jev reads three kinds of context, for every rule:
 
-| Name                | What Jev reads                                                                                                                                                                     |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workspacePackages` | The repo's own packages the file imports, each name with its directory, as in `{ "orders-core": "packages/orders" }`. A package it imports that is not listed is an installed one. |
-| `symbols`           | The compiler's type blocks for each name, plus compiler documentation and JSDoc tags; not literal editor hover text.                                                               |
-| `references`        | The declaration of each name the file uses from another file of the repo, whole: a function with its body, a method without the rest of its class.                                 |
+| Name                | What Jev reads                                                                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workspacePackages` | The repo's own packages the file imports, each name with its directory, as in `{ "orders-core": "packages/orders" }`. A package it imports that is not listed is an installed one.          |
+| `symbols`           | The compiler's type blocks for each name, plus compiler documentation and JSDoc tags; not literal editor hover text.                                                                        |
+| `references`        | Whole declarations of symbols the code uses from other files of the repo, keyed by `symbol:repository-relative pathname`: a function with its body, a method without the rest of its class. |
+
+`symbols` omits standard-library and Node/Bun runtime built-ins, including their
+methods. Project and third-party symbols remain, even when they share a built-in
+name. Built-in type names can still appear inside those symbols' type signatures.
+
+`references` is a flat string-to-string map. Keys keep the symbol's name as used
+in the target code, including import aliases, and the pathname's original casing.
+Values are complete declaration excerpts, not incoming reference call sites.
+Overlapping declarations under one key are merged; disjoint excerpts are joined
+with `…` between them. For example, code importing `twice as scale` can receive:
+
+```json
+{
+  "references": {
+    "__comment": "Declarations of symbols used by the target code, provided only as context. Keys are symbol:repository-relative pathname; values are source excerpts, not incoming call sites.",
+    "scale:src/Math.ts": "export function twice(value: number): number {\n  return value * 2;\n}"
+  }
+}
+```
+
+When sent to Jev, each selected `references`, `symbols`, and `workspacePackages`
+map includes a reserved `__comment` explaining its contents. These comments are
+included before `appendState` hooks and restored after hooks. Top-level guidance
+also tells Jev that these maps are context only: judge the target `code`, not the
+additional declarations or metadata.
+
+Each symbol's complete resolved content is truncated to 256 characters by
+default. Set `maxSymbolLength` in the config to change this limit. Documentation
+and JSDoc tags are first capped separately by `maxSymbolDocumentationLength`, also
+256 by default; `0` omits documentation and tags. Smaller limits reduce request
+size but can cut off type signatures, overloads, useful details, or examples.
 
 To read fewer, list the ones you want in the config's `reads`:
 
@@ -750,6 +781,8 @@ export default defineConfig({
   sufficiencyThreshold: 0.6,
   reads: ["workspacePackages", "symbols", "references"],
   presets: ["effect"],
+  maxSymbolDocumentationLength: 256,
+  maxSymbolLength: 256,
   exclude: ["**/generated/**"],
   overrides: { "effect/basics/instrument-with-pipe": "off" },
   rules: {
@@ -767,18 +800,20 @@ type UserId = typeof UserId.Type
 });
 ```
 
-| Key                    | Default                                          | Meaning                                                                                                                                                                |
-| ---------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `model`                | `"jev-latest"`                                   | The model id sent to TypeSafe.                                                                                                                                         |
-| `threshold`            | `0.8`                                            | Report a rule when Jev's probability is above this.                                                                                                                    |
-| `sufficiencyThreshold` | `0.6`                                            | Below it, a finding warns that Jev may not see enough to decide.                                                                                                       |
-| `presets`              | none                                             | Built-in rule sets, or their topics. See [Presets](#presets).                                                                                                          |
-| `rules`                | `.adhere/rules/`                                 | Rules inline, as above, or a directory (see [Where rules live](#where-rules-live)). Either replaces `.adhere/rules/`: none of its rules, root or nested, is read then. |
-| `exclude`              | none                                             | Globs, relative to the working directory, of files no rule judges.                                                                                                     |
-| `overrides`            | none                                             | Settings for a rule by its id. See [Overrides](#overrides).                                                                                                            |
-| `includeComments`      | `false`                                          | Send every comment to Jev. See [Comments](#comments).                                                                                                                  |
-| `reads`                | `["workspacePackages", "symbols", "references"]` | What Jev reads beside each file's code, for every rule. `[]` is the code alone. See [What Jev reads](#what-jev-reads).                                                 |
-| `provider`             | TypeSafe's Jev                                   | Where the questions go instead, with its own model. See [Providers](#providers).                                                                                       |
+| Key                            | Default                                          | Meaning                                                                                                                                                                |
+| ------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`                        | `"jev-latest"`                                   | The model id sent to TypeSafe.                                                                                                                                         |
+| `threshold`                    | `0.8`                                            | Report a rule when Jev's probability is above this.                                                                                                                    |
+| `sufficiencyThreshold`         | `0.6`                                            | Below it, a finding warns that Jev may not see enough to decide.                                                                                                       |
+| `presets`                      | none                                             | Built-in rule sets, or their topics. See [Presets](#presets).                                                                                                          |
+| `rules`                        | `.adhere/rules/`                                 | Rules inline, as above, or a directory (see [Where rules live](#where-rules-live)). Either replaces `.adhere/rules/`: none of its rules, root or nested, is read then. |
+| `exclude`                      | none                                             | Globs, relative to the working directory, of files no rule judges.                                                                                                     |
+| `overrides`                    | none                                             | Settings for a rule by its id. See [Overrides](#overrides).                                                                                                            |
+| `includeComments`              | `false`                                          | Send every comment to Jev. See [Comments](#comments).                                                                                                                  |
+| `reads`                        | `["workspacePackages", "symbols", "references"]` | What Jev reads beside each file's code, for every rule. `[]` is the code alone. See [What Jev reads](#what-jev-reads).                                                 |
+| `maxSymbolDocumentationLength` | `256`                                            | Maximum characters of each symbol's combined documentation and JSDoc tags, before `maxSymbolLength` applies. A non-negative integer; `0` omits them.                   |
+| `maxSymbolLength`              | `256`                                            | Maximum characters of each complete `symbols[name]` string, including type signatures and documentation. A non-negative integer; `0` leaves names with empty content.  |
+| `provider`                     | TypeSafe's Jev                                   | Where the questions go instead, with its own model. See [Providers](#providers).                                                                                       |
 
 - An invalid shape refuses the run.
 - A config can import other files by relative path, but no packages besides
@@ -866,9 +901,10 @@ export default defineConfig({ provider: mine });
   `choice`'s key. An id left out goes unanswered: its rule is not reported, and
   is asked again on the next run.
 - A rejection stops the run, but for three errors adhere exports:
-  `ContextOverflow` skips the file, `RequestBlocked` reports it blocked, and
-  `RequestFailed` is tried again, up to three times, when its `status` is 0,
-  for no answer, or a 408, 429, or 5xx.
+  `ContextOverflow` gets one retry without `references` when that map is present;
+  if the request still overflows, the file is skipped. `RequestBlocked` reports
+  it blocked, and `RequestFailed` is tried again, up to three times, when its
+  `status` is 0, for no answer, or a 408, 429, or 5xx.
 - adhere paces calls with `--rpm`, aborts `signal` after 30 seconds, and splits
   requests to fit Jev's 64,000 tokens. A model that takes less splits further in
   its `ask`.
@@ -1422,10 +1458,13 @@ about three bytes a token, and leaves 1k of room for what Jev wraps around it.
 
 - When a file's questions would not fit in one request, they are split across
   several.
-- A file whose state and longest question would not fit together, or that has
-  more than 255 sections, is skipped and counted in the summary, and the rest of
-  the run goes on. What adhere reads is never cut short to fit, so large
-  `references` can skip a file.
+- If a file's state and longest question would not fit together, or a provider
+  reports a context overflow, adhere retries once without `references` when that
+  map is present. Target code, `symbols`, and other context remain intact; no
+  declaration excerpt is shortened to fit. Removing references may still leave
+  the request too large, in which case the file is skipped and counted in the
+  summary. A file with more than 255 code sections is also skipped, and the rest
+  of the run goes on.
 - So is a file Jev itself counts as over its context, which text denser than the
   estimate, such as CJK, can cause.
 

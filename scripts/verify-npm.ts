@@ -12,6 +12,7 @@ import { createRequire } from "node:module";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import packageJson from "../package.json";
+import configTemplate from "./fixtures/verify-npm-config.ts.txt" with { type: "text" };
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
 const platforms = ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "win32-x64"];
@@ -93,36 +94,11 @@ const caller = [
   "  export const third = scale(3);",
   "",
 ].join("\n");
-const config = (marker: string) => `
-import assert from "node:assert/strict";
-import { basename } from "node:path";
-import { defineConfig } from "@drkmttr/adhere";
-
-export default defineConfig({
-  rules: {
-    nativeSmoke: {
-      description: "Exported functions must keep their callers type-safe.",
-      must: "export function twice(value: number): number { return value * 2; }",
-      appendState(state, file) {
-        assert.equal(basename(file.path), "caller.ts");
-        assert.equal(file.contents, ${JSON.stringify(caller)});
-        assert.deepEqual(state.workspacePackages, { "@adhere-smoke/library": "modules/library" });
-        assert.equal(typeof state.symbols.scale, "string");
-        assert(state.symbols.scale.includes("(value: number) => number"));
-        assert(state.symbols.scale.includes("Double a number."), "Compiler reads must include JSDoc");
-        assert.deepEqual(state.references, { scale: { "library.ts": ${JSON.stringify(declarationExcerpt)} } },
-          "References must contain complete declarations without neighboring statements, preserving indentation");
-        assert(!JSON.stringify(state.references).includes("outsideBefore"));
-        assert(!JSON.stringify(state.references).includes("outsideAfter"));
-        assert(Object.values(state.code).some((code) => code.includes("\\n\\texport const second")),
-          "Judged source must preserve indentation too");
-        console.log(${JSON.stringify(marker)});
-        return {};
-      },
-    },
-  },
-});
-`;
+const config = (marker: string) =>
+  configTemplate
+    .replace("__ADHERE_CALLER__", JSON.stringify(caller))
+    .replace("__ADHERE_DECLARATION__", JSON.stringify(declarationExcerpt))
+    .replace("__ADHERE_MARKER__", JSON.stringify(marker));
 
 const verify = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;

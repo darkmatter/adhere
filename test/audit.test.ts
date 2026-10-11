@@ -20,14 +20,17 @@ import {
   Effect,
   FileSystem,
   Layer,
+  Logger,
   Path,
   Record,
   Redacted,
+  References,
   Schema,
 } from "effect";
 import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
 import { FetchHttpClient } from "effect/http";
-import type { SystemOneRequest } from "../src/providers/systemOne.ts";
+import { requestOf, type SystemOneRequest } from "../src/providers/systemOne.ts";
+import { ContextOverflow, type Provider } from "../src/providers/provider.ts";
 import { describe, expect, it } from "vite-plus/test";
 import { isNote, withoutComments } from "../src/comments.ts";
 import { NO_SUPPRESSIONS, suppresses, suppressionsOf } from "../src/suppress.ts";
@@ -36,6 +39,8 @@ import {
   AdhereConfig as AdhereConfigSchema,
   type AppendState,
   DEFAULT_READS,
+  DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+  DEFAULT_MAX_SYMBOL_LENGTH,
   decodeConfig,
   type Loaded,
   type Preset,
@@ -79,6 +84,7 @@ import { SourceReads, SourceReadsLive } from "../src/services/SourceReads.ts";
 import {
   conflictBody,
   contradictBody,
+  describeState,
   fits,
   Jev,
   JevBlocked,
@@ -290,6 +296,8 @@ const audit = (options: {
             model: options.model ?? "jev-latest",
             threshold: options.threshold ?? 0.7,
             sufficiencyThreshold: 0.7,
+            maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+            maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
             reads: options.reads ?? [],
             rules: options.rules,
             ...(options.includeComments === undefined
@@ -575,6 +583,8 @@ describe("config", () => {
       loaded({}, { "data/brand": { description: "d", must: "r" } }),
     );
     expect(config.reads).toBeUndefined();
+    expect(config.maxSymbolDocumentationLength).toBeUndefined();
+    expect(config.maxSymbolLength).toBeUndefined();
     expect(Object.hasOwn(config, "reads")).toBe(false);
     expect(DEFAULT_READS).toEqual(["workspacePackages", "symbols", "references"]);
     expect(resolveConfig(config)).toEqual({
@@ -582,6 +592,8 @@ describe("config", () => {
       threshold: 0.8,
       sufficiencyThreshold: 0.6,
       reads: ["workspacePackages", "symbols", "references"],
+      maxSymbolDocumentationLength: 256,
+      maxSymbolLength: 256,
       rules: { "data/brand": { description: "d", must: "r" } },
     });
   });
@@ -590,6 +602,24 @@ describe("config", () => {
     const config = await Effect.runPromise(loaded({ sufficiencyThreshold: 0.6 }));
     expect(resolveConfig(config).sufficiencyThreshold).toBe(0.6);
     expect(resolveConfig(config, { sufficiencyThreshold: 0.5 }).sufficiencyThreshold).toBe(0.5);
+  });
+
+  it("keeps configured symbol and documentation limits, including zero", async () => {
+    for (const field of ["maxSymbolLength", "maxSymbolDocumentationLength"] as const) {
+      for (const length of [0, 32, 1024]) {
+        const config = await Effect.runPromise(loaded({ [field]: length }));
+        expect(resolveConfig(config)[field]).toBe(length);
+      }
+    }
+  });
+
+  it("refuses symbol limits that are not non-negative integers", async () => {
+    for (const field of ["maxSymbolLength", "maxSymbolDocumentationLength"] as const) {
+      for (const length of [-1, 1.5, Infinity, NaN, "256"]) {
+        const refused = await Effect.runPromise(Effect.flip(decodeConfig({ [field]: length })));
+        expect(refused.message).toContain(field);
+      }
+    }
   });
 
   it("folds presets into the rules, with a config rule winning over a preset rule", async () => {
@@ -1636,6 +1666,8 @@ describe("source walker", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+              maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
               reads: [],
               rules,
               exclude: ["src/skip.ts"],
@@ -2169,6 +2201,8 @@ const planOf = (options: {
   readonly cache: Layer.Layer<AuditCache>;
   readonly limit?: number;
   readonly reads?: ResolvedConfig["reads"];
+  readonly maxSymbolDocumentationLength?: number;
+  readonly maxSymbolLength?: number;
   readonly includeComments?: boolean;
   readonly workspacePackages?: Readonly<Record<string, string>>;
   readonly sourceReads?: Layer.Layer<SourceReads>;
@@ -2184,6 +2218,9 @@ const planOf = (options: {
             threshold: 0.7,
             sufficiencyThreshold: 0.7,
             reads: options.reads ?? [],
+            maxSymbolDocumentationLength:
+              options.maxSymbolDocumentationLength ?? DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+            maxSymbolLength: options.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,
             rules: options.rules,
             ...(options.scopedRules === undefined ? {} : { scopedRules: options.scopedRules }),
             ...(options.includeComments === undefined
@@ -2240,6 +2277,8 @@ describe("plan", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+              maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
               reads: [],
               rules,
             }),
@@ -2298,6 +2337,8 @@ describe("plan", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+              maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
               reads: [],
               rules,
             }),
@@ -2650,6 +2691,7 @@ describe("plan", () => {
     const planned = await planOf({ rules, files: [source, other], cache });
     expect(planned.files.map((plan) => plan.file.path)).toEqual([other.path, source.path]);
     expect({ ...planned, files: planned.files.length }).toEqual({
+      model: "jev-latest",
       files: 2,
       unjudged: [],
       rules: 2,
@@ -2680,6 +2722,8 @@ describe("plan", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+              maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
               reads: [],
               rules,
             }),
@@ -2834,6 +2878,8 @@ describe("plan", () => {
                 model: "jev-latest",
                 threshold: 0.7,
                 sufficiencyThreshold: 0.7,
+                maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+                maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
                 reads: [],
                 rules,
               }),
@@ -2854,7 +2900,7 @@ describe("plan", () => {
   const summary = (
     fields: Omit<
       AuditPlan,
-      "files" | "tokens" | "unjudged" | "threshold" | "sufficiencyThreshold"
+      "files" | "tokens" | "unjudged" | "threshold" | "sufficiencyThreshold" | "model"
     > & {
       readonly tokens?: number;
     },
@@ -2893,6 +2939,7 @@ describe("plan", () => {
       }),
       unjudged: [],
       tokens: 0,
+      model: "jev-latest",
       threshold: 0.7,
       sufficiencyThreshold: 0.7,
       ...fields,
@@ -3153,7 +3200,13 @@ describe("plan", () => {
         requests: 2,
         tokens: 41_234,
         price: 0.042,
-        nativeReads: { symbols: true, references: true, includeComments: false },
+        nativeReads: {
+          symbols: true,
+          references: true,
+          includeComments: false,
+          maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+          maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+        },
       },
       2,
     );
@@ -3184,6 +3237,8 @@ describe("plan", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+              maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
               reads: [],
               rules,
               scopedRules,
@@ -3352,6 +3407,8 @@ describe("linter check", () => {
                 model: "jev-latest",
                 threshold: 0.7,
                 sufficiencyThreshold: 0.7,
+                maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+                maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
                 reads: [],
                 rules: { ports, logs },
                 scopedRules,
@@ -3467,6 +3524,205 @@ describe("linter check", () => {
     ]);
     expect(formatLinterCheck([], "/repo")).toEqual([]);
   });
+});
+
+describe("oversized preflight payload logging", () => {
+  // Restore JSON escapes only inside string tokens, leaving layout and source backslashes intact.
+  const jsonFromDiagnostic = (text: string): string =>
+    text.replace(/"(?:\\[\s\S]|[^"\\])*"/g, (token) =>
+      token.replace(/\n/g, "\\n").replace(/\t/g, "\\t"),
+    );
+
+  const expectPayload = (
+    messages: ReadonlyArray<unknown>,
+    label: string,
+    payload: { judge: SystemOneRequest; locate: SystemOneRequest },
+    minimum: "All" | "Trace" | "Debug",
+  ) => {
+    const oversized = messages.filter((message) =>
+      String(message).includes("too long preflight payload"),
+    );
+    if (minimum === "Debug") {
+      expect(oversized).toEqual([]);
+      return;
+    }
+    expect(oversized).toHaveLength(1);
+    expect(String(oversized[0]).startsWith(`${label}\n`)).toBe(true);
+    const text = String(oversized[0]).slice(label.length + 1);
+    expect(text).toContain("\n\t");
+    expect(text).toContain(String.raw`\\n\\t`);
+    expect(text).not.toContain(String.raw`\n\tconst escaped`);
+    const json = jsonFromDiagnostic(text);
+    const logged = JSON.parse(json) as typeof payload;
+    expect(logged.judge).toEqual(payload.judge);
+    expect(logged.locate.model).toBe(payload.locate.model);
+    expect(logged.locate.state).toEqual(payload.locate.state);
+    if (minimum === "Trace") {
+      expect(Object.keys(logged.judge.state)[0]).toBe("code");
+      expect(Object.keys(logged.locate.state)[0]).toBe("code");
+    }
+    expect(Object.keys(logged.locate.questions)).toEqual(Object.keys(payload.locate.questions));
+    const lineQuestions = Object.entries(payload.locate.questions).filter(([id]) =>
+      /^(start|end):/.test(id),
+    );
+    expect(lineQuestions.length).toBeGreaterThan(0);
+    for (const [id, question] of Object.entries(payload.locate.questions)) {
+      if (minimum === "Trace" && question.type === "choice" && /^(start|end):/.test(id)) {
+        const { criteria, ...withoutCriteria } = question;
+        expect(Object.keys(criteria).length).toBeGreaterThan(0);
+        expect(logged.locate.questions[id]).not.toHaveProperty("criteria");
+        expect(logged.locate.questions[id]).toEqual(withoutCriteria);
+      } else {
+        expect(logged.locate.questions[id]).toEqual(question);
+      }
+    }
+    if (minimum === "All") {
+      expect(json).toBe(JSON.stringify(payload, null, 2));
+      expect(logged).toEqual(payload);
+    }
+  };
+
+  it.each(["All", "Trace", "Debug"] as const)(
+    "logs planning payloads with line criteria only at All (minimum: %s)",
+    async (minimum) => {
+      const lines = [
+        'import { orders } from "orders-core";',
+        '\tconst escaped = "\\n\\t";',
+        "export const generated = [",
+        `  "${"source".repeat(20_000)}",`,
+        "];",
+      ];
+      const workspacePackages = { "orders-core": "packages/orders" };
+      const cheapState = { workspacePackages };
+      const generated = { path: "/repo/generated.ts", lines };
+      const logs: Array<Logger.Options<unknown>> = [];
+      const cache = memoryCache();
+      const jev = recordingJev({ judge: {}, locate: {} });
+      const { plan, result } = await Effect.runPromise(
+        Effect.gen(function* () {
+          const plan = yield* planAudit();
+          return { plan, result: yield* executeAudit(plan) };
+        }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(AdhereConfig, {
+                model: "jev-latest",
+                threshold: 0.7,
+                sufficiencyThreshold: 0.7,
+                maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+                maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+                reads: ["workspacePackages"],
+                workspacePackages,
+                rules,
+              }),
+              fixtureWalker([generated]),
+              cache,
+              testCrypto,
+              jev.layer,
+              Logger.layer([Logger.make((entry) => logs.push(entry))]),
+            ),
+          ),
+          Effect.provideService(References.MinimumLogLevel, minimum),
+        ),
+      );
+      expect(plan.model).toBe("jev-latest");
+      expect(plan.skipped).toBe(1);
+      expect(plan.requests).toBe(0);
+      expect(result).toMatchObject({ skipped: 1, judged: 0, findings: [] });
+      expect(jev.calls).toEqual({ judge: [], locate: [] });
+      const payload = {
+        judge: judgeBody("jev-latest", lines, rules, [], cheapState),
+        locate: locateBody("jev-latest", lines, rules, cheapState) as SystemOneRequest,
+      };
+      const messages = logs.flatMap(({ message }) =>
+        Array.isArray(message) ? message : [message],
+      );
+      expectPayload(
+        messages,
+        `${generated.path}: too long preflight payload (planning)`,
+        payload,
+        minimum,
+      );
+      expect(Object.values(payload.judge.state.code).join("\n")).toBe(lines.join("\n"));
+      expect(payload.judge.questions.a?.criteria).toBeDefined();
+      expect(plan.files[0]?.readState).toEqual(cheapState);
+      if (minimum === "Debug") expect(JSON.stringify(messages)).not.toContain("source".repeat(100));
+    },
+  );
+
+  it.each(["All", "Trace", "Debug"] as const)(
+    "logs full execution context with line criteria only at All (minimum: %s)",
+    async (minimum) => {
+      const lines = [
+        'import { orders } from "orders-core";',
+        ...Array.from({ length: 32 }, (_, index) => `  const port${index} = 3000;`),
+      ];
+      const file = { path: "/repo/server.ts", lines };
+      const workspacePackages = { "orders-core": "packages/orders" };
+      const symbols = { orders: "const orders: Order[]", oversized: "symbol".repeat(20_000) };
+      const caller = `export function caller() {\n\tconst escaped = "\\n\\t";\n\treturn "${"context".repeat(20_000)}";\n}`;
+      const references = { "port:caller.ts": caller };
+      const readState = { workspacePackages, symbols, references };
+      const originalState = JSON.stringify(readState);
+      const sourceReads = Layer.succeed(SourceReads, {
+        prepare: () => Effect.void,
+        read: () => Effect.succeed({ symbols, references }),
+      });
+      const cache = memoryCache();
+      const plan = await planOf({
+        rules,
+        files: [file],
+        cache,
+        reads: DEFAULT_READS,
+        workspacePackages,
+      });
+      expect(plan.skipped).toBe(0);
+      const jev = recordingJev({ judge: {}, locate: {} });
+      const logs: Array<Logger.Options<unknown>> = [];
+      const result = await Effect.runPromise(
+        executeAudit(plan).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              cache,
+              testCrypto,
+              fixtureWalker([file]),
+              sourceReads,
+              jev.layer,
+              Logger.layer([Logger.make((entry) => logs.push(entry))]),
+            ),
+          ),
+          Effect.provideService(References.MinimumLogLevel, minimum),
+        ),
+      );
+      expect(result).toMatchObject({ skipped: 0, judged: 1, findings: [] });
+      expect(jev.calls.judge).toHaveLength(1);
+      expect(jev.calls.locate).toHaveLength(0);
+      expect(jev.states.judge).toEqual([{ workspacePackages, symbols }]);
+      expect(fits(lines, rules, { workspacePackages, symbols })).toBe(false);
+      const payload = {
+        judge: judgeBody(plan.model, lines, rules, [], readState),
+        locate: locateBody(plan.model, lines, rules, readState) as SystemOneRequest,
+      };
+      const messages = logs.flatMap(({ message }) =>
+        Array.isArray(message) ? message : [message],
+      );
+      expectPayload(
+        messages,
+        `${file.path}: too long preflight payload (full context)`,
+        payload,
+        minimum,
+      );
+      expect(payload.judge.state).toMatchObject(readState);
+      expect(Object.values(payload.judge.state.code).join("\n")).toBe(lines.join("\n"));
+      expect(payload.locate.questions.a?.type).toBe("choice");
+      expect(JSON.stringify(readState)).toBe(originalState);
+      if (minimum === "Debug")
+        expect(JSON.stringify(messages)).not.toContain("context".repeat(100));
+      expect(messages.some((message) => String(message).includes("full context too long"))).toBe(
+        true,
+      );
+    },
+  );
 });
 
 describe("pipeline", () => {
@@ -3735,6 +3991,8 @@ describe("pipeline", () => {
       symbols: true,
       references: true,
       includeComments: false,
+      maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+      maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
     });
     expect(planned).toMatchObject({
       planOnly: true,
@@ -3893,7 +4151,7 @@ describe("pipeline", () => {
           Effect.sync(() => {
             queried.push(file.path);
             return overflow === "native"
-              ? { references: { files: { "caller.ts": "x".repeat(110_000) } } }
+              ? { references: { "port:caller.ts": "x".repeat(110_000) } }
               : {};
           }),
       });
@@ -3920,7 +4178,7 @@ describe("pipeline", () => {
       expect(result).toMatchObject({ judged: 0, skipped: 1, waiting: 1 });
       expect(preparations).toEqual([[files[0]!.path]]);
       expect(queried).toEqual([files[0]!.path]);
-      expect(sent).toEqual(overflow === "native" ? [] : [rules]);
+      expect(sent).toEqual([rules]);
     },
   );
 
@@ -3960,7 +4218,7 @@ describe("pipeline", () => {
     expect(render(result, { root: "/repo" }).join("\n")).toContain(a.description);
   });
 
-  it("preserves cached located errors when native context overflows for new pending work", async () => {
+  it("preserves cached located errors when native fallback also API-overflows without looping", async () => {
     const cache = memoryCache();
     const first = await audit({
       rules: { a },
@@ -3969,10 +4227,14 @@ describe("pipeline", () => {
     });
     const sourceReads = Layer.succeed(SourceReads, {
       prepare: () => Effect.void,
-      read: () => Effect.succeed({ references: { files: { "caller.ts": "x".repeat(110_000) } } }),
+      read: () => Effect.succeed({ references: { "port:caller.ts": "x".repeat(110_000) } }),
     });
+    const attempts: ReadState[] = [];
     const noHttp = Layer.succeed(Jev, {
-      judge: () => Effect.die("oversized pending context must not be sent"),
+      judge: (_lines, _rules, _sampled, _file, state = {}) =>
+        Effect.sync(() => attempts.push(state)).pipe(
+          Effect.andThen(Effect.fail(JevOverflow.make())),
+        ),
       locate: () => Effect.die("the cached error is already located"),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
@@ -3991,6 +4253,7 @@ describe("pipeline", () => {
     expect(result.skipped).toBe(1);
     expect(result.findings).toEqual(first.findings);
     expect(failing(result.findings)).toHaveLength(1);
+    expect(attempts).toEqual([{}]);
     const reused = await audit({ rules: { a }, cache, jev: noHttp });
     expect(reused.findings).toEqual(first.findings);
   });
@@ -4002,8 +4265,8 @@ describe("pipeline", () => {
       cache,
       jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: {} }).layer,
     });
-    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
-    const references = { files: { "caller.ts": "use(port);\n" } };
+    const symbols = { port: "const port: number" };
+    const references = { "port:caller.ts": "use(port);\n" };
     const events: string[] = [];
     const sourceReads = Layer.succeed(SourceReads, {
       prepare: (files) =>
@@ -4073,11 +4336,17 @@ describe("pipeline", () => {
   });
 
   it("keeps reader subsets as flags in the plan and exposes only enabled native fields at execution", async () => {
-    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
-    const references = { files: { "caller.ts": "use(port);\n" } };
+    const symbols = { port: "const port: number" };
+    const references = { "port:caller.ts": "use(port);\n" };
     for (const reads of [["symbols"], ["references"]] as const) {
       const includeComments = reads[0] === "references";
-      const requested = { symbols: !includeComments, references: includeComments, includeComments };
+      const requested = {
+        symbols: !includeComments,
+        references: includeComments,
+        includeComments,
+        maxSymbolDocumentationLength: 32,
+        maxSymbolLength: 64,
+      };
       const preparations: Array<readonly string[]> = [];
       let queried = 0;
       const sourceReads = Layer.succeed(SourceReads, {
@@ -4097,6 +4366,8 @@ describe("pipeline", () => {
         rules,
         reads,
         includeComments,
+        maxSymbolDocumentationLength: requested.maxSymbolDocumentationLength,
+        maxSymbolLength: requested.maxSymbolLength,
         files: [source],
         cache,
         sourceReads,
@@ -4160,9 +4431,15 @@ describe("pipeline", () => {
       read: (file, _lines, requested) =>
         Effect.sync(() => {
           expect(preparations).toEqual([[other.path]]);
-          expect(requested).toEqual({ symbols: true, references: true, includeComments: false });
+          expect(requested).toEqual({
+            symbols: true,
+            references: true,
+            includeComments: false,
+            maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+            maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+          });
           queried.push(file.path);
-          return { symbols: {}, references: { sections: {}, files: {} } };
+          return { symbols: {}, references: {} };
         }),
     });
     const planned = await planOf({
@@ -4256,8 +4533,8 @@ describe("pipeline", () => {
     const files = [
       { ...source, lines: [...source.lines, 'import type { Order } from "orders-core/types";'] },
     ];
-    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
-    const references = { files: { "caller.ts": "\tuse(port);\n  use(port);\n" } };
+    const symbols = { port: "const port: number" };
+    const references = { "port:caller.ts": "\tuse(port);\n  use(port);\n" };
     const readState = { workspacePackages, symbols, references };
     let reads = 0;
     const preparations: Array<readonly string[]> = [];
@@ -4269,7 +4546,13 @@ describe("pipeline", () => {
       read: (_file, _lines, requested) =>
         Effect.sync(() => {
           expect(preparations).toEqual([[source.path]]);
-          expect(requested).toEqual({ symbols: true, references: true, includeComments: false });
+          expect(requested).toEqual({
+            symbols: true,
+            references: true,
+            includeComments: false,
+            maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+            maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+          });
           reads += 1;
           return { symbols, references, unrequested: true };
         }),
@@ -4300,6 +4583,8 @@ describe("pipeline", () => {
       symbols: true,
       references: true,
       includeComments: false,
+      maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+      maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
     });
     expect(JSON.stringify(planned)).not.toContain("caller.ts");
     for (const file of planned.files) {
@@ -4332,7 +4617,7 @@ describe("pipeline", () => {
     expect(preparations).toEqual([[source.path]]);
   });
 
-  it("rechecks sampled questions against real context and skips overflow during execution before HTTP", async () => {
+  it("rechecks real context and attempts judge and locate without oversized references", async () => {
     const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
     const preparations: Array<readonly string[]> = [];
     const sourceReads = Layer.succeed(SourceReads, {
@@ -4340,7 +4625,7 @@ describe("pipeline", () => {
         Effect.sync(() => {
           preparations.push(files);
         }),
-      read: () => Effect.succeed({ references: { files: { "caller.ts": "x".repeat(110_000) } } }),
+      read: () => Effect.succeed({ references: { "port:caller.ts": "x".repeat(110_000) } }),
     });
     const cache = memoryCache();
     const planned = await planOf({
@@ -4355,11 +4640,234 @@ describe("pipeline", () => {
     expect(Object.keys(planned.files[0]?.sampled ?? {}).sort()).toEqual(["a", "b"]);
     expect(preparations).toEqual([]);
     const result = await execute(planned, jev.layer, cache, sourceReads);
-    expect(result.skipped).toBe(1);
-    expect(result.judged).toBe(0);
+    expect(result.skipped).toBe(0);
+    expect(result.judged).toBe(1);
     expect(preparations).toEqual([[source.path]]);
-    expect(jev.calls).toEqual({ judge: [], locate: [] });
+    expect(jev.calls.judge).toHaveLength(1);
+    expect(jev.calls.locate).toHaveLength(1);
+    expect(jev.states).toEqual({ judge: [{}], locate: [{}] });
   });
+
+  it.each([
+    ["judge", true],
+    ["locate", true],
+    ["judge", false],
+    ["locate", false],
+  ] as const)(
+    "retries only the overflowing %s phase once without references (fallback succeeds: %s)",
+    async (phase, succeeds) => {
+      const references = { "port:caller.ts": "\tuse(port);\n" };
+      const symbols = { port: "const port: number" };
+      const sourceReads = Layer.succeed(SourceReads, {
+        prepare: () => Effect.void,
+        read: () => Effect.succeed({ symbols, references }),
+      });
+      const cache = memoryCache();
+      const plan = await planOf({
+        rules,
+        files: [source],
+        cache,
+        reads: ["symbols", "references"],
+      });
+      const attempts = { judge: [] as ReadState[], locate: [] as ReadState[] };
+      const jev = Layer.succeed(Jev, {
+        judge: (lines, asked, _sampled, _file, state = {}) => {
+          expect(lines).toEqual(source.lines);
+          expect(Object.keys(asked)).toEqual(["a", "b"]);
+          attempts.judge.push(state);
+          return phase === "judge" && (state.references !== undefined || !succeeds)
+            ? Effect.fail(JevOverflow.make())
+            : Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} });
+        },
+        locate: (lines, asked, _file, state = {}) => {
+          expect(lines).toEqual(source.lines);
+          expect(Object.keys(asked)).toEqual(["a"]);
+          attempts.locate.push(state);
+          return phase === "locate" && (state.references !== undefined || !succeeds)
+            ? Effect.fail(JevOverflow.make())
+            : Effect.succeed({ a: placedAt(lines, 2) });
+        },
+        conflicts: () => Effect.die("unused"),
+        contradicts: () => Effect.die("unused"),
+      });
+      const done: FileDone[] = [];
+      const result = await Effect.runPromise(
+        executeAudit(plan, (file) =>
+          Effect.sync(() => {
+            done.push(file);
+          }),
+        ).pipe(
+          Effect.provide(
+            Layer.mergeAll(jev, cache, sourceReads, fixtureWalker([source]), testCrypto),
+          ),
+        ),
+      );
+      if (!succeeds) {
+        expect(result).toMatchObject({ judged: 0, skipped: 1, findings: [] });
+        expect(attempts[phase]).toEqual([{ symbols, references }, { symbols }]);
+        expect(done[0]?.requests).toBe(phase === "judge" ? 2 : 3);
+        const retry = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+        await audit({ rules, cache, jev: retry.layer });
+        expect(retry.calls.judge).toHaveLength(1);
+        expect(Object.keys(retry.calls.judge[0]!)).toEqual(["a", "b"]);
+        return;
+      }
+      expect(result).toMatchObject({ judged: 1, skipped: 0 });
+      expect(result.findings.map(({ rule }) => rule)).toEqual(["a"]);
+      expect(attempts).toEqual(
+        phase === "judge"
+          ? { judge: [{ symbols, references }, { symbols }], locate: [{ symbols }] }
+          : { judge: [{ symbols, references }], locate: [{ symbols, references }, { symbols }] },
+      );
+      expect(done[0]?.requests).toBe(3);
+      const noRequests = Layer.succeed(Jev, {
+        judge: () => Effect.die("successful fallback must be cached"),
+        locate: () => Effect.die("successful fallback locations must be cached"),
+        conflicts: () => Effect.die("unused"),
+        contradicts: () => Effect.die("unused"),
+      });
+      const cached = await audit({ rules, cache, jev: noRequests });
+      expect(cached.findings).toEqual(result.findings);
+    },
+  );
+
+  it("strips hook-returned references on fallback but keeps original references available to hooks", async () => {
+    const references = { "port:caller.ts": "\tuse(port);\n" };
+    const symbols = { port: "const port: number" };
+    const seen: ReadState[] = [];
+    const appendState: AppendState = (state) => {
+      seen.push(state);
+      expect(state.references).toMatchObject(references);
+      return {
+        references: { "hook:caller.ts": "use(port);" },
+        hookContext: (state.references as Record<string, string>)["port:caller.ts"],
+      };
+    };
+    const hooked = { a: { ...a, appendState }, b: { ...b, appendState } };
+    const sent: SystemOneRequest[] = [];
+    const provider: Provider = {
+      model: "jev-latest",
+      ask: async (state, questions) => {
+        const body = requestOf("jev-latest", state, questions);
+        sent.push(body);
+        if (sent.length === 2) throw new ContextOverflow("second group overflow");
+        const locating = questions.some(({ id }) => id.startsWith("start:"));
+        return {
+          answers: Object.fromEntries(
+            questions.map(({ id }) => [
+              id,
+              id.startsWith("start:") || id.startsWith("end:")
+                ? "2"
+                : locating
+                  ? 0.9
+                  : id === "b"
+                    ? 0.9
+                    : sent.length === 1
+                      ? 0.99
+                      : 0.1,
+            ]),
+          ),
+        };
+      },
+    };
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: () => Effect.void,
+      read: () => Effect.succeed({ symbols, references }),
+    });
+    const cache = memoryCache();
+    const plan = await planOf({
+      rules: hooked,
+      files: [source],
+      cache,
+      reads: ["symbols", "references"],
+    });
+    const layer = JevLive.pipe(
+      Layer.provide([
+        Layer.succeed(AdhereConfig, resolveConfig({ presets: [], rules: hooked, provider })),
+        Layer.succeed(FetchHttpClient.Fetch, (() => {
+          throw new Error("no real HTTP");
+        }) as unknown as typeof globalThis.fetch),
+        Layer.succeed(Credentials, {
+          key: () => Effect.die("provider requires no credentials"),
+          file: Effect.die("unused"),
+          save: () => Effect.die("unused"),
+          remove: () => Effect.die("unused"),
+        }),
+      ]),
+    );
+    const done: FileDone[] = [];
+    const result = await Effect.runPromise(
+      executeAudit(plan, (file) =>
+        Effect.sync(() => {
+          done.push(file);
+        }),
+      ).pipe(
+        Effect.provide(
+          Layer.mergeAll(layer, cache, sourceReads, fixtureWalker([source]), testCrypto),
+        ),
+      ),
+    );
+    expect(result).toMatchObject({ judged: 1, skipped: 0 });
+    expect(result.findings.map(({ rule }) => rule)).toEqual(["b"]);
+    expect(sent).toHaveLength(5);
+    expect(seen).toHaveLength(5);
+    expect(done[0]?.requests).toBe(5);
+    for (const body of sent) {
+      expect(Object.values(body.state.code as Record<string, string>).join("\n")).toBe(
+        source.lines.join("\n"),
+      );
+      expect(body.state.symbols).toMatchObject(symbols);
+      expect(body.state.hookContext).toBe(references["port:caller.ts"]);
+    }
+    for (const body of sent.slice(2)) expect(body.state).not.toHaveProperty("references");
+    for (const body of sent.slice(0, 2))
+      expect(body.state.references).toMatchObject({ "hook:caller.ts": "use(port);" });
+    const again = recordingJev({ judge: {}, locate: {} });
+    const cached = await audit({ rules: hooked, cache, jev: again.layer });
+    expect(again.calls).toEqual({ judge: [], locate: [] });
+    expect(cached.findings).toEqual(result.findings);
+    expect(cached.cached).toBe(1);
+  });
+
+  it.each(["blocked", "unavailable"] as const)(
+    "does not remove references after a %s refusal",
+    async (kind) => {
+      const references = { "port:caller.ts": "use(port);\n" };
+      const attempts: ReadState[] = [];
+      const jev = Layer.succeed(Jev, {
+        judge: (_lines, _rules, _sampled, _file, state = {}) => {
+          attempts.push(state);
+          return kind === "blocked"
+            ? Effect.fail(JevBlocked.make({ ray: "no-retry" }))
+            : Effect.fail(JevUnavailable.make({ message: "no-retry" }));
+        },
+        locate: () => Effect.die("a refused judgment must not locate"),
+        conflicts: () => Effect.die("unused"),
+        contradicts: () => Effect.die("unused"),
+      });
+      const sourceReads = Layer.succeed(SourceReads, {
+        prepare: () => Effect.void,
+        read: () => Effect.succeed({ references }),
+      });
+      const cache = memoryCache();
+      const plan = await planOf({ rules, files: [source], cache, reads: ["references"] });
+      const effect = executeAudit(plan).pipe(
+        Effect.provide(
+          Layer.mergeAll(jev, cache, sourceReads, fixtureWalker([source]), testCrypto),
+        ),
+      );
+      if (kind === "blocked")
+        expect(await Effect.runPromise(effect)).toMatchObject({
+          judged: 0,
+          blocked: [{ ray: "no-retry", file: source.path }],
+        });
+      else
+        expect(await Effect.runPromise(Effect.flip(effect))).toMatchObject({
+          _tag: "JevUnavailable",
+        });
+      expect(attempts).toEqual([{ references }]);
+    },
+  );
 
   it("answers a file from the cache wherever its content moves", async () => {
     const cache = memoryCache();
@@ -4387,6 +4895,8 @@ describe("pipeline", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+              maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
               reads: [],
               rules,
             }),
@@ -4423,6 +4933,8 @@ describe("pipeline", () => {
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+              maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
               reads: [],
               rules,
             }),
@@ -5259,6 +5771,8 @@ describe("jev over http", () => {
           model: "jev-latest",
           threshold: 0.7,
           sufficiencyThreshold: 0.7,
+          maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+          maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
           reads: [],
           rules: {},
           rpm: 1200,
@@ -5309,6 +5823,8 @@ describe("jev over http", () => {
           model: "jev-latest",
           threshold: 0.7,
           sufficiencyThreshold: 0.7,
+          maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+          maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
           reads: [],
           rules: {},
         }),
@@ -5351,6 +5867,8 @@ describe("jev over http", () => {
           model: "jev-latest",
           threshold: 0.7,
           sufficiencyThreshold: 0.7,
+          maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+          maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
           reads: [],
           rules: {},
         }),
@@ -5400,6 +5918,8 @@ describe("jev over http", () => {
           model: "jev-latest",
           threshold: 0.7,
           sufficiencyThreshold: 0.7,
+          maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+          maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
           rules: {},
           ...config,
           reads: config.reads ?? [],
@@ -5440,18 +5960,21 @@ describe("jev over http", () => {
     const judged = await Effect.runPromise(Effect.provide(asked, layer));
 
     expect(judged.probabilities).toEqual({ a: 0.9, b: 0.9, hooked: 0.9 });
-    const appended = {
+    const appended = describeState({
       workspacePackages,
       code: { "1": "const replaced = true;" },
       seen: {
         sections: ["1"],
         path: "/repo/src/server.ts",
         contents: "const port = 3000;",
-        workspacePackages,
+        workspacePackages: describeState({ code: {}, workspacePackages }).workspacePackages,
       },
-    };
+    });
     expect(sent).toEqual([
-      { state: { workspacePackages, code: { "1": "const port = 3000;" } }, ids: ["a", "b"] },
+      {
+        state: describeState({ workspacePackages, code: { "1": "const port = 3000;" } }),
+        ids: ["a", "b"],
+      },
       { state: appended, ids: ["hooked"] },
       { state: appended, ids: ["start:hooked:1", "end:hooked:1", "sufficient:hooked"] },
     ]);
@@ -5461,8 +5984,8 @@ describe("jev over http", () => {
     const workspacePackages = { "orders-core": "packages/orders" };
     const catalog = { ...workspacePackages, unused: "packages/unused" };
     const lines = [...code1, 'import type { Order } from "orders-core/types";'];
-    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
-    const references = { files: { "caller.ts": "use(port);\n" } };
+    const symbols = { port: "const port: number" };
+    const references = { "port:caller.ts": "use(port);\n" };
     const seen: ReadState[] = [];
     const hooked = {
       ...b,
@@ -5500,7 +6023,12 @@ describe("jev over http", () => {
         ),
       ),
     );
-    const state = { code: { "1": lines.join("\n") }, workspacePackages, symbols, references };
+    const state = describeState({
+      code: { "1": lines.join("\n") },
+      workspacePackages,
+      symbols,
+      references,
+    });
     expect(seen).toEqual([state, state]);
     expect(sent.map(({ state }) => state)).toEqual([
       state,
@@ -5528,7 +6056,7 @@ describe("jev over http", () => {
 
     await Effect.runPromise(Effect.provide(asked, layer));
 
-    const state = { code: { "1": "const port = 3000;" }, workspacePackages };
+    const state = describeState({ code: { "1": "const port = 3000;" }, workspacePackages });
     expect(sent).toEqual([
       { state, ids: ["a", "b"] },
       { state, ids: ["start:b:1", "end:b:1", "sufficient:b"] },
@@ -5559,8 +6087,8 @@ describe("jev over http", () => {
   it("carries the full shared prepared context through judge and locate without replacing it from config", async () => {
     const readState = {
       workspacePackages: { "orders-core": "packages/orders" },
-      symbols: { "1": [{ name: "port", referenceCount: 1 }] },
-      references: { files: { "caller.ts": "use(port);\n" } },
+      symbols: { port: "const port: number" },
+      references: { "port:caller.ts": "use(port);\n" },
     };
     const { sent, layer } = recordedJev({
       reads: ["workspacePackages", "symbols", "references"],
@@ -5573,7 +6101,7 @@ describe("jev over http", () => {
         yield* jev.locate(code1, { b }, judgedFile, readState);
       }).pipe(Effect.provide(layer)),
     );
-    const state = { ...readState, code: { "1": "const port = 3000;" } };
+    const state = describeState({ ...readState, code: { "1": "const port = 3000;" } });
     expect(sent).toEqual([
       { state, ids: ["a", "b"] },
       { state, ids: ["start:b:1", "end:b:1", "sufficient:b"] },

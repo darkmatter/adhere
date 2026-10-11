@@ -11,7 +11,7 @@ import { NativeLsp } from "./NativeLsp.ts";
 import type { Project, Symbol, Type } from "typescript/async";
 import type { Node, SourceFile } from "typescript/ast";
 
-export type SourceReferences = Record<string, Record<string, string>>;
+export type SourceReferences = Record<string, string>;
 export type SourceReadState = ReadState & {
   readonly symbols?: Record<string, string>;
   readonly references?: SourceReferences;
@@ -20,6 +20,8 @@ export interface SourceReadRequest {
   readonly symbols: boolean;
   readonly references: boolean;
   readonly includeComments: boolean;
+  readonly maxSymbolLength: number;
+  readonly maxSymbolDocumentationLength: number;
 }
 export class SourceReads extends Context.Service<
   SourceReads,
@@ -121,6 +123,28 @@ async function readOf(
         ? undefined
         : target;
     });
+  const builtins = new Map<number, Promise<boolean>>();
+  const builtinOf = (symbol: Symbol) =>
+    once(builtins, symbol.id, async () => {
+      if (symbol.declarations.length === 0) {
+        if (symbol.name === "undefined")
+          return native.sdk("isUndefinedSymbol", () => project.checker.isUndefinedSymbol(symbol));
+        if (symbol.name === "arguments")
+          return native.sdk("isArgumentsSymbol", () => project.checker.isArgumentsSymbol(symbol));
+        return false;
+      }
+      for (const { path } of symbol.declarations) {
+        if (owned(path)) return false;
+        const pathname = canonicalOf(path).split(sep).join("/");
+        if (/(?:^|\/)node_modules\/(?:@types\/(?:node|bun)|bun-types)\//.test(pathname)) continue;
+        // Metadata classifies standard libraries without loading their full declaration ASTs.
+        const metadata = await native.sdk("getSourceFileMetadata", () =>
+          project.program.getSourceFileMetadataByPath(path),
+        );
+        if (!metadata?.isDefaultLibrary) return false;
+      }
+      return true;
+    });
   const definitionsOf = (symbol: Symbol) =>
     once(definitions, symbol.id, async () => {
       const found: Node[] = [];
@@ -154,6 +178,8 @@ async function readOf(
   for (const [index, node] of nodes.entries()) {
     const local = symbols[index];
     if (!local) continue;
+    const binding = local.flags & sdk.SymbolFlags.Alias ? await targetOf(local) : local;
+    if (binding && (await builtinOf(binding))) continue;
     const name = node.getText(source);
     const shorthand = ast.isShorthandPropertyAssignment(node.parent);
     const used = usedOf(node);
@@ -214,7 +240,8 @@ async function readOf(
       );
       return [comment, ...tags.map(({ name, text }) => `**@${name}**${text ? ` ${text}` : ""}`)]
         .filter(Boolean)
-        .join("\n\n");
+        .join("\n\n")
+        .slice(0, requested.maxSymbolDocumentationLength);
     });
   const formattedTypes = new Map<string, Promise<string>>();
   const descriptions = new Map<
@@ -254,32 +281,26 @@ async function readOf(
   }
   const cleaned = new Map<SourceFile, readonly string[]>();
   const references = sorted(
-    [...excerpts].map(
-      ([name, byFile]) =>
-        [
-          name,
-          sorted(
-            [...byFile].map(([pathname, { source: linked, windows }]) => {
-              let lines = cleaned.get(linked);
-              if (!lines) {
-                const directed = suppressionsOf(linked.text.split("\n")).lines;
-                lines = requested.includeComments ? directed : withoutComments(directed, isNote);
-                cleaned.set(linked, lines);
-              }
-              const merged: Array<{ first: number; last: number }> = [];
-              for (const window of windows.sort((a, b) => a.first - b.first || a.last - b.last)) {
-                const previous = merged.at(-1);
-                if (previous && window.first <= previous.last)
-                  previous.last = Math.max(previous.last, window.last);
-                else merged.push({ ...window });
-              }
-              return [
-                pathname,
-                merged.map(({ first, last }) => lines.slice(first, last).join("\n")).join("\n…\n"),
-              ] as const;
-            }),
-          ),
-        ] as const,
+    [...excerpts].flatMap(([name, byFile]) =>
+      [...byFile].map(([pathname, { source: linked, windows }]) => {
+        let lines = cleaned.get(linked);
+        if (!lines) {
+          const directed = suppressionsOf(linked.text.split("\n")).lines;
+          lines = requested.includeComments ? directed : withoutComments(directed, isNote);
+          cleaned.set(linked, lines);
+        }
+        const merged: Array<{ first: number; last: number }> = [];
+        for (const window of windows.sort((a, b) => a.first - b.first || a.last - b.last)) {
+          const previous = merged.at(-1);
+          if (previous && window.first <= previous.last)
+            previous.last = Math.max(previous.last, window.last);
+          else merged.push({ ...window });
+        }
+        return [
+          `${name}:${pathname}`,
+          merged.map(({ first, last }) => lines.slice(first, last).join("\n")).join("\n…\n"),
+        ] as const;
+      }),
     ),
   );
   return {
@@ -301,7 +322,9 @@ async function readOf(
                           .join("\n\n"),
                       ),
                     ),
-                  ].join("\n\n---\n\n"),
+                  ]
+                    .join("\n\n---\n\n")
+                    .slice(0, requested.maxSymbolLength),
                 ] as const,
             ),
           ),

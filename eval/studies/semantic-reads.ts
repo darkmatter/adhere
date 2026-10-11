@@ -11,7 +11,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { isNote, withoutComments } from "#comments.ts";
-import { type ReadState, type Rules } from "#config.ts";
+import {
+  DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+  DEFAULT_MAX_SYMBOL_LENGTH,
+  type ReadState,
+  type Rules,
+} from "#config.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { priceOf } from "#pricing.ts";
 import { CredentialsLive } from "#services/Credentials.ts";
@@ -249,6 +254,8 @@ const program = Effect.gen(function* () {
         symbols: true,
         references: true,
         includeComments: false,
+        maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+        maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
       }),
     ).pipe(Effect.provide(SourceReadsLive(directory)))) as SourceReadState;
     assert(state.symbols, "Native provider must return requested compiler type/docs strings");

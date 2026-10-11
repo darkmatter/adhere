@@ -1,5 +1,7 @@
 import {
   type AppendState,
+  DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+  DEFAULT_MAX_SYMBOL_LENGTH,
   type JevState,
   type ReadState,
   type ResolvedConfig,
@@ -10,6 +12,7 @@ import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { Credentials } from "#services/Credentials.ts";
 import { JevLive } from "#services/Jev.http.ts";
 import {
+  describeState,
   fits,
   Jev,
   judgeBody,
@@ -28,11 +31,11 @@ import { FetchHttpClient } from "effect/http";
 import { describe, expect, it } from "vite-plus/test";
 
 const plain: Rule = { description: "Ports must be named.", must: "const port = PORT;" };
-const lines = ["const port = 3000;"];
+const lines = ["const port = 3000;"] as const;
 const codeState = { code: { "1": lines[0] } };
 const file = { path: "/repo/src/server.ts", contents: lines.join("\n") };
 const symbols = { port: "```typescript\nconst port: number\n```" };
-const references = { PORT: { "src/config.ts": "export const PORT = 3000;\r\n" } };
+const references = { "PORT:src/config.ts": "export const PORT = 3000;\r\n" };
 const codeSufficiency = {
   type: "noul",
   instructions: {
@@ -76,6 +79,8 @@ const recordedJev = (
         model: "jev-latest",
         threshold: 0.8,
         sufficiencyThreshold: 0.6,
+        maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+        maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
         reads,
         rules: {},
         workspacePackages,
@@ -153,7 +158,19 @@ describe("prepared shared Jev reads", () => {
       project: { language: "typescript" },
       code: { "1": "replaced" },
     };
-    const enriched = { ...readState, ...codeState };
+    const enriched = describeState({ ...readState, ...codeState });
+    expect(enriched.__comment).toMatch(/only.*code|code.*only/i);
+    expect(enriched.__comment).toMatch(/context/i);
+    expect(enriched.symbols).toEqual({ ...symbols, __comment: expect.stringMatching(/symbol/i) });
+    expect(enriched.references).toEqual({
+      ...references,
+      __comment: expect.stringMatching(/symbol.*path|symbol.*file/i),
+    });
+    expect(enriched.workspacePackages).toEqual({
+      orders: "packages/orders",
+      __comment: expect.stringMatching(/package/i),
+    });
+    expect(Object.keys(enriched.code)).toEqual(["1"]);
     expect(judgeBody("", lines, rules, [], readState).state).toEqual(enriched);
     expect(locateBody("", lines, rules, readState).state).toEqual(enriched);
     const groups = requestGroups(rules);
@@ -166,8 +183,8 @@ describe("prepared shared Jev reads", () => {
       expect(judgeBody("", lines, group, [], readState).state).toEqual(enriched);
       const body = locateBody("", lines, group, readState);
       expect(body.state).toEqual(enriched);
-      expect(body.state.symbols).toBe(symbols);
-      expect(body.state.references).toBe(references);
+      expect(body.state.symbols).toEqual({ ...symbols, __comment: expect.any(String) });
+      expect(body.state.references).toEqual({ ...references, __comment: expect.any(String) });
       for (const id of Object.keys(group)) {
         expect(body.questions[`sufficient:${id}`]).toEqual(sufficiencyQuestion(plain, readState));
       }
@@ -176,9 +193,56 @@ describe("prepared shared Jev reads", () => {
     expect(locateRequests(lines, rules, readState)).toBe(3);
   });
 
+  it("preserves caller comments and raw context through judge, locate, and appended maps", async () => {
+    const readState = {
+      __comment: "User context: only target code is audited.",
+      symbols: { ...symbols, __comment: "User symbol description." },
+      references: { ...references, __comment: "User reference description." },
+      workspacePackages: { orders: "packages/orders", __comment: "User package description." },
+    };
+    const original = JSON.stringify(readState);
+    const hooked = {
+      ...plain,
+      appendState: () => ({ references: { "port:src/caller.ts": "\tuse(port);\r\n" } }),
+    };
+    const { sent, layer } = recordedJev();
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const jev = yield* Jev;
+        yield* jev.judge(lines, { plain, hooked }, [], file, readState);
+        yield* jev.locate(lines, { plain, hooked }, file, readState);
+      }).pipe(Effect.provide(layer)),
+    );
+    expect(sent).toHaveLength(4);
+    for (const body of sent) {
+      expect(body.state.code).toEqual(codeState.code);
+      expect(body.state.__comment).toBe(readState.__comment);
+      expect(body.state.symbols).toEqual(readState.symbols);
+      expect(body.state.workspacePackages).toEqual(readState.workspacePackages);
+    }
+    expect(sent[0]?.state.references).toEqual(readState.references);
+    expect(sent[2]?.state.references).toEqual(readState.references);
+    for (const index of [1, 3]) {
+      expect(sent[index]?.state.references).toEqual({
+        "port:src/caller.ts": "\tuse(port);\r\n",
+        __comment: expect.stringMatching(/symbol.*path|symbol.*file/i),
+      });
+    }
+    expect(JSON.stringify(readState)).toBe(original);
+    expect(
+      sent
+        .slice(2)
+        .flatMap(({ questions }) => Object.values(questions))
+        .filter(({ type }) => type === "noul")
+        .every(({ instructions }) => !instructions.question.includes("__comment")),
+    ).toBe(true);
+  });
+
   it("names actual shared keys in sufficiency, including packages but excluding duplicate code", () => {
     expect(sufficiencyQuestion(plain)).toEqual(codeSufficiency);
-    expect(sufficiencyQuestion(plain, { code: {} })).toEqual(codeSufficiency);
+    expect(sufficiencyQuestion(plain, { code: {}, __comment: "context description" })).toEqual(
+      codeSufficiency,
+    );
     expect(sufficiencyQuestion({ ...plain, appendState: () => ({ private: true }) })).toEqual(
       codeSufficiency,
     );
@@ -186,22 +250,32 @@ describe("prepared shared Jev reads", () => {
       { workspacePackages: {} },
       { symbols },
       { references },
-      { workspacePackages: {}, symbols, references, project: true, code: {} },
+      {
+        workspacePackages: {},
+        symbols,
+        references,
+        project: true,
+        code: {},
+        __comment: "context description",
+      },
     ]) {
       const question = sufficiencyQuestion(plain, readState);
       expect(question.instructions.question).not.toContain("`code` alone");
-      for (const key of Object.keys(readState).filter((key) => key !== "code")) {
+      for (const key of Object.keys(readState).filter(
+        (key) => key !== "code" && key !== "__comment",
+      )) {
         expect(question.instructions.question).toContain(`\`${key}\``);
         expect(question.criteria.true).toContain(`\`${key}\``);
         expect(question.criteria.false).toContain(`\`${key}\``);
       }
       expect(question.instructions.question.match(/`code`/g)).toHaveLength(2);
+      expect(JSON.stringify(question)).not.toContain("__comment");
     }
   });
 
   it("budgets all shared context beside every rule's questions", () => {
     const source = "export const value = 1;\n".repeat(2200);
-    const readState = { references: { value: { "src/related.ts": source } } };
+    const readState = { references: { "value:src/related.ts": source } };
     const large = { ...plain, must: "x".repeat(60_000) };
     const hooked = { ...plain, appendState: () => ({ private: "x".repeat(120_000) }) };
     expect(fits(lines, { large, hooked })).toBe(true);
@@ -295,7 +369,7 @@ describe("prepared shared Jev reads", () => {
     };
     const rules = { plain, native };
     const readState = {
-      references: { files: { "src/related.ts": "export const value = 1;\n".repeat(1500) } },
+      references: { "value:src/related.ts": "export const value = 1;\n".repeat(1500) },
     };
     const sampled = ["native"];
     expect(fits(long, rules, readState)).toBe(true);
@@ -338,7 +412,7 @@ describe("prepared shared Jev reads", () => {
 
   it("sends shared context once for non-hook rules and inherits it in private hook groups", async () => {
     const seen: Array<JevState> = [];
-    const privateSymbols = [{ name: "private", section: 1, usages: 0 }];
+    const privateSymbols = { private: "const private: number" };
     const appendState: AppendState = (state, receivedFile) => {
       expect(receivedFile).toBe(file);
       seen.push(state);
@@ -373,16 +447,19 @@ describe("prepared shared Jev reads", () => {
     });
     expect(result.judged.linter).toEqual({ plain: 0.9, hooked: 0.9 });
     expect(Object.keys(result.located)).toEqual(Object.keys(rules));
-    const enriched = { ...readState, ...codeState };
+    const enriched = describeState({ ...readState, ...codeState });
     expect(seen).toEqual([enriched, enriched, enriched, enriched]);
     for (const state of seen) {
-      expect(state.symbols).toBe(symbols);
-      expect(state.references).toBe(references);
-      expect(state.workspacePackages).toBe(workspacePackages);
+      expect(state.symbols).toEqual({ ...symbols, __comment: expect.any(String) });
+      expect(state.references).toEqual({ ...references, __comment: expect.any(String) });
+      expect(state.workspacePackages).toEqual({
+        ...workspacePackages,
+        __comment: expect.any(String),
+      });
     }
     const expectedStates = [
       enriched,
-      { ...enriched, private: "first", symbols: privateSymbols },
+      describeState({ ...enriched, private: "first", symbols: privateSymbols }),
       { ...enriched, private: "second" },
     ];
     expect(sent.map((body) => body.state)).toEqual([...expectedStates, ...expectedStates]);
@@ -432,8 +509,8 @@ describe("prepared shared Jev reads", () => {
     expect(sent.map((body) => body.state)).toEqual([
       codeState,
       codeState,
-      { symbols, ...codeState },
-      { symbols, ...codeState },
+      describeState({ symbols, ...codeState }),
+      describeState({ symbols, ...codeState }),
     ]);
   });
 });

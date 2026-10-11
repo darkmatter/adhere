@@ -411,10 +411,20 @@ describe("cli", () => {
         });
         if (reads === undefined) {
           expect(captured.state).toMatchObject({
+            __comment: expect.stringContaining("code"),
             code: { "1": caller },
-            workspacePackages: { "orders-core": "packages/orders" },
-            symbols: { value: "```typescript\n1\n```" },
-            references: { value: { "packages/orders/library.ts": library.trimEnd() } },
+            workspacePackages: {
+              __comment: expect.stringContaining("package"),
+              "orders-core": "packages/orders",
+            },
+            symbols: {
+              __comment: expect.stringContaining("types"),
+              value: "```typescript\n1\n```",
+            },
+            references: {
+              __comment: expect.stringContaining("declaration"),
+              "value:packages/orders/library.ts": library.trimEnd(),
+            },
           });
         } else {
           expect(captured.state).toEqual({ code: { "1": caller } });

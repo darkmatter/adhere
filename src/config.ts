@@ -222,6 +222,10 @@ export const AdhereConfig = Schema.Struct({
   ),
   /** Shared context for every audited file and all its rules. Unset: all built-in reads; []: code only. */
   reads: Schema.optionalKey(Reads),
+  /** Maximum characters of each symbol's complete resolved content. Defaults to 256. */
+  maxSymbolLength: Schema.optionalKey(Schema.Natural),
+  /** Maximum characters of documentation and JSDoc tags per symbol. Defaults to 256; 0 omits them. */
+  maxSymbolDocumentationLength: Schema.optionalKey(Schema.Natural),
   /**
    * A record of rules, or a directory path relative to the config file,
    * which holds its rules as `.adhere/rules/` does. Unset: the rules in
@@ -330,6 +334,8 @@ export const DEFAULT_MODEL = "jev-latest";
 export const DEFAULT_THRESHOLD = 0.8;
 export const DEFAULT_SUFFICIENCY_THRESHOLD = 0.6;
 export const DEFAULT_READS: typeof Reads.Type = ["workspacePackages", "symbols", "references"];
+export const DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH = 256;
+export const DEFAULT_MAX_SYMBOL_LENGTH = 256;
 
 /** A config with its presets folded in and every default applied. */
 export interface ResolvedConfig {
@@ -349,6 +355,10 @@ export interface ResolvedConfig {
   readonly includeComments?: boolean;
   /** Built-in context shared by every rule, with the default applied. */
   readonly reads: typeof Reads.Type;
+  /** Maximum characters of each symbol's complete resolved content. */
+  readonly maxSymbolLength: number;
+  /** Maximum characters of documentation and JSDoc tags before the complete symbol limit applies. */
+  readonly maxSymbolDocumentationLength: number;
   /**
    * The workspace's packages, each name with its directory from the working
    * directory, read from its manifests on every run when the config's reads
@@ -411,6 +421,9 @@ export const resolveConfig = (
     ...(config.exclude === undefined ? {} : { exclude: config.exclude }),
     ...(config.includeComments === undefined ? {} : { includeComments: config.includeComments }),
     reads: config.reads ?? DEFAULT_READS,
+    maxSymbolLength: config.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,
+    maxSymbolDocumentationLength:
+      config.maxSymbolDocumentationLength ?? DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
   };
 };
 

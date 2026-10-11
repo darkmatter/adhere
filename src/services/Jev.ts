@@ -9,8 +9,8 @@ import {
   type Rules,
 } from "#config.ts";
 import { type Range, sectionsOf } from "#excerpt.ts";
-import type { SystemOneRequest } from "#providers/systemOne.ts";
-import { Context, type Effect, Record, Schema } from "effect";
+import type { SystemOneQuestion, SystemOneRequest } from "#providers/systemOne.ts";
+import { Context, Effect, LogLevel, Record, References, Schema } from "effect";
 
 export type { Rules };
 export type Lines = ReadonlyArray<string>;
@@ -139,6 +139,32 @@ const bytesOf = (value: unknown): number => encoder.encode(JSON.stringify(value)
  */
 export const tokensOf = (value: unknown): number => Math.ceil(bytesOf(value) / 3);
 
+const READ_COMMENTS: Readonly<Record<string, string>> = {
+  symbols:
+    "Compiler-inferred types, documentation, and JSDoc for symbols in `code`; keys are symbol names.",
+  references:
+    "Declarations of symbols used in `code`. Each key is `symbol:pathname`: the symbol name as used in `code` followed by its repository-relative declaration path. Each value is a complete declaration excerpt.",
+  workspacePackages:
+    "Workspace packages imported by `code`; keys are package names and values are repository-relative package directories. Only packages imported by this file are listed.",
+};
+
+/** Explain the known context maps while preserving caller-provided descriptions and target code. */
+export const describeState = (state: JevState): JevState => {
+  const described = { ...state };
+  for (const [name, comment] of Object.entries(READ_COMMENTS)) {
+    const value = state[name];
+    if (value !== null && typeof value === "object" && !Array.isArray(value))
+      described[name] = { __comment: comment, ...value };
+  }
+  if (
+    described.__comment === undefined &&
+    Object.keys(state).some((name) => name !== "code" && name !== "__comment")
+  )
+    described.__comment =
+      "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit.";
+  return described;
+};
+
 /**
  * The file as Jev reads it: its sections, by `sectionsOf`, under their
  * numbers from 1, so the locate question can name one. Prepared context is
@@ -149,15 +175,16 @@ const stateOf = (
   lines: Lines,
   readState: ReadState = {},
   sections: ReadonlyArray<Range> = sectionsOf(lines),
-): JevState => ({
-  ...readState,
-  code: Object.fromEntries(
-    sections.map((section, index) => [
-      String(index + 1),
-      lines.slice(section.first - 1, section.last).join("\n"),
-    ]),
-  ),
-});
+): JevState =>
+  describeState({
+    ...readState,
+    code: Object.fromEntries(
+      sections.map((section, index) => [
+        String(index + 1),
+        lines.slice(section.first - 1, section.last).join("\n"),
+      ]),
+    ),
+  });
 
 /** The field an example goes under in a question: its word, with `should not` as `should_not`. */
 const fieldOf = (example: Example): string => example.word.replace(" ", "_");
@@ -361,7 +388,7 @@ export const judgeBody = (
  * it scored below 0.6, 62% were false, where 22% of all were.
  */
 const sufficiencyQuestionWith = (fields: ReturnType<typeof ruleFields>, readState: ReadState) => {
-  const keys = Object.keys(readState).filter((key) => key !== "code");
+  const keys = Object.keys(readState).filter((key) => key !== "code" && key !== "__comment");
   const context =
     keys.length === 0 ? undefined : ["`code`", ...keys.map((key) => `\`${key}\``)].join(" and ");
   return {
@@ -546,6 +573,43 @@ export const fits = (lines: Lines, rules: Rules, readState: ReadState = {}): boo
 
 /** A request to Jev, its questions typed as `Q`: `Question`, as adhere asks them, or anything an eval arm asks. */
 export type Body<Q = unknown> = SystemOneRequest<Q>;
+
+type RequestPayload =
+  | Body<SystemOneQuestion>
+  | { readonly judge: Body<SystemOneQuestion>; readonly locate: Body<SystemOneQuestion> };
+
+const traceBody = (body: Body<SystemOneQuestion>) => ({
+  ...body,
+  state: { code: body.state.code, ...body.state },
+  questions: Record.map(body.questions, (question, id) =>
+    question.type === "choice" && /^(start|end):/.test(id)
+      ? { ...question, criteria: undefined }
+      : question,
+  ),
+});
+
+/** Debug/Trace put target code first and omit line-option copies; All retains the complete request. */
+export const logRequestPayload = (
+  message: string,
+  payload: () => RequestPayload,
+  level: "Debug" | "Trace" = "Trace",
+): Effect.Effect<void> =>
+  Effect.gen(function* () {
+    const minimum = yield* References.MinimumLogLevel;
+    if (LogLevel.isGreaterThan(minimum, level)) return;
+    const full = payload();
+    const visible =
+      minimum === "All"
+        ? full
+        : "questions" in full
+          ? traceBody(full)
+          : { judge: traceBody(full.judge), locate: traceBody(full.locate) };
+    // Consume escaped backslashes first so source literals such as "\\n" remain literals.
+    const text = JSON.stringify(visible, null, 2).replace(/\\\\|\\[nt]/g, (escaped) =>
+      escaped === "\\n" ? "\n" : escaped === "\\t" ? "\t" : escaped,
+    );
+    yield* (level === "Debug" ? Effect.logDebug : Effect.logTrace)(`${message}\n${text}`);
+  });
 
 /**
  * A body as requests Jev can take: its questions in order, with a new
