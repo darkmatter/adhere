@@ -59,6 +59,10 @@ import skill from "../skills/adhere/SKILL.md" with { type: "text" };
 import fixSkill from "../skills/adhere-fix/SKILL.md" with { type: "text" };
 import setupSkill from "../skills/adhere-setup/SKILL.md" with { type: "text" };
 
+// @adhere This file owns CLI flags, progress output, and command wiring. Audit execution,
+// scaffolding, rule installation, credential storage, and rule checks are implemented in
+// their own modules imported above; the commands here connect them to the CLI.
+
 class FindingsReported extends Schema.TaggedError<FindingsReported>()("FindingsReported", {
   count: Schema.Finite,
 }) {
@@ -111,6 +115,13 @@ const sufficiencyThreshold = Flag.Finite("sufficiency-threshold").pipe(
   Flag.optional,
   Flag.withDescription(
     "Warn on a finding when Jev's probability that the file shows enough to decide it is below this value, 0 to 1. Replaces the config's sufficiencyThreshold; the default is 0.6.",
+  ),
+);
+
+const typeAware = Flag.Boolean("type-aware").pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "Include compiler-resolved symbols and declaration excerpts. Off by default.",
   ),
 );
 
@@ -235,7 +246,7 @@ export const auditLayer = (flags: Flags, filter: ReadonlyArray<string> = []) =>
 /** `adhere lint`: the audit. */
 export const lintCommand = Command.make(
   "lint",
-  { preset, threshold, sufficiencyThreshold, yes, limit, rpm, filter, denyWarnings },
+  { preset, threshold, sufficiencyThreshold, typeAware, yes, limit, rpm, filter, denyWarnings },
   (input) =>
     Effect.gen(function* () {
       const stdio = yield* Stdio.Stdio;
@@ -298,6 +309,7 @@ export const lintCommand = Command.make(
         presets: input.preset,
         threshold: Option.getOrUndefined(input.threshold),
         sufficiencyThreshold: Option.getOrUndefined(input.sufficiencyThreshold),
+        typeAware: Option.getOrUndefined(input.typeAware),
         rpm: Option.getOrUndefined(input.rpm),
       },
       input.filter,

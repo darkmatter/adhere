@@ -387,8 +387,8 @@ export const planAudit = (
       ? (config.workspacePackages ?? {})
       : undefined;
     const nativeReads: SourceReadRequest = {
-      symbols: config.reads.includes("symbols"),
-      references: config.reads.includes("references"),
+      symbols: config.typeAware,
+      references: config.typeAware,
       includeComments: config.includeComments === true,
       maxSymbolLength: config.maxSymbolLength,
       maxSymbolDocumentationLength: config.maxSymbolDocumentationLength,

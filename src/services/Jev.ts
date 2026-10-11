@@ -141,7 +141,7 @@ export const tokensOf = (value: unknown): number => Math.ceil(bytesOf(value) / 3
 
 const READ_COMMENTS: Readonly<Record<string, string>> = {
   symbols:
-    "Compiler-inferred types, documentation, and JSDoc for symbols in `code`; keys are symbol names.",
+    "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
   references:
     "Declarations of symbols used in `code`. Each key is `symbol:pathname`: the symbol name as used in `code` followed by its repository-relative declaration path. Each value is a complete declaration excerpt.",
   workspacePackages:

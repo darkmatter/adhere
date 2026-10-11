@@ -76,6 +76,7 @@ const recordedJev = (
     Layer.provide([
       Layer.succeed(FetchHttpClient.Fetch, fetch),
       Layer.succeed(AdhereConfig, {
+        typeAware: false,
         model: "jev-latest",
         threshold: 0.8,
         sufficiencyThreshold: 0.6,
@@ -493,9 +494,10 @@ describe("prepared shared Jev reads", () => {
     expect(readState.code).toEqual({});
   });
 
-  it("does not prepare context in HTTP even with resolved default reads and omitted or partial shared state", async () => {
+  it("uses only caller-prepared context in HTTP with workspace-only defaults", async () => {
     const config = resolveConfig({ presets: [], rules: { plain } });
-    expect(config.reads).toEqual(["workspacePackages", "symbols", "references"]);
+    expect(config.reads).toEqual(["workspacePackages"]);
+    expect(config.typeAware).toBe(false);
     const { sent, layer } = recordedJev({ unused: "packages/unused" }, config.reads);
     await Effect.runPromise(
       Effect.gen(function* () {

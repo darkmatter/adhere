@@ -97,6 +97,7 @@ your rules.
 - [Reading the report](#reading-the-report)
 - [Rule format](#rule-format)
 - [Config](#config)
+- [Other Providers](#providers)
 - [Running lint](#running-lint)
 - [Comments and suppressions](#comments-and-suppressions)
 - [Cache](#cache)
@@ -123,12 +124,14 @@ curl -fsSL --create-dirs -o ~/.local/bin/adhere \
 chmod +x ~/.local/bin/adhere
 ```
 
-- The npm package brings its own TypeScript compiler, for the
-  [`symbols` and `references`](#what-jev-reads) Jev reads by default. No other
-  setup is needed.
-- The standalone executable has no compiler, so it lints only with `reads: []`
-  or `reads: ["workspacePackages"]` in the [config](#config). It suits a global
-  install that your agent config can always call.
+- The npm package brings its own TypeScript compiler. Opt in with
+  `--type-aware` or `typeAware: true` to add both
+  [`symbols` and `references`](#what-jev-reads); type awareness is off by default.
+  No other compiler setup is needed.
+- The standalone executable has no compiler. It runs the default, compiler-free
+  audit with workspace context, or code alone with `reads: []`. Type-aware audits
+  require the npm package or a checkout with its development dependencies.
+  It suits a global install that your agent config can always call.
 - It is built for macOS and Linux, on arm64 and x64, and for Windows x64:
   download `adhere-Windows-x86_64.exe` from the
   [latest release](https://github.com/darkmatter/adhere/releases/latest).
@@ -354,13 +357,13 @@ writing a rule.
 
 ### What else the studies found
 
-| Lesson                                                 | What the study found                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "Should" is for people, not a weaker check.            | Rules written with "should" and with "must" scored nearly the same ([study](eval/studies/rule-vocabulary.md)).                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| A wrong finding is usually the rule's fault.           | Above 0.8, 31 of 35 wrong findings repeated within a rule: a scope its words reach past, or the same misreading again. Fixing the wording fixes them together. Below 0.8, one-off misreads grow, to about one finding in six at 0.6 to 0.7 ([study](eval/studies/presets.md)).                                                                                                                                                                                                                                                                                        |
-| Narrow a rule in its description.                      | Jev scores an `excludeIf` near 0.5 for real and false findings alike, so it thins a rule's findings about as much as a higher threshold ([study](eval/studies/presets.md)). Narrowing the description moves the judgment itself: scoping alchemy's idempotent-delete rule to providers' delete handlers dropped its findings elsewhere from 0.67–0.88 to 0.08–0.21, with nothing real lost ([study](eval/studies/idempotent-delete.md)).                                                                                                                              |
-| Beware rules that turn on what the file does not show. | The weakest preset rules hinged on facts outside the file: whether a client has a default timeout, whether a script is an entry point, whether a key is public ([study](eval/studies/presets.md)). Warning below a context of 0.7 marked one finding in five, and those were real about half the time, where the rest were real three times in four ([study](eval/studies/sufficiency.md)). Make such a rule a warning, or give Jev the fact with config-level [`reads`](#what-jev-reads), an [`appendState`](#rules-as-typescript-files) hook, or an `@adhere` note. |
-| Jev believes comments.                                 | Eight of nine real violations of the idempotent-delete rule carried a comment wrongly saying they were fine, and scored 0.31 to 0.62; without comments, all nine scored 0.81 or more ([study](eval/studies/idempotent-delete.md)). That is why adhere takes comments out. A fact Jev needs, such as an exemption, goes in an `@adhere` note, which stays ([study](eval/studies/comments.md)).                                                                                                                                                                         |
+| Lesson                                                 | What the study found                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Should" is for people, not a weaker check.            | Rules written with "should" and with "must" scored nearly the same ([study](eval/studies/rule-vocabulary.md)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| A wrong finding is usually the rule's fault.           | Above 0.8, 31 of 35 wrong findings repeated within a rule: a scope its words reach past, or the same misreading again. Fixing the wording fixes them together. Below 0.8, one-off misreads grow, to about one finding in six at 0.6 to 0.7 ([study](eval/studies/presets.md)).                                                                                                                                                                                                                                                                                                    |
+| Narrow a rule in its description.                      | Jev scores an `excludeIf` near 0.5 for real and false findings alike, so it thins a rule's findings about as much as a higher threshold ([study](eval/studies/presets.md)). Narrowing the description moves the judgment itself: scoping alchemy's idempotent-delete rule to providers' delete handlers dropped its findings elsewhere from 0.67–0.88 to 0.08–0.21, with nothing real lost ([study](eval/studies/idempotent-delete.md)).                                                                                                                                          |
+| Beware rules that turn on what the file does not show. | The weakest preset rules hinged on facts outside the file: whether a client has a default timeout, whether a script is an entry point, whether a key is public ([study](eval/studies/presets.md)). Warning below a context of 0.7 marked one finding in five, and those were real about half the time, where the rest were real three times in four ([study](eval/studies/sufficiency.md)). Make such a rule a warning, or give Jev the fact with [`typeAware` or workspace `reads`](#what-jev-reads), an [`appendState`](#rules-as-typescript-files) hook, or an `@adhere` note. |
+| Jev believes comments.                                 | Eight of nine real violations of the idempotent-delete rule carried a comment wrongly saying they were fine, and scored 0.31 to 0.62; without comments, all nine scored 0.81 or more ([study](eval/studies/idempotent-delete.md)). That is why adhere takes comments out. A fact Jev needs, such as an exemption, goes in an `@adhere` note, which stays ([study](eval/studies/comments.md)).                                                                                                                                                                                     |
 
 ## Commands
 
@@ -570,7 +573,9 @@ finding its matchers dropped, with their scores.
 
 ### What Jev reads
 
-Beside the file's code, Jev reads three kinds of context, for every rule:
+By default, Jev reads the file's code and its imported workspace packages, with
+no native compiler startup. Opt in with `typeAware: true` in the config or
+`adhere lint --type-aware` to add both compiler context maps for every rule:
 
 | Name                | What Jev reads                                                                                                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -597,7 +602,7 @@ with `…` between them. For example, code importing `twice as scale` can receiv
 }
 ```
 
-When sent to Jev, each selected `references`, `symbols`, and `workspacePackages`
+When sent to Jev, each enabled `references`, `symbols`, and `workspacePackages`
 map includes a reserved `__comment` explaining its contents. These comments are
 included before `appendState` hooks and restored after hooks. Top-level guidance
 also tells Jev that these maps are context only: judge the target `code`, not the
@@ -609,18 +614,25 @@ and JSDoc tags are first capped separately by `maxSymbolDocumentationLength`, al
 256 by default; `0` omits documentation and tags. Smaller limits reduce request
 size but can cut off type signatures, overloads, useful details, or examples.
 
-To read fewer, list the ones you want in the config's `reads`:
+`typeAware` defaults to `false`. When enabled, it adds **both** `symbols` and
+`references`, regardless of `reads`. The `reads` setting now chooses workspace
+context only: its default is `["workspacePackages"]`; `[]` omits that map.
+Legacy `"symbols"` or `"references"` entries in `reads` alone do not enable native
+context, and leaving them out does not disable it when `typeAware` is true.
 
 ```ts
 // .adhere/config.ts
 import { defineConfig } from "@drkmttr/adhere";
 
 export default defineConfig({
-  reads: ["workspacePackages"], // no symbols or references
+  typeAware: true, // opt in to both symbols and references
+  reads: [], // omit workspacePackages, not compiler context
 });
 ```
 
-`reads: []` sends the code alone.
+For code alone, use `reads: []` with type awareness off; do not pass
+`--type-aware`. To retain workspace context without a compiler, leave the
+settings at their defaults.
 
 Each name is the key Jev reads it under, so a rule's description can name it in
 backticks, as the questions name `code`:
@@ -657,10 +669,12 @@ import { parse } from "orders-core";
 - What adhere has no name for, such as a file of the repository's, a rule in
   TypeScript adds with [`appendState`](#rules-as-typescript-files).
 
-**Cost and privacy.** `symbols` and `references` send Jev more than the file it
+**Cost and privacy.** Opting into type awareness sends Jev more than the file it
 judges: whole declarations from other files, plus compiler-provided documentation
-and JSDoc tags in `symbols`, even with `includeComments` off. The plan's estimate leaves their tokens out. Leave them
-out of `reads` to send less.
+and JSDoc tags in `symbols`, even with `includeComments` off. It also starts the
+native compiler during execution. The plan's estimate leaves those tokens out.
+Keep `typeAware` off to avoid that extra context and compiler work; changing
+`reads` only changes workspace context.
 
 <details>
 <summary>Where the packages come from</summary>
@@ -720,7 +734,7 @@ export default defineRule({
 - The state is what Jev reads beside each question: `code`, the file's sections
   as Jev reads them, under their numbers from 1, as in
   `{ code: { "1": "import …", "2": "export const …" } }`, beside what the
-  config [`reads`](#what-jev-reads).
+  config's [`reads` and `typeAware`](#what-jev-reads) enable.
 - `file` is the file's absolute `path`, and its `contents` as written, comments
   and all.
 - Nothing the hook returns is checked, so it can change `code` too, or replace
@@ -779,7 +793,8 @@ export default defineConfig({
   model: "jev-latest",
   threshold: 0.8,
   sufficiencyThreshold: 0.6,
-  reads: ["workspacePackages", "symbols", "references"],
+  reads: ["workspacePackages"],
+  typeAware: true, // optional; false by default
   presets: ["effect"],
   maxSymbolDocumentationLength: 256,
   maxSymbolLength: 256,
@@ -800,20 +815,21 @@ type UserId = typeof UserId.Type
 });
 ```
 
-| Key                            | Default                                          | Meaning                                                                                                                                                                |
-| ------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `model`                        | `"jev-latest"`                                   | The model id sent to TypeSafe.                                                                                                                                         |
-| `threshold`                    | `0.8`                                            | Report a rule when Jev's probability is above this.                                                                                                                    |
-| `sufficiencyThreshold`         | `0.6`                                            | Below it, a finding warns that Jev may not see enough to decide.                                                                                                       |
-| `presets`                      | none                                             | Built-in rule sets, or their topics. See [Presets](#presets).                                                                                                          |
-| `rules`                        | `.adhere/rules/`                                 | Rules inline, as above, or a directory (see [Where rules live](#where-rules-live)). Either replaces `.adhere/rules/`: none of its rules, root or nested, is read then. |
-| `exclude`                      | none                                             | Globs, relative to the working directory, of files no rule judges.                                                                                                     |
-| `overrides`                    | none                                             | Settings for a rule by its id. See [Overrides](#overrides).                                                                                                            |
-| `includeComments`              | `false`                                          | Send every comment to Jev. See [Comments](#comments).                                                                                                                  |
-| `reads`                        | `["workspacePackages", "symbols", "references"]` | What Jev reads beside each file's code, for every rule. `[]` is the code alone. See [What Jev reads](#what-jev-reads).                                                 |
-| `maxSymbolDocumentationLength` | `256`                                            | Maximum characters of each symbol's combined documentation and JSDoc tags, before `maxSymbolLength` applies. A non-negative integer; `0` omits them.                   |
-| `maxSymbolLength`              | `256`                                            | Maximum characters of each complete `symbols[name]` string, including type signatures and documentation. A non-negative integer; `0` leaves names with empty content.  |
-| `provider`                     | TypeSafe's Jev                                   | Where the questions go instead, with its own model. See [Providers](#providers).                                                                                       |
+| Key                            | Default                 | Meaning                                                                                                                                                                |
+| ------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`                        | `"jev-latest"`          | The model id sent to TypeSafe.                                                                                                                                         |
+| `threshold`                    | `0.8`                   | Report a rule when Jev's probability is above this.                                                                                                                    |
+| `sufficiencyThreshold`         | `0.6`                   | Below it, a finding warns that Jev may not see enough to decide.                                                                                                       |
+| `presets`                      | none                    | Built-in rule sets, or their topics. See [Presets](#presets).                                                                                                          |
+| `rules`                        | `.adhere/rules/`        | Rules inline, as above, or a directory (see [Where rules live](#where-rules-live)). Either replaces `.adhere/rules/`: none of its rules, root or nested, is read then. |
+| `exclude`                      | none                    | Globs, relative to the working directory, of files no rule judges.                                                                                                     |
+| `overrides`                    | none                    | Settings for a rule by its id. See [Overrides](#overrides).                                                                                                            |
+| `includeComments`              | `false`                 | Send every comment to Jev. See [Comments](#comments).                                                                                                                  |
+| `reads`                        | `["workspacePackages"]` | Chooses workspace context only. `[]` omits it; native read entries do not enable type awareness. See [What Jev reads](#what-jev-reads).                                |
+| `typeAware`                    | `false`                 | Opt in to both compiler `symbols` and declaration `references`, regardless of `reads`. Also enabled by `--type-aware`.                                                 |
+| `maxSymbolDocumentationLength` | `256`                   | Maximum characters of each symbol's combined documentation and JSDoc tags, before `maxSymbolLength` applies. A non-negative integer; `0` omits them.                   |
+| `maxSymbolLength`              | `256`                   | Maximum characters of each complete `symbols[name]` string, including type signatures and documentation. A non-negative integer; `0` leaves names with empty content.  |
+| `provider`                     | TypeSafe's Jev          | Where the questions go instead, with its own model. See [Providers](#providers).                                                                                       |
 
 - An invalid shape refuses the run.
 - A config can import other files by relative path, but no packages besides
@@ -1122,6 +1138,7 @@ the default, `0.6`.
 | `--preset <names>`                 | Add built-in rule sets, or their topics. The config becomes optional. See [Presets](#presets). |
 | `--threshold <0 to 1>`             | Replace the config's threshold. Per-rule thresholds still apply.                               |
 | `--sufficiency-threshold <0 to 1>` | Replace the config's `sufficiencyThreshold`: a finding warns when its `context` is below it.   |
+| `--type-aware`                     | Enable both compiler `symbols` and declaration `references`; off by default.                   |
 | `--yes`, `-y`                      | Send the requests without asking first.                                                        |
 | `--limit <files>`                  | Send requests for at most that many files. See [Limiting a run](#limiting-a-run).              |
 | `--rpm <requests>`                 | Send at most that many requests a minute.                                                      |
@@ -1177,8 +1194,9 @@ Estimates cover only code and workspace-package context; symbol/reference input,
 - The cost is adhere's estimate of the input tokens times the model's price. Jev
   charges only for input tokens: $0.042 a million for `jev-latest`, per
   [TypeSafe AI's models page](https://docs.typesafe.ai/models) in
-  September 2026. The estimate leaves out `symbols` and `references`, which
-  adhere reads as it sends each file, so a run can cost more than it says.
+  September 2026. When type awareness is enabled, the estimate leaves out
+  `symbols` and `references`, which adhere reads as it sends each file, so a run
+  can cost more than it says.
 - A run that stops loses nothing: files finished before it stopped are cached,
   so running again continues from there.
 
@@ -1242,7 +1260,7 @@ it hashes or sends a file, or a declaration from
 [`references`](#what-jev-reads), blanking it so every line keeps its number.
 The report's excerpts still show them. Compiler-provided documentation and
 JSDoc tags still reach Jev in the type/docs strings [`symbols`](#what-jev-reads)
-sends; these are not editor hovers.
+sends when type awareness is enabled; these are not editor hovers.
 
 Jev takes what comments claim at their word, which hid real violations in the
 studies: see [Writing good rules](#writing-good-rules).
@@ -1474,17 +1492,21 @@ about three bytes a token, and leaves 1k of room for what Jev wraps around it.
 
 Names and layouts from older versions:
 
-| Version           | What it had                                                                                                  | What happens now                                                                                                                                                                                        |
-| ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| before 0.7        | A rule's examples were `reference` and `avoid` in a config, and a fence could be tagged `avoid`.             | They still read as `must` and `never`.                                                                                                                                                                  |
-| through 0.7       | The `effect` preset checked seven conventions a linter checks exactly.                                       | They are left to `@effect/tsgo`. The notes on `effect` under [Presets](#presets) say how to turn them on.                                                                                               |
-| before 0.13       | A rule was any `*.md` file in `.adhere/`, as `.adhere/data/brand-ports.md`.                                  | A `*.md` file outside every rule's directory, but a `README.md`, refuses the run. The refusal says where each such file goes to keep its id, so `adhere-ignore` comments and `overrides` still name it. |
-| before 0.13       | `.adhere/tsconfig.json` included only `config.ts`.                                                           | Make its `include` `["**/*.ts"]` to give rules written in TypeScript their types.                                                                                                                       |
-| 0.13.1            | The workspace's packages had a key of their own, `includeWorkspacePackages: true`.                           | adhere no longer reads it. Jev reads the workspace's packages by default.                                                                                                                               |
-| 0.13.1 and before | Prose around a `RULE.md`'s code was ignored.                                                                 | Jev reads it after the description, as the rule's details, so a rule with prose is judged again once. Keep prose about the rule: why it holds, or where it does not apply.                              |
-| 0.15.0 and before | A rule named what Jev reads beside its code, in `reads`.                                                     | `reads` is the config's, for every rule, and a rule that has it refuses the run: delete it. Jev reads all three by default. See [What Jev reads](#what-jev-reads).                                      |
-| 0.15.0 and before | `--limit` counted rule checks.                                                                               | It counts files.                                                                                                                                                                                        |
-| 0.14.0 and before | The `effect` preset had `services/test-layers-are-in-memory` and `services/operations-have-no-requirements`. | They are gone, and an `overrides` entry naming either refuses the run: remove it. `@effect/tsgo`'s `leakingRequirements` checks the second. `adhere-ignore` comments naming them suppress nothing.      |
+| Version           | What it had                                                                                                  | What happens now                                                                                                                                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| before 0.7        | A rule's examples were `reference` and `avoid` in a config, and a fence could be tagged `avoid`.             | They still read as `must` and `never`.                                                                                                                                                                              |
+| through 0.7       | The `effect` preset checked seven conventions a linter checks exactly.                                       | They are left to `@effect/tsgo`. The notes on `effect` under [Presets](#presets) say how to turn them on.                                                                                                           |
+| before 0.13       | A rule was any `*.md` file in `.adhere/`, as `.adhere/data/brand-ports.md`.                                  | A `*.md` file outside every rule's directory, but a `README.md`, refuses the run. The refusal says where each such file goes to keep its id, so `adhere-ignore` comments and `overrides` still name it.             |
+| before 0.13       | `.adhere/tsconfig.json` included only `config.ts`.                                                           | Make its `include` `["**/*.ts"]` to give rules written in TypeScript their types.                                                                                                                                   |
+| 0.13.1            | The workspace's packages had a key of their own, `includeWorkspacePackages: true`.                           | adhere no longer reads it. Jev reads the workspace's packages by default.                                                                                                                                           |
+| 0.13.1 and before | Prose around a `RULE.md`'s code was ignored.                                                                 | Jev reads it after the description, as the rule's details, so a rule with prose is judged again once. Keep prose about the rule: why it holds, or where it does not apply.                                          |
+| 0.15.0 and before | A rule named what Jev reads beside its code, in `reads`.                                                     | `reads` is the config's, for every rule, and a rule that has it refuses the run: delete it. Workspace context is on by default; compiler context requires `typeAware: true`. See [What Jev reads](#what-jev-reads). |
+| 0.15.0 and before | `--limit` counted rule checks.                                                                               | It counts files.                                                                                                                                                                                                    |
+| 0.14.0 and before | The `effect` preset had `services/test-layers-are-in-memory` and `services/operations-have-no-requirements`. | They are gone, and an `overrides` entry naming either refuses the run: remove it. `@effect/tsgo`'s `leakingRequirements` checks the second. `adhere-ignore` comments naming them suppress nothing.                  |
+
+Configs that previously enabled compiler context with `reads: ["symbols", "references"]`
+must now opt in with `typeAware: true`, or use `adhere lint --type-aware`.
+That switch enables both maps; `reads` only controls workspace context.
 
 ## Development
 
@@ -1497,13 +1519,13 @@ adhere lint --preset effect
 ```
 
 - In a checkout no platform package is installed, so `bin/adhere.js` runs
-  `src/main.ts` with Bun instead, and `symbols` and `references` use the
-  checkout's own TypeScript.
+  `src/main.ts` with Bun instead. Type-aware audits use the checkout's own
+  TypeScript; the default audit does not start it.
 - `bun run typecheck` runs `tsc` and the linter.
 - `bun run test` runs the tests.
 - `bun scripts/verify-npm.ts`, after `bun run build:npm`, installs the built
-  packages in a scratch project and checks that they read `symbols` and
-  `references`. It needs Node 24 or later, and sends Jev nothing.
+  packages in a scratch project and explicitly enables `typeAware: true` to
+  check `symbols` and `references`. It needs Node 24 or later, and sends Jev nothing.
 
 ### Native executable
 

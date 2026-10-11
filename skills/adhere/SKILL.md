@@ -27,6 +27,7 @@ adhere lint                      # judge the working directory; exit 1 on an err
 adhere lint --limit 0            # compiler-free counts/cache plan; no budgeting
 adhere lint --limit 100          # first 100 files needing requests; all pending rules per file
 adhere lint --yes                # send without asking, as in CI
+adhere lint --type-aware         # opt in to both compiler symbols and declaration references
 adhere lint --preset effect      # add a built-in rule set; the config becomes optional
 adhere lint --filter 'src/**'    # read only matching files; repeat, and ! to leave out
 adhere lint --threshold 0.9      # report at another threshold from the cache; judges nothing again
@@ -38,8 +39,9 @@ adhere skill [docs|setup|fix]    # print a skill
 
 `adhere <command> --help` lists every flag. Version, help, skills, `validate`,
 and planning with `--limit 0` do not start the native compiler. Default `lint`
-starts it only during execution, after confirmation, for pending judgments or
-cached findings still needing location.
+is compiler-free. With `typeAware: true` or `--type-aware`, it starts the compiler
+only during execution, after confirmation, for pending judgments or cached
+findings still needing location.
 
 `--limit` now counts files, not rule checks; use the same flag without an extra
 unit selector. Each request-bearing file consumes one slot for all its pending
@@ -127,7 +129,7 @@ rule takes:
 `description`, `must`, `never`, and the rest. Its `appendState(state, file, Bun)`
 runs right before each request for the rule, and what it returns is spread
 over the request's state: `code`, the file's sections as Jev reads them,
-plus the shared context selected by the config's `reads`. Use it to give Jev what the file cannot show, such
+plus the shared context enabled by the config's `reads` and `typeAware`. Use it to give Jev what the file cannot show, such
 as a schema another file holds, and name the key it adds in the description.
 Nothing it returns is checked, so it can break its own rule. The rule gets
 requests of its own, repeating the shared context. Hook-owned external data
@@ -153,7 +155,8 @@ export default defineConfig({
   presets: ["typescript", "security"], // built-in rule sets, or topics such as "effect/basics"
   threshold: 0.8, // default 0.8
   sufficiencyThreshold: 0.6, // below it, a finding warns the file and shared context may not show enough
-  reads: ["workspacePackages", "symbols", "references"], // default; omitting this field keeps all three
+  reads: ["workspacePackages"], // default; [] omits workspace context
+  typeAware: false, // default; true or --type-aware enables both symbols and references
   exclude: ["**/generated/**"], // files no rule judges
   includeComments: false, // true only for rules about comments
   overrides: {
@@ -163,14 +166,16 @@ export default defineConfig({
 });
 ```
 
-Top-level `reads` selects shared context for every audited file and all its
-rules, including presets. `resolveConfig` defaults to
-`["workspacePackages", "symbols", "references"]` when the field is omitted,
-even without a config file. An explicit array replaces the default: `reads: []`
-is the code-only opt-out, and a subset limits context to those readers. Presets
-do not own or override this selection. Rule-level `reads`, in Markdown front
-matter, `defineRule`, or inline rules, is rejected with guidance to move it to
-the config. The available names are:
+Top-level `reads` chooses workspace context for every audited file and all its
+rules, including presets. It defaults to `["workspacePackages"]`, even without
+a config file; `reads: []` omits that map. `typeAware` defaults to `false`.
+Opting in with `typeAware: true` or `--type-aware` enables both `symbols` and
+`references`, regardless of `reads`. Legacy native-reader entries in `reads`
+alone do not enable the compiler; leaving them out does not disable it when
+type awareness is on. Code alone requires `reads: []` and type awareness off.
+Presets do not own or override this selection. Rule-level `reads`, in Markdown
+front matter, `defineRule`, or inline rules, is rejected with guidance to move
+it to the config. The context maps are:
 
 - `workspacePackages`: only packages matched by this file's literal imports,
   as `{ canonicalPackageName: directory }`. Subpaths match the owning package;
@@ -184,10 +189,14 @@ the config. The available names are:
   and narrowing types stay distinct; docs/tags appear once per canonical symbol
   per file. This is not literal IDE hover text: there are no IDE labels or
   selected-call overload presentation. Unused local declarations may have type
-  blocks too. Library types/docs can appear even when their source is excluded
-  from snippets.
-- `references`: `{ Name: { pathname: declarationSnippet } }` for used symbols'
-  canonical outgoing alias-target declarations. Each snippet is the smallest
+  blocks too. Standard-library and Node/Bun built-ins and their methods are
+  omitted; project and third-party symbols remain, including built-in-name
+  shadows. Built-in type names can still appear inside meaningful signatures.
+- `references`: a flat `Record<string, string>`, as
+  `{ "Name:path/to/file.ts": "declarationSnippet" }`, for declarations of symbols
+  used by the target code, not incoming call sites. Keys retain names as used,
+  including import aliases, and repository-relative pathname casing; alias targets
+  are resolved canonically. Each snippet is the smallest
   complete AST declaration scope, with no extra surrounding lines: full function
   bodies; whole arrow/object initializer variable statements, including
   `export const` and semicolons; whole methods/getters/setters, not their classes;
@@ -201,8 +210,10 @@ the config. The available names are:
   exclusions remain. There are no counts, incoming callers, structured locations,
   unresolved lists, full-file collection, or completeness metadata.
 
-Default npm-installed lint uses `symbols` and `references` with adhere's pinned
-native TypeScript compiler through the npm/Bun launcher. No root `tsconfig.json`
+When type awareness is enabled, npm-installed lint uses both `symbols` and
+`references` with adhere's pinned native TypeScript compiler through the npm/Bun
+launcher. Enabled context maps include a self-describing `__comment` in Jev's
+state; top-level guidance identifies only `code` as the audit target. No root `tsconfig.json`
 or root file-list membership is required. During execution, native TypeScript
 opens files with pending judgments or cached findings needing location and
 discovers each file's configured project, including package
@@ -243,27 +254,32 @@ program graphs can still consume substantial time/memory. Bounding active
 documents/snapshots does not make total memory or model payload size constant,
 and oversized contexts are still possible. Context is queried just
 before judge/locate and reused locally. Planning never calls `SourceReads`.
-Source checkouts use their development compiler dependency. Raw GitHub
-binaries still have no compiler resources: their lint requires explicit config
-`reads: []` or `reads: ["workspacePackages"]` for execution; use the package
-launcher for the full default. Plan-only `--limit 0` needs no compiler or API key.
+Type-aware source checkouts use their development compiler dependency. Raw
+GitHub binaries have no compiler resources, but run the default compiler-free
+audit with workspace context without special configuration. Use `reads: []`
+for code alone, with type awareness off; use the package launcher or a checkout
+for type-aware execution. Plan-only `--limit 0` needs no compiler or API key.
 
 Rules without `appendState` share requests and pay for shared input context
 once per request, not once per rule. Context repeats on request splitting,
 locating findings, and hook requests. Compiler documentation and complete declaration
-scopes add default token/privacy cost, including source from files not judged.
+scopes add token/privacy cost only when type awareness is enabled, including
+source from files not judged.
 Complete scopes may contain substantially more source/tokens than fixed-line
 excerpts; function bodies are not peeked or capped to seven lines.
 Compiler-provided docs and JSDoc tags can remain present with ordinary comments
-stripped. Omit `symbols` to disable type/docs context, `references` to disable
-snippets, or use `reads: []` for code-only built-in context.
+stripped. Keep `typeAware` off to omit both native maps; `reads` controls only
+workspace context. Use `reads: []` with type awareness off for code alone.
 Plan token/cost estimates include code and cheap workspace metadata only, not
 native context or hook-added data. Actual cost and request splits may therefore
 be higher. Shared state plus any one question must fit 32k tokens, and state
 plus all questions in a request must fit 64k, with 1k reserved for overhead.
-Execution splits question batches, checks full budgets before HTTP, and skips
-oversized files instead of silently truncating type/docs strings or complete scopes. Only
-`appendState` forces a private rule request group.
+Execution splits question batches and checks full budgets before HTTP. On
+context overflow, it retries once without `references` when that map is present,
+keeping target code and `symbols` intact; a further overflow skips the file.
+Complete declaration scopes are not shortened to fit. Symbol strings have
+configurable `maxSymbolLength` and `maxSymbolDocumentationLength` limits, both
+256 by default. Only `appendState` forces a private rule request group.
 
 `overrides` changes any rule by the id the report shows, a preset's with the
 preset first, without copying it; an id no rule has refuses the run. `rules`
@@ -330,8 +346,8 @@ re-judges that rule; a threshold change re-judges nothing.
 
 Dependencies, related source, reader selection, shared read-context contents,
 and hook-owned external data are deliberately not fingerprinted. If `A.ts` imports
-`B.ts`, changing `B.ts` does not invalidate `A.ts`. Changing config `reads` does
-not refresh its cached answers either. This keeps planning cheap but accepts
+`B.ts`, changing `B.ts` does not invalidate `A.ts`. Changing config `reads` or
+`typeAware` does not refresh its cached answers either. This keeps planning cheap but accepts
 stale dependency/context judgments.
 
 `planAudit` reads/counts/hashes code, checks the cache, and makes code plus cheap
@@ -344,8 +360,8 @@ budgeting, native reads, and HTTP execution.
 Source reload/hash work is bounded to 8 files; plans retain compact metadata and
 estimates, not all file contents. Only sampled-linter files need a planning
 reread. After confirmation, execution reloads request-bearing files and cached
-finding excerpts, preparing full native context only for pending or
-cached-unlocated files just before judge/locate. Every reload validates normalized
+finding excerpts, preparing native context only when type awareness is enabled,
+for pending or cached-unlocated files just before judge/locate. Every reload validates normalized
 code and ignore directives against the active plan; changes refuse with rerun
 guidance, without adding persistent-cache keys. A fully cached and located run
 starts no compiler and needs no API key or Jev requests.
@@ -390,7 +406,8 @@ the file breaks the rule. On a terminal it is amber near its rule's
 threshold, within a quarter of the room above it (0.80 to 0.84 at a threshold
 of 0.80), and green above that: a rule whose findings are mostly amber turns
 on where its threshold sits. `context` is its probability that the file and
-shared context show enough to decide; all three readers are included by default.
+shared context show enough to decide. Default context is `workspacePackages`;
+`symbols` and `references` require `typeAware: true` or `--type-aware`.
 It is colored the same way around the sufficiency threshold, 0.6
 by default: amber from 0.50 to 0.69, red below. Below 0.6 the finding also
 carries `warning: this file may not show enough to check this rule`. It turns

@@ -42,6 +42,7 @@ describe("cli", () => {
     const { stdout } = await execFileAsync("bun", [main, "lint", "--help"], {
       cwd: process.cwd(),
     });
+    expect(stdout).toContain("--type-aware");
     expect(stdout).toContain("files needing requests");
     expect(stdout).toContain("A file can send multiple requests");
     const refused = await execFileAsync("bun", [main, "lint", "--limit", "-1"], {
@@ -242,7 +243,30 @@ describe("cli", () => {
     expect((await readdir(join(root, installed))).sort()).toEqual(["data", "style"]);
   });
 
-  it("uses inferred native context with no config or tsconfig and preserves explicit code-only opt-out", async () => {
+  it("removes the temporary clone directory when cloning fails", async () => {
+    const root = await mkdtemp(join(tmpdir(), "adhere-failed-clone-"));
+    const temporary = join(root, "temporary");
+    await mkdir(temporary);
+    const { SSH_CLIENT: _sshClient, SSH2_CLIENT: _ssh2Client, ...localEnv } = process.env;
+    const refused = await execFileAsync("bun", [main, "install", "acme/missing"], {
+      cwd: root,
+      env: {
+        ...localEnv,
+        TMPDIR: temporary,
+        GIT_CONFIG_COUNT: "1",
+        GIT_CONFIG_KEY_0: `url.file://${join(root, "missing")}.insteadOf`,
+        GIT_CONFIG_VALUE_0: "https://github.com/acme/missing.git",
+      },
+    }).then(
+      () => undefined,
+      (error: { readonly code: number; readonly stderr: string }) => error,
+    );
+    expect(refused?.code).toBe(1);
+    expect(refused?.stderr).toContain("Could not clone acme/missing");
+    expect(await readdir(temporary)).toEqual([]);
+  });
+
+  it("keeps defaults compiler-free without config or tsconfig and infers context only with --type-aware", async () => {
     const root = await mkdtemp(join(tmpdir(), "adhere-default-reads-"));
     const { TYPESAFE_API_KEY: _key, ...env } = process.env;
     const options = {
@@ -278,7 +302,13 @@ describe("cli", () => {
       await expect(stat(capturedFile)).rejects.toMatchObject({ code: "ENOENT" });
       await expect(stat(join(root, "tsconfig.json"))).rejects.toMatchObject({ code: "ENOENT" });
 
-      const refused = await execFileAsync("bun", [main, "lint"], options).then(
+      const refused = await execFileAsync("bun", [main, "lint"], {
+        ...options,
+        env: {
+          ...options.env,
+          ADHERE_TYPESCRIPT_PACKAGE: join(root, "missing-compiler", "package.json"),
+        },
+      }).then(
         () => undefined,
         (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) =>
           error,
@@ -291,6 +321,19 @@ describe("cli", () => {
         await readFile(capturedFile, "utf8"),
       );
       expect(state).toMatchObject({
+        code: { "1": source },
+        workspacePackages: {},
+      });
+      expect(state).not.toHaveProperty("symbols");
+      expect(state).not.toHaveProperty("references");
+      const optedIn = await execFileAsync("bun", [main, "lint", "--type-aware"], options).then(
+        () => undefined,
+        (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) =>
+          error,
+      );
+      expect(optedIn?.code).toBe(1);
+      expect(`${optedIn?.stdout}${optedIn?.stderr}`).toContain("TYPESAFE_API_KEY");
+      expect(JSON.parse(await readFile(capturedFile, "utf8"))).toMatchObject({
         code: { "1": source },
         workspacePackages: {},
         symbols: { port: "```typescript\n3000\n```" },
@@ -315,11 +358,49 @@ describe("cli", () => {
   }, 30_000);
 
   it.each([
-    { policy: "default", reads: undefined },
-    { policy: "code-only", reads: [] },
+    {
+      policy: "default",
+      reads: undefined,
+      typeAware: undefined,
+      flag: false,
+      native: false,
+      workspace: true,
+    },
+    {
+      policy: "code-only",
+      reads: [],
+      typeAware: false,
+      flag: false,
+      native: false,
+      workspace: false,
+    },
+    {
+      policy: "legacy native names without opt-in",
+      reads: ["symbols", "references"],
+      typeAware: undefined,
+      flag: false,
+      native: false,
+      workspace: false,
+    },
+    {
+      policy: "config opt-in with empty reads and absent flag",
+      reads: [],
+      typeAware: true,
+      flag: false,
+      native: true,
+      workspace: false,
+    },
+    {
+      policy: "flag opt-in overrides config false",
+      reads: ["workspacePackages"],
+      typeAware: false,
+      flag: true,
+      native: true,
+      workspace: true,
+    },
   ])(
     "prepares $policy context for a request hook before refusing an absent API key",
-    async ({ reads }) => {
+    async ({ reads, typeAware, flag, native, workspace }) => {
       const root = await mkdtemp(join(tmpdir(), "adhere-default-context-"));
       const { TYPESAFE_API_KEY: _key, ...env } = process.env;
       const library = "export const value = 1;\n";
@@ -337,7 +418,7 @@ describe("cli", () => {
             name: "orders-core",
             exports: "./library.ts",
           }),
-          ...(reads === undefined
+          ...(native
             ? {
                 "tsconfig.json": JSON.stringify({
                   compilerOptions: {
@@ -351,7 +432,8 @@ describe("cli", () => {
               }
             : {}),
           ".adhere/config.ts": `export default {
-          ${reads === undefined ? "" : "reads: [],"}
+          ${reads === undefined ? "" : `reads: ${JSON.stringify(reads)},`}
+          ${typeAware === undefined ? "" : `typeAware: ${typeAware},`}
           rules: {
             named: {
               description: "A value must be named.",
@@ -388,10 +470,22 @@ describe("cli", () => {
         // Only execution runs the hook; isolated missing credentials prevent HTTP.
         const refused = await execFileAsync(
           "bun",
-          [main, "lint", "--filter", "packages/orders/caller.ts"],
+          [
+            main,
+            "lint",
+            "--filter",
+            "packages/orders/caller.ts",
+            ...(flag ? ["--type-aware"] : []),
+          ],
           {
             cwd: root,
-            env: { ...env, XDG_CONFIG_HOME: join(root, "config") },
+            env: {
+              ...env,
+              XDG_CONFIG_HOME: join(root, "config"),
+              ...(native
+                ? {}
+                : { ADHERE_TYPESCRIPT_PACKAGE: join(root, "missing-compiler", "package.json") }),
+            },
             timeout: 20_000,
           },
         ).then(
@@ -409,14 +503,16 @@ describe("cli", () => {
           path: join(root, "packages/orders/caller.ts"),
           contents: caller,
         });
-        if (reads === undefined) {
+        expect(captured.state.code).toEqual({ "1": caller });
+        if (workspace) {
+          expect(captured.state.workspacePackages).toMatchObject({
+            "orders-core": "packages/orders",
+          });
+        } else expect(captured.state).not.toHaveProperty("workspacePackages");
+        if (native) {
           expect(captured.state).toMatchObject({
             __comment: expect.stringContaining("code"),
             code: { "1": caller },
-            workspacePackages: {
-              __comment: expect.stringContaining("package"),
-              "orders-core": "packages/orders",
-            },
             symbols: {
               __comment: expect.stringContaining("types"),
               value: "```typescript\n1\n```",
@@ -427,7 +523,9 @@ describe("cli", () => {
             },
           });
         } else {
-          expect(captured.state).toEqual({ code: { "1": caller } });
+          expect(captured.state).not.toHaveProperty("symbols");
+          expect(captured.state).not.toHaveProperty("references");
+          if (!workspace) expect(captured.state).toEqual({ code: { "1": caller } });
           await expect(stat(join(root, "tsconfig.json"))).rejects.toMatchObject({ code: "ENOENT" });
         }
       } finally {
