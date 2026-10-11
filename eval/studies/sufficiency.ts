@@ -15,19 +15,20 @@ import { readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { isNote, withoutComments } from "#comments.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { judgeBody, judgeQuestion } from "#services/Jev.ts";
 import type { Rule } from "#config.ts";
 
-interface Labeled {
-  readonly repo: string;
-  readonly file: string;
-  readonly rule: string;
-  readonly p: number;
-  readonly label: "real" | "false" | "debatable";
-}
+const Labeled = Schema.Struct({
+  repo: Schema.String,
+  file: Schema.String,
+  rule: Schema.String,
+  p: Schema.Finite,
+  label: Schema.Literals(["real", "false", "debatable"]),
+});
+type Labeled = typeof Labeled.Type;
 
 const presets = new URL("../../presets/", import.meta.url);
 
@@ -83,18 +84,20 @@ const direct = (rule: Rule) => {
   };
 };
 
+const Response = Schema.Struct({
+  answers: Schema.Record(Schema.String, Schema.Struct({ noul: Schema.Finite })),
+});
+
 const ask = async (key: string, body: unknown) => {
   for (let attempt = 0; attempt < 5; attempt++) {
     const response = await fetch("https://api.typesafe.ai/v1/systemone", {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
     });
     if (response.ok) {
-      const { answers } = (await response.json()) as {
-        answers: Record<string, { noul: number }>;
-      };
-      return answers;
+      return Schema.decodeUnknownSync(Response)(await response.json()).answers;
     }
     if (response.status !== 429 && response.status < 500) {
       throw new Error(`HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`);
@@ -118,10 +121,8 @@ const key = process.env.TYPESAFE_API_KEY;
 if (key === undefined) {
   throw new Error("usage: TYPESAFE_API_KEY=… bun eval/studies/sufficiency.ts [results.json]");
 }
-const labeled = (
-  JSON.parse(
-    await readFile(new URL("presets-labels.json", import.meta.url), "utf8"),
-  ) as ReadonlyArray<Labeled>
+const labeled = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(Labeled)))(
+  await readFile(new URL("presets-labels.json", import.meta.url), "utf8"),
 ).filter((f) => exists(f.rule));
 const rules = new Map<string, Rule>();
 for (const id of new Set(labeled.map((f) => f.rule))) rules.set(id, await ruleOf(id));

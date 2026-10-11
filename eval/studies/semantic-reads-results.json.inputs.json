@@ -162,23 +162,15 @@
     },
     "typescript/types/validate-external-data": {
       "description": "Data from outside the program, such as a parsed request body, a fetch response, a file's contents, a message, or an environment variable, must be checked at runtime before code gives it a type, never cast with `as` or assigned from `any` to a declared type. A schema's parse or decode, such as Zod's or Effect Schema's, or a type guard that checks each field it claims, is a runtime check.",
-      "appliesTo": [
-        "code that reads data from outside the program"
-      ],
-      "excludeIf": [
-        "a value read through a typed client of the program's own database"
-      ],
+      "appliesTo": ["code that reads data from outside the program"],
+      "excludeIf": ["a value read through a typed client of the program's own database"],
       "must": "const User = z.object({ id: z.string(), email: z.string().email() });\n\nconst response = await fetch(`/api/users/${id}`);\nconst user = User.parse(await response.json());",
       "never": "const response = await fetch(`/api/users/${id}`);\nconst user = (await response.json()) as User;"
     },
     "security/no-secrets-in-output": {
       "description": "A secret, such as a password, an API key, a token, a private key, a session id, or a connection string with credentials, must never be written to a log, put in an error message, or returned in an HTTP response; code must refer to a secret only by its name, its presence, or a non-secret id.",
-      "appliesTo": [
-        "code that writes a log, builds an error message, or builds an HTTP response"
-      ],
-      "excludeIf": [
-        "a masked secret that shows at most a few of its characters"
-      ],
+      "appliesTo": ["code that writes a log, builds an error message, or builds an HTTP response"],
+      "excludeIf": ["a masked secret that shows at most a few of its characters"],
       "must": "logger.info(\"calling billing\", { keyId: apiKey.id });\nthrow new Error(`Could not connect to the database at ${dbHost}`);",
       "never": "logger.info(`calling billing with key ${apiKey.secret}`);\nthrow new Error(`Could not connect to ${process.env.DATABASE_URL}`);"
     },

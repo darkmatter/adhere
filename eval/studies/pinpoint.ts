@@ -42,12 +42,13 @@ import { parseRuleMarkdown } from "#markdown.ts";
 import { judgeBody, judgeQuestion, requestsOf, tokensOf } from "#services/Jev.ts";
 
 /** A real finding's violations, as marked by hand: the clearest first. */
-interface Marked {
-  readonly repo: string;
-  readonly file: string;
-  readonly rule: string;
-  readonly ranges: ReadonlyArray<Range>;
-}
+const Marked = Schema.Struct({
+  repo: Schema.String,
+  file: Schema.String,
+  rule: Schema.String,
+  ranges: Schema.Array(Schema.Struct({ first: Schema.Natural, last: Schema.Natural })),
+});
+type Marked = typeof Marked.Type;
 
 const Response = Schema.Struct({
   answers: Schema.Record(
@@ -135,10 +136,8 @@ if (key === undefined) {
     "usage: TYPESAFE_API_KEY=… bun eval/studies/pinpoint.ts [results.json] [halving | inline]",
   );
 }
-const items = (
-  JSON.parse(
-    await readFile(new URL("violations.json", import.meta.url), "utf8"),
-  ) as ReadonlyArray<Marked>
+const items = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(Marked)))(
+  await readFile(new URL("violations.json", import.meta.url), "utf8"),
 ).filter((item) => exists(item.rule) && item.ranges.length > 0);
 const rules = new Map<string, Rule>();
 for (const id of new Set(items.map((item) => item.rule))) rules.set(id, await ruleOf(id));

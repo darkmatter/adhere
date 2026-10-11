@@ -32,13 +32,14 @@ import { type Range, sectionsOf } from "#excerpt.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { judgeQuestion, locateBody } from "#services/Jev.ts";
 
-interface Labeled {
-  readonly repo: string;
-  readonly file: string;
-  readonly line: number;
-  readonly rule: string;
-  readonly label: "real" | "false" | "debatable";
-}
+const Labeled = Schema.Struct({
+  repo: Schema.String,
+  file: Schema.String,
+  line: Schema.Natural,
+  rule: Schema.String,
+  label: Schema.Literals(["real", "false", "debatable"]),
+});
+type Labeled = typeof Labeled.Type;
 
 type Lines = ReadonlyArray<string>;
 
@@ -253,10 +254,8 @@ const key = process.env.TYPESAFE_API_KEY;
 if (key === undefined) {
   throw new Error("usage: TYPESAFE_API_KEY=… bun eval/studies/sections.ts [results.json] [arm…]");
 }
-const labeled = (
-  JSON.parse(
-    await readFile(new URL("presets-labels.json", import.meta.url), "utf8"),
-  ) as ReadonlyArray<Labeled>
+const labeled = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(Labeled)))(
+  await readFile(new URL("presets-labels.json", import.meta.url), "utf8"),
 ).filter((f) => exists(f.rule));
 const rules = new Map<string, Rule>();
 for (const id of new Set(labeled.map((f) => f.rule))) rules.set(id, await ruleOf(id));

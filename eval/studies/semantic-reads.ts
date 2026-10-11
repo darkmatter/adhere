@@ -31,7 +31,7 @@ import { contextCases, type ContextCase } from "./semantic-reads-cases.ts";
 
 const MODEL = "jev-1.13.0";
 const THRESHOLD = 0.8;
-const CONTEXT_FORMAT = "compiler-types-declaration-scopes-v1";
+const CONTEXT_FORMAT = "compiler-types-flat-declaration-scopes-v2";
 const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const CASE_DIGEST = digest(contextCases);
 const definitions = [
@@ -279,12 +279,10 @@ const program = Effect.gen(function* () {
       state.references,
       helper
         ? {
-            [helper]: {
-              "neighbor.ts": sample.files["neighbor.ts"]!.slice(
-                0,
-                sample.files["neighbor.ts"]!.indexOf("\n}") + 2,
-              ),
-            },
+            [`${helper}:neighbor.ts`]: sample.files["neighbor.ts"]!.slice(
+              0,
+              sample.files["neighbor.ts"]!.indexOf("\n}") + 2,
+            ),
           }
         : {},
       `${sample.name}: expected the complete helper declaration without neighboring functions or location/count metadata`,
@@ -356,12 +354,7 @@ const program = Effect.gen(function* () {
           [...new Set(Object.values(contexts[sample.name]!.references!).flatMap(Object.keys))].join(
             ", ",
           ),
-          String(
-            Object.values(contexts[sample.name]!.references!).reduce(
-              (n, paths) => n + Object.keys(paths).length,
-              0,
-            ),
-          ),
+          String(Object.keys(contexts[sample.name]!.references!).length),
           sample.note,
         ]),
       ),
