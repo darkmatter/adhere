@@ -1,0 +1,61 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CodePipeline/Pipeline.ts",
+  "kind": "judge",
+  "ordinal": 96,
+  "artifact": "attempt-00096.json",
+  "started": "2026-10-11T03:27:33.248Z",
+  "estimatedTokens": 4707,
+  "reservedTokens": 64000,
+  "chargedTokens": 3044,
+  "outcome": "answered",
+  "milliseconds": 78.54722299999776,
+  "referencesPresent": false,
+  "bodyDigest": "a3fd8b6a7718a7dbe77e9a76b66bae08acc60bfcc0d29fe83106865e0f4b2f3e",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":3044,\"output_tokens\":25}}",
+  "inputTokens": 3044,
+  "answers": {
+    "providers/idempotent-delete": 0.92
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as codepipeline from \"@distilled.cloud/aws/codepipeline\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, diffTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";",
+        "2": "\n\n\n\nexport interface PipelineArtifactStore {\n\n\n\n\n  type?: \"S3\";\n\n\n\n  location: string;\n\n\n\n  encryptionKey?: {\n\n    id: string;\n\n    type: \"KMS\";\n  };\n}\n\n\n\n\nexport interface PipelineActionConfig {\n\n  name: string;",
+        "3": "\n  category:\n    | \"Source\"\n    | \"Build\"\n    | \"Deploy\"\n    | \"Test\"\n    | \"Invoke\"\n    | \"Approval\"\n    | \"Compute\";\n\n  owner: \"AWS\" | \"ThirdParty\" | \"Custom\";\n\n\n\n\n  provider: string;\n\n\n\n\n  version?: string;\n\n\n\n\n  configuration?: Record<string, string>;\n\n  inputArtifacts?: string[];\n\n  outputArtifacts?: string[];",
+        "4": "\n  runOrder?: number;\n\n  region?: string;\n\n  roleArn?: string;\n\n  namespace?: string;\n}\n\n\n\n\nexport interface PipelineStageConfig {\n\n  name: string;\n\n  actions: PipelineActionConfig[];\n}\n\nexport interface PipelineProps {\n\n\n\n\n  pipelineName?: string;\n\n\n\n\n  roleArn: string;",
+        "5": "\n\n\n  artifactStore: PipelineArtifactStore;\n\n\n\n\n  stages: PipelineStageConfig[];\n\n\n\n\n  pipelineType?: \"V1\" | \"V2\";\n\n\n\n\n  executionMode?: \"QUEUED\" | \"SUPERSEDED\" | \"PARALLEL\";\n\n\n\n  tags?: Record<string, string>;\n}",
+        "6": "\nexport interface Pipeline extends Resource<\n  \"AWS.CodePipeline.Pipeline\",\n  PipelineProps,\n  {\n\n    pipelineName: string;\n\n    pipelineArn: string;\n\n    pipelineVersion: number;\n  },\n  never,\n  Providers\n> {}",
+        "7": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Pipeline = Resource<Pipeline>(\"AWS.CodePipeline.Pipeline\");\n\n\nconst toTagRecord = (\n  tags: ReadonlyArray<{ key?: string; value?: string }> | undefined,\n): Record<string, string> =>\n  Object.fromEntries(\n    (tags ?? [])\n      .filter(\n        (tag): tag is { key: string; value: string } =>\n          typeof tag.key === \"string\" && typeof tag.value === \"string\",\n      )\n      .map((tag) => [tag.key, tag.value]),\n  );\n\nconst toWireArtifactStore = (\n  store: PipelineArtifactStore,\n): codepipeline.ArtifactStore => ({\n  type: store.type ?? \"S3\",\n  location: store.location,\n  encryptionKey: store.encryptionKey,\n});",
+        "8": "\nconst toWireStages = (\n  stages: PipelineStageConfig[],\n): codepipeline.StageDeclaration[] =>\n  stages.map((stage) => ({\n    name: stage.name,\n    actions: stage.actions.map((action) => ({\n      name: action.name,\n      actionTypeId: {\n        category: action.category,\n        owner: action.owner,\n        provider: action.provider,\n        version: action.version ?? \"1\",\n      },\n      runOrder: action.runOrder,\n      configuration: action.configuration,\n      inputArtifacts: action.inputArtifacts?.map((n) => ({ name: n })),\n      outputArtifacts: action.outputArtifacts?.map((n) => ({ name: n })),\n      region: action.region,\n      roleArn: action.roleArn,\n      namespace: action.namespace,\n    })),\n  }));",
+        "9": "\nconst toWireDeclaration = (\n  name: string,\n  props: PipelineProps,\n): codepipeline.PipelineDeclaration => ({\n  name,\n  roleArn: props.roleArn,\n  artifactStore: toWireArtifactStore(props.artifactStore),\n  stages: toWireStages(props.stages),\n  pipelineType: props.pipelineType ?? \"V2\",\n  executionMode: props.executionMode,\n});\n\n\n\n\n\n\n\n\nconst retryIamPropagation = <\n  A,\n  E extends { readonly _tag: string; readonly message?: string },\n  R,\n>(\n  effect: Effect.Effect<A, E, R>,\n): Effect.Effect<A, E, R> =>",
+        "10": "  effect.pipe(\n    Effect.retry({\n      while: (e) => {\n        const message = (e.message ?? \"\").toLowerCase();\n        return (\n          e._tag === \"InvalidStructureException\" &&\n          (message.includes(\"not authorized\") ||\n            message.includes(\"cannot be assumed\") ||\n            message.includes(\"unable to assume\"))\n        );\n      },\n      schedule: Schedule.max([\n        Schedule.fixed(\"3 seconds\"),\n        Schedule.recurs(10),\n      ]),\n    }),\n  );\n\nexport const PipelineProvider = () =>\n  Provider.effect(\n    Pipeline,\n    Effect.gen(function* () {\n      const toName = (id: string, props: Partial<PipelineProps>) =>\n        props.pipelineName\n          ? Effect.succeed(props.pipelineName)\n          : createPhysicalName({ id, maxLength: 100 });",
+        "11": "\n\n      const getPipeline = Effect.fn(function* (name: string) {\n        return yield* codepipeline\n          .getPipeline({ name })\n          .pipe(\n            Effect.catchTag(\"PipelineNotFoundException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n      });",
+        "12": "\n      const syncTags = Effect.fn(function* (\n        arn: string,\n        desiredTags: Record<string, string>,\n      ) {\n        const observed = yield* codepipeline\n          .listTagsForResource({ resourceArn: arn })\n          .pipe(Effect.catch(() => Effect.succeed(undefined)));\n        const { removed, upsert } = diffTags(\n          toTagRecord(observed?.tags),\n          desiredTags,\n        );\n        if (upsert.length > 0) {\n          yield* codepipeline.tagResource({\n            resourceArn: arn,\n            tags: upsert.map(({ Key, Value }) => ({ key: Key, value: Value })),\n          });\n        }\n        if (removed.length > 0) {\n          yield* codepipeline.untagResource({\n            resourceArn: arn,\n            tagKeys: removed,\n          });\n        }\n      });\n\n      return {\n        stables: [\"pipelineName\", \"pipelineArn\"],",
+        "13": "\n        diff: Effect.fn(function* ({ id, olds, news }) {\n          if (!isResolved(news)) return undefined;\n          if (\n            (yield* toName(id, olds ?? {})) !== (yield* toName(id, news ?? {}))\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name = output?.pipelineName ?? (yield* toName(id, olds ?? {}));\n          const found = yield* getPipeline(name);\n          if (found?.metadata?.pipelineArn === undefined) return undefined;\n          const attrs = {\n            pipelineName: found.pipeline?.name ?? name,\n            pipelineArn: found.metadata.pipelineArn,\n            pipelineVersion: found.pipeline?.version ?? 1,\n          };\n          const tags = yield* codepipeline\n            .listTagsForResource({ resourceArn: attrs.pipelineArn })\n            .pipe(\n              Effect.map((res) => toTagRecord(res.tags)),\n              Effect.catch(() => Effect.succeed({})),\n            );\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name = output?.pipelineName ?? (yield* toName(id, news));",
+        "14": "          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...internalTags, ...news.tags };\n          const declaration = toWireDeclaration(name, news);\n\n\n          let observed = yield* getPipeline(name);\n\n\n          if (observed === undefined) {\n            yield* retryIamPropagation(\n              codepipeline.createPipeline({\n                pipeline: declaration,\n                tags: Object.entries(desiredTags).map(([key, value]) => ({\n                  key,\n                  value,\n                })),\n              }),\n            ).pipe(\n              Effect.catchTag(\"PipelineNameInUseException\", () => Effect.void),\n            );\n            observed = yield* getPipeline(name);\n          } else {\n\n            yield* retryIamPropagation(\n              codepipeline.updatePipeline({ pipeline: declaration }),\n            );\n            observed = yield* getPipeline(name);\n          }",
+        "15": "\n          const arn =\n            observed?.metadata?.pipelineArn ??\n            `arn:aws:codepipeline:${region}:${accountId}:${name}`;\n\n\n          yield* syncTags(arn, desiredTags);\n\n\n          yield* session.note(name);\n          return {\n            pipelineName: observed?.pipeline?.name ?? name,\n            pipelineArn: arn,\n            pipelineVersion: observed?.pipeline?.version ?? 1,\n          };\n        }),\n\n        delete: Effect.fn(function* ({ output }) {\n\n          yield* codepipeline.deletePipeline({ name: output.pipelineName });\n        }),",
+        "16": "\n        list: () =>\n          codepipeline.listPipelines.pages({}).pipe(\n            Stream.runCollect,\n            Effect.flatMap((chunk) =>\n              Effect.gen(function* () {\n                const { accountId, region } = yield* AWSEnvironment.current;\n                return Array.from(chunk)\n                  .flatMap((page) => page.pipelines ?? [])\n                  .flatMap((p) =>\n                    p.name !== undefined\n                      ? [\n                          {\n                            pipelineName: p.name,\n                            pipelineArn: `arn:aws:codepipeline:${region}:${accountId}:${p.name}`,\n                            pipelineVersion: p.version ?? 1,\n                          },\n                        ]\n                      : [],\n                  );\n              }),\n            ),\n          ),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

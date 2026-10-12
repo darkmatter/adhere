@@ -1,0 +1,58 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Cloudflare/Tags/ZoneResourceTags.ts",
+  "kind": "judge",
+  "ordinal": 248,
+  "artifact": "attempt-00248.json",
+  "started": "2026-10-11T03:27:58.372Z",
+  "estimatedTokens": 4010,
+  "reservedTokens": 64000,
+  "chargedTokens": 2648,
+  "outcome": "answered",
+  "milliseconds": 99.81710100000055,
+  "referencesPresent": false,
+  "bodyDigest": "a48710b84567501ab4a0dd6d150db2ce82598fb8c8085a6e56a458c2c4472438",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":2648,\"output_tokens\":25}}",
+  "inputTokens": 2648,
+  "answers": {
+    "providers/idempotent-delete": 0.92
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as resourceTagging from \"@distilled.cloud/cloudflare/resource-tagging\";\nimport * as Effect from \"effect/Effect\";\nimport * as Predicate from \"effect/Predicate\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\n\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport type { Input } from \"../../Input.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { recordsEqual } from \"../../Util/equal.ts\";\nimport { CloudflareEnvironment } from \"../CloudflareEnvironment.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nconst TypeId = \"Cloudflare.Tags.ZoneResourceTags\" as const;\ntype TypeId = typeof TypeId;\n\n\n\n\n\nconst targetVisibleRetry = {\n  while: (e: { _tag: string }) => e._tag === \"ZoneTagResourceNotFound\",\n  schedule: Schedule.max([\n    Schedule.exponential(\"500 millis\"),\n    Schedule.recurs(10),\n  ]),\n} as const;",
+        "2": "\n\n\n\n\nexport type ZoneTagResourceType =\n  | \"access_application_policy\"\n  | \"api_gateway_operation\"\n  | \"custom_certificate\"\n  | \"custom_hostname\"\n  | \"dns_record\"\n  | \"managed_client_certificate\"\n  | \"zone\"\n  | (string & {});\n\nexport interface ZoneResourceTagsProps {\n\n\n\n\n\n  zoneId: string;\n\n\n\n\n\n\n\n\n\n  resourceType: ZoneTagResourceType;",
+        "3": "\n\n\n\n\n\n  resourceId: string;\n\n\n\n\n\n\n  accessApplicationId?: string;\n\n\n\n\n\n\n\n\n  tags: Record<string, string>;\n}",
+        "4": "\nexport interface ZoneResourceTagsAttributes {\n\n  zoneId: string;\n\n  resourceType: ZoneTagResourceType;\n\n  resourceId: string;\n\n  accessApplicationId: string | undefined;\n\n  tags: Record<string, string>;\n\n  etag: string;\n}\n\nexport type ZoneResourceTags = Resource<\n  TypeId,\n  ZoneResourceTagsProps,\n  ZoneResourceTagsAttributes,\n  never,\n  Providers\n>;",
+        "5": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ZoneResourceTags = Resource<ZoneResourceTags>(TypeId);\n\n\n\n\nexport const isZoneResourceTags = (value: unknown): value is ZoneResourceTags =>\n  Predicate.hasProperty(value, \"Type\") && value.Type === TypeId;\n\nexport const ZoneResourceTagsProvider = () =>\n  Provider.succeed(ZoneResourceTags, {\n    stables: [\"zoneId\", \"resourceType\", \"resourceId\", \"accessApplicationId\"],",
+        "6": "\n    list: Effect.fn(function* () {\n      const { accountId } = yield* yield* CloudflareEnvironment;\n\n\n\n\n\n      return yield* resourceTagging.listResourceTaggings\n        .pages({ accountId })\n        .pipe(\n          Stream.runCollect,\n          Effect.map((chunk) =>\n            Array.from(chunk).flatMap((page) =>\n              (page.result ?? [])\n                .filter((item): item is ZoneScopedTagging => \"zoneId\" in item)\n                .map((item): ZoneResourceTagsAttributes => ({\n                  zoneId: item.zoneId,\n                  resourceType: item.type,\n                  resourceId: item.id,\n                  accessApplicationId:\n                    \"accessApplicationId\" in item\n                      ? item.accessApplicationId\n                      : undefined,\n                  tags: narrowTags(item.tags),\n                  etag: item.etag,\n                })),\n            ),\n          ),\n        );\n    }),",
+        "7": "\n    diff: Effect.fn(function* ({ olds = {}, news }) {\n      const o = olds as Partial<ZoneResourceTagsProps>;\n      const n = news as ZoneResourceTagsProps;\n      if (o.resourceType !== undefined && o.resourceType !== n.resourceType) {\n        return { action: \"replace\" } as const;\n      }\n\n\n\n      if (\n        typeof o.zoneId === \"string\" &&\n        typeof n.zoneId === \"string\" &&\n        o.zoneId !== n.zoneId\n      ) {\n        return { action: \"replace\" } as const;\n      }\n      if (\n        typeof o.resourceId === \"string\" &&\n        typeof n.resourceId === \"string\" &&\n        o.resourceId !== n.resourceId\n      ) {\n        return { action: \"replace\" } as const;\n      }",
+        "8": "      if (\n        typeof o.accessApplicationId === \"string\" &&\n        typeof n.accessApplicationId === \"string\" &&\n        o.accessApplicationId !== n.accessApplicationId\n      ) {\n        return { action: \"replace\" } as const;\n      }\n    }),\n\n    read: Effect.fn(function* ({ output, olds }) {\n      const zoneId = output?.zoneId ?? (olds?.zoneId as string | undefined);\n      const resourceId =\n        output?.resourceId ?? (olds?.resourceId as string | undefined);\n      const resourceType = output?.resourceType ?? olds?.resourceType;\n      const accessApplicationId =\n        output?.accessApplicationId ??\n        (olds?.accessApplicationId as string | undefined);\n      if (!zoneId || !resourceId || !resourceType) return undefined;",
+        "9": "\n      const observed = yield* resourceTagging\n        .getZoneTag({\n          zoneId,\n          resourceId,\n          resourceType,\n          accessApplicationId,\n        })\n\n\n        .pipe(\n          Effect.catchTag(\"ZoneTagResourceNotFound\", () =>\n            Effect.succeed(undefined),\n          ),\n        );\n      if (observed === undefined) return undefined;\n      const tags = narrowTags(observed.tags);\n\n\n      if (Object.keys(tags).length === 0) return undefined;\n\n      const attrs: ZoneResourceTagsAttributes = {\n        zoneId,\n        resourceType,\n        resourceId,\n        accessApplicationId,\n        tags,\n        etag: observed.etag,\n      };",
+        "10": "\n\n\n      return output ? attrs : Unowned(attrs);\n    }),\n\n    reconcile: Effect.fn(function* ({ news }) {\n\n      const zoneId = news.zoneId as string;\n      const resourceId = news.resourceId as string;\n      const accessApplicationId = news.accessApplicationId as\n        | string\n        | undefined;\n      const desired = resolveTags(news.tags);\n\n\n\n\n\n\n\n      const observed = yield* resourceTagging\n        .getZoneTag({\n          zoneId,\n          resourceId,\n          resourceType: news.resourceType,\n          accessApplicationId,\n        })\n        .pipe(Effect.retry(targetVisibleRetry));",
+        "11": "\n\n\n      if (recordsEqual(narrowTags(observed.tags), desired)) {\n        return {\n          zoneId,\n          resourceType: news.resourceType,\n          resourceId,\n          accessApplicationId,\n          tags: desired,\n          etag: observed.etag,\n        } satisfies ZoneResourceTagsAttributes;\n      }\n\n      const updated = yield* resourceTagging\n        .putZoneTag({\n          zoneId,\n          resourceId,\n          resourceType: news.resourceType,\n          accessApplicationId,\n          tags: desired,\n        })\n        .pipe(Effect.retry(targetVisibleRetry));\n      return {\n        zoneId,\n        resourceType: news.resourceType,\n        resourceId,\n        accessApplicationId,\n        tags: narrowTags(updated.tags),\n        etag: updated.etag,\n      } satisfies ZoneResourceTagsAttributes;\n    }),",
+        "12": "\n    delete: Effect.fn(function* ({ output }) {\n\n\n      yield* resourceTagging.deleteZoneTag({\n        zoneId: output.zoneId,\n        resourceId: output.resourceId,\n        resourceType: output.resourceType,\n        accessApplicationId: output.accessApplicationId,\n      });\n    }),\n  });\n\n\n\n\n\n\n\n\ntype ZoneScopedTagging = Extract<\n  resourceTagging.ListResourceTaggingsResponse[\"result\"][number],\n  { zoneId: string }\n>;\n\n\nconst narrowTags = (tags: Record<string, unknown>): Record<string, string> =>\n  Object.fromEntries(\n    Object.entries(tags).map(([k, v]) => [k, String(v)] as const),\n  );",
+        "13": "\n\nconst resolveTags = (\n  tags: Record<string, Input<string>>,\n): Record<string, string> =>\n  Object.fromEntries(\n    Object.entries(tags).map(([k, v]) => [k, v as string] as const),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

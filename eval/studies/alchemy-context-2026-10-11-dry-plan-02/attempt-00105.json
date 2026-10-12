@@ -1,0 +1,694 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/ACME/Certificate.ts",
+  "kind": "locate",
+  "ordinal": 105,
+  "artifact": "attempt-00105.json",
+  "started": "2026-10-11T03:20:38.981Z",
+  "estimatedTokens": 16705,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.22890100000040547,
+  "referencesPresent": false,
+  "bodyDigest": "2c63db2fb1353082f9ecb5fdfe9f9d91f6d54688914d8e971724c23314b1cefb",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "33",
+    "end:providers/idempotent-delete:2": "33",
+    "start:providers/idempotent-delete:3": "63",
+    "end:providers/idempotent-delete:3": "63",
+    "start:providers/idempotent-delete:4": "64",
+    "end:providers/idempotent-delete:4": "64",
+    "start:providers/idempotent-delete:5": "94",
+    "end:providers/idempotent-delete:5": "94",
+    "start:providers/idempotent-delete:6": "153",
+    "end:providers/idempotent-delete:6": "153",
+    "start:providers/idempotent-delete:7": "183",
+    "end:providers/idempotent-delete:7": "183",
+    "start:providers/idempotent-delete:8": "212",
+    "end:providers/idempotent-delete:8": "212",
+    "start:providers/idempotent-delete:9": "234",
+    "end:providers/idempotent-delete:9": "234",
+    "start:providers/idempotent-delete:10": "252",
+    "end:providers/idempotent-delete:10": "252",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "account": "```typescript\nAccountRef\n```\n\n---\n\n```typescript\nAccount\n```\n\nThe Account that orders the certificate. Changing it replaces.",
+        "Account": "An ACME account with a certificate authority — the identity that every\nCertificate and every runtime IssueCertificate call\nsigns with. One per CA per stack.\n\nThe account key is generated on first reconcile and persisted as a\nredacted value alongside the CA",
+        "AccountCredentials": "Everything the flow needs to sign requests as an account.",
+        "accountKey": "```typescript\nRedacted.Redacted<string>\n```",
+        "accountLayer": "```typescript\n(credentials: AccountCredentials) => import(\"effect/Layer\").Layer<Acme.Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```\n\nThe SDK's `Credentials` (+ a CA-trusting `HttpClient` for private CAs)\nfor one account. Provide ar",
+        "accountOf": "```typescript\n(value: unknown) => AccountRef\n```\n\nThe resolved account attributes behind a resource-valued prop.",
+        "accountUrl": "```typescript\nstring\n```\n\n---\n\n```typescript\nstring\n```\n\nThe account that issued the certificate.",
+        "action": "```typescript\n\"replace\"\n```\n\n---\n\n```typescript\n\"update\"\n```",
+        "arrayEqualsUnordered": "```typescript\n<T extends string | number>(a: ReadonlyArray<T> | undefined, b: ReadonlyArray<T> | undefined) => boolean\n```\n\nOrder-insensitive array equality for primitive elements (compares\nsorted copies). `undefined`-tolerant like arrayEquals.",
+        "ca": "```typescript\n{ directoryUrl: string; trustedRoot: string | undefined; }\n```",
+        "certificate": "```typescript\nstring\n```\n\n---\n\n```typescript\nstring\n```\n\nLeaf certificate PEM.",
+        "Certificate": "```typescript\nimport(\"../Resource.ts\").ResourceClass<Certificate>\n```\n\nA TLS certificate issued over ACME at deploy time, with renewal.\n\nReconcile places an order, proves control of every name over DNS-01\nthrough the `solver`, finalizes with a fresh key's ",
+        "CertificateProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<Certificate>, never, any>\n```",
+        "certificateUrl": "```typescript\nstring\n```\n\nThe CA's certificate URL.\n\n---\n\n```typescript\nstring\n```\n\n---\n\n```typescript\nstring\n```\n\nThe CA's certificate URL (for re-download and revocation bookkeeping).",
+        "chain": "```typescript\nstring\n```\n\nFull chain PEM, leaf first.\n\n---\n\n```typescript\nstring\n```",
+        "credentialsOf": "```typescript\n(account: AccountRef) => AccountCredentials\n```",
+        "DEFAULT_RENEW_BEFORE": "```typescript\n`${number} days`\n```",
+        "delete": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: CertificateProps; output: { certificate: string; chain: string; privateKey: Redacted.Redacted<string>; serial: string; notBefore: string; notAfter: string; issuer: string; identifi",
+        "diff": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: CertificateProps; news: import(\"../Input.ts\").Input<CertificateProps>; oldBindings: import(\"../Resource.ts\").ResourceBinding<never>[]; newBindings: import(\"../Input.ts\").Input<impo",
+        "directoryUrl": "```typescript\nstring\n```\n\n---\n\n```typescript\nstring\n```\n\nThe CA the certificate was issued by (for revocation on delete).",
+        "DnsSolverDescriptor": "Serializable solver description stored in `ACME.Certificate` props.\n`type` selects the registered implementation; the rest is provider data.",
+        "Duration": "```typescript\ntypeof Duration\n```",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "identifiers": "```typescript\nstring[]\n```\n\nDNS names the certificate covers. The first is the subject CN;\nwildcards (`*.example.com`) are allowed. Changing the set re-issues.\n\n---\n\n```typescript\nstring[]\n```\n\nThe DNS names covered.\n\n---\n\n```typescript\nstring[]\n```",
+        "Input": "Valid input types that can be converted to a Duration.\n\n**When to use**\n\nUse when an API should accept any value that Effect can convert into a\n`Duration`, including existing durations, millisecond numbers, nanosecond\nbigints, high-resolution tuples, durat",
+        "isResolved": "```typescript\n<T>(value: import(\"../Input.ts\").Input<T>) => value is T\n```",
+        "issueCertificate": "```typescript\n<R = never>(request: import(\"./Client.ts\").IssueRequest<R>) => Effect.Effect<import(\"./Client.ts\").IssuedCertificate, import(\"./Client.ts\").IssueError, Acme.Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient | R>\n```\n\nIssue a ",
+        "issued": "```typescript\nimport(\"./Client.ts\").IssuedCertificate\n```",
+        "issuer": "```typescript\nstring\n```\n\nIssuer distinguished name.\n\n---\n\n```typescript\nstring\n```",
+        "keyAlgorithm": "```typescript\nKeyAlgorithm | undefined\n```\n\nCertificate key algorithm. Changing it re-issues the certificate.\n\n**@default** \"ES256\"\n\n---\n\n```typescript\nKeyAlgorithm\n```\n\nKey algorithm of `privateKey`.\n\n---\n\n```typescript\nKeyAlgorithm\n```",
+        "news": "```typescript\nimport(\"../Input.ts\").Input<CertificateProps>\n```\n\n```typescript\nCertificateProps\n```\n\n---\n\n```typescript\nCertificateProps\n```",
+        "notAfter": "```typescript\nstring\n```\n\n---\n\n```typescript\nstring\n```\n\nISO 8601 expiry. Renewal is scheduled against it.\n\n---\n\n```typescript\nstring\n```\n\nISO 8601.",
+        "notBefore": "```typescript\nstring\n```\n\nISO 8601 validity start.\n\n---\n\n```typescript\nstring\n```\n\n---\n\n```typescript\nstring\n```\n\nISO 8601.",
+        "now": "```typescript\nnumber\n```",
+        "olds": "```typescript\nCertificateProps\n```\n\n---\n\n```typescript\nCertificateProps | undefined\n```",
+        "orderUrl": "```typescript\nstring\n```\n\nThe CA's order URL.\n\n---\n\n```typescript\nstring\n```",
+        "output": "```typescript\n{ certificate: string; chain: string; privateKey: Redacted.Redacted<string>; serial: string; notBefore: string; notAfter: string; issuer: string; identifiers: string[]; certificateUrl: string; orderUrl: string; keyAlgorithm: KeyAlgorithm; acc",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "preferredChain": "```typescript\nstring | undefined\n```\n\nIssuer name to prefer (`CN=…` substring, e.g. `ISRG Root X1`) when the\nCA offers alternate chains.\n\n---\n\n```typescript\nstring | undefined\n```",
+        "privateKey": "```typescript\nRedacted.Redacted<string>\n```\n\n---\n\n```typescript\nRedacted.Redacted<string>\n```\n\nPKCS#8 private key PEM.\n\n---\n\n```typescript\nRedacted.Redacted<string>\n```\n\nPKCS#8 private key PEM. Sensitive; persisted in stack state.",
+        "propagation": "```typescript\nPropagationOptions | undefined\n```\n\n---\n\n```typescript\nPropagationOptions | undefined\n```\n\nDNS propagation polling (resolvers, timeout, interval).",
+        "provide": "```typescript\n{ <const Layers extends [import(\"effect/Layer\").Any, ...Array<import(\"effect/Layer\").Any>]>(layers: Layers, options?: { readonly local?: boolean | undefined; } | undefined): <A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E | impo",
+        "Provider": "```typescript\ntypeof Provider\n```",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: CertificateProps; output: { certificate: string; chain: string; privateKey: Redacted.Redacted<string>; serial: string; notBefore: string; notAfter: string; issuer: string; identifi",
+        "reason": "```typescript\n\"cessationOfOperation\"\n```",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: CertificateProps; olds: CertificateProps | undefined; output: { certificate: string; chain: string; privateKey: Redacted.Redacted<string>; serial: string; notBefore: string; notAft",
+        "Redacted": "A wrapper for sensitive values whose string, JSON, and inspection output is\nredacted.\n\n**When to use**\n\nUse to carry sensitive values while reducing accidental exposure in string,\nJSON, and inspection output.\n\n**Gotchas**\n\nThe underlying value is still sto",
+        "reissue": "```typescript\nboolean\n```",
+        "renewalDue": "```typescript\n(notAfter: string, renewBefore: Duration.Input | undefined, now: number) => boolean\n```",
+        "renewBefore": "```typescript\nDuration.Input | undefined\n```\n\n---\n\n```typescript\nDuration.Input | undefined\n```\n\nRe-issue when less than this remains before `notAfter`. Renewal is a\n`diff` result, so any `alchemy deploy` (a scheduled one, typically)\nrenews.\n\n**@default** ",
+        "resolveDnsSolver": "```typescript\n(descriptor: DnsSolverDescriptor) => Effect.Effect<import(\"./DnsSolver.ts\").DnsSolver, import(\"./Errors.ts\").DnsSolverNotRegistered | import(\"./Errors.ts\").DnsSolverError>\n```\n\nResolve the registered implementation for a descriptor.",
+        "Resource": "```typescript\n<R extends import(\"../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../Resource.ts\").ResourceOptions) => import(\"../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nThe returne",
+        "revokeCertificate": "```typescript\n(request: import(\"./Client.ts\").RevokeRequest) => Effect.Effect<void, import(\"./Client.ts\").RevokeError, Acme.Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```\n\nRevoke a certificate. `AcmeAlreadyRevoked` is folded into s",
+        "revokeOnDelete": "```typescript\nboolean | undefined\n```\n\nRevoke the certificate at the CA when the resource is deleted. By\ndefault deletion only forgets the certificate.\n\n**@default** false",
+        "serial": "```typescript\nstring\n```\n\nSerial number, hex.\n\n---\n\n```typescript\nstring\n```",
+        "solver": "```typescript\nimport(\"./DnsSolver.ts\").DnsSolver<never>\n```\n\n---\n\n```typescript\nDnsSolverDescriptor\n```\n\nHow `_acme-challenge` TXT records are published, e.g.\n`Cloudflare.DNS.AcmeSolver(zone)`. Changing the solver alone does not\nre-issue.",
+        "stables": "```typescript\n\"directoryUrl\"[]\n```",
+        "succeed": "```typescript\n<R extends import(\"../Resource.ts\").ResourceLike, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../Resource.ts\").ResourceClass<",
+        "sync": "```typescript\n<A>(thunk: import(\"effect/Function\").LazyArg<A>) => Effect.Effect<A>\n```\n\nCreates an `Effect` that represents a synchronous side-effectful computation.\n\n**When to use**\n\nUse when you need to wrap a synchronous side-effectful operation that is",
+        "toMillis": "```typescript\n(self: Duration.Input) => number\n```\n\nConverts a Duration to milliseconds.\n\n**Example** (Converting durations to milliseconds)\n\n```ts import.meta.vitest\nimport { Duration } from \"effect\"\n\nDuration.toMillis(Duration.seconds(5)) // => 5000\nDura",
+        "trustedRoot": "```typescript\nstring | undefined\n```\n\nPEM root trusted for the CA's endpoint (private CAs only).\n\n---\n\n```typescript\nstring | undefined\n```",
+        "value": "```typescript\nunknown\n```"
+      },
+      "code": {
+        "1": "import * as Duration from \"effect/Duration\";\nimport * as Effect from \"effect/Effect\";\nimport type * as Redacted from \"effect/Redacted\";\nimport { isResolved } from \"../Diff.ts\";\nimport * as Provider from \"../Provider.ts\";\nimport { Resource } from \"../Resource.ts\";\nimport { arrayEqualsUnordered } from \"../Util/equal.ts\";\nimport type { Account } from \"./Account.ts\";\nimport {\n  accountLayer,\n  issueCertificate,\n  revokeCertificate,\n  type AccountCredentials,\n} from \"./Client.ts\";\nimport type { PropagationOptions } from \"./Dns.ts\";\nimport { resolveDnsSolver, type DnsSolverDescriptor } from \"./DnsSolver.ts\";\nimport type { KeyAlgorithm } from \"./Pki.ts\";\nimport type { Providers } from \"./Providers.ts\";\n\nexport interface CertificateProps {\n\n  account: Account;\n\n\n\n\n  identifiers: string[];",
+        "2": "\n\n\n\n\n  solver: DnsSolverDescriptor;\n\n\n\n\n  keyAlgorithm?: KeyAlgorithm;\n\n\n\n\n\n\n  renewBefore?: Duration.Input;\n\n\n\n\n\n  revokeOnDelete?: boolean;\n\n\n\n\n  preferredChain?: string;\n\n  propagation?: PropagationOptions;\n}\n\nexport interface Certificate extends Resource<\n  \"ACME.Certificate\",",
+        "3": "  CertificateProps,",
+        "4": "  {\n\n    certificate: string;\n\n    chain: string;\n\n    privateKey: Redacted.Redacted<string>;\n\n    serial: string;\n\n    notBefore: string;\n\n    notAfter: string;\n\n    issuer: string;\n\n    identifiers: string[];\n\n    certificateUrl: string;\n\n    orderUrl: string;\n\n    keyAlgorithm: KeyAlgorithm;\n\n    accountUrl: string;\n\n    directoryUrl: string;\n\n    trustedRoot: string | undefined;\n  },",
+        "5": "  never,\n  Providers\n> {}",
+        "6": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Certificate = Resource<Certificate>(\"ACME.Certificate\");\n\ntype AccountRef = {\n  directoryUrl: string;\n  trustedRoot?: string | undefined;\n  accountUrl: string;\n  privateKey: Redacted.Redacted<string>;\n};\n\n\nconst accountOf = (value: unknown): AccountRef => value as AccountRef;\n\nconst credentialsOf = (account: AccountRef): AccountCredentials => ({\n  ca: { directoryUrl: account.directoryUrl, trustedRoot: account.trustedRoot },\n  accountKey: account.privateKey,\n  accountUrl: account.accountUrl,\n});\n\nconst DEFAULT_RENEW_BEFORE: Duration.Input = \"30 days\";\n\nconst renewalDue = (\n  notAfter: string,\n  renewBefore: Duration.Input | undefined,\n  now: number,\n): boolean =>\n  Date.parse(notAfter) - now <\n  Duration.toMillis(renewBefore ?? DEFAULT_RENEW_BEFORE);\n\nexport const CertificateProvider = () =>\n  Provider.succeed(Certificate, {",
+        "7": "    stables: [\"directoryUrl\"],\n\n    diff: Effect.fn(function* ({ news, olds, output }) {\n      if (news === undefined || !isResolved(news) || output === undefined) {\n        return undefined;\n      }\n      const account = accountOf(news.account);\n      if (account.accountUrl !== output.accountUrl) {\n        return { action: \"replace\" as const };\n      }\n      const now = yield* Effect.sync(() => Date.now());\n      const reissue =\n        !arrayEqualsUnordered(news.identifiers, output.identifiers) ||\n        (news.keyAlgorithm ?? \"ES256\") !== output.keyAlgorithm ||\n        news.preferredChain !== olds?.preferredChain ||\n        renewalDue(output.notAfter, news.renewBefore, now);\n      return reissue ? { action: \"update\" as const } : undefined;\n    }),\n\n    read: Effect.fn(function* ({ output }) {\n      return output;\n    }),\n\n    reconcile: Effect.fn(function* ({ news, olds, output }) {\n      const account = accountOf(news.account);\n      const keyAlgorithm = news.keyAlgorithm ?? \"ES256\";\n      const now = yield* Effect.sync(() => Date.now());",
+        "8": "\n\n      if (\n        output !== undefined &&\n        output.accountUrl === account.accountUrl &&\n        arrayEqualsUnordered(news.identifiers, output.identifiers) &&\n        output.keyAlgorithm === keyAlgorithm &&\n        news.preferredChain === olds?.preferredChain &&\n        !renewalDue(output.notAfter, news.renewBefore, now)\n      ) {\n        return {\n          ...output,\n          directoryUrl: account.directoryUrl,\n          trustedRoot: account.trustedRoot,\n        };\n      }\n      const solver = yield* resolveDnsSolver(news.solver);\n      const issued = yield* issueCertificate({\n        identifiers: news.identifiers,\n        solver,\n        keyAlgorithm,\n        preferredChain: news.preferredChain,\n        propagation: news.propagation,\n      }).pipe(Effect.provide(accountLayer(credentialsOf(account))));",
+        "9": "      return {\n        certificate: issued.certificate,\n        chain: issued.chain,\n        privateKey: issued.privateKey,\n        serial: issued.serial,\n        notBefore: issued.notBefore,\n        notAfter: issued.notAfter,\n        issuer: issued.issuer,\n        identifiers: [...news.identifiers],\n        certificateUrl: issued.certificateUrl,\n        orderUrl: issued.orderUrl,\n        keyAlgorithm,\n        accountUrl: account.accountUrl,\n        directoryUrl: account.directoryUrl,\n        trustedRoot: account.trustedRoot,\n      };\n    }),",
+        "10": "\n    delete: Effect.fn(function* ({ olds, output }) {\n      if (olds.revokeOnDelete !== true) return;\n      const account = accountOf(olds.account);\n\n\n      yield* revokeCertificate({\n        certificate: output.certificate,\n        privateKey: output.privateKey,\n        reason: \"cessationOfOperation\",\n      }).pipe(\n        Effect.provide(\n          accountLayer({\n            ca: {\n              directoryUrl: output.directoryUrl,\n              trustedRoot: output.trustedRoot,\n            },\n            accountKey: account.privateKey,\n            accountUrl: account.accountUrl,\n          }),\n        ),\n      );\n    }),\n  });\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as Duration from \"effect/Duration\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import type * as Redacted from \"effect/Redacted\";",
+          "4": "import { isResolved } from \"../Diff.ts\";",
+          "5": "import * as Provider from \"../Provider.ts\";",
+          "6": "import { Resource } from \"../Resource.ts\";",
+          "7": "import { arrayEqualsUnordered } from \"../Util/equal.ts\";",
+          "8": "import type { Account } from \"./Account.ts\";",
+          "9": "import {",
+          "10": "accountLayer,",
+          "11": "issueCertificate,",
+          "12": "revokeCertificate,",
+          "13": "type AccountCredentials,",
+          "14": "} from \"./Client.ts\";",
+          "15": "import type { PropagationOptions } from \"./Dns.ts\";",
+          "16": "import { resolveDnsSolver, type DnsSolverDescriptor } from \"./DnsSolver.ts\";",
+          "17": "import type { KeyAlgorithm } from \"./Pki.ts\";",
+          "18": "import type { Providers } from \"./Providers.ts\";",
+          "20": "export interface CertificateProps {",
+          "22": "account: Account;",
+          "27": "identifiers: string[];"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as Duration from \"effect/Duration\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import type * as Redacted from \"effect/Redacted\";",
+          "4": "import { isResolved } from \"../Diff.ts\";",
+          "5": "import * as Provider from \"../Provider.ts\";",
+          "6": "import { Resource } from \"../Resource.ts\";",
+          "7": "import { arrayEqualsUnordered } from \"../Util/equal.ts\";",
+          "8": "import type { Account } from \"./Account.ts\";",
+          "9": "import {",
+          "10": "accountLayer,",
+          "11": "issueCertificate,",
+          "12": "revokeCertificate,",
+          "13": "type AccountCredentials,",
+          "14": "} from \"./Client.ts\";",
+          "15": "import type { PropagationOptions } from \"./Dns.ts\";",
+          "16": "import { resolveDnsSolver, type DnsSolverDescriptor } from \"./DnsSolver.ts\";",
+          "17": "import type { KeyAlgorithm } from \"./Pki.ts\";",
+          "18": "import type { Providers } from \"./Providers.ts\";",
+          "20": "export interface CertificateProps {",
+          "22": "account: Account;",
+          "27": "identifiers: string[];"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "33": "solver: DnsSolverDescriptor;",
+          "38": "keyAlgorithm?: KeyAlgorithm;",
+          "45": "renewBefore?: Duration.Input;",
+          "51": "revokeOnDelete?: boolean;",
+          "56": "preferredChain?: string;",
+          "58": "propagation?: PropagationOptions;",
+          "59": "}",
+          "61": "export interface Certificate extends Resource<",
+          "62": "\"ACME.Certificate\","
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "33": "solver: DnsSolverDescriptor;",
+          "38": "keyAlgorithm?: KeyAlgorithm;",
+          "45": "renewBefore?: Duration.Input;",
+          "51": "revokeOnDelete?: boolean;",
+          "56": "preferredChain?: string;",
+          "58": "propagation?: PropagationOptions;",
+          "59": "}",
+          "61": "export interface Certificate extends Resource<",
+          "62": "\"ACME.Certificate\","
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "63": "CertificateProps,"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "63": "CertificateProps,"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "64": "{",
+          "66": "certificate: string;",
+          "68": "chain: string;",
+          "70": "privateKey: Redacted.Redacted<string>;",
+          "72": "serial: string;",
+          "74": "notBefore: string;",
+          "76": "notAfter: string;",
+          "78": "issuer: string;",
+          "80": "identifiers: string[];",
+          "82": "certificateUrl: string;",
+          "84": "orderUrl: string;",
+          "86": "keyAlgorithm: KeyAlgorithm;",
+          "88": "accountUrl: string;",
+          "90": "directoryUrl: string;",
+          "92": "trustedRoot: string | undefined;",
+          "93": "},"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "64": "{",
+          "66": "certificate: string;",
+          "68": "chain: string;",
+          "70": "privateKey: Redacted.Redacted<string>;",
+          "72": "serial: string;",
+          "74": "notBefore: string;",
+          "76": "notAfter: string;",
+          "78": "issuer: string;",
+          "80": "identifiers: string[];",
+          "82": "certificateUrl: string;",
+          "84": "orderUrl: string;",
+          "86": "keyAlgorithm: KeyAlgorithm;",
+          "88": "accountUrl: string;",
+          "90": "directoryUrl: string;",
+          "92": "trustedRoot: string | undefined;",
+          "93": "},"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "94": "never,",
+          "95": "Providers",
+          "96": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "94": "never,",
+          "95": "Providers",
+          "96": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "153": "export const Certificate = Resource<Certificate>(\"ACME.Certificate\");",
+          "155": "type AccountRef = {",
+          "156": "directoryUrl: string;",
+          "157": "trustedRoot?: string | undefined;",
+          "158": "accountUrl: string;",
+          "159": "privateKey: Redacted.Redacted<string>;",
+          "160": "};",
+          "163": "const accountOf = (value: unknown): AccountRef => value as AccountRef;",
+          "165": "const credentialsOf = (account: AccountRef): AccountCredentials => ({",
+          "166": "ca: { directoryUrl: account.directoryUrl, trustedRoot: account.trustedRoot },",
+          "167": "accountKey: account.privateKey,",
+          "168": "accountUrl: account.accountUrl,",
+          "169": "});",
+          "171": "const DEFAULT_RENEW_BEFORE: Duration.Input = \"30 days\";",
+          "173": "const renewalDue = (",
+          "174": "notAfter: string,",
+          "175": "renewBefore: Duration.Input | undefined,",
+          "176": "now: number,",
+          "177": "): boolean =>",
+          "178": "Date.parse(notAfter) - now <",
+          "179": "Duration.toMillis(renewBefore ?? DEFAULT_RENEW_BEFORE);",
+          "181": "export const CertificateProvider = () =>",
+          "182": "Provider.succeed(Certificate, {"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "153": "export const Certificate = Resource<Certificate>(\"ACME.Certificate\");",
+          "155": "type AccountRef = {",
+          "156": "directoryUrl: string;",
+          "157": "trustedRoot?: string | undefined;",
+          "158": "accountUrl: string;",
+          "159": "privateKey: Redacted.Redacted<string>;",
+          "160": "};",
+          "163": "const accountOf = (value: unknown): AccountRef => value as AccountRef;",
+          "165": "const credentialsOf = (account: AccountRef): AccountCredentials => ({",
+          "166": "ca: { directoryUrl: account.directoryUrl, trustedRoot: account.trustedRoot },",
+          "167": "accountKey: account.privateKey,",
+          "168": "accountUrl: account.accountUrl,",
+          "169": "});",
+          "171": "const DEFAULT_RENEW_BEFORE: Duration.Input = \"30 days\";",
+          "173": "const renewalDue = (",
+          "174": "notAfter: string,",
+          "175": "renewBefore: Duration.Input | undefined,",
+          "176": "now: number,",
+          "177": "): boolean =>",
+          "178": "Date.parse(notAfter) - now <",
+          "179": "Duration.toMillis(renewBefore ?? DEFAULT_RENEW_BEFORE);",
+          "181": "export const CertificateProvider = () =>",
+          "182": "Provider.succeed(Certificate, {"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "183": "stables: [\"directoryUrl\"],",
+          "185": "diff: Effect.fn(function* ({ news, olds, output }) {",
+          "186": "if (news === undefined || !isResolved(news) || output === undefined) {",
+          "187": "return undefined;",
+          "188": "}",
+          "189": "const account = accountOf(news.account);",
+          "190": "if (account.accountUrl !== output.accountUrl) {",
+          "191": "return { action: \"replace\" as const };",
+          "192": "}",
+          "193": "const now = yield* Effect.sync(() => Date.now());",
+          "194": "const reissue =",
+          "195": "!arrayEqualsUnordered(news.identifiers, output.identifiers) ||",
+          "196": "(news.keyAlgorithm ?? \"ES256\") !== output.keyAlgorithm ||",
+          "197": "news.preferredChain !== olds?.preferredChain ||",
+          "198": "renewalDue(output.notAfter, news.renewBefore, now);",
+          "199": "return reissue ? { action: \"update\" as const } : undefined;",
+          "200": "}),",
+          "202": "read: Effect.fn(function* ({ output }) {",
+          "203": "return output;",
+          "204": "}),",
+          "206": "reconcile: Effect.fn(function* ({ news, olds, output }) {",
+          "207": "const account = accountOf(news.account);",
+          "208": "const keyAlgorithm = news.keyAlgorithm ?? \"ES256\";",
+          "209": "const now = yield* Effect.sync(() => Date.now());"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "183": "stables: [\"directoryUrl\"],",
+          "185": "diff: Effect.fn(function* ({ news, olds, output }) {",
+          "186": "if (news === undefined || !isResolved(news) || output === undefined) {",
+          "187": "return undefined;",
+          "188": "}",
+          "189": "const account = accountOf(news.account);",
+          "190": "if (account.accountUrl !== output.accountUrl) {",
+          "191": "return { action: \"replace\" as const };",
+          "192": "}",
+          "193": "const now = yield* Effect.sync(() => Date.now());",
+          "194": "const reissue =",
+          "195": "!arrayEqualsUnordered(news.identifiers, output.identifiers) ||",
+          "196": "(news.keyAlgorithm ?? \"ES256\") !== output.keyAlgorithm ||",
+          "197": "news.preferredChain !== olds?.preferredChain ||",
+          "198": "renewalDue(output.notAfter, news.renewBefore, now);",
+          "199": "return reissue ? { action: \"update\" as const } : undefined;",
+          "200": "}),",
+          "202": "read: Effect.fn(function* ({ output }) {",
+          "203": "return output;",
+          "204": "}),",
+          "206": "reconcile: Effect.fn(function* ({ news, olds, output }) {",
+          "207": "const account = accountOf(news.account);",
+          "208": "const keyAlgorithm = news.keyAlgorithm ?? \"ES256\";",
+          "209": "const now = yield* Effect.sync(() => Date.now());"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "212": "if (",
+          "213": "output !== undefined &&",
+          "214": "output.accountUrl === account.accountUrl &&",
+          "215": "arrayEqualsUnordered(news.identifiers, output.identifiers) &&",
+          "216": "output.keyAlgorithm === keyAlgorithm &&",
+          "217": "news.preferredChain === olds?.preferredChain &&",
+          "218": "!renewalDue(output.notAfter, news.renewBefore, now)",
+          "219": ") {",
+          "220": "return {",
+          "221": "...output,",
+          "222": "directoryUrl: account.directoryUrl,",
+          "223": "trustedRoot: account.trustedRoot,",
+          "224": "};",
+          "225": "}",
+          "226": "const solver = yield* resolveDnsSolver(news.solver);",
+          "227": "const issued = yield* issueCertificate({",
+          "228": "identifiers: news.identifiers,",
+          "229": "solver,",
+          "230": "keyAlgorithm,",
+          "231": "preferredChain: news.preferredChain,",
+          "232": "propagation: news.propagation,",
+          "233": "}).pipe(Effect.provide(accountLayer(credentialsOf(account))));"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "212": "if (",
+          "213": "output !== undefined &&",
+          "214": "output.accountUrl === account.accountUrl &&",
+          "215": "arrayEqualsUnordered(news.identifiers, output.identifiers) &&",
+          "216": "output.keyAlgorithm === keyAlgorithm &&",
+          "217": "news.preferredChain === olds?.preferredChain &&",
+          "218": "!renewalDue(output.notAfter, news.renewBefore, now)",
+          "219": ") {",
+          "220": "return {",
+          "221": "...output,",
+          "222": "directoryUrl: account.directoryUrl,",
+          "223": "trustedRoot: account.trustedRoot,",
+          "224": "};",
+          "225": "}",
+          "226": "const solver = yield* resolveDnsSolver(news.solver);",
+          "227": "const issued = yield* issueCertificate({",
+          "228": "identifiers: news.identifiers,",
+          "229": "solver,",
+          "230": "keyAlgorithm,",
+          "231": "preferredChain: news.preferredChain,",
+          "232": "propagation: news.propagation,",
+          "233": "}).pipe(Effect.provide(accountLayer(credentialsOf(account))));"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "234": "return {",
+          "235": "certificate: issued.certificate,",
+          "236": "chain: issued.chain,",
+          "237": "privateKey: issued.privateKey,",
+          "238": "serial: issued.serial,",
+          "239": "notBefore: issued.notBefore,",
+          "240": "notAfter: issued.notAfter,",
+          "241": "issuer: issued.issuer,",
+          "242": "identifiers: [...news.identifiers],",
+          "243": "certificateUrl: issued.certificateUrl,",
+          "244": "orderUrl: issued.orderUrl,",
+          "245": "keyAlgorithm,",
+          "246": "accountUrl: account.accountUrl,",
+          "247": "directoryUrl: account.directoryUrl,",
+          "248": "trustedRoot: account.trustedRoot,",
+          "249": "};",
+          "250": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "234": "return {",
+          "235": "certificate: issued.certificate,",
+          "236": "chain: issued.chain,",
+          "237": "privateKey: issued.privateKey,",
+          "238": "serial: issued.serial,",
+          "239": "notBefore: issued.notBefore,",
+          "240": "notAfter: issued.notAfter,",
+          "241": "issuer: issued.issuer,",
+          "242": "identifiers: [...news.identifiers],",
+          "243": "certificateUrl: issued.certificateUrl,",
+          "244": "orderUrl: issued.orderUrl,",
+          "245": "keyAlgorithm,",
+          "246": "accountUrl: account.accountUrl,",
+          "247": "directoryUrl: account.directoryUrl,",
+          "248": "trustedRoot: account.trustedRoot,",
+          "249": "};",
+          "250": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "252": "delete: Effect.fn(function* ({ olds, output }) {",
+          "253": "if (olds.revokeOnDelete !== true) return;",
+          "254": "const account = accountOf(olds.account);",
+          "257": "yield* revokeCertificate({",
+          "258": "certificate: output.certificate,",
+          "259": "privateKey: output.privateKey,",
+          "260": "reason: \"cessationOfOperation\",",
+          "261": "}).pipe(",
+          "262": "Effect.provide(",
+          "263": "accountLayer({",
+          "264": "ca: {",
+          "265": "directoryUrl: output.directoryUrl,",
+          "266": "trustedRoot: output.trustedRoot,",
+          "267": "},",
+          "268": "accountKey: account.privateKey,",
+          "269": "accountUrl: account.accountUrl,",
+          "270": "}),",
+          "271": "),",
+          "272": ");",
+          "273": "}),",
+          "274": "});"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "252": "delete: Effect.fn(function* ({ olds, output }) {",
+          "253": "if (olds.revokeOnDelete !== true) return;",
+          "254": "const account = accountOf(olds.account);",
+          "257": "yield* revokeCertificate({",
+          "258": "certificate: output.certificate,",
+          "259": "privateKey: output.privateKey,",
+          "260": "reason: \"cessationOfOperation\",",
+          "261": "}).pipe(",
+          "262": "Effect.provide(",
+          "263": "accountLayer({",
+          "264": "ca: {",
+          "265": "directoryUrl: output.directoryUrl,",
+          "266": "trustedRoot: output.trustedRoot,",
+          "267": "},",
+          "268": "accountKey: account.privateKey,",
+          "269": "accountUrl: account.accountUrl,",
+          "270": "}),",
+          "271": "),",
+          "272": ");",
+          "273": "}),",
+          "274": "});"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

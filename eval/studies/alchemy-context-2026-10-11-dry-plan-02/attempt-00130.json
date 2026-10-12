@@ -1,0 +1,51 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CloudWatch/Alarm.ts",
+  "kind": "judge",
+  "ordinal": 130,
+  "artifact": "attempt-00130.json",
+  "started": "2026-10-11T03:20:39.788Z",
+  "estimatedTokens": 3610,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 1.6674680000014632,
+  "referencesPresent": false,
+  "bodyDigest": "77129e16ebf898e2ed9eed9f4993d6736248856d3a5d7245076536e7f999aae3",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as cloudwatch from \"@distilled.cloud/aws/cloudwatch\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { hasAlchemyTags } from \"../../Tags.ts\";\nimport { AWSEnvironment, type AccountID } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport type { RegionID } from \"../Region.ts\";\nimport {\n  createName,\n  readResourceTags,\n  retryConcurrent,\n  updateResourceTags,\n} from \"./common.ts\";\n\nexport type AlarmName = string;\nexport type AlarmArn =\n  `arn:aws:cloudwatch:${RegionID}:${AccountID}:alarm:${string}`;\nexport type AlarmStateValue = cloudwatch.StateValue;",
+        "2": "\nexport interface AlarmProps extends Omit<\n  cloudwatch.PutMetricAlarmInput,\n  \"AlarmName\" | \"Tags\"\n> {\n\n\n\n  name?: AlarmName;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "3": "\nexport interface Alarm extends Resource<\n  \"AWS.CloudWatch.Alarm\",\n  AlarmProps,\n  {\n\n    alarmName: AlarmName;\n\n    alarmArn: AlarmArn;\n\n    stateValue: AlarmStateValue | undefined;\n\n    stateReason: string | undefined;\n\n    metricAlarm: cloudwatch.MetricAlarm;\n\n    tags: Record<string, string>;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Alarm = Resource<Alarm>(\"AWS.CloudWatch.Alarm\");\n\nexport const AlarmProvider = () =>\n  Provider.effect(\n    Alarm,\n    Effect.gen(function* () {\n      const createAlarmName = (id: string, props: { name?: string } = {}) =>\n        createName(id, props.name, 255);\n\n      const alarmArn = (alarmName: string) =>\n        AWSEnvironment.current.pipe(\n          Effect.map(\n            (env) =>\n              `arn:aws:cloudwatch:${env.region}:${env.accountId}:alarm:${alarmName}` as AlarmArn,\n          ),\n        );",
+        "5": "\n      const readAlarm = Effect.fn(function* (alarmName: string) {\n        const described = yield* cloudwatch.describeAlarms({\n          AlarmNames: [alarmName],\n          AlarmTypes: [\"MetricAlarm\"],\n        });\n        const metricAlarm = described.MetricAlarms?.find(\n          (candidate) => candidate.AlarmName === alarmName,\n        );\n\n        if (!metricAlarm?.AlarmName || !metricAlarm.AlarmArn) {\n          return undefined;\n        }\n\n        const tags = yield* readResourceTags(metricAlarm.AlarmArn).pipe(\n          Effect.catchTag(\"ResourceNotFoundException\", () =>\n            Effect.succeed({}),\n          ),\n        );\n\n        return {\n          alarmName: metricAlarm.AlarmName,\n          alarmArn: metricAlarm.AlarmArn as AlarmArn,\n          stateValue: metricAlarm.StateValue,\n          stateReason: metricAlarm.StateReason,\n          metricAlarm,\n          tags,\n        };\n      });",
+        "6": "\n      return {\n        stables: [\"alarmName\", \"alarmArn\"],\n        diff: Effect.fn(function* ({ id, olds = {}, news = {} }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createAlarmName(id, olds);\n          const newName = yield* createAlarmName(id, news);\n\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n\n\n\n\n        list: () =>\n          Effect.gen(function* () {\n            const alarms = yield* cloudwatch.describeAlarms\n              .pages({ AlarmTypes: [\"MetricAlarm\"] })\n              .pipe(\n                Stream.runCollect,\n                Effect.map((chunk) =>\n                  Array.from(chunk).flatMap((page) => page.MetricAlarms ?? []),\n                ),\n              );",
+        "7": "\n            const attrs: Alarm[\"Attributes\"][] = yield* Effect.forEach(\n              alarms.filter(\n                (\n                  metricAlarm,\n                ): metricAlarm is typeof metricAlarm & {\n                  AlarmName: string;\n                  AlarmArn: string;\n                } =>\n                  metricAlarm.AlarmName != null && metricAlarm.AlarmArn != null,\n              ),\n              (metricAlarm) =>\n                Effect.gen(function* () {\n                  const tags = yield* readResourceTags(\n                    metricAlarm.AlarmArn,\n                  ).pipe(\n                    Effect.catchTag(\"ResourceNotFoundException\", () =>\n                      Effect.succeed({}),\n                    ),\n                  );\n                  return {\n                    alarmName: metricAlarm.AlarmName,\n                    alarmArn: metricAlarm.AlarmArn as AlarmArn,\n                    stateValue: metricAlarm.StateValue,\n                    stateReason: metricAlarm.StateReason,\n                    metricAlarm,\n                    tags,\n                  };\n                }),\n              { concurrency: 10 },\n            );",
+        "8": "            return attrs;\n          }),\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name =\n            output?.alarmName ?? (yield* createAlarmName(id, olds ?? {}));\n          const state = yield* readAlarm(name);\n          if (!state) return undefined;\n          return (yield* hasAlchemyTags(id, state.tags))\n            ? state\n            : Unowned(state);\n        }),\n        reconcile: Effect.fn(function* ({ id, news, olds, output, session }) {\n\n\n\n          const name = output?.alarmName ?? (yield* createAlarmName(id, news));\n          const existing = yield* readAlarm(name);\n\n\n\n\n          yield* retryConcurrent(\n            cloudwatch.putMetricAlarm({\n              ...news,\n              AlarmName: name,\n            }),\n          );",
+        "9": "\n\n\n\n          const tags = yield* updateResourceTags({\n            id,\n            resourceArn: yield* alarmArn(name),\n            olds: olds?.tags ?? existing?.tags,\n            news: news.tags,\n          });\n\n          yield* session.note(yield* alarmArn(name));\n\n          const state = yield* readAlarm(name);\n          if (!state) {\n            return yield* Effect.fail(\n              new Error(`failed to read reconciled alarm '${name}'`),\n            );\n          }\n\n          return {\n            ...state,\n            tags,\n          };\n        }),",
+        "10": "        delete: Effect.fn(function* ({ output }) {\n          yield* retryConcurrent(\n            cloudwatch.deleteAlarms({\n              AlarmNames: [output.alarmName],\n            }),\n          );\n        }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

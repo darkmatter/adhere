@@ -1,0 +1,44 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Cloudflare/SecretsStore/LocalSecretsStoreGateway.ts",
+  "kind": "judge",
+  "ordinal": 266,
+  "artifact": "attempt-00266.json",
+  "started": "2026-10-11T03:20:44.752Z",
+  "estimatedTokens": 2024,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.02723100000002887,
+  "referencesPresent": false,
+  "bodyDigest": "2d4cd2a4a59390ae3a77599e1d778056d7d6447fd980489baf76fc1b910a371f",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nimport type * as runtime from \"@cloudflare/workers-types\";\nimport { SecretsStore } from \"@alchemy.run/cloudflare-runtime/core/bindings\";\nimport { open } from \"@alchemy.run/cloudflare-runtime/core/platform-proxy\";\nimport * as Data from \"effect/Data\";\nimport * as Effect from \"effect/Effect\";\nimport { gatewayName } from \"../LocalGateway.ts\";\n\nexport class LocalSecretsStoreError extends Data.TaggedError(\n  \"LocalSecretsStoreError\",\n)<{\n  message: string;\n  cause?: unknown;\n}> {}\n\n\n\n\n\n\n\nexport const withLocalSecretsStore = <A, E, R>(",
+        "2": "  storeId: string,\n  use: (store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>,\n) =>\n  Effect.scoped(\n    Effect.gen(function* () {\n      const proxy = yield* open({\n        name: gatewayName(\"alchemy-secrets-store-gateway\", storeId),\n        bindings: [SecretsStore.admin({ binding: \"STORE\", storeId })],\n      });\n      const store = (proxy.env as Record<string, unknown>)\n        .STORE as runtime.KVNamespace<string>;\n      return yield* use(store);\n    }),\n  );",
+        "3": "\n\nexport const seedLocalSecret = (\n  storeId: string,\n  secretName: string,\n  value: string,\n) =>\n  withLocalSecretsStore(storeId, (store) =>\n    Effect.tryPromise({\n      try: () => store.put(secretName, value),\n      catch: (cause) =>\n        new LocalSecretsStoreError({\n          message: `Failed to seed secret \"${secretName}\" into the local Secrets Store`,\n          cause,\n        }),\n    }),\n  );\n\n\nexport const deleteLocalSecret = (storeId: string, secretName: string) =>\n  withLocalSecretsStore(storeId, (store) =>\n    Effect.tryPromise({\n      try: () => store.delete(secretName),\n      catch: (cause) =>\n        new LocalSecretsStoreError({\n          message: `Failed to delete secret \"${secretName}\" from the local Secrets Store`,\n          cause,\n        }),\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

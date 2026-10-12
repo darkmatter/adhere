@@ -1,0 +1,109 @@
+{
+  "arm": "symbols+references",
+  "file": "packages/alchemy/src/Cloudflare/KV/WriteNamespaceHttp.ts",
+  "kind": "judge",
+  "ordinal": 78,
+  "artifact": "attempt-00078.json",
+  "started": "2026-10-11T03:20:35.063Z",
+  "estimatedTokens": 6368,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.06820800000059535,
+  "referencesPresent": true,
+  "bodyDigest": "48b1db839b11f1677ccac6c260e60b14e540d25524f2d1a4226a54d11edd455e",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "accountId": "```typescript\nstring\n```",
+        "arrayBuffer": "```typescript\n{ (): Promise<ArrayBuffer>; (): Promise<ArrayBuffer>; }\n```\n\nThe **`arrayBuffer()`** method of the Request interface reads the request body and returns it as a promise that resolves with an ArrayBuffer.\n\n[MDN Reference](https://developer.mozi",
+        "asVoid": "```typescript\n<A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<void, E, R>\n```\n\nMaps the success value of an `Effect` to `void`, preserving failures.\n\n**Example** (Discarding success values)\n\n```ts import.meta.vitest\nimport { Effect } from \"effect\"",
+        "auth": "```typescript\nKVAuth\n```",
+        "authorize": "```typescript\n<A, E>(eff: Effect.Effect<A, E, import(\"@distilled.cloud/cloudflare/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>) => Effect.Effect<A, E, import(\"../../RuntimeContext.ts\").RuntimeContext>\n```",
+        "Blob": "```typescript\n{ new (blobParts?: BlobPart[], options?: BlobPropertyBag): Blob; prototype: Blob; }\n```\n\nThe **`Blob`** interface represents a blob, which is a file-like object of immutable, raw data; they can be read as text or binary data, or converted int",
+        "body": "```typescript\nstring | Blob\n```",
+        "buffer": "```typescript\nArrayBuffer\n```",
+        "bytes": "```typescript\nUint8Array<ArrayBuffer>\n```",
+        "catch": "```typescript\n(error: unknown) => NamespaceError\n```",
+        "delete": "```typescript\nany\n```",
+        "deleteNamespaceValue": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<kv.DeleteNamespaceValueRequest, kv.DeleteNamespaceValueResponse, kv.DeleteNamespaceValueError, kv.CloudflareOpContext>\n```\n\nRemove a KV pair from the namespace. Use URL-encoding to use speci",
+        "effect": "```typescript\n{ <I, S>(service: import(\"effect/Context\").Key<I, S>): <E, R>(effect: Effect.Effect<S, E, R>) => Layer.Layer<I, E, Exclude<R, import(\"effect/Scope\").Scope>>; <I, S, E, R>(service: import(\"effect/Context\").Key<I, S>, effect: Effect.Effect<impo",
+        "Effect": "```typescript\ntypeof Effect\n```\n\n---\n\nThe `Effect` interface defines a value that lazily describes a workflow or\njob. The workflow requires some context `R`, and may fail with an error of\ntype `E`, or succeed with a value of type `A`.\n\n**When to use**\n\nUse",
+        "expiration": "```typescript\nnumber | undefined\n```",
+        "expirationTtl": "```typescript\nnumber | undefined\n```",
+        "flatMap": "```typescript\n{ <A, B, E1, R1>(f: (a: A) => Effect.Effect<B, E1, R1>): <E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<B, E1 | E, R1 | R>; <A, E, R, B, E1, R1>(self: Effect.Effect<A, E, R>, f: (a: A) => Effect.Effect<B, E1, R1>): Effect.Effect<B, E |",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "key": "```typescript\nstring\n```",
+        "keyName": "```typescript\nstring\n```",
+        "kv": "```typescript\ntypeof kv\n```",
+        "KVAuth": "Injectable auth for the KV HTTP client builders. Both the scoped-token\n(`*Http`) and current-credentials (`*Local`) variants supply an `authorize`\n(which provides `Credentials` + `HttpClient` to a raw SDK op) and an\n`accountId`, so the client builders are ",
+        "Layer": "```typescript\ntypeof Layer\n```",
+        "makeClient": "```typescript\n(token: import(\"./NamespaceHttp.ts\").HttpToken, namespaceId: Effect.Effect<string, never, never>) => WriteNamespaceClient<string>\n```",
+        "makeHttpKVNamespaceBinding": "```typescript\n<Client>(options: { permissionGroups: import(\"../ApiToken/Common.ts\").PermissionGroupRef[]; makeClient: (token: import(\"./NamespaceHttp.ts\").HttpToken, namespaceId: Effect.Effect<string>) => Client; }) => Effect.Effect<(namespace: import(\"./N",
+        "makeKVAuth": "```typescript\n(token: import(\"./NamespaceHttp.ts\").HttpToken) => KVAuth\n```\n\nBuild a scoped-token KVAuth from a bound HttpToken.",
+        "makeKVHttpScope": "```typescript\n(auth: KVAuth, namespaceId: Effect.Effect<string>) => Effect.Effect<import(\"./NamespaceHttp.ts\").HttpScope>\n```\n\nResolve the account and namespace id once per operation.",
+        "makeWriteKVHttpClient": "```typescript\n(auth: KVAuth, namespaceId: Effect.Effect<string>) => WriteNamespaceClient\n```",
+        "mapError": "```typescript\n{ <E, E2>(f: (e: E) => E2): <A, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E2, R>; <A, E, R, E2>(self: Effect.Effect<A, E, R>, f: (e: E) => E2): Effect.Effect<A, E2, R>; }\n```\n\nTransforms the failure value of an effect without chang",
+        "metadata": "```typescript\nany\n```",
+        "namespaceId": "```typescript\nEffect.Effect<string, never, never>\n```\n\n---\n\n```typescript\nstring\n```",
+        "options": "```typescript\nKVNamespacePutOptions | undefined\n```",
+        "permissionGroups": "```typescript\n\"Workers KV Storage Write\"[]\n```",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "put": "```typescript\nany\n```",
+        "putNamespaceValue": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<kv.PutNamespaceValueRequest, kv.PutNamespaceValueResponse, kv.PutNamespaceValueError, kv.CloudflareOpContext>\n```\n\nWrite a value identified by a key. Use URL-encoding to use special characte",
+        "Response": "```typescript\n{ new (body?: BodyInit | null, init?: ResponseInit): Response; prototype: Response; error(): Response; json(data: any, init?: ResponseInit): Response; redirect(url: string | URL, status?: number): Response; }\n```\n\nThe **`Response`** interface",
+        "scope": "```typescript\nEffect.Effect<import(\"./NamespaceHttp.ts\").HttpScope, never, never>\n```",
+        "suspend": "```typescript\n<A, E, R>(effect: import(\"effect/Function\").LazyArg<Effect.Effect<A, E, R>>) => Effect.Effect<A, E, R>\n```\n\nCreates an `Effect` lazily, delaying construction until it is needed.\n\n**When to use**\n\nUse when you need to defer the evaluation of a",
+        "token": "```typescript\nimport(\"./NamespaceHttp.ts\").HttpToken\n```",
+        "toKVBody": "```typescript\n(value: string | ArrayBuffer | ArrayBufferView | ReadableStream) => Effect.Effect<string | Blob, NamespaceError>\n```\n\nCollect a put value into a body accepted by the KV HTTP API.",
+        "toKVNamespaceError": "```typescript\n(error: unknown) => NamespaceError\n```",
+        "try": "```typescript\n() => Promise<ArrayBuffer>\n```",
+        "tryPromise": "```typescript\n{ <A>(options: (signal: AbortSignal) => PromiseLike<A>): Effect.Effect<A, import(\"effect/Cause\").UnknownError>; <A, E>(options: { readonly try: (signal: AbortSignal) => PromiseLike<A>; readonly catch: (error: unknown) => E; }): Effect.Effect<",
+        "value": "```typescript\nstring | ArrayBuffer | ArrayBufferView<ArrayBufferLike> | ReadableStream<any>\n```\n\n---\n\n```typescript\nstring | Blob\n```\n\n---\n\n```typescript\nstring | ArrayBuffer | ArrayBufferView<ArrayBufferLike> | ReadableStream<any>\n```\n\n```typescript\nstrin",
+        "view": "```typescript\nArrayBufferView<ArrayBufferLike>\n```",
+        "WriteNamespace": "```typescript\nWriteNamespace\n```\n\nBind a Namespace to a Worker with write access and obtain the\nEffect-native KV client (`put`, `delete`).\n\n`WriteNamespace` is a single identifier that is simultaneously the binding's\nContext tag, its type, and the callable",
+        "WriteNamespaceHttp": "```typescript\nLayer.Layer<WriteNamespace, never, import(\"../CloudflareEnvironmentService.ts\").CloudflareEnvironment | import(\"../../Self.ts\").Self<{ Type: string; LogicalId: string; }>>\n```\n\nHTTP-backed implementation of the WriteNamespace binding.\n\nIt cre"
+      },
+      "references": {
+        "__comment": "Declarations of symbols used in `code`. Each key is `symbol:pathname`: the symbol name as used in `code` followed by its repository-relative declaration path. Each value is a complete declaration excerpt.",
+        "KVAuth:packages/alchemy/src/Cloudflare/KV/NamespaceHttp.ts": "export interface KVAuth {\n  authorize: <A, E>(\n    eff: Effect.Effect<A, E, Credentials | HttpClient.HttpClient>,\n  ) => Effect.Effect<A, E, RuntimeContext>;\n  accountId: Effect.Effect<string>;\n}",
+        "makeHttpKVNamespaceBinding:packages/alchemy/src/Cloudflare/KV/NamespaceHttp.ts": "export const makeHttpKVNamespaceBinding = <Client>(options: {\n  permissionGroups: PermissionGroup[];\n  makeClient: (token: HttpToken, namespaceId: Effect.Effect<string>) => Client;\n}) =>\n  Effect.gen(function* () {\n    const Token = yield* AccountApiToken;\n    const self = yield* Self;\n    const env = yield* CloudflareEnvironment;\n\n    return Effect.fn(function* (namespace: Namespace) {\n      const { accountId } = yield* env;\n      const token = yield* Token(`${self.LogicalId}Token`);\n      if (!globalThis.__ALCHEMY_RUNTIME__) {\n        yield* token.bind`${namespace.LogicalId}`({\n          policies: [\n            {\n              effect: \"allow\",\n              permissionGroups: options.permissionGroups,\n              resources: {\n                [`com.cloudflare.api.account.${accountId}`]: \"*\",\n              },\n            },\n          ],\n        });\n      }\n      const bound = {\n        value: yield* token.value,\n        accountId: yield* token.accountId,\n      } satisfies HttpToken;\n      const namespaceId = yield* namespace.namespaceId;\n      return options.makeClient(bound, namespaceId);\n    });\n  });",
+        "makeKVAuth:packages/alchemy/src/Cloudflare/KV/NamespaceHttp.ts": "export const makeKVAuth = (token: HttpToken): KVAuth => ({\n  authorize: authorizeWith(token),\n  accountId: token.accountId,\n});",
+        "makeKVHttpScope:packages/alchemy/src/Cloudflare/KV/NamespaceHttp.ts": "export const makeKVHttpScope = (\n  auth: KVAuth,\n  namespaceId: Effect.Effect<string>,\n): Effect.Effect<HttpScope> =>\n  Effect.gen(function* () {\n    const accountId = yield* auth.accountId;\n    const id = yield* namespaceId;\n    return { accountId, namespaceId: id };\n  });",
+        "NamespaceError:packages/alchemy/src/Cloudflare/KV/NamespaceTypes.ts": "export class NamespaceError extends Data.TaggedError(\"NamespaceError\")<{\n  message: string;\n  cause: Error;\n}> {}",
+        "toKVNamespaceError:packages/alchemy/src/Cloudflare/KV/NamespaceHttp.ts": "export const toKVNamespaceError = (error: unknown): NamespaceError =>\n  new NamespaceError({\n    message:\n      typeof error === \"object\" && error !== null && \"message\" in error\n        ? String((error as { message: unknown }).message)\n        : \"Unknown KV error\",\n    cause: error instanceof Error ? error : new Error(String(error)),\n  });",
+        "WriteNamespace:packages/alchemy/src/Cloudflare/KV/WriteNamespace.ts": "export interface WriteNamespace extends Binding.Service<\n  WriteNamespace,\n  \"Cloudflare.KV.WriteNamespace\",\n  (namespace: Namespace) => Effect.Effect<WriteNamespaceClient>\n> {}\n…\nexport const WriteNamespace = Binding.Service<WriteNamespace>(\n  \"Cloudflare.KV.WriteNamespace\",\n);",
+        "WriteNamespaceClient:packages/alchemy/src/Cloudflare/KV/WriteNamespace.ts": "export interface WriteNamespaceClient<Key extends string = string> {\n  put(\n    key: Key,\n    value: string | ArrayBuffer | ArrayBufferView | ReadableStream,\n    options?: KVNamespacePutOptions,\n  ): Effect.Effect<void, NamespaceError, RuntimeContext>;\n  delete(key: Key): Effect.Effect<void, NamespaceError, RuntimeContext>;\n}"
+      },
+      "code": {
+        "1": "import * as kv from \"@distilled.cloud/cloudflare/kv\";\nimport * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport {\n  makeHttpKVNamespaceBinding,\n  makeKVAuth,\n  makeKVHttpScope,\n  toKVNamespaceError,\n  type KVAuth,\n} from \"./NamespaceHttp.ts\";\nimport { NamespaceError } from \"./NamespaceTypes.ts\";\nimport { WriteNamespace, type WriteNamespaceClient } from \"./WriteNamespace.ts\";\n\n\n\n\n\n\n\nexport const WriteNamespaceHttp = Layer.effect(\n  WriteNamespace,\n  Effect.suspend(() =>\n    makeHttpKVNamespaceBinding({\n      permissionGroups: [\"Workers KV Storage Write\"],\n      makeClient: (token, namespaceId) =>\n        makeWriteKVHttpClient(makeKVAuth(token), namespaceId),\n    }),\n  ),\n);",
+        "2": "\nexport const makeWriteKVHttpClient = (\n  auth: KVAuth,\n  namespaceId: Effect.Effect<string>,\n): WriteNamespaceClient => {\n  const { authorize } = auth;\n  const scope = makeKVHttpScope(auth, namespaceId);",
+        "3": "\n  return {\n    put: ((\n      key: string,\n      value: string | ArrayBuffer | ArrayBufferView | ReadableStream,\n      options?: KVNamespacePutOptions,\n    ) =>\n      scope.pipe(\n        Effect.flatMap(({ accountId, namespaceId }) =>\n          toKVBody(value).pipe(\n            Effect.flatMap((body) =>\n              authorize(\n                kv.putNamespaceValue({\n                  accountId,\n                  namespaceId,\n                  keyName: key,\n                  value: body,\n                  expiration: options?.expiration,\n                  expirationTtl: options?.expirationTtl,\n                  metadata: options?.metadata,\n                }),\n              ),\n            ),\n          ),\n        ),\n        Effect.mapError(toKVNamespaceError),\n        Effect.asVoid,\n      )) as any,",
+        "4": "    delete: ((key: string) =>\n      scope.pipe(\n        Effect.flatMap(({ accountId, namespaceId }) =>\n          authorize(\n            kv.deleteNamespaceValue({ accountId, namespaceId, keyName: key }),\n          ),\n        ),\n        Effect.mapError(toKVNamespaceError),\n        Effect.asVoid,\n      )) as any,\n  };\n};\n\n\nconst toKVBody = (\n  value: string | ArrayBuffer | ArrayBufferView | ReadableStream,\n): Effect.Effect<string | Blob, NamespaceError> =>",
+        "5": "  Effect.gen(function* () {\n    if (typeof value === \"string\") return value;\n    if (value instanceof Blob) return value;\n    if (value instanceof ArrayBuffer) return new Blob([value]);\n    if (value instanceof ReadableStream) {\n      const buffer = yield* Effect.tryPromise({\n        try: () => new Response(value as any).arrayBuffer(),\n        catch: toKVNamespaceError,\n      });\n      return new Blob([buffer]);\n    }\n    const view = value as ArrayBufferView;\n    const bytes = new Uint8Array(view.byteLength);\n    bytes.set(\n      new Uint8Array(\n        view.buffer as ArrayBuffer,\n        view.byteOffset,\n        view.byteLength,\n      ),\n    );\n    return new Blob([bytes]);\n  });\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

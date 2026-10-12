@@ -1,0 +1,46 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/SES/ReceiptRuleSet.ts",
+  "kind": "judge",
+  "ordinal": 226,
+  "artifact": "attempt-00226.json",
+  "started": "2026-10-11T03:20:43.238Z",
+  "estimatedTokens": 2562,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.01623999999719672,
+  "referencesPresent": false,
+  "bodyDigest": "694a5a8f64ee1b2fe7f927e1ee8891d346246e88df65c3d3a9c22cb2a2836dfd",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as ses from \"@distilled.cloud/aws/ses\";\nimport * as Effect from \"effect/Effect\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface ReceiptRuleSetProps {\n\n\n\n\n\n\n\n  ruleSetName?: string;\n}\n\nexport interface ReceiptRuleSet extends Resource<\n  \"AWS.SES.ReceiptRuleSet\",\n  ReceiptRuleSetProps,\n  {\n\n    ruleSetName: string;\n  },\n  never,\n  Providers\n> {}",
+        "2": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ReceiptRuleSet = Resource<ReceiptRuleSet>(\n  \"AWS.SES.ReceiptRuleSet\",\n);\n\nexport const ReceiptRuleSetProvider = () =>\n  Provider.effect(\n    ReceiptRuleSet,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: Pick<ReceiptRuleSetProps, \"ruleSetName\">,\n      ) {\n        return (\n          props.ruleSetName ??\n          (yield* createPhysicalName({ id, maxLength: 64 }))\n        );\n      });\n\n      const describe = Effect.fn(function* (name: string) {\n        return yield* ses\n          .describeReceiptRuleSet({ RuleSetName: name })\n          .pipe(\n            Effect.catchTag(\"RuleSetDoesNotExistException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n      });\n\n      return ReceiptRuleSet.Provider.of({\n        stables: [\"ruleSetName\"],",
+        "3": "\n\n\n\n        list: () =>\n          Effect.gen(function* () {\n            const rows: { ruleSetName: string }[] = [];\n            let nextToken: string | undefined;\n            do {\n              const page = yield* ses.listReceiptRuleSets({\n                NextToken: nextToken,\n              });\n              for (const set of page.RuleSets ?? []) {\n                if (set.Name) rows.push({ ruleSetName: set.Name });\n              }\n              nextToken = page.NextToken;\n            } while (nextToken);\n            return rows;\n          }),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name = output?.ruleSetName ?? (yield* createName(id, olds));\n          const found = yield* describe(name);\n\n\n\n          return found ? { ruleSetName: name } : undefined;\n        }),",
+        "4": "\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output }) {\n          const name = output?.ruleSetName ?? (yield* createName(id, news));\n\n\n          const observed = yield* describe(name);\n\n\n          if (observed === undefined) {\n            yield* ses\n              .createReceiptRuleSet({ RuleSetName: name })\n              .pipe(\n                Effect.catchTag(\"AlreadyExistsException\", () =>\n                  Effect.succeed({}),\n                ),\n              );\n          }\n\n\n\n          return { ruleSetName: name };\n        }),",
+        "5": "\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* ses.deleteReceiptRuleSet({\n            RuleSetName: output.ruleSetName,\n          });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

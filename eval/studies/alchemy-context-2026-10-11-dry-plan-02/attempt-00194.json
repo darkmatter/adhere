@@ -1,0 +1,51 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/EntityResolution/MatchingWorkflow.ts",
+  "kind": "judge",
+  "ordinal": 194,
+  "artifact": "attempt-00194.json",
+  "started": "2026-10-11T03:20:42.077Z",
+  "estimatedTokens": 3745,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.025797999998758314,
+  "referencesPresent": false,
+  "bodyDigest": "1b6944f169e036c32f371a5617d475850bcbe6e82311bcda6f741dea234cbb9d",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as entityresolution from \"@distilled.cloud/aws/entityresolution\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { deepEqual, isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport {\n  readEntityResolutionTags,\n  retryRolePropagation,\n  syncEntityResolutionTags,\n} from \"./internal.ts\";\n\nexport interface MatchingWorkflowProps {\n\n\n\n\n\n  workflowName?: string;\n\n\n\n  description?: string;",
+        "2": "\n\n\n\n\n  inputSourceConfig: entityresolution.InputSource[];\n\n\n\n\n  outputSourceConfig: entityresolution.OutputSource[];\n\n\n\n\n  resolutionTechniques: entityresolution.ResolutionTechniques;\n\n\n\n\n  incrementalRunConfig?: entityresolution.IncrementalRunConfig;\n\n\n\n\n  roleArn: string;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "3": "\nexport interface MatchingWorkflow extends Resource<\n  \"AWS.EntityResolution.MatchingWorkflow\",\n  MatchingWorkflowProps,\n  {\n\n\n\n    workflowName: string;\n\n\n\n    workflowArn: string;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const MatchingWorkflow = Resource<MatchingWorkflow>(\n  \"AWS.EntityResolution.MatchingWorkflow\",\n);\n\nexport const MatchingWorkflowProvider = () =>\n  Provider.effect(\n    MatchingWorkflow,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: { workflowName?: string | undefined },\n      ) {\n        return (\n          props.workflowName ??\n          (yield* createPhysicalName({ id, maxLength: 255 }))\n        );\n      });\n\n\n      const getByName = Effect.fn(function* (workflowName: string) {\n        return yield* entityresolution\n          .getMatchingWorkflow({ workflowName })\n          .pipe(\n            Effect.catchTag(\"ResourceNotFoundException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n      });",
+        "5": "\n      return {\n        stables: [\"workflowName\", \"workflowArn\"],\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name =\n            output?.workflowName ?? (yield* createName(id, olds ?? {}));\n          const workflow = yield* getByName(name);\n          if (workflow === undefined) return undefined;\n          const attrs = {\n            workflowName: workflow.workflowName,\n            workflowArn: workflow.workflowArn,\n          };\n\n\n          const tags = yield* readEntityResolutionTags(workflow.workflowArn);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),\n\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const name = output?.workflowName ?? (yield* createName(id, news));\n          const internalTags = yield* createInternalTags(id);",
+        "6": "          const desiredTags = { ...news.tags, ...internalTags };\n\n\n          let workflow = yield* getByName(name);",
+        "7": "\n\n\n\n\n\n\n          if (workflow === undefined) {\n            yield* entityresolution\n              .createMatchingWorkflow({\n                workflowName: name,\n                description: news.description,\n                inputSourceConfig: news.inputSourceConfig,\n                outputSourceConfig: news.outputSourceConfig,\n                resolutionTechniques: news.resolutionTechniques,\n                incrementalRunConfig: news.incrementalRunConfig,\n                roleArn: news.roleArn,\n                tags: desiredTags,\n              })\n              .pipe(\n                retryRolePropagation,\n                Effect.catchTag(\"ConflictException\", () => Effect.void),\n              );\n            workflow = yield* entityresolution.getMatchingWorkflow({\n              workflowName: name,\n            });\n          }",
+        "8": "\n\n\n\n          const desired = {\n            description: news.description ?? undefined,\n            inputSourceConfig: news.inputSourceConfig,\n            outputSourceConfig: news.outputSourceConfig,\n            resolutionTechniques: news.resolutionTechniques,\n            incrementalRunConfig: news.incrementalRunConfig ?? undefined,\n            roleArn: news.roleArn,\n          };\n          const observed = {\n            description: workflow.description ?? undefined,\n            inputSourceConfig: workflow.inputSourceConfig,\n            outputSourceConfig: workflow.outputSourceConfig,\n            resolutionTechniques: workflow.resolutionTechniques,\n            incrementalRunConfig: workflow.incrementalRunConfig ?? undefined,\n            roleArn: workflow.roleArn,\n          };",
+        "9": "          if (!deepEqual(observed, desired)) {\n\n\n            yield* entityresolution\n              .updateMatchingWorkflow({\n                workflowName: name,\n                description: news.description,\n                inputSourceConfig: news.inputSourceConfig,\n                outputSourceConfig: news.outputSourceConfig,\n                resolutionTechniques: news.resolutionTechniques,\n                incrementalRunConfig: news.incrementalRunConfig,\n                roleArn: news.roleArn,\n              })\n              .pipe(retryRolePropagation);\n          }\n\n          const workflowArn = workflow.workflowArn;\n\n\n          yield* syncEntityResolutionTags(workflowArn, desiredTags);\n\n          yield* session.note(workflowArn);\n          return { workflowName: name, workflowArn };\n        }),",
+        "10": "\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* entityresolution\n            .deleteMatchingWorkflow({ workflowName: output.workflowName })\n            .pipe(\n              Effect.retry({\n                while: (e) => e._tag === \"ConflictException\",\n                schedule: Schedule.max([\n                  Schedule.fixed(\"2 seconds\"),\n                  Schedule.recurs(10),\n                ]),\n              }),\n            );\n        }),\n\n        list: () =>\n          entityresolution.listMatchingWorkflows.items({}).pipe(\n            Stream.map((summary) => ({\n              workflowName: summary.workflowName,\n              workflowArn: summary.workflowArn,\n            })),\n            Stream.runCollect,\n            Effect.map((chunk) => Array.from(chunk)),\n          ),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

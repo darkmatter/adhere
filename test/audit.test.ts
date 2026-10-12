@@ -1,3473 +1,62 @@
 import {
-  access,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { stripVTControlCharacters } from "node:util";
-import {
-  ConfigProvider,
-  Crypto,
-  Effect,
-  FileSystem,
-  Layer,
-  Path,
-  Record,
-  Redacted,
-  Schema,
-} from "effect";
-import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
+  planOf,
+  loaded,
+  a,
+  b,
+  rules,
+  testCrypto,
+  memoryCache,
+  placedAt,
+  sendingJev,
+  recordingJev,
+  source,
+  fixtureWalker,
+  audit,
+  findingA,
+  onDisk,
+} from "./audit.fixtures.ts";
+import { readFile, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { Effect, Layer, Path, Record, Schema } from "effect";
 import { FetchHttpClient } from "effect/http";
-import type { SystemOneRequest } from "../src/providers/systemOne.ts";
+import { requestOf, type SystemOneRequest } from "../src/providers/systemOne.ts";
+import { ContextOverflow, type Provider } from "../src/providers/provider.ts";
 import { describe, expect, it } from "vite-plus/test";
-import { isNote, withoutComments } from "../src/comments.ts";
-import { NO_SUPPRESSIONS, suppresses, suppressionsOf } from "../src/suppress.ts";
-import { findContradictions, formatContradictions } from "../src/contradictions.ts";
 import {
-  AdhereConfig as AdhereConfigSchema,
   type AppendState,
   DEFAULT_READS,
-  decodeConfig,
-  type Loaded,
-  type Preset,
+  DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+  DEFAULT_MAX_SYMBOL_LENGTH,
   type ReadState,
-  type ResolvedConfig,
-  presetsOf,
   resolveConfig,
 } from "../src/config.ts";
-import { type Range, sectionsOf } from "../src/excerpt.ts";
-import { tokenize } from "../src/highlight.ts";
-import { initProject } from "../src/init.ts";
-import { parseRuleMarkdown } from "../src/markdown.ts";
-import { workspacePackagesOf } from "../src/workspaces.ts";
-import { presetOf, presets, topicsOf, wholePresetOf } from "../src/presets.ts";
-import { type ScannedFile, WalkUnavailable } from "../src/models/Audit.ts";
-import {
-  applicableRules,
-  loadAdhereRuleSet,
-  loadRules,
-  type RuleEntry,
-  type RuleSet,
-  shownId,
-  withOverrides,
-} from "../src/rules.ts";
-import { AdhereConfig, AdhereConfigLive } from "../src/services/AdhereConfig.ts";
-import {
-  type Answers,
-  AuditCache,
-  AuditCacheLive,
-  CacheEntry,
-  type Live,
-  type Tally,
-} from "../src/services/AuditCache.ts";
-import {
-  Credentials,
-  CredentialsLive,
-  CredentialsUnavailable,
-} from "../src/services/Credentials.ts";
+
+import { type ScannedFile } from "../src/models/Audit.ts";
+import { AdhereConfig } from "../src/services/AdhereConfig.ts";
+import { AuditCache, CacheEntry, type Live } from "../src/services/AuditCache.ts";
+import { Credentials } from "../src/services/Credentials.ts";
 import { JevLive } from "../src/services/Jev.http.ts";
 import { SourceReads, SourceReadsLive } from "../src/services/SourceReads.ts";
 import {
-  conflictBody,
-  contradictBody,
   fits,
   Jev,
   JevBlocked,
   JevOverflow,
   JevUnavailable,
-  judgeBody,
   judgeLoad,
-  linterKey,
-  linterQuestion,
-  locateBody,
-  locateRequests,
-  matcherQuestion,
-  namedPairs,
-  type Pair,
-  pairProbability,
-  requestGroups,
-  requestsOf,
   type Rules,
-  sufficiencyQuestion,
-  tokensOf,
 } from "../src/services/Jev.ts";
-import {
-  isInSkippedTree,
-  isScannable,
-  isTestFile,
-  passesFilter,
-  SourceWalker,
-  SourceWalkerLive,
-} from "../src/services/SourceWalker.ts";
-import { formatStrays, straysAmong, strayingOf, TIPS_URL } from "../src/wording.ts";
-import { walkFiles } from "../src/walk.ts";
-import { Status } from "../src/services/Status.ts";
-import {
-  formatLinterCheck,
-  SAMPLE,
-  type Tallied,
-  talliedOf,
-  tallyKeyOf,
-  tallyProjectRules,
-} from "../src/mechanical.ts";
+import { tallyKeyOf } from "../src/mechanical.ts";
 import {
   type AuditPlan,
   executeAudit,
   failing,
   type FileDone,
-  type FilePlan,
   planAudit,
   pruneCache,
   render,
-  runAudit,
 } from "../src/workflows/audit.ts";
-import { describePlan, progressLine, sendQuestion } from "../src/workflows/format.ts";
-
-const a = {
-  description: "Ports are branded.",
-  must: '\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\ntype Port = typeof Port.Type\n',
-};
-const b = {
-  description: "Secrets are redacted.",
-  must: 'const key = yield* Config.redacted("API_KEY")',
-};
-const rules: Rules = { a, b };
-const code1 = ["const port = 3000;"];
-
-/** Echoes the input as its digest, so equal text still shares a cache key. */
-const testCrypto = Layer.succeed(
-  Crypto.Crypto,
-  Crypto.make({
-    randomBytes: (size) => new Uint8Array(size),
-    digest: (_algorithm, data) => Effect.succeed(data),
-  }),
-);
-
-/** Answers by content hash, as the cache keeps them; `pruned` holds what each prune was told is live. */
-const memoryCache = (
-  seed: Readonly<Record<string, Answers>> = {},
-  tallies: Map<string, Tally> = new Map(),
-  pruned: Array<Live> = [],
-) => {
-  const entries = new Map<string, Answers>(Object.entries(seed));
-  return Layer.succeed(AuditCache, {
-    get: (hash) => Effect.sync(() => entries.get(hash) ?? {}),
-    put: (hash, answers) =>
-      Effect.sync(() => {
-        entries.set(hash, { ...entries.get(hash), ...answers });
-      }),
-    tally: (key) => Effect.sync(() => tallies.get(key)),
-    putTally: (key, tally) =>
-      Effect.sync(() => {
-        tallies.set(key, tally);
-      }),
-    prune: (live) =>
-      Effect.sync(() => {
-        pruned.push(live);
-        return 0;
-      }),
-  });
-};
-
-/** A section of one line. */
-const lineAt = (line: number): Range => ({ first: line, last: line });
-
-/** The section of `lines` that holds `line`, as Jev's locate answer names it. */
-const sectionAt = (lines: ReadonlyArray<string>, line: number): Range =>
-  sectionsOf(lines).find((section) => section.first <= line && line <= section.last) ?? {
-    first: line,
-    last: line,
-  };
-
-/** Jev's locate answer for a finding on `line`: its section, and the line, in a file that shows enough. */
-const placedAt = (lines: ReadonlyArray<string>, line: number) => ({
-  section: sectionAt(lines, line),
-  sufficiency: 0.9,
-  lines: { first: line, last: line },
-});
-
-/** Jev that answers from tables, as `recordingJev` does, and keeps the code of every request. */
-const sendingJev = (answers: {
-  readonly judge: Record<string, number>;
-  readonly locate: Record<string, number>;
-}) => {
-  const sent: Array<string> = [];
-  const answer = (table: Readonly<Record<string, number>>, asked: Rules) =>
-    Record.filter(table, (_, id) => asked[id] !== undefined);
-  const layer = Layer.succeed(Jev, {
-    judge: (code, asked) =>
-      Effect.sync(() => {
-        sent.push(code.join("\n"));
-        return { probabilities: answer(answers.judge, asked), linter: {} };
-      }),
-    locate: (code, asked) =>
-      Effect.sync(() => {
-        sent.push(code.join("\n"));
-        return Record.map(answer(answers.locate, asked), (line) => placedAt(code, line));
-      }),
-    conflicts: () => Effect.die("an audit compares no rules"),
-    contradicts: () => Effect.die("an audit compares no rules"),
-  });
-  return { sent, layer };
-};
-
-const recordingJev = (answers: {
-  readonly judge: Record<string, number>;
-  readonly locate: Record<string, number>;
-}) => {
-  const calls = { judge: [] as Array<Rules>, locate: [] as Array<Rules> };
-  const states = { judge: [] as Array<ReadState>, locate: [] as Array<ReadState> };
-  const asked = (table: Record<string, number>, rules: Rules) =>
-    Record.filter(table, (_, id) => rules[id] !== undefined);
-  const layer = Layer.succeed(Jev, {
-    judge: (_lines, rules, _sampled, _file, readState = {}) =>
-      Effect.sync(() => {
-        calls.judge.push(rules);
-        states.judge.push(readState);
-        return { probabilities: asked(answers.judge, rules), linter: {} };
-      }),
-    locate: (lines, rules, _file, readState = {}) =>
-      Effect.sync(() => {
-        calls.locate.push(rules);
-        states.locate.push(readState);
-        return Record.map(asked(answers.locate, rules), (line) => placedAt(lines, line));
-      }),
-    conflicts: () => Effect.die("an audit compares no rules"),
-    contradicts: () => Effect.die("an audit compares no rules"),
-  });
-  return { calls, states, layer };
-};
-
-const source: ScannedFile = {
-  path: "/repo/src/server.ts",
-  lines: [
-    "const before = 1;",
-    "  const port: number = Number(process.env.PORT);",
-    "const after = 2;",
-  ],
-};
-
-const fixtureWalker = (files: ReadonlyArray<ScannedFile>) =>
-  Layer.succeed(SourceWalker, {
-    files: Effect.succeed(
-      files.map(({ path, test }) => ({ path, ...(test === undefined ? {} : { test }) })),
-    ),
-    read: ({ path }) =>
-      Effect.suspend(() => {
-        const file = files.find((file) => file.path === path);
-        return file === undefined
-          ? Effect.die(`Missing source fixture: ${path}`)
-          : Effect.succeed(file);
-      }),
-  });
-
-const audit = (options: {
-  readonly rules: Rules;
-  readonly model?: string;
-  readonly threshold?: number;
-  readonly jev: Layer.Layer<Jev>;
-  readonly cache: Layer.Layer<AuditCache>;
-  readonly files?: ReadonlyArray<ScannedFile>;
-  readonly includeComments?: boolean;
-  readonly reads?: ResolvedConfig["reads"];
-  readonly workspacePackages?: Readonly<Record<string, string>>;
-  readonly sourceReads?: Layer.Layer<SourceReads>;
-}) =>
-  Effect.runPromise(
-    runAudit.pipe(
-      Effect.provide(
-        Layer.mergeAll(
-          Layer.succeed(AdhereConfig, {
-            model: options.model ?? "jev-latest",
-            threshold: options.threshold ?? 0.7,
-            sufficiencyThreshold: 0.7,
-            reads: options.reads ?? [],
-            rules: options.rules,
-            ...(options.includeComments === undefined
-              ? {}
-              : { includeComments: options.includeComments }),
-            ...(options.workspacePackages === undefined
-              ? {}
-              : { workspacePackages: options.workspacePackages }),
-          }),
-          fixtureWalker(options.files ?? [source]),
-          options.jev,
-          options.cache,
-          testCrypto,
-          ...(options.sourceReads === undefined ? [] : [options.sourceReads]),
-        ),
-      ),
-    ),
-  );
-
-const findingA = {
-  rule: "a",
-  description: a.description,
-  examples: { good: { word: "must" as const, code: a.must } },
-  file: "/repo/src/server.ts",
-  section: { first: 1, last: 3 },
-  lines: { first: 2, last: 2 },
-  excerpt: { start: 1, lines: source.lines },
-  context: 0.9,
-  probability: 0.9,
-  threshold: 0.7,
-  level: "error" as const,
-};
-
-describe("request bodies", () => {
-  const code = ["const x = 1;", "", "  const y = 2;"];
-  const sectioned = { "1": "const x = 1;\n\n  const y = 2;" };
-  const diverges =
-    "Does `code` diverge from the pattern shown in `must`, as described by `rule`? Answer no if the pattern does not apply to this file.";
-  const scoped = {
-    true: "`code` diverges from the pattern shown in `must`, in code that `rule` is about",
-    false: "`code` follows the pattern, or has no code that `rule` is about",
-  };
-
-  it("judge: the code's sections are the whole state, and each rule rides in its own noul", () => {
-    expect(judgeBody("jev-latest", code, rules)).toEqual({
-      model: "jev-latest",
-      state: { code: sectioned },
-      questions: {
-        a: {
-          type: "noul",
-          instructions: { question: diverges, rule: a.description, must: a.must },
-          criteria: scoped,
-        },
-        b: {
-          type: "noul",
-          instructions: { question: diverges, rule: b.description, must: b.must },
-          criteria: scoped,
-        },
-      },
-    });
-  });
-
-  it("carries a rule's details after its description, in every question and comparison", () => {
-    const detailed = { ...a, details: "Why: a bare number accepts 70000 and -1." };
-    const text = `${a.description}\n\nWhy: a bare number accepts 70000 and -1.`;
-    const judged = judgeBody("jev-latest", code, { a: detailed, b }).questions;
-    expect(judged.a?.instructions).toMatchObject({ rule: text, must: a.must });
-    // A rule without details sends its description alone, as before.
-    expect(judged.b?.instructions).toMatchObject({ rule: b.description });
-    expect(linterQuestion(detailed).instructions).toMatchObject({ rule: text });
-    expect(matcherQuestion(detailed, "appliesTo", "a port").instructions).toMatchObject({
-      rule: text,
-    });
-    expect(sufficiencyQuestion(detailed).instructions).toMatchObject({ rule: text });
-    expect(locateBody("jev-latest", code, { a: detailed }).questions).toMatchObject({
-      "start:a:1": { instructions: { rule: text } },
-      "end:a:1": { instructions: { rule: text } },
-      "sufficient:a": { instructions: { rule: text } },
-    });
-    const compared = [
-      { id: "a", rule: detailed },
-      { id: "b", rule: b },
-    ];
-    expect(contradictBody("jev-latest", compared, [0, 1]).state.rules["0"]).toMatchObject({
-      description: text,
-    });
-  });
-
-  it("judge: each matcher rides in its own noul beside its rule, about the code that breaks it", () => {
-    const scoped = { ...a, appliesTo: ["a port"], excludeIf: ["a port a third party fixes"] };
-    const { questions } = judgeBody("jev-latest", code, { a: scoped });
-
-    expect(Object.keys(questions)).toEqual(["a", "appliesTo:a:0", "excludeIf:a:0"]);
-    expect(questions["appliesTo:a:0"]).toMatchObject({
-      type: "noul",
-      instructions: {
-        question: expect.stringContaining("Is any of the code in `code` that breaks `rule`"),
-        rule: a.description,
-        must: a.must,
-        matcher: "a port",
-      },
-    });
-    expect(questions["excludeIf:a:0"]).toMatchObject({
-      instructions: {
-        question: expect.stringContaining("Is all of the code in `code` that breaks `rule`"),
-        matcher: "a port a third party fixes",
-      },
-    });
-  });
-
-  it("locate: one choice per rule among the sections' numbers, carrying the rule", () => {
-    const long = Array.from({ length: 70 }, (_, index) => `const v${index + 1} = ${index + 1};`);
-    const body = locateBody("jev-latest", long, { a });
-    expect(Object.keys(body.state.code)).toEqual(["1", "2", "3"]);
-    expect(body.state.code["2"]?.split("\n")[0]).toBe("const v31 = 31;");
-    expect(Object.keys(body.questions)).toEqual([
-      "a",
-      "start:a:1",
-      "end:a:1",
-      "start:a:2",
-      "end:a:2",
-      "start:a:3",
-      "end:a:3",
-      "sufficient:a",
-    ]);
-    // Where in a section it starts or ends: a choice among its lines, each its text.
-    expect(body.questions["start:a:2"]).toMatchObject({
-      type: "choice",
-      instructions: {
-        question: 'Which line of `code["2"]` does the code that breaks `rule` start on?',
-        rule: a.description,
-        must: a.must,
-      },
-    });
-    expect(Object.entries(body.questions["start:a:2"]?.criteria ?? {})[0]).toEqual([
-      "31",
-      "const v31 = 31;",
-    ]);
-    expect(body.questions.a).toEqual({
-      type: "choice",
-      instructions: {
-        question: "Which entry of `code` most clearly diverges from `must`?",
-        rule: a.description,
-        must: a.must,
-      },
-      criteria: { "1": null, "2": null, "3": null },
-    });
-    expect(body.questions["sufficient:a"]).toMatchObject({
-      type: "noul",
-      instructions: {
-        question: expect.stringContaining("from `code` alone"),
-        rule: a.description,
-        must: a.must,
-      },
-    });
-    // A file of one section has no section to choose.
-    expect(Object.keys(locateBody("jev-latest", code, { a }).questions)).toEqual([
-      "start:a:1",
-      "end:a:1",
-      "sufficient:a",
-    ]);
-  });
-
-  it("carries the code under the rule's words: must and never, or should and should not", () => {
-    const both = { ...a, never: "const port: number = 3000" };
-    const neverOnly = {
-      description: "Domain code must never throw.",
-      never: 'throw new Error("x")',
-    };
-    const guideline = {
-      description: "A file should be small.",
-      should: "export const one = 1;",
-      shouldNot: "export const a = 1, b = 2;",
-    };
-    const questions = judgeBody("jev-latest", code, { both, neverOnly, guideline }).questions;
-    expect(questions.both).toEqual({
-      type: "noul",
-      instructions: {
-        question:
-          "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
-        rule: both.description,
-        must: both.must,
-        never: both.never,
-      },
-      criteria: {
-        true: "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
-        false: scoped.false,
-      },
-    });
-    expect(questions.neverOnly).toEqual({
-      type: "noul",
-      instructions: {
-        question:
-          "Does `code` contain the pattern shown in `never`, which `rule` rules out? Answer no if nothing in this file resembles it.",
-        rule: neverOnly.description,
-        never: neverOnly.never,
-      },
-      criteria: {
-        true: "`code` contains the pattern shown in `never`, in code that `rule` is about",
-        false: "`code` has nothing like `never`, or has no code that `rule` is about",
-      },
-    });
-    expect(questions.guideline?.instructions).toEqual({
-      question:
-        "Does `code` diverge from the pattern shown in `should`, for example by doing what `should_not` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
-      rule: guideline.description,
-      should: guideline.should,
-      should_not: guideline.shouldNot,
-    });
-
-    const long = Array.from({ length: 40 }, (_, index) => `const v${index} = ${index};`);
-    const located = locateBody("jev-latest", long, { both, neverOnly }).questions;
-    expect(located.both?.instructions.question).toBe(
-      "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
-    );
-    expect(located.neverOnly?.instructions.question).toBe(
-      "Which entry of `code` most clearly shows the pattern in `never`?",
-    );
-  });
-});
-
-describe("jev's context", () => {
-  /** A rule whose question comes to about `tokens` by `tokensOf`'s count. */
-  const sized = (tokens: number) => ({ description: "Sized.", must: "x".repeat(tokens * 3) });
-  const linesOf = (count: number, line: string) => Array.from({ length: count }, () => line);
-  const line = "export const value = compute(input);";
-
-  it("splits questions into requests that fit beside the state, in order", () => {
-    const body = judgeBody("jev-latest", code1, {
-      a: sized(20_000),
-      b: sized(20_000),
-      c: sized(20_000),
-      d: sized(20_000),
-    });
-    const requests = requestsOf(body);
-    expect(requests.map((request) => Object.keys(request.questions))).toEqual([
-      ["a", "b", "c"],
-      ["d"],
-    ]);
-    for (const request of requests) {
-      expect(request.state).toEqual(body.state);
-      const questions = Object.values(request.questions).map(tokensOf);
-      expect(tokensOf(request.state) + questions.reduce((sum, n) => sum + n, 0)).toBeLessThan(
-        64_000,
-      );
-    }
-  });
-
-  it("gives each rule with appendState requests of its own, to judge and to locate", () => {
-    const hooked = { ...b, appendState: () => ({}) };
-    expect(requestGroups({ a, hooked, b })).toEqual([{ a, b }, { hooked }]);
-    expect(requestGroups({ hooked })).toEqual([{ hooked }]);
-    const readState = { workspacePackages: { "orders-core": "packages/orders" } };
-    expect(requestGroups(rules)).toEqual([rules]);
-    expect(judgeLoad(code1, rules, [], readState).requests).toBe(1);
-    expect(locateRequests(code1, rules, readState)).toBe(1);
-    expect(judgeLoad(code1, { a, b, hooked }, [], readState).requests).toBe(2);
-    expect(locateRequests(code1, { a, hooked }, readState)).toBe(2);
-  });
-
-  it("keeps a body that fits as one request", () => {
-    const body = judgeBody("jev-latest", code1, rules);
-    expect(requestsOf(body)).toEqual([body]);
-  });
-
-  it("fits a file whose code and longest question come within 32k tokens, in at most 255 sections", () => {
-    expect(fits(linesOf(1000, line), rules)).toBe(true);
-    expect(fits(linesOf(4000, line), rules)).toBe(false);
-    expect(fits(linesOf(7650, "a;"), rules)).toBe(true);
-    expect(fits(linesOf(7680, "a;"), rules)).toBe(false);
-    expect(fits(code1, { a: sized(20_000) })).toBe(true);
-    expect(fits(code1, { a: sized(33_000) })).toBe(false);
-  });
-});
-
-/** A decoded config whose rules are already in memory, as the loader hands them on. */
-const loaded = (config: typeof AdhereConfigSchema.Encoded, rules: Rules = {}) =>
-  Effect.map(decodeConfig(config), (decoded) => ({ ...decoded, rules }));
-
-describe("config", () => {
-  it("applies the default model, thresholds, and all three reads only at resolution", async () => {
-    const config = await Effect.runPromise(
-      loaded({}, { "data/brand": { description: "d", must: "r" } }),
-    );
-    expect(config.reads).toBeUndefined();
-    expect(Object.hasOwn(config, "reads")).toBe(false);
-    expect(DEFAULT_READS).toEqual(["workspacePackages", "symbols", "references"]);
-    expect(resolveConfig(config)).toEqual({
-      model: "jev-latest",
-      threshold: 0.8,
-      sufficiencyThreshold: 0.6,
-      reads: ["workspacePackages", "symbols", "references"],
-      rules: { "data/brand": { description: "d", must: "r" } },
-    });
-  });
-
-  it("takes the sufficiency threshold from the flag, then the config, then the default", async () => {
-    const config = await Effect.runPromise(loaded({ sufficiencyThreshold: 0.6 }));
-    expect(resolveConfig(config).sufficiencyThreshold).toBe(0.6);
-    expect(resolveConfig(config, { sufficiencyThreshold: 0.5 }).sufficiencyThreshold).toBe(0.5);
-  });
-
-  it("folds presets into the rules, with a config rule winning over a preset rule", async () => {
-    const override = { description: "mine", must: "mine" };
-    const preset: Loaded<Preset> = { rules: { a, b } };
-    const config = await Effect.runPromise(loaded({}, { a: override }));
-    const resolved = resolveConfig(config, { presets: ["effect"] }, { effect: preset });
-    expect(resolved.rules).toEqual({ a: override, b });
-  });
-
-  it("leaves rules unset when the config names none, so the loader can pick .adhere/", async () => {
-    const decoded = await Effect.runPromise(decodeConfig({}));
-    expect(decoded.rules).toBeUndefined();
-  });
-
-  it("accepts a directory path as the rules of a config", async () => {
-    const decoded = await Effect.runPromise(decodeConfig({ rules: "./team-rules" }));
-    expect(decoded.rules).toBe("./team-rules");
-  });
-
-  it("decodes overrides by rule id: off, a level, or a level and a threshold", async () => {
-    const overrides = {
-      "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
-      "effect/basics/gen-for-sequencing": "off",
-    } as const;
-    expect((await Effect.runPromise(decodeConfig({ overrides }))).overrides).toEqual(overrides);
-    const refused = await Effect.runPromise(
-      Effect.flip(decodeConfig({ overrides: { "effect/basics/gen-for-sequencing": "nit" } })),
-    );
-    expect(refused._tag).toBe("ConfigUnavailable");
-  });
-
-  it("applies overrides by the id a report shows: off drops a rule, a level or threshold replaces its own", () => {
-    const entry = (id: string, preset?: string): RuleEntry => ({
-      id,
-      ...(preset === undefined ? {} : { preset }),
-      scope: "/repo",
-      rule: { description: id, must: "a()", threshold: 0.7 },
-    });
-    const entries = [
-      entry("providers/idempotent-delete", "alchemy"),
-      entry("basics/gen-for-sequencing", "effect"),
-      entry("style/names"),
-      entry("style/kept"),
-    ];
-    const overridden = withOverrides(entries, {
-      "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
-      "effect/basics/gen-for-sequencing": "off",
-      "style/names": "warning",
-    });
-    expect(overridden.map((one) => [shownId(one), one.rule.level, one.rule.threshold])).toEqual([
-      ["alchemy/providers/idempotent-delete", "warning", 0.9],
-      ["style/names", "warning", 0.7],
-      ["style/kept", undefined, 0.7],
-    ]);
-  });
-
-  it("keeps the config's exclude globs, and refuses a rule's tests other than only or include", async () => {
-    const configured = await Effect.runPromise(loaded({ exclude: ["gen/**"] }));
-    expect(resolveConfig(configured).exclude).toEqual(["gen/**"]);
-    const refused = await Effect.runPromise(
-      Effect.flip(
-        decodeConfig({ rules: { a: { description: "d", must: "a()", tests: "sometimes" } } }),
-      ),
-    );
-    expect(refused._tag).toBe("ConfigUnavailable");
-  });
-
-  it("threshold precedence: command line, then config, then preset, then 0.8", async () => {
-    const registry = { effect: { threshold: 0.9, rules: {} } };
-    const bare = await Effect.runPromise(loaded({}));
-    expect(resolveConfig(bare).threshold).toBe(0.8);
-    expect(resolveConfig(bare, { presets: ["effect"] }, registry).threshold).toBe(0.9);
-    const configured = await Effect.runPromise(loaded({ presets: ["effect"], threshold: 0.6 }));
-    expect(resolveConfig(configured, {}, registry).threshold).toBe(0.6);
-    expect(resolveConfig(configured, { threshold: 0.85 }, registry).threshold).toBe(0.85);
-  });
-
-  it("refuses an unknown preset", async () => {
-    const refused = await Effect.runPromise(Effect.flip(decodeConfig({ presets: ["vue"] })));
-    expect(refused._tag).toBe("ConfigUnavailable");
-    expect(refused.message).toContain("effect");
-  });
-
-  it("refuses a rule without an example, or one that is both a requirement and a guideline", async () => {
-    const refusal = (rule: typeof AdhereConfigSchema.Encoded.rules) =>
-      Effect.runPromise(Effect.flip(decodeConfig({ rules: rule })));
-    const bare = await refusal({ "data/brand": { description: "d" } });
-    expect(bare._tag).toBe("ConfigUnavailable");
-    expect(bare.message).toContain("a rule needs an example: must, never, should, or shouldNot");
-    const mixed = await refusal({ "data/brand": { description: "d", must: "a()", should: "b()" } });
-    expect(mixed.message).toContain(
-      "a rule is a requirement (must, never) or a guideline (should, shouldNot), not both",
-    );
-  });
-
-  it("accepts a rule with only code never to write, and a guideline", async () => {
-    const never = { description: "Domain code does not throw.", never: "throw new Error()" };
-    const guideline = { description: "A file should be small.", should: "export const one = 1;" };
-    const config = await Effect.runPromise(decodeConfig({ rules: { never, guideline } }));
-    expect(config.rules).toEqual({ never, guideline });
-  });
-
-  it("takes a function as a rule's appendState, and refuses anything else", async () => {
-    const appendState = () => ({});
-    const decoded = await Effect.runPromise(decodeConfig({ rules: { a: { ...a, appendState } } }));
-    expect(decoded.rules).toEqual({ a: { ...a, appendState } });
-    const refused = await Effect.runPromise(
-      Effect.flip(decodeConfig({ rules: { a: { ...a, appendState: "{}" } } })),
-    );
-    expect(refused.message).toContain("Expected a function");
-  });
-
-  it("keeps configured shared reads through resolution and refuses unknown reads", async () => {
-    const reads = ["workspacePackages", "symbols", "references"] as const;
-    const decoded = await Effect.runPromise(decodeConfig({ reads, rules }));
-    expect(decoded.reads).toEqual(reads);
-    expect(decoded.rules).toEqual(rules);
-    expect(resolveConfig({ ...decoded, rules }).reads).toEqual(reads);
-    const refused = await Effect.runPromise(Effect.flip(decodeConfig({ reads: ["comments"] })));
-    expect(refused.message).toContain(
-      'Expected "workspacePackages" | "symbols" | "references"\n  at ["reads"][0]',
-    );
-  });
-
-  it("replaces default reads with explicit empty or subset lists rather than merging them", async () => {
-    for (const reads of [
-      [],
-      ["workspacePackages"],
-      ["symbols"],
-      ["references"],
-      ["symbols", "references"],
-    ] as const) {
-      const config = await Effect.runPromise(loaded({ reads }, rules));
-      expect(config.reads).toEqual(reads);
-      expect(resolveConfig(config).reads).toEqual(reads);
-    }
-  });
-
-  it("refuses rule-level reads with instructions to move them to the config", async () => {
-    for (const reads of [["workspacePackages", "symbols", "references"], [], ["comments"]]) {
-      const refused = await Effect.runPromise(
-        Effect.flip(decodeConfig({ reads: ["symbols"], rules: { a: { ...a, reads } } })),
-      );
-      expect(refused._tag).toBe("ConfigUnavailable");
-      expect(refused.message).toContain("reads");
-      expect(refused.message).toMatch(/move/i);
-      expect(refused.message).toMatch(/config/i);
-    }
-  });
-
-  it("reads reference and avoid, the names before 0.7, as must and never", async () => {
-    const config = await Effect.runPromise(
-      decodeConfig({ rules: { old: { description: "d", reference: "a()", avoid: "b()" } } }),
-    );
-    expect(config.rules).toEqual({ old: { description: "d", must: "a()", never: "b()" } });
-  });
-});
-
-describe("markdown rules", () => {
-  const parse = (text: string) => Effect.runPromise(parseRuleMarkdown(text, "rules/a.md"));
-
-  it("front matter is the description and threshold; an untagged fence is code to write", async () => {
-    const rule = await parse(
-      [
-        "---",
-        "description: Ports are branded.",
-        "threshold: 0.8",
-        "---",
-        "",
-        "Why: a bare number accepts 70000.",
-        "",
-        "```ts",
-        'const Port = Schema.Int.pipe(Schema.brand("Port"))',
-        "type Port = typeof Port.Type",
-        "```",
-        "",
-      ].join("\n"),
-    );
-    expect(rule).toEqual({
-      description: "Ports are branded.",
-      threshold: 0.8,
-      details: "Why: a bare number accepts 70000.",
-      must: 'const Port = Schema.Int.pipe(Schema.brand("Port"))\ntype Port = typeof Port.Type',
-    });
-  });
-
-  it("prose around the code is the rule's details, without the fences and the headings that name code", async () => {
-    const rule = await parse(
-      [
-        "---",
-        "description: Ports are branded.",
-        "---",
-        "",
-        "Why: a bare number accepts 70000 and -1.",
-        "",
-        "## Must",
-        "",
-        "A port read from the environment is parsed once, at the edge.",
-        "",
-        "```ts",
-        'const Port = Schema.Int.pipe(Schema.brand("Port"))',
-        "```",
-        "",
-        "## Never",
-        "",
-        "```ts",
-        "const port: number = Number(process.env.PORT)",
-        "```",
-        "",
-        "",
-        "",
-        "## Where it does not apply",
-        "",
-        "A port in a test fixture.",
-        "",
-      ].join("\n"),
-    );
-    expect(rule.details).toBe(
-      [
-        "Why: a bare number accepts 70000 and -1.",
-        "",
-        "A port read from the environment is parsed once, at the edge.",
-        "",
-        "## Where it does not apply",
-        "",
-        "A port in a test fixture.",
-      ].join("\n"),
-    );
-    // A body that is all code, or code and its headings alone, has none.
-    expect(await parse("---\ndescription: d\n---\nconst x = 1\n")).not.toHaveProperty("details");
-    expect(
-      await parse("---\ndescription: d\n---\n\n## Must\n\n```ts\na()\n```\n"),
-    ).not.toHaveProperty("details");
-  });
-
-  it("without a fence, the whole body is code to write", async () => {
-    const rule = await parse("---\ndescription: d\n---\nconst x = 1\n");
-    expect(rule).toEqual({ description: "d", must: "const x = 1" });
-  });
-
-  it("fences tagged must and never, or should and should not, hold code under those words", async () => {
-    const fenced = (...fences: ReadonlyArray<string>) =>
-      parse(
-        `---\ndescription: d\n---\n\n${fences.map((fence) => `\`\`\`${fence}\n\`\`\``).join("\n\n")}\n`,
-      );
-    expect(await fenced("ts never\nb()", "ts must\na()")).toEqual({
-      description: "d",
-      must: "a()",
-      never: "b()",
-    });
-    expect(await fenced("ts should\na()", "ts should not\nb()")).toEqual({
-      description: "d",
-      should: "a()",
-      shouldNot: "b()",
-    });
-    // An untagged fence is code to write at the rule's level: should, in a guideline.
-    expect(await fenced("ts\na()", "ts should not\nb()")).toEqual({
-      description: "d",
-      should: "a()",
-      shouldNot: "b()",
-    });
-    expect(await fenced("ts must not\nb()")).toEqual({ description: "d", never: "b()" });
-  });
-
-  it("a fence tagged avoid, the word before 0.7, is code never to write", async () => {
-    const rule = await parse(
-      [
-        "---",
-        "description: A domain failure is a tagged error.",
-        "---",
-        "",
-        "Not this:",
-        "",
-        "```ts avoid",
-        'throw new Error("not found")',
-        "```",
-        "",
-        "This:",
-        "",
-        "```ts",
-        'class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {}) {}',
-        "```",
-        "",
-      ].join("\n"),
-    );
-    expect(rule).toEqual({
-      description: "A domain failure is a tagged error.",
-      details: "Not this:\n\nThis:",
-      must: 'class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {}) {}',
-      never: 'throw new Error("not found")',
-    });
-  });
-
-  it("a rule can be only code never to write", async () => {
-    const rule = await parse(
-      "---\ndescription: A module has no default export.\n---\n\n```ts avoid\nexport default {}\n```\n",
-    );
-    expect(rule).toEqual({
-      description: "A module has no default export.",
-      never: "export default {}",
-    });
-  });
-
-  const body = (...lines: ReadonlyArray<string>) =>
-    parse(["---", "description: d", "---", "", ...lines, ""].join("\n"));
-
-  it("a heading of must and never, or should and should not, names the code in its section", async () => {
-    expect(
-      await body("## Must", "", "```ts", "a()", "```", "", "## Never", "", "```ts", "b()", "```"),
-    ).toEqual({
-      description: "d",
-      must: "a()",
-      never: "b()",
-    });
-    // In any case, with or without a colon or a closing run of #s.
-    expect(
-      await body("# should", "```ts", "a()", "```", "### Should not: ###", "```ts", "b()", "```"),
-    ).toEqual({
-      description: "d",
-      should: "a()",
-      shouldNot: "b()",
-    });
-    expect(await body("## Must not", "```ts", "b()", "```")).toEqual({
-      description: "d",
-      never: "b()",
-    });
-  });
-
-  it("a deeper heading stays in the section above it, and the next heading at its level ends it", async () => {
-    const rule = await body(
-      "## Never",
-      "",
-      "### A bare number",
-      "",
-      "```ts",
-      "b()",
-      "```",
-      "",
-      "## Notes",
-      "",
-      "```ts",
-      "a()",
-      "```",
-    );
-    // Headings that name no code are prose, so they stay in the details.
-    expect(rule).toEqual({
-      description: "d",
-      details: "### A bare number\n\n## Notes",
-      must: "a()",
-      never: "b()",
-    });
-  });
-
-  it("a fence's own word wins over its heading's", async () => {
-    const rule = await body("## Must", "", "```ts never", "b()", "```", "", "```ts", "a()", "```");
-    expect(rule).toEqual({ description: "d", must: "a()", never: "b()" });
-  });
-
-  it("names a word only in a heading that is the word alone, outside any fence", async () => {
-    expect(await body("## Why never", "", "```ts", "a()", "```")).toEqual({
-      description: "d",
-      details: "## Why never",
-      must: "a()",
-    });
-    // A `#` line in a fence is code, so the fence after it is still under Never.
-    expect(
-      await body("## Never", "", "```sh", "# Must", "b", "```", "", "```sh", "c", "```"),
-    ).toEqual({
-      description: "d",
-      never: "# Must\nb",
-    });
-  });
-
-  it("front matter's tests says a rule judges test files, only them or as well", async () => {
-    expect(await parse("---\ndescription: d\ntests: only\n---\na()\n")).toEqual({
-      description: "d",
-      tests: "only",
-      must: "a()",
-    });
-    expect(await parse("---\ndescription: d\ntests: include\n---\na()\n")).toMatchObject({
-      tests: "include",
-    });
-    const refused = await Effect.runPromise(
-      Effect.flip(
-        parseRuleMarkdown("---\ndescription: d\ntests: always\n---\na()\n", "rules/a.md"),
-      ),
-    );
-    expect(refused.message).toContain("rules/a.md");
-  });
-
-  it("refuses front matter's reads, naming the file and telling the user to move them to the config", async () => {
-    for (const reads of [
-      '["workspacePackages", "symbols", "references"]',
-      "[]",
-      '["workspacePackagez"]',
-    ]) {
-      const refused = await Effect.runPromise(
-        Effect.flip(
-          parseRuleMarkdown(`---\ndescription: d\nreads: ${reads}\n---\na()\n`, "rules/a.md"),
-        ),
-      );
-      expect(refused.message).toContain("rules/a.md");
-      expect(refused.message).toContain("reads");
-      expect(refused.message).toMatch(/move/i);
-      expect(refused.message).toMatch(/config/i);
-    }
-  });
-
-  it("front matter's appliesTo and excludeIf are JSON arrays of strings", async () => {
-    expect(
-      await parse(
-        '---\ndescription: d\nappliesTo: ["a declared union"]\nexcludeIf: ["a Slack block", "a row"]\n---\na()\n',
-      ),
-    ).toEqual({
-      description: "d",
-      appliesTo: ["a declared union"],
-      excludeIf: ["a Slack block", "a row"],
-      must: "a()",
-    });
-    const refused = await Effect.runPromise(
-      Effect.flip(
-        parseRuleMarkdown(
-          "---\ndescription: d\nexcludeIf: a Slack block\n---\na()\n",
-          "rules/a.md",
-        ),
-      ),
-    );
-    expect(refused.message).toContain("rules/a.md");
-  });
-
-  it("front matter's level makes a rule's findings warnings", async () => {
-    expect(await parse("---\ndescription: d\nlevel: warning\n---\na()\n")).toEqual({
-      description: "d",
-      level: "warning",
-      must: "a()",
-    });
-    const refused = await Effect.runPromise(
-      Effect.flip(parseRuleMarkdown("---\ndescription: d\nlevel: nit\n---\na()\n", "rules/a.md")),
-    );
-    expect(refused.message).toContain("rules/a.md");
-  });
-
-  it("refuses a body with no code, naming the file", async () => {
-    const refused = await Effect.runPromise(
-      Effect.flip(parseRuleMarkdown("---\ndescription: d\n---\n\n", "rules/a.md")),
-    );
-    expect(refused.message).toContain("rules/a.md: the body needs code");
-  });
-
-  it("refuses a rule that is both a requirement and a guideline, naming the file", async () => {
-    const refused = await Effect.runPromise(
-      Effect.flip(
-        parseRuleMarkdown(
-          "---\ndescription: d\n---\n\n```ts must\na()\n```\n\n```ts should not\nb()\n```\n",
-          "rules/a.md",
-        ),
-      ),
-    );
-    expect(refused.message).toBe(
-      "rules/a.md: a rule is a requirement (must, never) or a guideline (should, should not), not both",
-    );
-  });
-
-  it("refuses a file without a description, naming the file", async () => {
-    const refused = await Effect.runPromise(
-      Effect.flip(parseRuleMarkdown("---\nthreshold: 0.8\n---\ncode", "rules/a.md")),
-    );
-    expect(refused._tag).toBe("ConfigUnavailable");
-    expect(refused.message).toContain("rules/a.md");
-    expect(refused.message).toContain("description");
-  });
-
-  it("loads a directory: each rule is a directory holding a RULE.md, and its path is the id", async () => {
-    const tree: Record<string, string> = {
-      "/repo/rules/basics/gen/RULE.md": "---\ndescription: gen\n---\n```ts\ngen()\n```\n",
-      "/repo/rules/data/brand/RULE.md": "---\ndescription: brand\n---\nbrand()\n",
-    };
-    const fs = FileSystem.layerNoop({
-      // A recursive listing names directories too. A README and a note in a rule's directory are no rules.
-      readDirectory: () =>
-        Effect.succeed([
-          "basics",
-          "basics/gen",
-          "basics/gen/RULE.md",
-          "data",
-          "data/brand",
-          "data/brand/RULE.md",
-          "data/brand/why.md",
-          "README.md",
-          "notes.txt",
-        ]),
-      readFileString: (file) => Effect.succeed(tree[file] ?? ""),
-    });
-    const rules = await Effect.runPromise(
-      loadRules("/repo/rules").pipe(Effect.provide(Layer.merge(fs, Path.layer))),
-    );
-    expect(rules).toEqual({
-      "basics/gen": { description: "gen", must: "gen()" },
-      "data/brand": { description: "brand", must: "brand()" },
-    });
-  });
-});
-
-/** Node's file system, as Bun's layer provides it, for tests that walk a real tree. */
-const realFileSystem = Layer.merge(BunFileSystem.layer, Path.layer);
-
-/** Writes each file of `tree` under a new temporary directory, and returns the directory. */
-const onDisk = async (tree: Readonly<Record<string, string>>): Promise<string> => {
-  const root = await mkdtemp(join(tmpdir(), "adhere-tree-"));
-  for (const [relative, content] of Object.entries(tree)) {
-    await mkdir(dirname(join(root, relative)), { recursive: true });
-    await writeFile(join(root, relative), content, "utf8");
-  }
-  return root;
-};
-
-describe("rule ids in output", () => {
-  it("puts a preset rule's whole preset first, and leaves the project's own ids alone", () => {
-    expect(shownId({ id: "basics/gen-for-sequencing", preset: "effect" })).toBe(
-      "effect/basics/gen-for-sequencing",
-    );
-    expect(shownId({ id: "data/brand-ports" })).toBe("data/brand-ports");
-    expect(wholePresetOf("effect/basics")).toBe("effect");
-    expect(wholePresetOf("alchemy")).toBe("alchemy");
-  });
-});
-
-describe("walk", () => {
-  it("lists files a directory at a time, never into a skipped one or through a link to one", async () => {
-    const root = await onDisk({
-      "src/a.ts": "",
-      "src/deep/b.ts": "",
-      "node_modules/pkg/index.ts": "",
-      "packages/api/node_modules/dep/index.ts": "",
-      ".git/HEAD": "",
-    });
-    await symlink(join(root, "src"), join(root, "packages", "api", "linked"));
-    await symlink("..", join(root, "src", "deep", "up"));
-    await symlink(join(root, "src", "a.ts"), join(root, "packages", "api", "alias.ts"));
-    await symlink(join(root, "nowhere"), join(root, "src", "dangling"));
-
-    const progress: Array<readonly [number, number]> = [];
-    const files = await Effect.runPromise(
-      Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        return yield* walkFiles(
-          fs,
-          path,
-          root,
-          (relative) => {
-            const name = relative.split("/").at(-1);
-            return name !== "node_modules" && name !== ".git";
-          },
-          (directories, found) => Effect.sync(() => progress.push([directories, found])),
-        );
-      }).pipe(Effect.provide(realFileSystem)),
-    );
-
-    // The link to a file is listed; the link to src/, the cycle, and the link to nothing are not.
-    expect(files).toEqual(["packages/api/alias.ts", "src/a.ts", "src/deep/b.ts"]);
-    // The root, src/, src/deep/, packages/, and packages/api/ were read, in that many steps.
-    expect(progress.at(-1)).toEqual([5, 3]);
-  });
-});
-
-describe("workspace packages", () => {
-  const packagesOf = (root: string) =>
-    Effect.runPromise(workspacePackagesOf(root).pipe(Effect.provide(realFileSystem)));
-  const named = (name: string) => JSON.stringify({ name });
-
-  it("loads workspace package context by default and respects empty or subset replacements", async () => {
-    const path = await Effect.runPromise(Path.Path.pipe(Effect.provide(Path.layer)));
-    for (const reads of [
-      undefined,
-      [],
-      ["workspacePackages"],
-      ["symbols"],
-      ["references"],
-    ] as const) {
-      const root = await onDisk({
-        ".adhere/config.ts": `export default ${JSON.stringify({
-          rules,
-          ...(reads === undefined ? {} : { reads }),
-        })};\n`,
-        "package.json": JSON.stringify({ workspaces: ["packages/*"] }),
-        "packages/orders/package.json": named("orders-core"),
-      });
-      try {
-        const config = await Effect.runPromise(
-          AdhereConfig.pipe(
-            Effect.provide(
-              AdhereConfigLive({}).pipe(
-                Layer.provide([
-                  BunFileSystem.layer,
-                  Layer.succeed(Path.Path, {
-                    ...path,
-                    resolve: (...parts) => path.resolve(root, ...parts),
-                  }),
-                ]),
-              ),
-            ),
-          ),
-        );
-        const expectedReads = reads ?? ["workspacePackages", "symbols", "references"];
-        expect(config.reads).toEqual(expectedReads);
-        expect(config.rules).toEqual(rules);
-        expect(config.workspacePackages).toEqual(
-          expectedReads.some((name) => name === "workspacePackages")
-            ? { "orders-core": "packages/orders" }
-            : undefined,
-        );
-      } finally {
-        await rm(root, { recursive: true, force: true });
-      }
-    }
-  });
-
-  it("defaults all three reads with no config file when a preset or discovered rules supplies the rules", async () => {
-    const path = await Effect.runPromise(Path.Path.pipe(Effect.provide(Path.layer)));
-    for (const preset of [false, true]) {
-      const root = await onDisk({
-        "package.json": JSON.stringify({ workspaces: ["packages/*"] }),
-        "packages/orders/package.json": named("orders-core"),
-        ...(preset
-          ? {}
-          : {
-              ".adhere/rules/ports/RULE.md":
-                "---\ndescription: A port must be named.\n---\nconst port = PORT;\n",
-            }),
-      });
-      try {
-        const config = await Effect.runPromise(
-          AdhereConfig.pipe(
-            Effect.provide(
-              AdhereConfigLive(preset ? { presets: ["effect"] } : {}).pipe(
-                Layer.provide([
-                  BunFileSystem.layer,
-                  Layer.succeed(Path.Path, {
-                    ...path,
-                    resolve: (...parts) => path.resolve(root, ...parts),
-                  }),
-                ]),
-              ),
-            ),
-          ),
-        );
-        expect(config.reads).toEqual(["workspacePackages", "symbols", "references"]);
-        expect(config.workspacePackages).toEqual({ "orders-core": "packages/orders" });
-        expect(Object.keys(config.rules).length).toBeGreaterThan(0);
-        expect(config.scopedRules?.some((entry) => entry.preset === "effect")).toBe(preset);
-      } finally {
-        await rm(root, { recursive: true, force: true });
-      }
-    }
-  });
-
-  it("reads a root package.json's workspaces, by name, with each package's directory", async () => {
-    const root = await onDisk({
-      "package.json": JSON.stringify({
-        workspaces: ["packages/*", "apps/**", "!packages/private"],
-      }),
-      "packages/orders/package.json": named("orders-core"),
-      "packages/cache/package.json": named("@acme/cache"),
-      "packages/private/package.json": named("private"),
-      "packages/notes/README.md": "no manifest, so no package",
-      "apps/web/package.json": named("web"),
-      "apps/tools/cli/package.json": named("cli"),
-      "apps/web/node_modules/zod/package.json": named("zod"),
-      "elsewhere/package.json": named("elsewhere"),
-    });
-
-    expect(await packagesOf(root)).toEqual({
-      "@acme/cache": "packages/cache",
-      cli: "apps/tools/cli",
-      "orders-core": "packages/orders",
-      web: "apps/web",
-    });
-  });
-
-  it("reads Yarn's workspaces.packages, and pnpm-workspace.yaml's packages", async () => {
-    const yarn = await onDisk({
-      "package.json": JSON.stringify({ workspaces: { packages: ["libs/*"] } }),
-      "libs/a/package.json": named("a"),
-    });
-    expect(await packagesOf(yarn)).toEqual({ a: "libs/a" });
-
-    const pnpm = await onDisk({
-      "package.json": named("root"),
-      "pnpm-workspace.yaml":
-        "packages:\n  - 'packages/*'\n  - \"tools/cli\"\n  - '!packages/skip'\nallowBuilds:\n  msgpackr-extract: false\n",
-      "packages/b/package.json": named("b"),
-      "packages/skip/package.json": named("skip"),
-      "tools/cli/package.json": named("cli"),
-    });
-    expect(await packagesOf(pnpm)).toEqual({ b: "packages/b", cli: "tools/cli" });
-  });
-
-  it("has no packages without a workspace, or with a manifest it cannot read", async () => {
-    expect(await packagesOf(await onDisk({ "package.json": named("alone") }))).toEqual({});
-    expect(await packagesOf(await onDisk({ "package.json": "{ not json" }))).toEqual({});
-    expect(await packagesOf(await onDisk({ "README.md": "no manifest" }))).toEqual({});
-  });
-});
-
-describe("nested .adhere rules", () => {
-  it("loads every .adhere directory with the containing directory as scope", async () => {
-    const root = await onDisk({
-      ".adhere/rules/style/service/RULE.md": "---\ndescription: root\n---\nroot()\n",
-      ".adhere/cache/ignored.md": "not a rule, so reading it would refuse the load",
-      "packages/api/.adhere/rules/style/service/RULE.md": "---\ndescription: api\n---\napi()\n",
-      "packages/api/.adhere/rules/api/schema/RULE.md": "---\ndescription: schema\n---\nschema()\n",
-    });
-
-    const entries = await Effect.runPromise(
-      loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem)),
-    );
-
-    expect(entries).toEqual([
-      {
-        id: "style/service",
-        file: `${root}/.adhere/rules/style/service/RULE.md`,
-        scope: root,
-        rule: { description: "root", must: "root()" },
-      },
-      {
-        id: "api/schema",
-        file: `${root}/packages/api/.adhere/rules/api/schema/RULE.md`,
-        scope: `${root}/packages/api`,
-        rule: { description: "schema", must: "schema()" },
-      },
-      {
-        id: "style/service",
-        file: `${root}/packages/api/.adhere/rules/style/service/RULE.md`,
-        scope: `${root}/packages/api`,
-        rule: { description: "api", must: "api()" },
-      },
-    ]);
-  });
-
-  it("loads a RULE.ts by its default export, which can import a helper beside it", async () => {
-    // Neither the config nor the helper default-exports a rule, so reading either as one would refuse the load.
-    const root = await onDisk({
-      ".adhere/config.ts": "export default {};\n",
-      ".adhere/rules/data/ports/RULE.ts": [
-        'import { ports } from "./ports.ts";',
-        "",
-        'export default { description: "A port must be branded.", must: "Port.make(3000)", appendState: () => ({ ports }) };',
-        "",
-      ].join("\n"),
-      ".adhere/rules/data/ports/ports.ts": "export const ports = [3000];\n",
-    });
-
-    const entries = await Effect.runPromise(
-      loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem)),
-    );
-
-    expect(entries).toMatchObject([
-      {
-        id: "data/ports",
-        file: `${root}/.adhere/rules/data/ports/RULE.ts`,
-        scope: root,
-        rule: { description: "A port must be branded.", must: "Port.make(3000)" },
-      },
-    ]);
-    const added = await entries[0]?.rule.appendState?.(
-      { code: {} },
-      { path: "", contents: "" },
-      undefined as never,
-    );
-    expect(added).toEqual({ ports: [3000] });
-  });
-
-  it("refuses a TypeScript rule file that default-exports no rule, naming the file", async () => {
-    const root = await onDisk({
-      ".adhere/rules/ports/RULE.ts": 'export const rule = { description: "d", must: "m()" };\n',
-    });
-
-    const refused = await Effect.runPromise(
-      Effect.flip(loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem))),
-    );
-
-    expect(refused.message).toContain(
-      `${root}/.adhere/rules/ports/RULE.ts: a rule file must default-export defineRule({...})`,
-    );
-  });
-
-  it("refuses a Markdown file outside every rule's directory, saying where it goes to keep its id", async () => {
-    const root = await onDisk({
-      ".adhere/rules/data/ports/RULE.md": "---\ndescription: ports\n---\nports()\n",
-      ".adhere/rules/data/ports/why.md": "In a rule's directory, so no rule.\n",
-      ".adhere/rules/README.md": "# The rules\n",
-      ".adhere/rules/secrets.md": "---\ndescription: secrets\n---\nsecrets()\n",
-      ".adhere/style/service.md": "---\ndescription: service\n---\nservice()\n",
-    });
-
-    const refused = await Effect.runPromise(
-      Effect.flip(loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem))),
-    );
-
-    expect(refused.message).toBe(
-      [
-        "Rules now live one to a directory, as .adhere/rules/<id>/RULE.md or RULE.ts. Move each of these to keep its id:",
-        "  .adhere/rules/secrets.md → .adhere/rules/rules/secrets/RULE.md",
-        "  .adhere/style/service.md → .adhere/rules/style/service/RULE.md",
-      ].join("\n"),
-    );
-  });
-
-  it("refuses a rule's directory that holds both a RULE.md and a RULE.ts", async () => {
-    const root = await onDisk({
-      ".adhere/rules/ports/RULE.md": "---\ndescription: ports\n---\nports()\n",
-      ".adhere/rules/ports/RULE.ts": "export default {};\n",
-    });
-
-    const refused = await Effect.runPromise(
-      Effect.flip(loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem))),
-    );
-
-    expect(refused.message).toBe(".adhere/rules/ports: a rule is a RULE.md or a RULE.ts, not both");
-  });
-
-  it("skips .adhere directories inside dependency and generated trees, and through links", async () => {
-    // A skipped file is not a rule, so reading it would refuse the load.
-    const root = await onDisk({
-      ".adhere/rules/e2e/isolated/RULE.md": "---\ndescription: isolated\n---\nisolated()\n",
-      "node_modules/@drkmttr/adhere/.adhere/rules/refusals-name-the-file/RULE.md": "not a rule",
-      "dist/.adhere/rules/style/service/RULE.md": "not a rule",
-      ".git/.adhere/rules/leftover/RULE.md": "not a rule",
-    });
-    // A workspace package linked into node_modules and back, as pnpm links them.
-    await mkdir(join(root, "packages"), { recursive: true });
-    await symlink(join(root, ".adhere"), join(root, "packages", "linked"));
-    await symlink("..", join(root, "packages", "loop"));
-
-    const entries = await Effect.runPromise(
-      loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem)),
-    );
-
-    expect(entries.map((entry) => entry.id)).toEqual(["e2e/isolated"]);
-  });
-
-  it("applies root rules globally and lets the nearest nested rule shadow the same id", () => {
-    const rootOnly = { description: "Root only.", must: "rootOnly()" };
-    const rootShadowed = { description: "Root service.", must: "root()" };
-    const apiShadow = { description: "API service.", must: "api()" };
-    const apiOnly = { description: "API only.", must: "apiOnly()" };
-
-    const entries = [
-      {
-        id: "style/root-only",
-        file: "/repo/.adhere/rules/style/root-only/RULE.md",
-        scope: "/repo",
-        rule: rootOnly,
-      },
-      {
-        id: "style/service",
-        file: "/repo/.adhere/rules/style/service/RULE.md",
-        scope: "/repo",
-        rule: rootShadowed,
-      },
-      {
-        id: "style/service",
-        file: "/repo/packages/api/.adhere/rules/style/service/RULE.md",
-        scope: "/repo/packages/api",
-        rule: apiShadow,
-      },
-      {
-        id: "api/schema",
-        file: "/repo/packages/api/.adhere/rules/api/schema/RULE.md",
-        scope: "/repo/packages/api",
-        rule: apiOnly,
-      },
-    ];
-
-    expect(applicableRules("/repo/packages/api/src/index.ts", entries)).toEqual({
-      "api/schema": apiOnly,
-      "style/root-only": rootOnly,
-      "style/service": apiShadow,
-    });
-    expect(applicableRules("/repo/packages/web/src/index.ts", entries)).toEqual({
-      "style/root-only": rootOnly,
-      "style/service": rootShadowed,
-    });
-  });
-});
-
-describe("adhere-ignore", () => {
-  const provider = [
-    "export const Policy = Provider.effect({",
-    "  // adhere-ignore alchemy/providers/idempotent-delete -- AWS returns success for a missing policy",
-    "  delete: Effect.fn(function* ({ output }) {",
-    "    yield* autoscaling.deletePolicy({ PolicyName: output.policyName });",
-    "  }),",
-    "  read: Effect.fn(function* ({ output }) {",
-    "    return yield* autoscaling.describePolicy({ PolicyName: output.policyName });",
-    "  }),",
-    "});",
-  ];
-
-  it("covers the statement below the comment, wherever in it Jev points, and blanks the comment", () => {
-    const { lines, suppressions } = suppressionsOf(provider);
-    expect(lines).toHaveLength(provider.length);
-    expect(lines[1]).toBe("");
-    expect(lines.filter((line, index) => line !== provider[index])).toEqual([""]);
-    const rule = "alchemy/providers/idempotent-delete";
-    expect([3, 4, 5].map((line) => suppresses(suppressions, rule, lineAt(line)))).toEqual([
-      true,
-      true,
-      true,
-    ]);
-    expect(suppresses(suppressions, rule, lineAt(7))).toBe(false);
-    // A section that holds the statement, beside code it does not cover, is covered too.
-    expect(suppresses(suppressions, rule, { first: 6, last: 9 })).toBe(false);
-    expect(suppresses(suppressions, rule, { first: 1, last: 7 })).toBe(true);
-    expect(suppresses(suppressions, "effect/data/brand-meaningful-primitives", lineAt(4))).toBe(
-      false,
-    );
-  });
-
-  it("covers a trailing comment's own line, a whole file, and several rules at once", () => {
-    const { lines, suppressions } = suppressionsOf([
-      "// adhere-ignore-file effect/basics/gen-for-sequencing -- generated",
-      "const a = 1; // adhere-ignore data/ports, data/names -- a fixed port",
-      "const b = 2;",
-    ]);
-    expect(lines).toEqual(["", "const a = 1;", "const b = 2;"]);
-    expect(suppresses(suppressions, "effect/basics/gen-for-sequencing", lineAt(3))).toBe(true);
-    expect(suppresses(suppressions, "data/ports", lineAt(2))).toBe(true);
-    expect(suppresses(suppressions, "data/names", lineAt(2))).toBe(true);
-    expect(suppresses(suppressions, "data/ports", lineAt(3))).toBe(false);
-  });
-
-  it("reads a comment only: a string that mentions adhere-ignore, or a comment naming no rule, suppresses nothing", () => {
-    const code = [
-      'const hint = "// adhere-ignore data/ports -- in a string";',
-      "// adhere-ignore -- no rule named",
-      "const port = 1;",
-    ];
-    const { lines, suppressions } = suppressionsOf(code);
-    expect(lines).toEqual(code);
-    expect(suppressions.statements).toEqual([]);
-    expect(suppressions.file.size).toBe(0);
-  });
-});
-
-describe("comments", () => {
-  it("keeps a comment that says @adhere anywhere in it, and returns a file without comments as it is", () => {
-    const lines = [
-      "// plain",
-      "/** Deletes the activity. @adhere DeleteActivity succeeds on a missing activity. */",
-      "const x = 1; // trailing",
-    ];
-    expect(withoutComments(lines, isNote)).toEqual(["", lines[1], "const x = 1;"]);
-    const bare = ["const x = 1;", "const y = x / 2;"];
-    expect(withoutComments(bare, isNote)).toBe(bare);
-  });
-
-  it("takes comments out, keeping every line and its number", () => {
-    const lines = [
-      "/**",
-      " * Deleting a missing policy returns success.",
-      " */",
-      "const retries = 3; // enough",
-      "const every = /* seconds */ 5;",
-      "  // gone",
-      "export const x = 1;",
-    ];
-    expect(withoutComments(lines)).toEqual([
-      "",
-      "",
-      "",
-      "const retries = 3;",
-      "const every =  5;",
-      "",
-      "export const x = 1;",
-    ]);
-  });
-
-  it("keeps a string, template literal, or regular expression that holds a comment's marks", () => {
-    const lines = [
-      'const url = "https://example.com"; // the site',
-      "const path = `a//b/*c*/`;",
-      "const slashes = /\\/\\//g;",
-    ];
-    expect(withoutComments(lines)).toEqual([
-      'const url = "https://example.com";',
-      "const path = `a//b/*c*/`;",
-      "const slashes = /\\/\\//g;",
-    ]);
-  });
-
-  it("takes JSX comments out, and keeps a URL in JSX text", () => {
-    const lines = [
-      "return (",
-      "  <div>",
-      "    {/* the docs */}",
-      '    <a href="https://example.com">https://example.com/docs</a>',
-      "  </div>",
-      ");",
-    ];
-    expect(withoutComments(lines)).toEqual([
-      "return (",
-      "  <div>",
-      "    {}",
-      '    <a href="https://example.com">https://example.com/docs</a>',
-      "  </div>",
-      ");",
-    ]);
-  });
-});
-
-describe("source walker", () => {
-  it("lists only paths and classifications, then reads current contents on demand", async () => {
-    const root = await onDisk({
-      "src/a.ts": "export const before = 1;\n",
-      "src/a.test.ts": "export const test = 1;\n",
-      "src/skip.ts": "export const skipped = 1;\n",
-      "src/types.d.ts": "declare const declared: number;\n",
-      ".adhere/config.ts": "export default {};\n",
-    });
-    try {
-      const [fs, path] = await Effect.runPromise(
-        Effect.all([FileSystem.FileSystem, Path.Path]).pipe(Effect.provide(realFileSystem)),
-      );
-      const reads: Array<string> = [];
-      const layer = SourceWalkerLive(["src/**"]).pipe(
-        Layer.provide(
-          Layer.mergeAll(
-            Layer.succeed(FileSystem.FileSystem, {
-              ...fs,
-              readFileString: (file) =>
-                Effect.suspend(() => {
-                  reads.push(file);
-                  return fs.readFileString(file);
-                }),
-            }),
-            Layer.succeed(Path.Path, {
-              ...path,
-              resolve: (...parts) => path.resolve(root, ...parts),
-            }),
-            Layer.succeed(AdhereConfig, {
-              model: "jev-latest",
-              threshold: 0.7,
-              sufficiencyThreshold: 0.7,
-              reads: [],
-              rules,
-              exclude: ["src/skip.ts"],
-            }),
-          ),
-        ),
-      );
-      await Effect.runPromise(
-        Effect.gen(function* () {
-          const walker = yield* SourceWalker;
-          const files = yield* walker.files;
-          expect(files).toEqual([
-            { path: join(root, "src/a.test.ts"), test: true },
-            { path: join(root, "src/a.ts") },
-          ]);
-          expect(reads).toEqual([]);
-          const file = files.find((file) => file.path.endsWith("/a.ts"))!;
-          yield* Effect.promise(() => writeFile(file.path, "export const after = 2;\n", "utf8"));
-          expect(yield* walker.read(file)).toEqual({
-            ...file,
-            lines: ["export const after = 2;", ""],
-          });
-          expect(reads).toEqual([file.path]);
-        }).pipe(Effect.provide(layer)),
-      );
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("keeps the files a filter's globs match, and leaves out what a ! pattern matches", () => {
-    expect(passesFilter("src/a.ts", [])).toBe(true);
-    expect(passesFilter("src/deep/a.ts", ["src/**"])).toBe(true);
-    expect(passesFilter("lib/a.ts", ["src/**"])).toBe(false);
-    expect(passesFilter("src/billing.service.ts", ["**/*.service.ts"])).toBe(true);
-    expect(passesFilter("packages/web/a.ts", ["packages/{api,web}/**"])).toBe(true);
-    expect(passesFilter("src/gen/a.ts", ["src/**", "!src/gen/**"])).toBe(false);
-    expect(passesFilter("src/a.ts", ["!src/gen/**"])).toBe(true);
-    expect(passesFilter("src\\a.ts", ["src/*.ts"])).toBe(true);
-  });
-
-  it("skips dependency, generated, and .adhere trees by whole path segment", () => {
-    expect(isInSkippedTree("src/server.ts")).toBe(false);
-    expect(isInSkippedTree("vendorized/lib.ts")).toBe(false);
-    expect(isInSkippedTree("packages/api/node_modules/pkg/index.ts")).toBe(true);
-    expect(isInSkippedTree("dist/main.ts")).toBe(true);
-    expect(isInSkippedTree(".adhere/config.ts")).toBe(true);
-  });
-
-  it("reads .ts, .tsx, .mts, and .cts files, but not declaration files or JavaScript", () => {
-    for (const name of ["a.ts", "Button.tsx", "a.mts", "a.cts"]) {
-      expect(isScannable(`/repo/src/${name}`, "/adhere")).toBe(true);
-    }
-    for (const name of ["a.d.ts", "a.d.mts", "a.d.cts", "a.js", "a.jsx", "a.mjs"]) {
-      expect(isScannable(`/repo/src/${name}`, "/adhere")).toBe(false);
-    }
-  });
-
-  it("counts .test.ts and .spec.ts files, and files under a test directory, as tests", () => {
-    expect(isTestFile("src/a.test.ts")).toBe(true);
-    expect(isTestFile("src/a.spec.ts")).toBe(true);
-    expect(isTestFile("src/Button.test.tsx")).toBe(true);
-    expect(isTestFile("src/a.spec.mts")).toBe(true);
-    expect(isTestFile("src/test-utils.tsx")).toBe(true);
-    expect(isTestFile("packages/api/test/helpers/layer.ts")).toBe(true);
-    expect(isTestFile("src/__tests__/a.ts")).toBe(true);
-    expect(isTestFile("fixtures/worker.ts")).toBe(true);
-    expect(isTestFile("src/testing/clock.ts")).toBe(true);
-    expect(isTestFile("src/coder/fixture/case-env.ts")).toBe(true);
-    expect(isTestFile("src/__mocks__/fs.ts")).toBe(true);
-    for (const name of [
-      "fixtures.ts",
-      "GitHubHttpFixtures.ts",
-      "ledger-copy.fixture.ts",
-      "fetch-errors.fixtures.ts",
-      "attribution-test-fixtures.ts",
-      "linear-test-helpers.ts",
-      "GitHubHttpTestUtils.ts",
-      "test-utils.ts",
-    ]) {
-      expect(isTestFile(`src/${name}`)).toBe(true);
-    }
-    expect(isTestFile("src/test.ts")).toBe(false);
-    expect(isTestFile("src/latest-utils.ts")).toBe(false);
-    expect(isTestFile("src/tester/TestRun.ts")).toBe(false);
-    expect(isTestFile("src/test-runs/test-draft.ts")).toBe(false);
-    expect(isTestFile("src/AWS/B2BI/TestConversionHttp.ts")).toBe(false);
-  });
-});
-
-describe("contradictions", () => {
-  const entry = (id: string, scope: string, description: string): RuleEntry => ({
-    id,
-    scope,
-    file: `${scope}/.adhere/rules/${id}/RULE.md`,
-    rule: { description, must: `${id}()` },
-  });
-  const entries = [
-    entry("style/use-services", "/repo", "Use service classes for IO."),
-    entry("style/plain-functions", "/repo/packages/api", "IO is plain functions, not classes."),
-    entry("style/unrelated", "/repo/packages/web", "Avoid mutable globals."),
-    entry("style/use-services", "/repo/packages/api", "API services are classes too."),
-  ];
-
-  const comparingJev = (
-    named: ReadonlyArray<Pair>,
-    probabilities: Readonly<Record<string, number>>,
-  ) => {
-    const calls = {
-      conflicts: [] as Array<ReadonlyArray<ReadonlyArray<number>>>,
-      contradicts: [] as Array<ReadonlyArray<Pair>>,
-    };
-    const layer = Layer.succeed(Jev, {
-      judge: () => Effect.die("comparing rules judges no file"),
-      locate: () => Effect.die("comparing rules judges no file"),
-      conflicts: (_rules, partners) =>
-        Effect.sync(() => {
-          calls.conflicts.push(partners);
-          return named;
-        }),
-      contradicts: (_rules, pairs) =>
-        Effect.sync(() => {
-          calls.contradicts.push(pairs);
-          return pairs.map(([first, second]) => probabilities[`${first}-${second}`] ?? 0);
-        }),
-    });
-    return { calls, layer };
-  };
-
-  it("offers no pair of a rule on tests only and a rule that skips tests, which share no file", async () => {
-    const jev = comparingJev([], {});
-    const onTests: RuleEntry = {
-      ...entry("testing/clock", "/repo", "A test must use the test clock."),
-      rule: { description: "A test must use the test clock.", must: "clock()", tests: "only" },
-    };
-    const contradictions = await Effect.runPromise(
-      findContradictions(
-        [entry("style/use-services", "/repo", "Use service classes for IO."), onTests],
-        0.7,
-      ).pipe(Effect.provide(jev.layer)),
-    );
-    expect(contradictions).toEqual([]);
-    expect(jev.calls.conflicts).toEqual([]);
-  });
-
-  it("offers each rule the rules sharing its files, then reports the pairs Jev confirms", async () => {
-    const jev = comparingJev(
-      [
-        [0, 1],
-        [1, 0],
-        [3, 1],
-      ],
-      { "0-1": 0.9, "1-3": 0.4 },
-    );
-    const contradictions = await Effect.runPromise(
-      findContradictions(entries, 0.7).pipe(Effect.provide(jev.layer)),
-    );
-
-    // A shared id is shadowing, and packages/api and packages/web share no files.
-    expect(jev.calls.conflicts).toEqual([[[1, 2], [0, 3], [0], [1]]]);
-    expect(jev.calls.contradicts).toEqual([
-      [
-        [0, 1],
-        [1, 3],
-      ],
-    ]);
-    expect(contradictions).toEqual([{ first: entries[0], second: entries[1], probability: 0.9 }]);
-    const report = formatContradictions(contradictions);
-    expect(report).toContain("1. No code can follow both (0.90):");
-    expect(report).toContain("/repo/.adhere/rules/style/use-services/RULE.md");
-    expect(report).toContain("/repo/packages/api/.adhere/rules/style/plain-functions/RULE.md");
-    // A preset's rule names its preset, where the project's own names its file.
-    const fromPreset: RuleEntry = {
-      id: "services/provide-at-entry",
-      scope: "/repo",
-      preset: "effect",
-      rule: { description: "Layers must be provided once, at the entry.", must: "run()" },
-    };
-    const mixed = formatContradictions([
-      { first: entries[0]!, second: fromPreset, probability: 0.8 },
-    ]);
-    expect(mixed).toContain("   - effect/services/provide-at-entry\n");
-    expect(mixed).toContain(
-      "   - style/use-services (/repo/.adhere/rules/style/use-services/RULE.md)\n",
-    );
-  });
-
-  it("asks nothing when no two rules share files", async () => {
-    const jev = comparingJev([], {});
-    const contradictions = await Effect.runPromise(
-      findContradictions(entries.slice(1, 3), 0.7).pipe(Effect.provide(jev.layer)),
-    );
-    expect(jev.calls).toEqual({ conflicts: [], contradicts: [] });
-    expect(contradictions).toEqual([]);
-  });
-
-  it("conflicts: per rule a choice among the rules sharing its files; then a noul per pair", () => {
-    const compared = [
-      { id: "x", rule: { description: "X.", must: "x()" } },
-      { id: "y", rule: { description: "Y.", never: "y()" } },
-      { id: "z", rule: { description: "Z.", must: "z()" } },
-    ];
-    const state = {
-      rules: {
-        "0": { id: "x", description: "X.", must: "x()" },
-        "1": { id: "y", description: "Y.", never: "y()" },
-      },
-    };
-    const choice = (rule: string, criteria: Record<string, string>) => ({
-      type: "choice",
-      instructions: `Each choice other than none is the rule in state.rules under its key. Which of them demands the opposite of what state.rules["${rule}"] demands of the same code, so that following one breaks the other? Choose none if code can follow each of them alongside it.`,
-      criteria: { none: "None of them", ...criteria },
-    });
-
-    expect(conflictBody("jev-latest", compared, [[1], [0], []])).toEqual({
-      model: "jev-latest",
-      state,
-      questions: { "0:0": choice("0", { "1": "Y." }), "1:0": choice("1", { "0": "X." }) },
-    });
-    expect(contradictBody("jev-latest", compared, [0, 1])).toEqual({
-      model: "jev-latest",
-      state,
-      questions: {
-        "0-1": {
-          type: "noul",
-          instructions:
-            'Do state.rules["0"] and state.rules["1"] demand opposite things of the same code, so that following one breaks the other? Answer no if code can follow both, or if they are about different things.',
-        },
-      },
-    });
-  });
-
-  it("reads a pair from each chosen partner that was offered, and a pair's probability", () => {
-    const partners = [[1, 2], [0], [0]];
-    expect(namedPairs({ "0:0": "2", "1:0": "none", "2:0": "7" }, partners)).toEqual([[0, 2]]);
-    expect(pairProbability({ "0-2": 0.8 }, [0, 2])).toBe(0.8);
-    expect(pairProbability({ "0-2": 0.8 }, [0, 1])).toBe(0);
-  });
-
-  it("conflicts: a rule with more partners than a choice holds gets one question per chunk", () => {
-    const compared = Array.from({ length: 300 }, (_, index) => ({
-      id: `r${index}`,
-      rule: { description: `R${index}.`, must: "r()" },
-    }));
-    const partners = compared.map((_, index) =>
-      index === 0 ? Array.from({ length: 299 }, (__, other) => other + 1) : [],
-    );
-    const { questions } = conflictBody("jev-latest", compared, partners);
-    expect(Object.keys(questions)).toEqual(["0:0", "0:1"]);
-    expect(Object.keys(questions["0:0"]?.criteria ?? {})).toHaveLength(255);
-    expect(Object.keys(questions["0:1"]?.criteria ?? {})).toHaveLength(46);
-  });
-});
-
-describe("wording", () => {
-  it("a rule worded as the tips recommend strays by nothing, whole words in any case", () => {
-    expect(
-      strayingOf({
-        description: "A port must be branded, never a bare number.",
-        must: "a()",
-        never: "b()",
-      }),
-    ).toEqual([]);
-    expect(
-      strayingOf({ description: "Ports MUST be branded. Never bare.", must: "a()", never: "b()" }),
-    ).toEqual([]);
-    expect(
-      strayingOf({
-        description: "A file should be small, and should not do two jobs.",
-        should: "a()",
-        shouldNot: "b()",
-      }),
-    ).toEqual([]);
-  });
-
-  it("a description that does not say a word its code is under strays by each such word", () => {
-    expect(
-      strayingOf({
-        description: "A port is branded, not a bare number.",
-        must: "a()",
-        never: "b()",
-      }),
-    ).toEqual([
-      { _tag: "Unsaid", word: "must" },
-      { _tag: "Unsaid", word: "never" },
-    ]);
-    // Part of a word is not the word.
-    expect(strayingOf({ description: "Mustard, nevermore.", must: "a()", never: "b()" })).toEqual([
-      { _tag: "Unsaid", word: "must" },
-      { _tag: "Unsaid", word: "never" },
-    ]);
-    expect(
-      strayingOf({ description: "A file should be small.", should: "a()", shouldNot: "b()" }),
-    ).toEqual([{ _tag: "Unsaid", word: "should not" }]);
-  });
-
-  it("code to write without code that breaks the rule strays; code that breaks it alone does not", () => {
-    expect(strayingOf({ description: "Ports must be branded.", must: "a()" })).toEqual([
-      { _tag: "Unshown", word: "never" },
-    ]);
-    expect(strayingOf({ description: "A file should be small.", should: "a()" })).toEqual([
-      { _tag: "Unshown", word: "should not" },
-    ]);
-    expect(strayingOf({ description: "Code must never retry by hand.", never: "b()" })).toEqual([]);
-  });
-
-  it("a description in the other kind of rule's words strays by each", () => {
-    expect(
-      strayingOf({
-        description: "A port must be branded and should never be a bare number.",
-        must: "a()",
-        never: "b()",
-      }),
-    ).toEqual([{ _tag: "Mixed", word: "should" }]);
-    expect(
-      strayingOf({
-        description: "A file should be small and should not do two jobs; it must never grow.",
-        should: "a()",
-        shouldNot: "b()",
-      }),
-    ).toEqual([
-      { _tag: "Mixed", word: "must" },
-      { _tag: "Mixed", word: "never" },
-    ]);
-  });
-
-  it("lists each rule that strays, with its file and how, then the tips", () => {
-    const entries: ReadonlyArray<RuleEntry> = [
-      {
-        id: "data/ports",
-        scope: "/repo",
-        file: "/repo/.adhere/rules/data/ports/RULE.md",
-        rule: { description: "A port is branded.", must: "a()" },
-      },
-      {
-        id: "data/ids",
-        scope: "/repo",
-        rule: {
-          description: "An id must be branded, never a bare string.",
-          must: "a()",
-          never: "b()",
-        },
-      },
-      {
-        id: "style/small",
-        scope: "/repo",
-        rule: { description: "A file must be small.", should: "a()", shouldNot: "b()" },
-      },
-    ];
-    expect(formatStrays(straysAmong(entries), "/repo")).toEqual([
-      "2 rules are not worded as the rule writing tips recommend:",
-      "  data/ports (.adhere/rules/data/ports/RULE.md)",
-      '    The description does not say "must", though the rule has a must example.',
-      "    The rule has no never example. Rules with one example of each kind judge best.",
-      "  style/small",
-      '    The description does not say "should", though the rule has a should example.',
-      '    The description does not say "should not", though the rule has a should not example.',
-      '    The description says "must", a requirement\'s word, but the rule is a guideline.',
-      `Rule writing tips: ${TIPS_URL}`,
-    ]);
-    expect(formatStrays(straysAmong(entries.slice(1, 2)), "/repo")).toEqual([
-      "Every rule is worded as the rule writing tips recommend.",
-    ]);
-  });
-
-  it("every rule of every preset is worded as the tips recommend", async () => {
-    const fs = FileSystem.layerNoop({
-      readDirectory: (directory) => Effect.promise(() => readdir(directory, { recursive: true })),
-      readFileString: (file) => Effect.promise(() => readFile(file, "utf8")),
-    });
-    for (const preset of Object.values(presets)) {
-      const rules = await Effect.runPromise(
-        loadRules(fileURLToPath(preset.rules)).pipe(Effect.provide(Layer.merge(fs, Path.layer))),
-      );
-      expect(Object.keys(rules).length).toBeGreaterThan(0);
-      expect(
-        Record.filter(Record.map(rules, strayingOf), (straying) => straying.length > 0),
-      ).toEqual({});
-    }
-  });
-});
-
-describe("presets", () => {
-  it("names each preset's topics after its subdirectories that are not rules", async () => {
-    for (const name of Object.keys(presets) as ReadonlyArray<keyof typeof presets>) {
-      const directory = fileURLToPath(presets[name].rules);
-      const entries = await readdir(directory, { withFileTypes: true });
-      const topics = entries.filter(
-        (entry) => entry.isDirectory() && !existsSync(join(directory, entry.name, "RULE.md")),
-      );
-      expect([...topicsOf(name)].sort()).toEqual(topics.map((entry) => entry.name).sort());
-    }
-  });
-
-  it("reads a topic from its whole preset's directory, keeping the preset's rule ids", () => {
-    expect(presetOf("effect/basics")).toEqual({ rules: presets.effect.rules, topic: "basics" });
-    expect(presetOf("alchemy")).toEqual({ rules: presets.alchemy.rules });
-  });
-
-  it("applies each preset once, and a topic only when its whole preset is not named", () => {
-    expect(
-      presetsOf(
-        { presets: ["effect", "effect/basics", "alchemy/secrets"] },
-        { presets: ["effect"] },
-      ),
-    ).toEqual(["effect", "alchemy/secrets"]);
-    expect(presetsOf({ presets: ["effect/basics", "effect/data"] }, {})).toEqual([
-      "effect/basics",
-      "effect/data",
-    ]);
-  });
-});
-
-describe("init", () => {
-  it("scaffolds config and example rules without clobbering existing files", async () => {
-    const root = join(tmpdir(), `adhere-init-${Date.now()}`);
-    await Effect.runPromise(initProject(root));
-    const config = await readFile(join(root, ".adhere", "config.ts"), "utf8");
-    const project = JSON.parse(await readFile(join(root, ".adhere", "tsconfig.json"), "utf8"));
-    const rule = await readFile(
-      join(root, ".adhere", "rules", "style", "prefer-small-files", "RULE.md"),
-      "utf8",
-    );
-
-    expect(config).toContain('import { defineConfig } from "@drkmttr/adhere";');
-    expect(config).toContain("export default defineConfig({");
-    // A tsconfig's globs skip .adhere/, so the config and TypeScript rules get a project that resolves the package.
-    expect(project).toMatchObject({
-      compilerOptions: { moduleResolution: "bundler" },
-      include: ["**/*.ts"],
-    });
-    expect(rule).toContain("description:");
-
-    const second = await Effect.runPromise(initProject(root));
-    expect(second.created).toEqual([]);
-    expect(second.skipped).toContain(".adhere/config.ts");
-    expect(second.skipped).toContain(".adhere/tsconfig.json");
-    expect(second.skipped).toContain(".adhere/rules/style/prefer-small-files/RULE.md");
-  });
-
-  it("scaffolds example rules worded as the rule writing tips recommend", async () => {
-    const root = join(tmpdir(), `adhere-init-wording-${Date.now()}`);
-    await Effect.runPromise(initProject(root));
-
-    for (const name of ["prefer-small-files", "name-domain-actions"]) {
-      const file = join(root, ".adhere", "rules", "style", name, "RULE.md");
-      const rule = await Effect.runPromise(parseRuleMarkdown(await readFile(file, "utf8"), file));
-      expect(strayingOf(rule)).toEqual([]);
-    }
-  });
-
-  it("adds adhere to package.json only where there is one without it", async () => {
-    const bare = join(tmpdir(), `adhere-init-bare-${Date.now()}`);
-    expect((await Effect.runPromise(initProject(bare))).install).toEqual({
-      status: "no-package-json",
-    });
-
-    const listed = join(tmpdir(), `adhere-init-listed-${Date.now()}`);
-    await mkdir(listed, { recursive: true });
-    await writeFile(
-      join(listed, "package.json"),
-      JSON.stringify({ devDependencies: { "@drkmttr/adhere": "^0.9.0" } }),
-      "utf8",
-    );
-    expect((await Effect.runPromise(initProject(listed))).install).toEqual({ status: "listed" });
-  });
-
-  it("scaffolds a shared repo with a README, a CI workflow that validates, and a stack, but no config", async () => {
-    const root = join(tmpdir(), `adhere-init-shared-${Date.now()}`);
-    await mkdir(root, { recursive: true });
-    // An existing package.json with nothing to install keeps npm off the network.
-    await writeFile(join(root, "package.json"), '{ "name": "standards" }\n', "utf8");
-    const result = await Effect.runPromise(initProject(root, { shared: "acme/standards" }));
-    const read = (path: string) => readFile(join(root, path), "utf8");
-
-    expect(result.created).toEqual([
-      "README.md",
-      ".github/workflows/adhere.yaml",
-      "alchemy.run.ts",
-      ".gitignore",
-      ".adhere/rules/style/prefer-small-files/RULE.md",
-      ".adhere/rules/style/name-domain-actions/RULE.md",
-    ]);
-    expect(result.skipped).toEqual(["package.json"]);
-    expect(result.install).toEqual({
-      status: "installed",
-      what: "package.json",
-      packageManager: "npm",
-    });
-    expect(await read("README.md")).toContain("adhere install acme/standards\n");
-    expect(await read(".github/workflows/adhere.yaml")).toContain(
-      "npx --yes @drkmttr/adhere validate\n        env:\n          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}",
-    );
-    const stack = await read("alchemy.run.ts");
-    expect(stack).toContain('const owner = "acme";');
-    expect(stack).toContain('name: "standards",');
-    expect(stack).toContain('name: "TYPESAFE_API_KEY",');
-    expect(stack).toContain('visibility: "public",');
-    await expect(access(join(root, ".adhere", "config.ts"))).rejects.toThrow();
-  });
-
-  it("makes a shared repo private when asked", async () => {
-    const root = join(tmpdir(), `adhere-init-private-${Date.now()}`);
-    await mkdir(root, { recursive: true });
-    await writeFile(join(root, "package.json"), '{ "name": "standards" }\n', "utf8");
-    await Effect.runPromise(initProject(root, { shared: "acme/standards", visibility: "private" }));
-
-    expect(await readFile(join(root, "alchemy.run.ts"), "utf8")).toContain(
-      'visibility: "private",',
-    );
-  });
-
-  it("keeps a config at another accepted path instead of adding a second one", async () => {
-    const root = join(tmpdir(), `adhere-init-existing-${Date.now()}`);
-    await mkdir(root, { recursive: true });
-    await writeFile(join(root, "adhere.config.ts"), "export default {};\n", "utf8");
-
-    const result = await Effect.runPromise(initProject(root, { force: true }));
-
-    expect(result.skipped).toContain("adhere.config.ts");
-    expect(result.created).not.toContain(".adhere/config.ts");
-    expect(result.created).not.toContain(".adhere/tsconfig.json");
-    await expect(access(join(root, ".adhere", "config.ts"))).rejects.toThrow();
-    await expect(access(join(root, ".adhere", "tsconfig.json"))).rejects.toThrow();
-  });
-});
-
-const planOf = (options: {
-  readonly rules: Rules;
-  readonly files: ReadonlyArray<ScannedFile>;
-  readonly cache: Layer.Layer<AuditCache>;
-  readonly limit?: number;
-  readonly reads?: ResolvedConfig["reads"];
-  readonly includeComments?: boolean;
-  readonly workspacePackages?: Readonly<Record<string, string>>;
-  readonly sourceReads?: Layer.Layer<SourceReads>;
-  readonly walker?: Layer.Layer<SourceWalker>;
-  readonly scopedRules?: RuleSet;
-}) =>
-  Effect.runPromise(
-    planAudit({ limit: options.limit }).pipe(
-      Effect.provide(
-        Layer.mergeAll(
-          Layer.succeed(AdhereConfig, {
-            model: "jev-latest",
-            threshold: 0.7,
-            sufficiencyThreshold: 0.7,
-            reads: options.reads ?? [],
-            rules: options.rules,
-            ...(options.scopedRules === undefined ? {} : { scopedRules: options.scopedRules }),
-            ...(options.includeComments === undefined
-              ? {}
-              : { includeComments: options.includeComments }),
-            ...(options.workspacePackages === undefined
-              ? {}
-              : { workspacePackages: options.workspacePackages }),
-          }),
-          options.walker ?? fixtureWalker(options.files),
-          options.cache,
-          testCrypto,
-          ...(options.sourceReads === undefined ? [] : [options.sourceReads]),
-        ),
-      ),
-    ),
-  );
-
-describe("plan", () => {
-  const other: ScannedFile = { path: "/repo/src/other.ts", lines: ["const x = 1;"] };
-
-  it("consumes bounded source prefetch while retaining only compact file metadata", async () => {
-    const paths = Array.from({ length: 64 }, (_, index) => ({
-      path: `/repo/src/f${String(index).padStart(2, "0")}.ts`,
-    }));
-    let loaded = 0;
-    let consumed = 0;
-    let peak = 0;
-    const walker = Layer.succeed(SourceWalker, {
-      files: Effect.succeed(paths),
-      read: (file) =>
-        Effect.sync(() => {
-          loaded += 1;
-          peak = Math.max(peak, loaded - consumed);
-          return { ...file, lines: [`export const bounded = ${loaded};`] };
-        }),
-    });
-    const status = Layer.succeed(Status, {
-      show: () =>
-        Effect.sync(() => {
-          consumed += 1;
-        }),
-      clear: Effect.void,
-    });
-    const planned = await Effect.runPromise(
-      planAudit({ limit: 0 }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            walker,
-            status,
-            memoryCache(),
-            testCrypto,
-            Layer.succeed(AdhereConfig, {
-              model: "jev-latest",
-              threshold: 0.7,
-              sufficiencyThreshold: 0.7,
-              reads: [],
-              rules,
-            }),
-          ),
-        ),
-      ),
-    );
-    expect(loaded).toBe(paths.length);
-    expect(consumed).toBe(paths.length);
-    expect(peak).toBeLessThanOrEqual(16);
-    expect(planned.files.map((plan) => plan.file)).toEqual(paths);
-    expect(planned.files.every((plan) => !Object.hasOwn(plan, "original"))).toBe(true);
-    expect(JSON.stringify(planned)).not.toContain("export const bounded");
-    expect(planned).toMatchObject({ checks: 128, deferred: 64, requests: 0, tokens: 0 });
-  });
-
-  it("refuses the whole audit without pruning when a later prefetched source read fails", async () => {
-    const paths = Array.from({ length: 64 }, (_, index) => ({
-      path: `/repo/src/f${String(index).padStart(2, "0")}.ts`,
-    }));
-    const refusal = WalkUnavailable.make({ message: `${paths.at(-1)!.path}: unreadable source` });
-    const walker = Layer.succeed(SourceWalker, {
-      files: Effect.succeed(paths),
-      read: (file) =>
-        file.path === paths.at(-1)!.path
-          ? Effect.fail(refusal)
-          : Effect.succeed({ ...file, lines: ["export const value = 1;"] }),
-    });
-    let progress = 0;
-    let cleared = 0;
-    const status = Layer.succeed(Status, {
-      show: () =>
-        Effect.sync(() => {
-          progress += 1;
-        }),
-      clear: Effect.sync(() => {
-        cleared += 1;
-      }),
-    });
-    const pruned: Array<Live> = [];
-    const jev = recordingJev({ judge: { a: 0.1, b: 0.1 }, locate: {} });
-    const result = await Effect.runPromise(
-      Effect.result(
-        Effect.flatMap(planAudit(), (plan) =>
-          executeAudit(plan).pipe(Effect.tap(() => pruneCache(plan))),
-        ),
-      ).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            walker,
-            status,
-            jev.layer,
-            memoryCache({}, new Map(), pruned),
-            testCrypto,
-            Layer.succeed(AdhereConfig, {
-              model: "jev-latest",
-              threshold: 0.7,
-              sufficiencyThreshold: 0.7,
-              reads: [],
-              rules,
-            }),
-          ),
-        ),
-      ),
-    );
-    expect(result).toMatchObject({
-      _tag: "Failure",
-      failure: { _tag: "WalkUnavailable", message: refusal.message },
-    });
-    expect(progress).toBeGreaterThan(0);
-    expect(cleared).toBe(1);
-    expect(jev.calls).toEqual({ judge: [], locate: [] });
-    expect(pruned).toEqual([]);
-  });
-
-  it.each([
-    { directive: "adhere-ignore", before: "a", after: "b", cached: true },
-    { directive: "adhere-ignore-file", before: "b", after: "a", cached: false },
-  ])(
-    "refuses changed $directive metadata before requests or cache writes",
-    async ({ directive, before, after, cached }) => {
-      const cache = memoryCache();
-      let current = { ...source, lines: [`// ${directive} ${before} -- before`, ...code1] };
-      if (cached) {
-        await audit({
-          rules,
-          files: [{ ...source, lines: ["// before", ...code1] }],
-          cache,
-          jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
-        });
-      }
-      const walker = Layer.succeed(SourceWalker, {
-        files: Effect.succeed([{ path: source.path }]),
-        read: () => Effect.sync(() => current),
-      });
-      const planned = await planOf({ rules, files: [], cache, walker });
-      const oldLines = current.lines;
-      current = { ...current, lines: [`// ${directive} ${after} -- after`, ...code1] };
-      expect(suppressionsOf(current.lines).lines).toEqual(suppressionsOf(oldLines).lines);
-      let writes = 0;
-      const guardedCache = Layer.effect(AuditCache)(
-        Effect.map(AuditCache, (cache) => ({
-          ...cache,
-          put: () =>
-            Effect.sync(() => {
-              writes += 1;
-            }),
-          putTally: () =>
-            Effect.sync(() => {
-              writes += 1;
-            }),
-        })),
-      ).pipe(Layer.provide(cache));
-      const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
-      const result = await Effect.runPromise(
-        Effect.result(executeAudit(planned)).pipe(
-          Effect.provide(Layer.mergeAll(walker, guardedCache, jev.layer, testCrypto)),
-        ),
-      );
-      expect(result).toMatchObject({
-        _tag: "Failure",
-        failure: {
-          _tag: "WalkUnavailable",
-          message: expect.stringContaining(
-            `${source.path}: source changed since planning. Rerun adhere lint`,
-          ),
-        },
-      });
-      expect(jev.calls).toEqual({ judge: [], locate: [] });
-      expect(writes).toBe(0);
-      const replanned = await planOf({ rules, files: [], cache, walker });
-      expect(replanned.files[0]?.hash).toBe(planned.files[0]?.hash);
-      if (cached) expect(replanned.files[0]?.kept.a).toEqual(planned.files[0]?.kept.a);
-      else expect(Object.keys(replanned.files[0]!.prepared)).toEqual(["b"]);
-    },
-  );
-
-  it("accepts reordered ignore rule sets and edited reasons without changing suppression semantics", async () => {
-    const cache = memoryCache();
-    let current = {
-      ...source,
-      lines: [
-        "// adhere-ignore-file outside-a, outside-b -- before",
-        "// adhere-ignore a, outside-c -- before",
-        ...code1,
-      ],
-    };
-    await audit({
-      rules,
-      files: [{ ...source, lines: ["// before", "// before", ...code1] }],
-      cache,
-      jev: recordingJev({ judge: { a: 0.1, b: 0.9 }, locate: { b: 3 } }).layer,
-    });
-    const walker = Layer.succeed(SourceWalker, {
-      files: Effect.succeed([{ path: source.path }]),
-      read: () => Effect.sync(() => current),
-    });
-    const planned = await planOf({ rules, files: [], cache, walker });
-    current = {
-      ...current,
-      lines: [
-        "// adhere-ignore-file outside-b, outside-a -- after",
-        "// adhere-ignore outside-c, a -- after",
-        ...code1,
-      ],
-    };
-    const jev = recordingJev({ judge: {}, locate: {} });
-    const result = await Effect.runPromise(
-      executeAudit(planned).pipe(
-        Effect.provide(Layer.mergeAll(walker, cache, jev.layer, testCrypto)),
-      ),
-    );
-    expect(result.cached).toBe(1);
-    expect(result.findings.map((finding) => finding.rule)).toEqual(["b"]);
-    expect(jev.calls).toEqual({ judge: [], locate: [] });
-  });
-
-  it.each([false, true])(
-    "refuses changed source before execution, including cached excerpts (cached: %s)",
-    async (cached) => {
-      const cache = memoryCache();
-      let current = source;
-      if (cached) {
-        await audit({
-          rules: { a },
-          cache,
-          jev: recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } }).layer,
-        });
-      }
-      const walker = Layer.succeed(SourceWalker, {
-        files: Effect.succeed([{ path: source.path }]),
-        read: () => Effect.sync(() => current),
-      });
-      const planned = await planOf({ rules: { a }, files: [], cache, walker });
-      const before = await Effect.runPromise(
-        Effect.flatMap(AuditCache, (cache) => cache.get(planned.files[0]!.hash, source.path)).pipe(
-          Effect.provide(cache),
-        ),
-      );
-      current = { ...source, lines: ["export const changed = 2;"] };
-      const jev = recordingJev({ judge: { a: 0.9 }, locate: { a: 1 } });
-      const result = await Effect.runPromise(
-        Effect.result(executeAudit(planned)).pipe(
-          Effect.provide(Layer.mergeAll(walker, cache, jev.layer, testCrypto)),
-        ),
-      );
-      expect(result).toMatchObject({
-        _tag: "Failure",
-        failure: {
-          _tag: "WalkUnavailable",
-          message: expect.stringContaining(
-            `${source.path}: source changed since planning. Rerun adhere lint`,
-          ),
-        },
-      });
-      expect(jev.calls).toEqual({ judge: [], locate: [] });
-      const after = await Effect.runPromise(
-        Effect.flatMap(AuditCache, (cache) => cache.get(planned.files[0]!.hash, source.path)).pipe(
-          Effect.provide(cache),
-        ),
-      );
-      expect(after).toEqual(before);
-    },
-  );
-
-  it("reloads cached report excerpts while accepting comment-only changes to the same normalized hash", async () => {
-    const cache = memoryCache();
-    let current = { ...source, lines: ["// before", ...source.lines] };
-    await audit({
-      rules: { a },
-      files: [current],
-      cache,
-      jev: recordingJev({ judge: { a: 0.9 }, locate: { a: 3 } }).layer,
-    });
-    let reads = 0;
-    const walker = Layer.succeed(SourceWalker, {
-      files: Effect.succeed([{ path: source.path }]),
-      read: () =>
-        Effect.sync(() => {
-          reads += 1;
-          return current;
-        }),
-    });
-    const planned = await planOf({ rules: { a }, files: [], cache, walker });
-    expect(reads).toBe(1);
-    current = { ...source, lines: ["// after", ...source.lines] };
-    const jev = recordingJev({ judge: {}, locate: {} });
-    const result = await Effect.runPromise(
-      executeAudit(planned).pipe(
-        Effect.provide(Layer.mergeAll(walker, cache, jev.layer, testCrypto)),
-      ),
-    );
-    expect(reads).toBe(2);
-    expect(result.cached).toBe(1);
-    expect(result.findings[0]?.excerpt.lines).toEqual(current.lines);
-    expect(jev.calls).toEqual({ judge: [], locate: [] });
-  });
-
-  it("judges a test file only by the rules that say tests, and leaves out a file no rule judges", async () => {
-    const plain = { description: "Plain.", must: "plain()" };
-    const onTests = { description: "On tests.", must: "tests()", tests: "only" as const };
-    const alsoTests = { description: "Also tests.", must: "also()", tests: "include" as const };
-    const helper: ScannedFile = {
-      path: "/repo/test/helper.ts",
-      lines: ["const y = 2;"],
-      test: true,
-    };
-    const judgedBy = (planned: AuditPlan) =>
-      Object.fromEntries(
-        planned.files.map((plan) => [plan.file.path, Object.keys(plan.prepared).sort()]),
-      );
-
-    const all = await planOf({
-      rules: { plain, onTests, alsoTests },
-      files: [other, helper],
-      cache: memoryCache(),
-    });
-    expect(judgedBy(all)).toEqual({
-      [other.path]: ["alsoTests", "plain"],
-      [helper.path]: ["alsoTests", "onTests"],
-    });
-    const plainOnly = await planOf({
-      rules: { plain },
-      files: [other, helper],
-      cache: memoryCache(),
-    });
-    expect(judgedBy(plainOnly)).toEqual({ [other.path]: ["plain"] });
-  });
-
-  it.each(["preset", "full tally", "already tallied"] as const)(
-    "estimates judging and cached locating in one source pass without sample additions (%s)",
-    async (sampling) => {
-      const imported = {
-        ...source,
-        lines: [...source.lines, 'import type { Order } from "@repo/orders/core";'],
-      };
-      const files = [imported, other];
-      const workspacePackages = { "@repo/orders": "packages/orders", unused: "x".repeat(110_000) };
-      const tallies = new Map<string, Tally>();
-      if (sampling !== "preset") {
-        const paths =
-          sampling === "full tally"
-            ? Array.from({ length: SAMPLE }, (_, index) => `/repo/previous${index}.ts`)
-            : files.map((file) => file.path);
-        for (const rule of Object.values(rules)) {
-          const key = await Effect.runPromise(
-            tallyKeyOf("jev-latest", rule).pipe(Effect.provide(testCrypto)),
-          );
-          tallies.set(key, { files: Object.fromEntries(paths.map((path) => [path, 0.9])) });
-        }
-      }
-      const cache = memoryCache({}, tallies);
-      await audit({
-        rules: { a },
-        files: [imported],
-        cache,
-        jev: recordingJev({ judge: { a: 0.9 }, locate: {} }).layer,
-      });
-      const reads: Array<string> = [];
-      const walker = Layer.succeed(SourceWalker, {
-        files: Effect.succeed(files.map(({ path }) => ({ path }))),
-        read: ({ path }) =>
-          Effect.sync(() => {
-            reads.push(path);
-            return files.find((file) => file.path === path)!;
-          }),
-      });
-      const planned = await planOf({
-        rules,
-        files,
-        cache,
-        walker,
-        reads: ["workspacePackages"],
-        workspacePackages,
-        ...(sampling === "preset"
-          ? {
-              scopedRules: Object.entries(rules).map(([id, rule]) => ({
-                id,
-                rule,
-                scope: "/repo",
-                preset: "example",
-              })),
-            }
-          : {}),
-      });
-      expect(reads.toSorted()).toEqual(files.map((file) => file.path).toSorted());
-      expect(planned.files.every((file) => Record.isEmptyRecord(file.sampled))).toBe(true);
-      const loads = planned.files.map((plan) =>
-        judgeLoad(
-          files.find((file) => file.path === plan.file.path)!.lines,
-          Record.map(plan.pending, ({ rule }) => rule),
-          [],
-          plan.readState,
-        ),
-      );
-      expect(planned.requests).toBe(loads.reduce((sum, load) => sum + load.requests, 0));
-      expect(planned.tokens).toBe(loads.reduce((sum, load) => sum + load.tokens, 0));
-      expect(planned.skipped).toBe(0);
-      const importedPlan = planned.files.find((plan) => plan.file.path === imported.path)!;
-      expect(importedPlan.readState).toEqual({
-        workspacePackages: { "@repo/orders": "packages/orders" },
-      });
-      expect(planned.files.find((plan) => plan.file.path === other.path)?.readState).toEqual({
-        workspacePackages: {},
-      });
-      expect(planned.cachedLocateRequests).toBe(
-        locateRequests(imported.lines, { a }, importedPlan.readState),
-      );
-    },
-  );
-
-  it.each(["code", "ignore directives"])(
-    "revalidates %s changes when sampled estimates need a reread",
-    async (change) => {
-      const original = { ...source, lines: ["// adhere-ignore b", ...code1] };
-      let reads = 0;
-      const walker = Layer.succeed(SourceWalker, {
-        files: Effect.succeed([{ path: source.path }]),
-        read: () =>
-          Effect.sync(() => {
-            reads += 1;
-            return reads === 1
-              ? original
-              : {
-                  ...original,
-                  lines:
-                    change === "code"
-                      ? ["// adhere-ignore b", "export const changed = 2;"]
-                      : ["// adhere-ignore a", ...code1],
-                };
-          }),
-      });
-      await expect(
-        planOf({ rules: { a }, files: [], cache: memoryCache(), walker }),
-      ).rejects.toThrow(`${source.path}: source changed since planning. Rerun adhere lint`);
-      expect(reads).toBe(2);
-    },
-  );
-
-  it("counts the checks, what the cache answers, and the requests the rest take", async () => {
-    const cache = memoryCache();
-    await audit({
-      rules,
-      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
-      cache,
-    });
-
-    const planned = await planOf({ rules, files: [source, other], cache });
-    expect(planned.files.map((plan) => plan.file.path)).toEqual([other.path, source.path]);
-    expect({ ...planned, files: planned.files.length }).toEqual({
-      files: 2,
-      unjudged: [],
-      rules: 2,
-      checks: 4,
-      cached: 2,
-      skipped: 0,
-      deferred: 0,
-      requests: 1,
-      tokens: expect.any(Number),
-      price: 0.042,
-      threshold: 0.7,
-      sufficiencyThreshold: 0.7,
-    });
-  });
-
-  it("counts the files it has planned on the status line, and clears it after", async () => {
-    const shown: Array<string> = [];
-    const status = Layer.succeed(Status, {
-      show: (text: string) => Effect.sync(() => void shown.push(text)),
-      clear: Effect.sync(() => void shown.push("(cleared)")),
-    });
-
-    await Effect.runPromise(
-      planAudit().pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(AdhereConfig, {
-              model: "jev-latest",
-              threshold: 0.7,
-              sufficiencyThreshold: 0.7,
-              reads: [],
-              rules,
-            }),
-            fixtureWalker([source, other]),
-            memoryCache(),
-            testCrypto,
-            status,
-          ),
-        ),
-      ),
-    );
-
-    expect(shown).toEqual(["Planning: 1 of 2 files", "Planning: 2 of 2 files", "(cleared)"]);
-  });
-
-  it("tells progress each file's requests and findings as it finishes", async () => {
-    const cache = memoryCache();
-    const planned = await planOf({ rules, files: [source, other], cache });
-    // Rule a is broken in server.ts, the three-line file, and nowhere else.
-    const jev = Layer.succeed(Jev, {
-      judge: (lines, asked) =>
-        Effect.succeed({
-          probabilities: Record.map(asked, (_, id) => (id === "a" && lines.length > 1 ? 0.9 : 0.2)),
-          linter: {},
-        }),
-      locate: (lines, asked) => Effect.succeed(Record.map(asked, () => placedAt(lines, 2))),
-      conflicts: () => Effect.die("an audit compares no rules"),
-      contradicts: () => Effect.die("an audit compares no rules"),
-    });
-    const done: Array<FileDone> = [];
-    const result = await Effect.runPromise(
-      executeAudit(planned, (file) =>
-        Effect.sync(() => {
-          done.push(file);
-        }),
-      ).pipe(
-        Effect.provide(Layer.mergeAll(jev, cache, fixtureWalker([source, other]), testCrypto)),
-      ),
-    );
-
-    // Both files are judged; only server.ts has a finding, so only it is located too.
-    expect([...done].sort((x, y) => x.findings - y.findings)).toEqual([
-      { requests: 1, findings: 0 },
-      { requests: 2, findings: 1 },
-    ]);
-    expect(result.findings).toEqual([findingA]);
-  });
-
-  it("gives each finding Jev's probability that the file shows enough to decide it, and locates again one cached without", async () => {
-    const located: Array<ReadonlyArray<string>> = [];
-    const jev = (sufficiency: Record<string, number>) =>
-      Layer.succeed(Jev, {
-        judge: () => Effect.succeed({ probabilities: { a: 0.9, b: 0.9 }, linter: {} }),
-        locate: (lines, asked) =>
-          Effect.sync(() => {
-            located.push(Object.keys(asked));
-            return Record.map(asked, (_, id) => ({
-              section: sectionAt(lines, 2),
-              sufficiency: sufficiency[id] ?? 0.9,
-            }));
-          }),
-        conflicts: () => Effect.die("an audit compares no rules"),
-        contradicts: () => Effect.die("an audit compares no rules"),
-      });
-    const result = await audit({ rules, jev: jev({ a: 0.25 }), cache: memoryCache() });
-    expect(result.findings.map(({ rule, context }) => ({ rule, context }))).toEqual([
-      { rule: "a", context: 0.25 },
-      { rule: "b", context: 0.9 },
-    ]);
-
-    // An answer located before sufficiency was asked has none: its rule is located again,
-    // and not judged again.
-    const entries = new Map<string, Answers>();
-    const withoutSufficiency = Layer.succeed(AuditCache, {
-      get: (hash) =>
-        Effect.sync(() =>
-          Record.map(entries.get(hash) ?? {}, (answer) => {
-            const { sufficiency, ...rest } = answer;
-            return sufficiency === undefined ? answer : rest;
-          }),
-        ),
-      put: (hash, answers) =>
-        Effect.sync(() => {
-          entries.set(hash, { ...entries.get(hash), ...answers });
-        }),
-      tally: () => Effect.succeed(undefined),
-      putTally: () => Effect.void,
-      prune: () => Effect.succeed(0),
-    });
-    await audit({ rules, jev: jev({}), cache: withoutSufficiency });
-    located.length = 0;
-    const again = recordingJev({ judge: {}, locate: { a: 2, b: 2 } });
-    await audit({ rules, jev: again.layer, cache: withoutSufficiency });
-    expect(again.calls).toEqual({ judge: [], locate: [rules] });
-  });
-
-  it("drops a finding its matchers put out of scope, and keeps their scores in the cache", async () => {
-    const cache = memoryCache();
-    const scoped: Rules = {
-      a: { ...a, excludeIf: ["a port a third party fixes"] },
-      b: { ...b, appliesTo: ["a secret read from config"] },
-    };
-    const located: Array<ReadonlyArray<string>> = [];
-    const judging = Layer.succeed(Jev, {
-      judge: () =>
-        Effect.succeed({
-          probabilities: { a: 0.9, b: 0.9 },
-          linter: {},
-          matchers: {
-            a: { appliesTo: [], excludeIf: [0.8] },
-            b: { appliesTo: [0.7], excludeIf: [] },
-          },
-        }),
-      locate: (lines, asked) =>
-        Effect.sync(() => {
-          located.push(Object.keys(asked));
-          return Record.map(asked, () => placedAt(lines, 2));
-        }),
-      conflicts: () => Effect.die("an audit compares no rules"),
-      contradicts: () => Effect.die("an audit compares no rules"),
-    });
-
-    const first = await audit({ rules: scoped, jev: judging, cache });
-    // a breaks its rule, but only in code its excludeIf describes, so it is not even located.
-    expect(first.findings.map((finding) => finding.rule)).toEqual(["b"]);
-    expect(located).toEqual([["b"]]);
-
-    // A rerun reads the matchers' scores from the cache, and asks Jev nothing.
-    const cachedOnly = Layer.succeed(Jev, {
-      judge: () => Effect.die("every check is cached"),
-      locate: () => Effect.die("every finding is located"),
-      conflicts: () => Effect.die("an audit compares no rules"),
-      contradicts: () => Effect.die("an audit compares no rules"),
-    });
-    const second = await audit({ rules: scoped, jev: cachedOnly, cache });
-    expect(second.findings).toEqual(first.findings);
-  });
-
-  it("names the file a refusal stopped at, and that a rerun continues", async () => {
-    const refusing = Layer.succeed(Jev, {
-      judge: () => Effect.fail(JevUnavailable.make({ message: "Jev answered HTTP 429" })),
-      locate: () => Effect.die("nothing judged, nothing to locate"),
-      conflicts: () => Effect.die("an audit compares no rules"),
-      contradicts: () => Effect.die("an audit compares no rules"),
-    });
-    const refused = await Effect.runPromise(
-      Effect.flip(
-        runAudit.pipe(
-          Effect.provide(
-            Layer.mergeAll(
-              Layer.succeed(AdhereConfig, {
-                model: "jev-latest",
-                threshold: 0.7,
-                sufficiencyThreshold: 0.7,
-                reads: [],
-                rules,
-              }),
-              fixtureWalker([source]),
-              refusing,
-              memoryCache(),
-              testCrypto,
-            ),
-          ),
-        ),
-      ),
-    );
-    expect(refused.message).toBe(
-      "/repo/src/server.ts: Jev answered HTTP 429. Files judged before it are cached, so a rerun continues from there.",
-    );
-  });
-
-  const summary = (
-    fields: Omit<
-      AuditPlan,
-      "files" | "tokens" | "unjudged" | "threshold" | "sufficiencyThreshold"
-    > & {
-      readonly tokens?: number;
-    },
-    files = 200,
-  ): AuditPlan => {
-    const prepared: FilePlan["prepared"] = Object.fromEntries(
-      Array.from({ length: fields.rules }, (_, index) => [
-        `rule${index}`,
-        {
-          rule: { ...a, description: `Summary rule ${index}.` },
-          fingerprint: `rule${index}`,
-          threshold: 0.7,
-        },
-      ]),
-    );
-    const cachedFiles = fields.cached / fields.rules;
-    return {
-      files: Array.from({ length: files }, (_, index): FilePlan => {
-        const cached = index < cachedFiles;
-        const skipped = index >= files - fields.skipped;
-        const deferred = !skipped && index >= files - fields.skipped - fields.deferred;
-        return {
-          file: { path: `/repo/${String(index).padStart(3, "0")}.ts` },
-          skipped,
-          hash: "",
-          readState: {},
-          prepared,
-          kept: cached
-            ? Record.map(prepared, ({ fingerprint }) => ({ fingerprint, probability: 0.2 }))
-            : {},
-          pending: cached || skipped || deferred ? {} : prepared,
-          deferred,
-          sampled: {},
-          suppressions: NO_SUPPRESSIONS,
-        };
-      }),
-      unjudged: [],
-      tokens: 0,
-      threshold: 0.7,
-      sufficiencyThreshold: 0.7,
-      ...fields,
-    };
-  };
-
-  it("selects whole pending rule maps for --limit files in path order, without charging cached files", async () => {
-    const manyRules: Rules = {
-      ...rules,
-      names: { description: "Constants must be named.", must: "const named = 1;" },
-      numbers: { description: "Numbers must be branded.", must: "const count = Count.make(1);" },
-    };
-    const cache = memoryCache();
-    const one = await planOf({ rules: manyRules, files: [source, other], cache, limit: 1 });
-    expect(one.files.map((plan) => [Object.keys(plan.pending), plan.deferred])).toEqual([
-      [Object.keys(manyRules), false],
-      [[], true],
-    ]);
-    expect(one).toMatchObject({ checks: 8, cached: 0, deferred: 1, requests: 1 });
-    const answers = { judge: { ...Record.map(manyRules, () => 0.2), a: 0.9 }, locate: { a: 1 } };
-    const jev = recordingJev(answers);
-    const result = await Effect.runPromise(
-      executeAudit(one).pipe(
-        Effect.provide(
-          Layer.mergeAll(jev.layer, cache, fixtureWalker([source, other]), testCrypto),
-        ),
-      ),
-    );
-    expect(jev.calls.judge).toEqual([manyRules]);
-    expect({ judged: result.judged, waiting: result.waiting }).toEqual({ judged: 1, waiting: 1 });
-
-    // The cached, located first file reports its finding without taking the next run's slot.
-    const next = recordingJev(answers);
-    const nextPlan = await planOf({ rules: manyRules, files: [source, other], cache, limit: 1 });
-    expect(nextPlan.files.map((plan) => [Object.keys(plan.pending), plan.deferred])).toEqual([
-      [[], false],
-      [Object.keys(manyRules), false],
-    ]);
-    const again = await Effect.runPromise(
-      executeAudit(nextPlan).pipe(
-        Effect.provide(
-          Layer.mergeAll(next.layer, cache, fixtureWalker([source, other]), testCrypto),
-        ),
-      ),
-    );
-    expect(next.calls.judge).toEqual([manyRules]);
-    expect(again).toMatchObject({ judged: 1, cached: 1, waiting: 0 });
-    expect(
-      again.findings.some((finding) => finding.file === other.path && finding.rule === "a"),
-    ).toBe(true);
-  });
-
-  it("budgets only selected files, leaving later overflow and cached locating unbudgeted", async () => {
-    const cache = memoryCache();
-    const first = { ...other, path: "/repo/src/a-first.ts" };
-    const cached = { ...source, path: "/repo/src/b-cached.ts" };
-    await audit({
-      rules,
-      files: [cached],
-      cache,
-      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: {} }).layer,
-    });
-    const generated: ScannedFile = {
-      path: "/repo/src/z-generated.ts",
-      lines: ["x".repeat(110_000)],
-    };
-    expect(fits(generated.lines, rules)).toBe(false);
-    const planned = await planOf({
-      rules,
-      reads: DEFAULT_READS,
-      files: [generated, cached, first],
-      cache,
-      limit: 1,
-    });
-    expect(
-      planned.files.map((plan) => ({
-        path: plan.file.path,
-        pending: Object.keys(plan.pending),
-        deferred: plan.deferred,
-        skipped: plan.skipped,
-      })),
-    ).toEqual([
-      { path: first.path, pending: ["a", "b"], deferred: false, skipped: false },
-      { path: cached.path, pending: [], deferred: true, skipped: false },
-      { path: generated.path, pending: [], deferred: true, skipped: false },
-    ]);
-    expect(planned).toMatchObject({
-      rules: 2,
-      checks: 6,
-      cached: 2,
-      skipped: 0,
-      deferred: 2,
-      requests: 1,
-    });
-    expect(planned.cachedLocateRequests ?? 0).toBe(0);
-  });
-
-  it("refills the limit in path order after selected work fails the cheap budget", async () => {
-    const generated: ScannedFile = {
-      path: "/repo/src/a-generated.ts",
-      lines: ["x".repeat(110_000)],
-    };
-    const first = { ...other, path: "/repo/src/b-first.ts" };
-    const last = { ...source, path: "/repo/src/c-last.ts" };
-    const planned = await planOf({
-      rules,
-      files: [last, generated, first],
-      cache: memoryCache(),
-      limit: 1,
-    });
-    expect(
-      planned.files.map((plan) => ({
-        path: plan.file.path,
-        pending: Object.keys(plan.pending),
-        deferred: plan.deferred,
-        skipped: plan.skipped,
-      })),
-    ).toEqual([
-      { path: generated.path, pending: [], deferred: false, skipped: true },
-      { path: first.path, pending: ["a", "b"], deferred: false, skipped: false },
-      { path: last.path, pending: [], deferred: true, skipped: false },
-    ]);
-    expect(planned).toMatchObject({
-      rules: 2,
-      checks: 4,
-      cached: 0,
-      skipped: 1,
-      deferred: 1,
-      requests: 1,
-    });
-  });
-
-  it("describes diagnostic checks and selected, cached, skipped, and deferred files", () => {
-    const partly = summary({
-      rules: 14,
-      checks: 2758,
-      cached: 1400,
-      skipped: 3,
-      deferred: 0,
-      requests: 197,
-    });
-    expect(describePlan(partly)).toEqual([
-      "200 files and 14 rules: 2758 checks, 1400 cached, 3 files too long to judge.",
-      "Judging 97 files takes 197 requests to Jev, plus 1 or more for each file with a finding.",
-    ]);
-    expect(sendQuestion(partly)).toBe("Send 197 requests to Jev?");
-    expect(describePlan({ ...partly, provider: "clef-flash" })[1]).toBe(
-      "Judging 97 files takes 197 requests to clef-flash, plus 1 or more for each file with a finding.",
-    );
-    expect(sendQuestion({ ...partly, provider: "clef-flash" })).toBe(
-      "Send 197 requests to clef-flash?",
-    );
-    expect(
-      describePlan(
-        summary({ rules: 1, checks: 1, cached: 0, skipped: 0, deferred: 0, requests: 1 }, 1),
-      ),
-    ).toEqual([
-      "1 file and 1 rule: 1 check.",
-      "Judging 1 file takes 1 request to Jev, plus 1 or more for each file with a finding.",
-    ]);
-    expect(
-      describePlan(
-        summary({ rules: 2, checks: 4, cached: 4, skipped: 0, deferred: 0, requests: 0 }, 2),
-      )[1],
-    ).toBe("The cache answers every check.");
-    const limited = summary({
-      rules: 14,
-      checks: 2800,
-      cached: 1400,
-      skipped: 0,
-      deferred: 64,
-      requests: 42,
-    });
-    expect(describePlan(limited, { filter: ["src/**"], rpm: 30 })).toEqual([
-      "200 files matching the filter and 14 rules: 2800 checks, 1400 cached.",
-      "Judging 36 files takes 42 requests to Jev, plus 1 or more for each file with a finding. At 30 a minute, they take about 1 minute. 64 files wait for a later run.",
-    ]);
-    expect(
-      describePlan(
-        summary({ rules: 2, checks: 4, cached: 0, skipped: 0, deferred: 2, requests: 0 }, 2),
-      )[1],
-    ).toBe("The limit leaves all 2 files needing requests for a later run.");
-    expect(
-      describePlan(
-        summary({ rules: 1, checks: 1, cached: 0, skipped: 0, deferred: 1, requests: 0 }, 1),
-      )[1],
-    ).toBe("The limit leaves 1 file needing requests for a later run.");
-    const one = summary(
-      { rules: 1, checks: 4, cached: 0, skipped: 0, deferred: 1, requests: 3 },
-      4,
-    );
-    expect(describePlan(one)[1]).toBe(
-      "Judging 3 files takes 3 requests to Jev, plus 1 or more for each file with a finding. 1 file waits for a later run.",
-    );
-    expect(progressLine({ files: 37, requests: 41, findings: 1 }, partly)).toBe(
-      "37/200 files, 41 requests sent, 1 finding",
-    );
-  });
-
-  it("describes a plan-only limit in files without prompting to send requests", () => {
-    const plan = summary(
-      {
-        rules: 2,
-        checks: 4,
-        cached: 0,
-        skipped: 0,
-        deferred: 2,
-        requests: 0,
-        planOnly: true,
-      },
-      2,
-    );
-    expect(describePlan(plan)).toEqual([
-      "2 files and 2 rules: 4 checks.",
-      "Plan only (--limit 0): no native reads will be resolved and no requests will be sent.",
-      "2 files left for a later run.",
-    ]);
-    expect(sendQuestion(plan)).toBe(
-      "Plan only (--limit 0): no native reads will be resolved and no requests will be sent.",
-    );
-  });
-
-  it("says what judging costs at the model's price, and only the tokens when the price is unknown", () => {
-    const fields = {
-      rules: 14,
-      checks: 2800,
-      cached: 1400,
-      skipped: 0,
-      deferred: 0,
-      requests: 197,
-    };
-    const priced = summary({ ...fields, tokens: 3_217_450, price: 0.042 });
-    expect(describePlan(priced)[2]).toBe(
-      "Those carry about 3.2 million input tokens: about $0.14 at $0.042 per million, and more for locating findings.",
-    );
-    expect(sendQuestion(priced)).toBe("Send 197 requests to Jev, about $0.14?");
-    const unpriced = summary({ ...fields, tokens: 41_234 });
-    expect(describePlan(unpriced)[2]).toBe(
-      "Those carry about 41,000 input tokens, and more for locating findings.",
-    );
-    expect(sendQuestion(unpriced)).toBe("Send 197 requests to Jev?");
-    expect(describePlan(summary({ ...fields, tokens: 43_012_345, price: 0.042 }))[2]).toBe(
-      "Those carry about 43 million input tokens: about $1.81 at $0.042 per million, and more for locating findings.",
-    );
-    expect(describePlan(summary({ ...fields, tokens: 612, price: 0.042 }))[2]).toBe(
-      "Those carry about 612 input tokens: under $0.01 at $0.042 per million, and more for locating findings.",
-    );
-  });
-
-  it("labels native-read plan costs and prompts as base estimates that exclude execution-time native context", () => {
-    const plan = summary(
-      {
-        rules: 2,
-        checks: 4,
-        cached: 0,
-        skipped: 0,
-        deferred: 0,
-        requests: 2,
-        tokens: 41_234,
-        price: 0.042,
-        nativeReads: { symbols: true, references: true, includeComments: false },
-      },
-      2,
-    );
-    const description = describePlan(plan).join("\n");
-    expect(description).toContain("41,000");
-    expect(description).toMatch(/native|symbols?|references?/i);
-    expect(description).toMatch(/base|estim|exclud|not includ/i);
-    const prompt = sendQuestion(plan);
-    expect(prompt).toMatch(/native|symbols?|references?/i);
-    expect(prompt).toMatch(/base|estim|extra|additional|increas|exclud/i);
-    const { price: _price, ...unpricedPlan } = plan;
-    const unpriced = describePlan(unpricedPlan).join("\n");
-    expect(unpriced).toMatch(/native|symbols?|references?/i);
-    expect(unpriced).not.toContain("$");
-  });
-
-  it("tells each finding the preset its rule came from, and nothing for the project's own", async () => {
-    const scopedRules: RuleSet = [
-      { id: "a", rule: a, scope: "/repo" },
-      { id: "b", rule: b, scope: "/repo", preset: "effect" },
-    ];
-    const jev = recordingJev({ judge: { a: 0.9, b: 0.9 }, locate: { a: 2, b: 2 } });
-    const result = await Effect.runPromise(
-      runAudit.pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(AdhereConfig, {
-              model: "jev-latest",
-              threshold: 0.7,
-              sufficiencyThreshold: 0.7,
-              reads: [],
-              rules,
-              scopedRules,
-            }),
-            fixtureWalker([source]),
-            jev.layer,
-            memoryCache(),
-            testCrypto,
-          ),
-        ),
-      ),
-    );
-    expect(result.findings.map((finding) => [finding.rule, finding.preset])).toEqual([
-      ["a", undefined],
-      ["b", "effect"],
-    ]);
-  });
-
-  it("counts the input tokens its judge requests carry, and the model's price", async () => {
-    const planned = await planOf({ rules, files: [source, other], cache: memoryCache() });
-    // Each file's pending rules, and the linter check's questions sampled beside them.
-    const load = (sampled: boolean) =>
-      planned.files.reduce((sum, plan) => {
-        const pending = Record.map(plan.pending, ({ rule }) => rule);
-        const ids = sampled ? Object.keys(plan.sampled) : [];
-        const lines = [source, other].find((file) => file.path === plan.file.path)!.lines;
-        return sum + judgeLoad(lines, pending, ids, plan.readState).tokens;
-      }, 0);
-    expect({ tokens: planned.tokens, price: planned.price }).toEqual({
-      tokens: load(true),
-      price: 0.042,
-    });
-    expect(planned.tokens).toBeGreaterThan(load(false));
-  });
-});
-
-describe("linter check", () => {
-  const ports = {
-    description: "A port must be a branded integer, never a bare number.",
-    must: "const port = Port.make(8080);",
-    never: "const port: number = 8080;",
-  };
-  const files: ReadonlyArray<ScannedFile> = Array.from({ length: 25 }, (_, index) => ({
-    path: `/repo/src/f${String(index).padStart(2, "0")}.ts`,
-    lines: [`export const x${index} = ${index};`],
-  }));
-  const keyOf = (rule: typeof ports) =>
-    Effect.runPromise(tallyKeyOf("jev-latest", rule).pipe(Effect.provide(testCrypto)));
-  const sampledPaths = (plan: AuditPlan) =>
-    plan.files.filter((file) => !Record.isEmptyRecord(file.sampled)).map((file) => file.file.path);
-  const tallyOf = (paths: ReadonlyArray<string>, probability: number): Tally => ({
-    files: Object.fromEntries(paths.map((path) => [path, probability])),
-  });
-
-  it("rides beside a sampled rule's judge question, with the fields the judge question has", () => {
-    const body = judgeBody("jev-latest", ["const x = 1;"], { ports, a }, ["ports"]);
-    expect(Object.keys(body.questions)).toEqual(["ports", "a", linterKey("ports")]);
-    expect(body.questions[linterKey("ports")]).toEqual(linterQuestion(ports));
-    expect(linterQuestion(ports).instructions).toMatchObject({
-      question:
-        "Should `rule` have been checked by a regular linter? Consider `code`: could a linter or type checker have decided exactly whether it follows `rule`, without judgment?",
-      rule: ports.description,
-      must: ports.must,
-      never: ports.never,
-    });
-  });
-
-  it("asks on 10 of the files a rule is judged on, spread evenly over them in path order", async () => {
-    const planned = await planOf({ rules: { ports }, files, cache: memoryCache() });
-    const key = await keyOf(ports);
-
-    expect(sampledPaths(planned)).toEqual(
-      [0, 2, 5, 7, 10, 12, 15, 17, 20, 22].map((index) => files[index]?.path),
-    );
-    expect(planned.files.flatMap((file) => Object.values(file.sampled))).toEqual(
-      Array.from({ length: SAMPLE }, () => key),
-    );
-  });
-
-  it("keeps exact split and token estimates while rereading only files that gain sample questions", async () => {
-    const largeRules = {
-      ports: { ...ports, must: "x".repeat(70_000) },
-      secrets: { ...b, must: "y".repeat(70_000) },
-    };
-    const importedFiles = files.map((file, index) => ({
-      ...file,
-      lines: [
-        ...file.lines,
-        ...(index % 2 === 0 ? ['import type { Order } from "@repo/orders/types";'] : []),
-      ],
-    }));
-    const workspacePackages = { "@repo/orders": "packages/orders", unused: "x".repeat(110_000) };
-    const reads: Array<string> = [];
-    const walker = Layer.succeed(SourceWalker, {
-      files: Effect.succeed(importedFiles.map(({ path }) => ({ path }))),
-      read: ({ path }) =>
-        Effect.sync(() => {
-          reads.push(path);
-          return importedFiles.find((file) => file.path === path)!;
-        }),
-    });
-    const planned = await planOf({
-      rules: largeRules,
-      files: importedFiles,
-      cache: memoryCache(),
-      walker,
-      reads: ["workspacePackages"],
-      workspacePackages,
-    });
-    const samples = new Set(sampledPaths(planned));
-    expect(samples.size).toBe(SAMPLE);
-    expect(reads).toHaveLength(importedFiles.length + samples.size);
-    for (const file of importedFiles) {
-      expect(reads.filter((path) => path === file.path)).toHaveLength(
-        samples.has(file.path) ? 2 : 1,
-      );
-    }
-    const loads = planned.files.map((plan) =>
-      judgeLoad(
-        importedFiles.find((file) => file.path === plan.file.path)!.lines,
-        Record.map(plan.pending, ({ rule }) => rule),
-        Object.keys(plan.sampled),
-        plan.readState,
-      ),
-    );
-    expect(planned.requests).toBe(loads.reduce((sum, load) => sum + load.requests, 0));
-    expect(planned.tokens).toBe(loads.reduce((sum, load) => sum + load.tokens, 0));
-    expect(planned.requests).toBeGreaterThan(
-      importedFiles.reduce((sum, file) => sum + judgeLoad(file.lines, largeRules).requests, 0),
-    );
-  });
-
-  it("asks only for the answers a rule's tally lacks, on files it has none from", async () => {
-    const key = await keyOf(ports);
-    const tallies = new Map([
-      [
-        key,
-        tallyOf(
-          files.slice(0, 7).map((file) => file.path),
-          0.9,
-        ),
-      ],
-    ]);
-
-    const planned = await planOf({ rules: { ports }, files, cache: memoryCache({}, tallies) });
-
-    expect(sampledPaths(planned)).toEqual([7, 13, 19].map((index) => files[index]?.path));
-  });
-
-  it("asks nothing for a rule whose tally is full, or for a preset's rule", async () => {
-    const logs = {
-      description: "Code must never call console.log.",
-      must: "yield* Effect.log(message);",
-      never: "console.log(message);",
-    };
-    const scopedRules: RuleSet = [
-      { id: "ports", rule: ports, scope: "/repo" },
-      { id: "logs", rule: logs, scope: "/repo", preset: "effect" },
-    ];
-    const plan = (cache: Layer.Layer<AuditCache>) =>
-      Effect.runPromise(
-        planAudit().pipe(
-          Effect.provide(
-            Layer.mergeAll(
-              Layer.succeed(AdhereConfig, {
-                model: "jev-latest",
-                threshold: 0.7,
-                sufficiencyThreshold: 0.7,
-                reads: [],
-                rules: { ports, logs },
-                scopedRules,
-              }),
-              fixtureWalker(files),
-              cache,
-              testCrypto,
-            ),
-          ),
-        ),
-      );
-
-    const fresh = await plan(memoryCache());
-    expect(new Set(fresh.files.flatMap((file) => Object.keys(file.sampled)))).toEqual(
-      new Set(["ports"]),
-    );
-    const full = new Map([[await keyOf(ports), tallyOf(["/repo/elsewhere.ts"], 0.9)]]);
-    for (let index = 1; index < SAMPLE; index++) {
-      full.set(await keyOf(ports), {
-        files: { ...full.get(await keyOf(ports))?.files, [`/repo/other${index}.ts`]: 0.9 },
-      });
-    }
-    expect(sampledPaths(await plan(memoryCache({}, full)))).toEqual([]);
-  });
-
-  it("adds each sampled file's answer to the rule's tally", async () => {
-    const key = await keyOf(ports);
-    const tallies = new Map([[key, tallyOf(["/repo/elsewhere.ts"], 0.2)]]);
-    const cache = memoryCache({}, tallies);
-    const planned = await planOf({ rules: { ports }, files, cache });
-    const asked: Array<ReadonlyArray<string>> = [];
-    const jev = Layer.succeed(Jev, {
-      judge: (_lines, rules, sampled = []) =>
-        Effect.sync(() => {
-          asked.push(sampled);
-          return {
-            probabilities: Record.map(rules, () => 0.1),
-            linter: Object.fromEntries(sampled.map((id) => [id, 0.8])),
-          };
-        }),
-      locate: () => Effect.die("no file breaks the rule"),
-      conflicts: () => Effect.die("an audit compares no rules"),
-      contradicts: () => Effect.die("an audit compares no rules"),
-    });
-
-    await Effect.runPromise(
-      executeAudit(planned).pipe(
-        Effect.provide(Layer.mergeAll(jev, cache, fixtureWalker(files), testCrypto)),
-      ),
-    );
-
-    // The tally had one answer, so 9 of the 25 files carried the question.
-    expect(asked.filter((ids) => ids.length > 0)).toEqual(
-      Array.from({ length: 9 }, () => ["ports"]),
-    );
-    const answers = tallies.get(key)?.files ?? {};
-    expect(Object.keys(answers)).toHaveLength(SAMPLE);
-    expect(answers["/repo/elsewhere.ts"]).toBe(0.2);
-    expect(Object.values(answers).filter((probability) => probability === 0.8)).toHaveLength(9);
-  });
-
-  it("counts a file as flagged when Jev says a linter more likely than not could check it", () => {
-    const entry: RuleEntry = { id: "ports", rule: ports, scope: "/repo" };
-    expect(talliedOf(entry, { files: { a: 0.9, b: 0.51, c: 0.5, d: 0.1 } })).toEqual({
-      entry,
-      asked: 4,
-      flagged: 2,
-    });
-    expect(talliedOf(entry, undefined)).toEqual({ entry, asked: 0, flagged: 0 });
-  });
-
-  it("tallies only the project's rules: a preset's are not the user's to change", async () => {
-    const cache = memoryCache({}, new Map([[await keyOf(ports), tallyOf(["/repo/a.ts"], 0.9)]]));
-    const project: RuleEntry = { id: "ports", rule: ports, scope: "/repo" };
-
-    const tallied = await Effect.runPromise(
-      tallyProjectRules(
-        [project, { id: "logs", rule: ports, scope: "/repo", preset: "effect" }],
-        "jev-latest",
-      ).pipe(Effect.provide(Layer.merge(cache, testCrypto))),
-    );
-
-    expect(tallied).toEqual([{ entry: project, asked: 1, flagged: 1 }]);
-  });
-
-  it("reports a rule most files flagged, one with mixed answers, and the rules with too few", () => {
-    const tallied = (id: string, asked: number, flagged: number, file?: string): Tallied => ({
-      entry: { id, rule: ports, scope: "/repo", ...(file === undefined ? {} : { file }) },
-      asked,
-      flagged,
-    });
-
-    expect(
-      formatLinterCheck(
-        [
-          tallied("data/ports", 10, 9, "/repo/.adhere/rules/data/ports/RULE.md"),
-          tallied("style/naming", 10, 5),
-          tallied("style/small", 10, 2),
-          tallied("style/new", 4, 4),
-        ],
-        "/repo",
-      ),
-    ).toEqual([
-      "2 rules flagged by the linter check:",
-      "  data/ports (.adhere/rules/data/ports/RULE.md)",
-      "    Flagged on 9 of 10 files: a regular linter should probably check this rule.",
-      "  style/naming",
-      "    Flagged on 5 of 10 files: say more precisely what the rule applies to.",
-      "1 rule has fewer than 10 answers from lint yet, which asks as it judges files.",
-    ]);
-    expect(formatLinterCheck([tallied("style/small", 10, 2)], "/repo")).toEqual([
-      "The linter check flags no rule.",
-    ]);
-    expect(formatLinterCheck([], "/repo")).toEqual([]);
-  });
-});
+import { describePlan, sendQuestion } from "../src/workflows/format.ts";
 
 describe("pipeline", () => {
   const execute = (
@@ -3713,7 +302,50 @@ describe("pipeline", () => {
     },
   );
 
-  it("keeps default-native limit-zero plans and execution compiler-free even with uncached files", async () => {
+  it.each([
+    { policy: "default", reads: DEFAULT_READS, typeAware: undefined },
+    {
+      policy: "legacy native names",
+      reads: ["workspacePackages", "symbols", "references"] as const,
+      typeAware: undefined,
+    },
+    {
+      policy: "explicit off",
+      reads: ["workspacePackages", "symbols", "references"] as const,
+      typeAware: false,
+    },
+  ])("judges and locates compiler-free with $policy context", async ({ reads, typeAware }) => {
+    const imported = {
+      ...source,
+      lines: [...source.lines, 'import type { Order } from "orders-core/types";'],
+    };
+    const workspacePackages = { "orders-core": "packages/orders", unused: "packages/unused" };
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: () => Effect.die("non-type-aware work must not acquire the compiler"),
+      read: () => Effect.die("non-type-aware work must not query native context"),
+    });
+    const cache = memoryCache();
+    const plan = await planOf({
+      rules,
+      files: [imported],
+      cache,
+      reads,
+      ...(typeAware === undefined ? {} : { typeAware }),
+      sourceReads,
+      workspacePackages,
+    });
+    expect(plan.nativeReads).toBeUndefined();
+    const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    const result = await execute(plan, jev.layer, cache, sourceReads, [imported]);
+    expect(result).toMatchObject({ judged: 1, skipped: 0 });
+    expect(result.findings.map(({ rule }) => rule)).toEqual(["a"]);
+    expect(jev.states).toEqual({
+      judge: [{ workspacePackages: { "orders-core": "packages/orders" } }],
+      locate: [{ workspacePackages: { "orders-core": "packages/orders" } }],
+    });
+  });
+
+  it("keeps type-aware limit-zero plans and execution compiler-free even with uncached files", async () => {
     const sourceReads = Layer.succeed(SourceReads, {
       prepare: () => Effect.die("planning and deferred files must not start the compiler"),
       read: () => Effect.die("planning and deferred files must not read native context"),
@@ -3725,6 +357,7 @@ describe("pipeline", () => {
     };
     const planned = await planOf({
       rules,
+      typeAware: true,
       reads: DEFAULT_READS,
       files: [source, generated],
       cache,
@@ -3735,6 +368,8 @@ describe("pipeline", () => {
       symbols: true,
       references: true,
       includeComments: false,
+      maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+      maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
     });
     expect(planned).toMatchObject({
       planOnly: true,
@@ -3780,6 +415,7 @@ describe("pipeline", () => {
     });
     const planned = await planOf({
       rules,
+      typeAware: true,
       reads: DEFAULT_READS,
       files: [source],
       cache,
@@ -3835,6 +471,7 @@ describe("pipeline", () => {
       });
       const planned = await planOf({
         rules: selectedRules,
+        typeAware: true,
         reads: DEFAULT_READS,
         files: [...files].reverse(),
         cache,
@@ -3893,12 +530,13 @@ describe("pipeline", () => {
           Effect.sync(() => {
             queried.push(file.path);
             return overflow === "native"
-              ? { references: { files: { "caller.ts": "x".repeat(110_000) } } }
+              ? { references: { "port:caller.ts": "x".repeat(110_000) } }
               : {};
           }),
       });
       const planned = await planOf({
         rules,
+        typeAware: true,
         reads: ["references"],
         files,
         cache,
@@ -3920,7 +558,7 @@ describe("pipeline", () => {
       expect(result).toMatchObject({ judged: 0, skipped: 1, waiting: 1 });
       expect(preparations).toEqual([[files[0]!.path]]);
       expect(queried).toEqual([files[0]!.path]);
-      expect(sent).toEqual(overflow === "native" ? [] : [rules]);
+      expect(sent).toEqual([rules]);
     },
   );
 
@@ -3947,6 +585,7 @@ describe("pipeline", () => {
     });
     const planned = await planOf({
       rules,
+      typeAware: true,
       reads: DEFAULT_READS,
       files: [imported],
       cache,
@@ -3960,7 +599,7 @@ describe("pipeline", () => {
     expect(render(result, { root: "/repo" }).join("\n")).toContain(a.description);
   });
 
-  it("preserves cached located errors when native context overflows for new pending work", async () => {
+  it("preserves cached located errors when native fallback also API-overflows without looping", async () => {
     const cache = memoryCache();
     const first = await audit({
       rules: { a },
@@ -3969,16 +608,21 @@ describe("pipeline", () => {
     });
     const sourceReads = Layer.succeed(SourceReads, {
       prepare: () => Effect.void,
-      read: () => Effect.succeed({ references: { files: { "caller.ts": "x".repeat(110_000) } } }),
+      read: () => Effect.succeed({ references: { "port:caller.ts": "x".repeat(110_000) } }),
     });
+    const attempts: ReadState[] = [];
     const noHttp = Layer.succeed(Jev, {
-      judge: () => Effect.die("oversized pending context must not be sent"),
+      judge: (_lines, _rules, _sampled, _file, state = {}) =>
+        Effect.sync(() => attempts.push(state)).pipe(
+          Effect.andThen(Effect.fail(JevOverflow.make())),
+        ),
       locate: () => Effect.die("the cached error is already located"),
       conflicts: () => Effect.die("an audit compares no rules"),
       contradicts: () => Effect.die("an audit compares no rules"),
     });
     const planned = await planOf({
       rules,
+      typeAware: true,
       reads: ["references"],
       files: [source],
       cache,
@@ -3991,6 +635,7 @@ describe("pipeline", () => {
     expect(result.skipped).toBe(1);
     expect(result.findings).toEqual(first.findings);
     expect(failing(result.findings)).toHaveLength(1);
+    expect(attempts).toEqual([{}]);
     const reused = await audit({ rules: { a }, cache, jev: noHttp });
     expect(reused.findings).toEqual(first.findings);
   });
@@ -4002,8 +647,8 @@ describe("pipeline", () => {
       cache,
       jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: {} }).layer,
     });
-    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
-    const references = { files: { "caller.ts": "use(port);\n" } };
+    const symbols = { port: "const port: number" };
+    const references = { "port:caller.ts": "use(port);\n" };
     const events: string[] = [];
     const sourceReads = Layer.succeed(SourceReads, {
       prepare: (files) =>
@@ -4019,6 +664,7 @@ describe("pipeline", () => {
     });
     const planned = await planOf({
       rules,
+      typeAware: true,
       reads: DEFAULT_READS,
       files: [source],
       cache,
@@ -4058,6 +704,7 @@ describe("pipeline", () => {
     });
     const cached = await planOf({
       rules,
+      typeAware: true,
       reads: DEFAULT_READS,
       files: [source],
       cache,
@@ -4072,12 +719,18 @@ describe("pipeline", () => {
     expect(reused.findings).toEqual(result.findings);
   });
 
-  it("keeps reader subsets as flags in the plan and exposes only enabled native fields at execution", async () => {
-    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
-    const references = { files: { "caller.ts": "use(port);\n" } };
-    for (const reads of [["symbols"], ["references"]] as const) {
+  it("enables both native fields with typeAware regardless of legacy read subsets", async () => {
+    const symbols = { port: "const port: number" };
+    const references = { "port:caller.ts": "use(port);\n" };
+    for (const reads of [[], ["symbols"], ["references"]] as const) {
       const includeComments = reads[0] === "references";
-      const requested = { symbols: !includeComments, references: includeComments, includeComments };
+      const requested = {
+        symbols: true,
+        references: true,
+        includeComments,
+        maxSymbolDocumentationLength: 32,
+        maxSymbolLength: 64,
+      };
       const preparations: Array<readonly string[]> = [];
       let queried = 0;
       const sourceReads = Layer.succeed(SourceReads, {
@@ -4095,8 +748,11 @@ describe("pipeline", () => {
       const cache = memoryCache();
       const planned = await planOf({
         rules,
+        typeAware: true,
         reads,
         includeComments,
+        maxSymbolDocumentationLength: requested.maxSymbolDocumentationLength,
+        maxSymbolLength: requested.maxSymbolLength,
         files: [source],
         cache,
         sourceReads,
@@ -4107,7 +763,7 @@ describe("pipeline", () => {
       expect(queried).toBe(0);
       const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
       await execute(planned, jev.layer, cache, sourceReads);
-      const state = includeComments ? { references } : { symbols };
+      const state = { symbols, references };
       expect(jev.states).toEqual({ judge: [state], locate: [state] });
       expect(preparations).toEqual([[source.path]]);
       expect(queried).toBe(1);
@@ -4127,6 +783,7 @@ describe("pipeline", () => {
     ]) {
       const planned = await planOf({
         rules,
+        typeAware: true,
         reads: DEFAULT_READS,
         files,
         cache: memoryCache(),
@@ -4160,13 +817,20 @@ describe("pipeline", () => {
       read: (file, _lines, requested) =>
         Effect.sync(() => {
           expect(preparations).toEqual([[other.path]]);
-          expect(requested).toEqual({ symbols: true, references: true, includeComments: false });
+          expect(requested).toEqual({
+            symbols: true,
+            references: true,
+            includeComments: false,
+            maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+            maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+          });
           queried.push(file.path);
-          return { symbols: {}, references: { sections: {}, files: {} } };
+          return { symbols: {}, references: {} };
         }),
     });
     const planned = await planOf({
       rules,
+      typeAware: true,
       reads: ["symbols", "references", "symbols"],
       cache,
       sourceReads,
@@ -4224,6 +888,7 @@ describe("pipeline", () => {
       const jev = recordingJev({ judge: { a: 0.1, b: 0.9 }, locate: { b: 2 } });
       await audit({
         rules,
+        typeAware: true,
         reads: ["symbols", "references"],
         jev: jev.layer,
         cache,
@@ -4250,14 +915,14 @@ describe("pipeline", () => {
     }
   });
 
-  it("plans all default reads without the compiler and acquires one shared context only during execution", async () => {
+  it("plans type-aware reads without the compiler and acquires one shared context only during execution", async () => {
     const workspacePackages = { "orders-core": "packages/orders" };
     const catalog = { ...workspacePackages, unused: "packages/unused" };
     const files = [
       { ...source, lines: [...source.lines, 'import type { Order } from "orders-core/types";'] },
     ];
-    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
-    const references = { files: { "caller.ts": "\tuse(port);\n  use(port);\n" } };
+    const symbols = { port: "const port: number" };
+    const references = { "port:caller.ts": "\tuse(port);\n  use(port);\n" };
     const readState = { workspacePackages, symbols, references };
     let reads = 0;
     const preparations: Array<readonly string[]> = [];
@@ -4269,7 +934,13 @@ describe("pipeline", () => {
       read: (_file, _lines, requested) =>
         Effect.sync(() => {
           expect(preparations).toEqual([[source.path]]);
-          expect(requested).toEqual({ symbols: true, references: true, includeComments: false });
+          expect(requested).toEqual({
+            symbols: true,
+            references: true,
+            includeComments: false,
+            maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+            maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+          });
           reads += 1;
           return { symbols, references, unrequested: true };
         }),
@@ -4278,6 +949,7 @@ describe("pipeline", () => {
     const config = resolveConfig(await Effect.runPromise(loaded({}, rules)), {
       threshold: 0.7,
       sufficiencyThreshold: 0.7,
+      typeAware: true,
     });
     expect(config.reads).toEqual(["workspacePackages", "symbols", "references"]);
     const planned = await Effect.runPromise(
@@ -4300,6 +972,8 @@ describe("pipeline", () => {
       symbols: true,
       references: true,
       includeComments: false,
+      maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+      maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
     });
     expect(JSON.stringify(planned)).not.toContain("caller.ts");
     for (const file of planned.files) {
@@ -4332,7 +1006,7 @@ describe("pipeline", () => {
     expect(preparations).toEqual([[source.path]]);
   });
 
-  it("rechecks sampled questions against real context and skips overflow during execution before HTTP", async () => {
+  it("rechecks real context and attempts judge and locate without oversized references", async () => {
     const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
     const preparations: Array<readonly string[]> = [];
     const sourceReads = Layer.succeed(SourceReads, {
@@ -4340,11 +1014,12 @@ describe("pipeline", () => {
         Effect.sync(() => {
           preparations.push(files);
         }),
-      read: () => Effect.succeed({ references: { files: { "caller.ts": "x".repeat(110_000) } } }),
+      read: () => Effect.succeed({ references: { "port:caller.ts": "x".repeat(110_000) } }),
     });
     const cache = memoryCache();
     const planned = await planOf({
       rules,
+      typeAware: true,
       reads: ["references"],
       files: [source],
       cache,
@@ -4355,11 +1030,242 @@ describe("pipeline", () => {
     expect(Object.keys(planned.files[0]?.sampled ?? {}).sort()).toEqual(["a", "b"]);
     expect(preparations).toEqual([]);
     const result = await execute(planned, jev.layer, cache, sourceReads);
-    expect(result.skipped).toBe(1);
-    expect(result.judged).toBe(0);
+    expect(result.skipped).toBe(0);
+    expect(result.judged).toBe(1);
     expect(preparations).toEqual([[source.path]]);
-    expect(jev.calls).toEqual({ judge: [], locate: [] });
+    expect(jev.calls.judge).toHaveLength(1);
+    expect(jev.calls.locate).toHaveLength(1);
+    expect(jev.states).toEqual({ judge: [{}], locate: [{}] });
   });
+
+  it.each([
+    ["judge", true],
+    ["locate", true],
+    ["judge", false],
+    ["locate", false],
+  ] as const)(
+    "retries only the overflowing %s phase once without references (fallback succeeds: %s)",
+    async (phase, succeeds) => {
+      const references = { "port:caller.ts": "\tuse(port);\n" };
+      const symbols = { port: "const port: number" };
+      const sourceReads = Layer.succeed(SourceReads, {
+        prepare: () => Effect.void,
+        read: () => Effect.succeed({ symbols, references }),
+      });
+      const cache = memoryCache();
+      const plan = await planOf({
+        rules,
+        files: [source],
+        cache,
+        typeAware: true,
+        reads: ["symbols", "references"],
+      });
+      const attempts = { judge: [] as ReadState[], locate: [] as ReadState[] };
+      const jev = Layer.succeed(Jev, {
+        judge: (lines, asked, _sampled, _file, state = {}) => {
+          expect(lines).toEqual(source.lines);
+          expect(Object.keys(asked)).toEqual(["a", "b"]);
+          attempts.judge.push(state);
+          return phase === "judge" && (state.references !== undefined || !succeeds)
+            ? Effect.fail(JevOverflow.make())
+            : Effect.succeed({ probabilities: { a: 0.9, b: 0.2 }, linter: {} });
+        },
+        locate: (lines, asked, _file, state = {}) => {
+          expect(lines).toEqual(source.lines);
+          expect(Object.keys(asked)).toEqual(["a"]);
+          attempts.locate.push(state);
+          return phase === "locate" && (state.references !== undefined || !succeeds)
+            ? Effect.fail(JevOverflow.make())
+            : Effect.succeed({ a: placedAt(lines, 2) });
+        },
+        conflicts: () => Effect.die("unused"),
+        contradicts: () => Effect.die("unused"),
+      });
+      const done: FileDone[] = [];
+      const result = await Effect.runPromise(
+        executeAudit(plan, (file) =>
+          Effect.sync(() => {
+            done.push(file);
+          }),
+        ).pipe(
+          Effect.provide(
+            Layer.mergeAll(jev, cache, sourceReads, fixtureWalker([source]), testCrypto),
+          ),
+        ),
+      );
+      if (!succeeds) {
+        expect(result).toMatchObject({ judged: 0, skipped: 1, findings: [] });
+        expect(attempts[phase]).toEqual([{ symbols, references }, { symbols }]);
+        expect(done[0]?.requests).toBe(phase === "judge" ? 2 : 3);
+        const retry = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+        await audit({ rules, cache, jev: retry.layer });
+        expect(retry.calls.judge).toHaveLength(1);
+        expect(Object.keys(retry.calls.judge[0]!)).toEqual(["a", "b"]);
+        return;
+      }
+      expect(result).toMatchObject({ judged: 1, skipped: 0 });
+      expect(result.findings.map(({ rule }) => rule)).toEqual(["a"]);
+      expect(attempts).toEqual(
+        phase === "judge"
+          ? { judge: [{ symbols, references }, { symbols }], locate: [{ symbols }] }
+          : { judge: [{ symbols, references }], locate: [{ symbols, references }, { symbols }] },
+      );
+      expect(done[0]?.requests).toBe(3);
+      const noRequests = Layer.succeed(Jev, {
+        judge: () => Effect.die("successful fallback must be cached"),
+        locate: () => Effect.die("successful fallback locations must be cached"),
+        conflicts: () => Effect.die("unused"),
+        contradicts: () => Effect.die("unused"),
+      });
+      const cached = await audit({ rules, cache, jev: noRequests });
+      expect(cached.findings).toEqual(result.findings);
+    },
+  );
+
+  it("strips hook-returned references on fallback but keeps original references available to hooks", async () => {
+    const references = { "port:caller.ts": "\tuse(port);\n" };
+    const symbols = { port: "const port: number" };
+    const seen: ReadState[] = [];
+    const appendState: AppendState = (state) => {
+      seen.push(state);
+      expect(state.references).toMatchObject(references);
+      return {
+        references: { "hook:caller.ts": "use(port);" },
+        hookContext: (state.references as Record<string, string>)["port:caller.ts"],
+      };
+    };
+    const hooked = { a: { ...a, appendState }, b: { ...b, appendState } };
+    const sent: SystemOneRequest[] = [];
+    const provider: Provider = {
+      model: "jev-latest",
+      ask: async (state, questions) => {
+        const body = requestOf("jev-latest", state, questions);
+        sent.push(body);
+        if (sent.length === 2) throw new ContextOverflow("second group overflow");
+        const locating = questions.some(({ id }) => id.startsWith("start:"));
+        return {
+          answers: Object.fromEntries(
+            questions.map(({ id }) => [
+              id,
+              id.startsWith("start:") || id.startsWith("end:")
+                ? "2"
+                : locating
+                  ? 0.9
+                  : id === "b"
+                    ? 0.9
+                    : sent.length === 1
+                      ? 0.99
+                      : 0.1,
+            ]),
+          ),
+        };
+      },
+    };
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: () => Effect.void,
+      read: () => Effect.succeed({ symbols, references }),
+    });
+    const cache = memoryCache();
+    const plan = await planOf({
+      rules: hooked,
+      files: [source],
+      cache,
+      typeAware: true,
+      reads: ["symbols", "references"],
+    });
+    const layer = JevLive.pipe(
+      Layer.provide([
+        Layer.succeed(AdhereConfig, resolveConfig({ presets: [], rules: hooked, provider })),
+        Layer.succeed(FetchHttpClient.Fetch, (() => {
+          throw new Error("no real HTTP");
+        }) as unknown as typeof globalThis.fetch),
+        Layer.succeed(Credentials, {
+          key: () => Effect.die("provider requires no credentials"),
+          file: Effect.die("unused"),
+          save: () => Effect.die("unused"),
+          remove: () => Effect.die("unused"),
+        }),
+      ]),
+    );
+    const done: FileDone[] = [];
+    const result = await Effect.runPromise(
+      executeAudit(plan, (file) =>
+        Effect.sync(() => {
+          done.push(file);
+        }),
+      ).pipe(
+        Effect.provide(
+          Layer.mergeAll(layer, cache, sourceReads, fixtureWalker([source]), testCrypto),
+        ),
+      ),
+    );
+    expect(result).toMatchObject({ judged: 1, skipped: 0 });
+    expect(result.findings.map(({ rule }) => rule)).toEqual(["b"]);
+    expect(sent).toHaveLength(5);
+    expect(seen).toHaveLength(5);
+    expect(done[0]?.requests).toBe(5);
+    for (const body of sent) {
+      expect(Object.values(body.state.code as Record<string, string>).join("\n")).toBe(
+        source.lines.join("\n"),
+      );
+      expect(body.state.symbols).toMatchObject(symbols);
+      expect(body.state.hookContext).toBe(references["port:caller.ts"]);
+    }
+    for (const body of sent.slice(2)) expect(body.state).not.toHaveProperty("references");
+    for (const body of sent.slice(0, 2))
+      expect(body.state.references).toMatchObject({ "hook:caller.ts": "use(port);" });
+    const again = recordingJev({ judge: {}, locate: {} });
+    const cached = await audit({ rules: hooked, cache, jev: again.layer });
+    expect(again.calls).toEqual({ judge: [], locate: [] });
+    expect(cached.findings).toEqual(result.findings);
+    expect(cached.cached).toBe(1);
+  });
+
+  it.each(["blocked", "unavailable"] as const)(
+    "does not remove references after a %s refusal",
+    async (kind) => {
+      const references = { "port:caller.ts": "use(port);\n" };
+      const attempts: ReadState[] = [];
+      const jev = Layer.succeed(Jev, {
+        judge: (_lines, _rules, _sampled, _file, state = {}) => {
+          attempts.push(state);
+          return kind === "blocked"
+            ? Effect.fail(JevBlocked.make({ ray: "no-retry" }))
+            : Effect.fail(JevUnavailable.make({ message: "no-retry" }));
+        },
+        locate: () => Effect.die("a refused judgment must not locate"),
+        conflicts: () => Effect.die("unused"),
+        contradicts: () => Effect.die("unused"),
+      });
+      const sourceReads = Layer.succeed(SourceReads, {
+        prepare: () => Effect.void,
+        read: () => Effect.succeed({ references }),
+      });
+      const cache = memoryCache();
+      const plan = await planOf({
+        rules,
+        files: [source],
+        cache,
+        typeAware: true,
+        reads: ["references"],
+      });
+      const effect = executeAudit(plan).pipe(
+        Effect.provide(
+          Layer.mergeAll(jev, cache, sourceReads, fixtureWalker([source]), testCrypto),
+        ),
+      );
+      if (kind === "blocked")
+        expect(await Effect.runPromise(effect)).toMatchObject({
+          judged: 0,
+          blocked: [{ ray: "no-retry", file: source.path }],
+        });
+      else
+        expect(await Effect.runPromise(Effect.flip(effect))).toMatchObject({
+          _tag: "JevUnavailable",
+        });
+      expect(attempts).toEqual([{ references }]);
+    },
+  );
 
   it("answers a file from the cache wherever its content moves", async () => {
     const cache = memoryCache();
@@ -4384,9 +1290,12 @@ describe("pipeline", () => {
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(AdhereConfig, {
+              typeAware: false,
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+              maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
               reads: [],
               rules,
             }),
@@ -4420,9 +1329,12 @@ describe("pipeline", () => {
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(AdhereConfig, {
+              typeAware: false,
               model: "jev-latest",
               threshold: 0.7,
               sufficiencyThreshold: 0.7,
+              maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+              maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
               reads: [],
               rules,
             }),
@@ -4704,1151 +1616,5 @@ describe("pipeline", () => {
     });
     expect(again.calls).toEqual({ judge: [], locate: [] });
     expect(result.findings).toEqual([{ ...findingA, level: "warning" }]);
-  });
-});
-
-describe("highlight", () => {
-  /** Each line of the code, with every classified token marked `[kind text]`. */
-  const marked = (code: string) =>
-    tokenize(code).map((line) =>
-      line.map(({ text, kind }) => (kind === undefined ? text : `[${kind} ${text}]`)).join(""),
-    );
-
-  it("marks keywords, type names, constants, strings, and comments", () => {
-    expect(marked('const port: number = Number(process.env.PORT ?? "80"); // why')).toEqual([
-      '[keyword const] port: [type number] = [type Number](process.env.PORT ?? [string "80"]); [comment // why]',
-    ]);
-  });
-
-  it("reads a word after a dot or before a colon as a property, not a keyword", () => {
-    expect(marked('cache.get(key); ({ type: "noul" as const })')).toEqual([
-      'cache.get(key); ({ type: [string "noul"] [keyword as] [keyword const] })',
-    ]);
-  });
-
-  it("reads a slash as a regex where an expression can start, and as division after a value", () => {
-    expect(marked("const fence = /[/]`{3,}/g; const half = total / 2 / scale;")).toEqual([
-      "[keyword const] fence = [string /[/]`{3,}/g]; [keyword const] half = total / [constant 2] / scale;",
-    ]);
-  });
-
-  it("cuts a comment or template that crosses lines into one token per line", () => {
-    expect(marked("/* one\n\n   two */ const s = `a\n${b}`;")).toEqual([
-      "[comment /* one]",
-      "",
-      "[comment    two */] [keyword const] s = [string `a]",
-      "[string ${b}`];",
-    ]);
-  });
-
-  it("reads a template in another's ${…} as part of it, braces and all", () => {
-    expect(marked("const list = `${xs.map((x) => `- ${x}`).join(`}`)}`; const n = 1;")).toEqual([
-      "[keyword const] list = [string `${xs.map((x) => `- ${x}`).join(`}`)}`]; [keyword const] n = [constant 1];",
-    ]);
-  });
-
-  it("gives back every character of the input, however malformed", () => {
-    for (const code of [
-      '"unterminated',
-      "/* open",
-      "`open\n\n",
-      "`${open",
-      "`${a}\\",
-      "a\r\nb",
-      "é → 🎉",
-      "y / z /",
-    ]) {
-      const text = tokenize(code).map((line) => line.map((token) => token.text).join(""));
-      expect(text.join("\n")).toBe(code);
-    }
-  });
-});
-
-describe("sections", () => {
-  /** A statement of `n` lines: `const name = [` then its values, then `];`. */
-  const statement = (name: string, n: number): ReadonlyArray<string> => [
-    `const ${name} = [`,
-    ...Array.from({ length: n - 2 }, (_, index) => `  ${index},`),
-    "];",
-  ];
-
-  it("packs whole statements into sections of at most 30 lines, covering every line", () => {
-    const code = [
-      'import { a } from "a";',
-      "",
-      "// the first",
-      ...statement("first", 20),
-      "",
-      ...statement("second", 20),
-      ...statement("third", 5),
-    ];
-    expect(sectionsOf(code)).toEqual([
-      { first: 1, last: 23 },
-      { first: 24, last: 49 },
-    ]);
-  });
-
-  it("splits a long statement into the statements of its largest group", () => {
-    const code = [
-      "export class Big {",
-      ...Array.from({ length: 4 }, (_, index) => [
-        `  method${index}() {`,
-        ...Array.from({ length: 12 }, (_, line) => `    this.call(${line});`),
-        "  }",
-      ]).flat(),
-      "}",
-    ];
-    const sections = sectionsOf(code);
-    expect(sections.length).toBeGreaterThan(1);
-    expect(sections[0]?.first).toBe(1);
-    expect(sections.at(-1)?.last).toBe(code.length);
-    for (const section of sections) expect(section.last - section.first).toBeLessThan(30);
-  });
-
-  it("keeps a decorator with the declaration it decorates", () => {
-    const code = [
-      ...statement("before", 28),
-      "@Command({",
-      "  name: 'reset',",
-      "})",
-      "export class Reset {}",
-    ];
-    expect(sectionsOf(code)).toEqual([
-      { first: 1, last: 28 },
-      { first: 29, last: 32 },
-    ]);
-  });
-});
-
-describe("render", () => {
-  const result = {
-    files: 1,
-    judged: 1,
-    cached: 0,
-    skipped: 0,
-    waiting: 0,
-    blocked: [],
-    findings: [findingA],
-    suppressed: 0,
-  };
-
-  it("prints the vp-lint frame with the code to write as the hint, then the legend for its scores", () => {
-    expect(render(result, { root: "/repo" }).join("\n")).toBe(
-      [
-        "  × a: Ports are branded.",
-        "    confidence 0.90 · context 0.90",
-        "   ╭─[src/server.ts:2:3]",
-        " 1 │ const before = 1;",
-        " 2 │   const port: number = Number(process.env.PORT);",
-        "   ·   ──────────────────────────────────────────────",
-        " 3 │ const after = 2;",
-        "   ╰────",
-        '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
-        "        type Port = typeof Port.Type",
-        "",
-        "  confidence  0–0.74 < 0.8 < 0.85–1  Jev's probability that the file breaks the rule",
-        "  context     0–0.49 < 0.6 < 0.70–1  its probability that the file shows enough to decide",
-        "",
-        "Found 1 error.",
-        "1 file, 1 judged, 0 cached.",
-      ].join("\n"),
-    );
-  });
-
-  it("numbers the section's lines right-aligned, and underlines the lines Jev names past a tab", () => {
-    const excerpt = { start: 9, lines: ["\tif (port) {", "\t\tlisten(port);", "\t}"] };
-    const finding = {
-      ...findingA,
-      section: { first: 9, last: 11 },
-      lines: { first: 10, last: 10 },
-      excerpt,
-    };
-    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(2, 8)).toEqual([
-      "    ╭─[src/server.ts:10:3]",
-      "  9 │ \tif (port) {",
-      " 10 │ \t\tlisten(port);",
-      "    · \t\t─────────────",
-      " 11 │ \t}",
-      "    ╰────",
-    ]);
-  });
-
-  it("marks the lines of a span of several with a bar beside the code, not an underline each", () => {
-    const finding = { ...findingA, lines: { first: 2, last: 3 } };
-    expect(render({ ...result, findings: [finding] }, { root: "/repo" }).slice(2, 7)).toEqual([
-      "   ╭─[src/server.ts:2:3]",
-      " 1 │   const before = 1;",
-      " 2 │ ┃   const port: number = Number(process.env.PORT);",
-      " 3 │ ┃ const after = 2;",
-      "   ╰────",
-    ]);
-  });
-
-  it("places a finding without lines at its section's first line, with no underline", () => {
-    const { lines: _, ...unlined } = findingA;
-    expect(render({ ...result, findings: [unlined] }, { root: "/repo" }).slice(2, 7)).toEqual([
-      "   ╭─[src/server.ts:1:1]",
-      " 1 │ const before = 1;",
-      " 2 │   const port: number = Number(process.env.PORT);",
-      " 3 │ const after = 2;",
-      "   ╰────",
-    ]);
-  });
-
-  it("shows a finding's scores under its header, and warns under the section when its context is below the threshold", () => {
-    const finding = { ...findingA, context: 0.45 };
-    const lines = render({ ...result, findings: [finding] }, { root: "/repo" });
-    expect(lines.slice(0, 2)).toEqual([
-      "  × a: Ports are branded.",
-      "    confidence 0.90 · context 0.45",
-    ]);
-    expect(lines.slice(8, 12)).toEqual([
-      "  warning: this file may not show enough to check this rule",
-      "     help: add what the code relies on outside this file as a note Jev reads:",
-      "           // @adhere <the fact>, and how you know it",
-      '  hint: const Port = Schema.Int.pipe(Schema.brand("Port"))',
-    ]);
-    // Above the threshold, which the caller can set, there is no warning.
-    const enough = render({ ...result, findings: [finding] }, { sufficiencyThreshold: 0.4 });
-    expect(enough.some((line) => line.includes("warning:"))).toBe(false);
-    expect(enough).toContain(
-      "  context     0–0.24 < 0.4 < 0.55–1  its probability that the file shows enough to decide",
-    );
-  });
-
-  it("shows the code never to write, labeled with its word, for a rule without code to write", () => {
-    const code = 'throw new Error("x")\nthrow new Error("y")';
-    const finding = { ...findingA, examples: { bad: { word: "never" as const, code } } };
-    const lines = render({ ...result, findings: [finding] }, { root: "/repo" });
-    expect(lines).toContain('  never: throw new Error("x")');
-    expect(lines).toContain('         throw new Error("y")');
-    expect(lines.some((line) => line.includes("hint:"))).toBe(false);
-  });
-
-  const sgr = (code: string, text: string) => `\u001b[${code}m${text}\u001b[0m`;
-
-  it("names a preset rule's preset first in its header, and a project rule plainly", () => {
-    const fromPreset = { ...findingA, rule: "basics/ports", preset: "effect" };
-    const lines = render({ ...result, findings: [fromPreset, findingA] }, { root: "/repo" });
-    expect(lines.filter((line) => line.startsWith("  × "))).toEqual([
-      "  × effect/basics/ports: Ports are branded.",
-      "  × a: Ports are branded.",
-    ]);
-  });
-
-  it("marks a warning's header and counts warnings apart from errors", () => {
-    const warning = { ...findingA, rule: "b", level: "warning" as const };
-    const lines = render({ ...result, findings: [findingA, warning] }, { root: "/repo" });
-    expect(lines.filter((line) => /^  [×⚠] /.test(line))).toEqual([
-      "  × a: Ports are branded.",
-      "  ⚠ b: Ports are branded.",
-    ]);
-    expect(lines).toContain("Found 1 error and 1 warning.");
-    expect(render({ ...result, findings: [warning] }, { root: "/repo" })).toContain(
-      "Found 0 errors and 1 warning.",
-    );
-    const amber = "38;2;214;154;0;1";
-    expect(render({ ...result, findings: [warning] }, { color: true }).join("\n")).toContain(
-      `  ${sgr(amber, "⚠")} ${sgr(amber, "b")}: `,
-    );
-  });
-
-  it("fails a run on its errors, and on its warnings only when asked to", () => {
-    const warning = { ...findingA, level: "warning" as const };
-    expect(failing([findingA, warning])).toEqual([findingA]);
-    expect(failing([warning])).toEqual([]);
-    expect(failing([findingA, warning], true)).toEqual([findingA, warning]);
-  });
-
-  const green = "38;2;152;195;121";
-  const amber = "38;2;229;192;123";
-  const rose = "38;2;224;108;117";
-  const dim = "2";
-
-  it("colors only the rule red in the header on a terminal, dims the scores' labels, and counts skipped files", () => {
-    const red = "38;2;164;20;71;1";
-    const colored = render({ ...result, skipped: 2 }, { color: true }).join("\n");
-    expect(colored).toContain(
-      `  ${sgr(red, "×")} ${sgr(red, "a")}: ${sgr("38;2;230;230;255", "Ports are branded.")}\n    ${sgr(dim, "confidence ")}${sgr(green, "0.90")}${sgr(dim, " · context ")}${sgr(green, "0.90")}`,
-    );
-    expect(colored).toContain("\u001b[38;2;5;125;160;1m/repo/src/server.ts");
-    expect(colored.endsWith("1 file, 1 judged, 0 cached, 2 skipped.")).toBe(true);
-  });
-
-  it("colors a confidence by how far it is from its rule's threshold: amber within a quarter of the room above it, either side, red below, green above", () => {
-    const scores = (probability: number, threshold: number) =>
-      render(
-        { ...result, findings: [{ ...findingA, probability, threshold }] },
-        { color: true },
-      )[1];
-    const confidence = (code: string, text: string) =>
-      `${sgr(dim, "confidence ")}${sgr(code, text)}`;
-    // At 0.80 the room above is 0.20, so the band is 0.05 either side.
-    expect(scores(0.74, 0.8)).toContain(confidence(rose, "0.74"));
-    expect(scores(0.75, 0.8)).toContain(confidence(amber, "0.75"));
-    expect(scores(0.8, 0.8)).toContain(confidence(amber, "0.80"));
-    expect(scores(0.84, 0.8)).toContain(confidence(amber, "0.84"));
-    expect(scores(0.85, 0.8)).toContain(confidence(green, "0.85"));
-    // The band narrows as the threshold rises, which leaves a range above it.
-    expect(scores(0.87, 0.9)).toContain(confidence(rose, "0.87"));
-    expect(scores(0.92, 0.9)).toContain(confidence(amber, "0.92"));
-    expect(scores(0.93, 0.9)).toContain(confidence(green, "0.93"));
-  });
-
-  it("colors a context the same way around the sufficiency threshold, and warns below the threshold itself", () => {
-    const lines = (value: number) =>
-      render({ ...result, findings: [{ ...findingA, context: value }] }, { color: true });
-    const context = (code: string, text: string) => `${sgr(dim, " · context ")}${sgr(code, text)}`;
-    const warns = (value: number) => lines(value).some((line) => line.includes("warning: "));
-    // At 0.60 the room above is 0.40, so the band is 0.10 either side.
-    expect(lines(0.49)[1]).toContain(context(rose, "0.49"));
-    expect(lines(0.5)[1]).toContain(context(amber, "0.50"));
-    expect(lines(0.69)[1]).toContain(context(amber, "0.69"));
-    expect(lines(0.7)[1]).toContain(context(green, "0.70"));
-    // The warning keeps its own cutoff, inside the amber range.
-    expect(warns(0.59)).toBe(true);
-    expect(warns(0.6)).toBe(false);
-  });
-
-  it("sets the legend as a table: a bold label, the threshold in amber between the ranges far below and well above it, each in its scores' color, and a dim meaning", () => {
-    const colored = render(result, { color: true });
-    const less = sgr(amber, "<");
-    expect(colored).toContain(
-      `  ${sgr("1", "confidence")}  ${sgr(rose, "0–0.74")} ${less} ${sgr(amber, "0.8")} ${less} ${sgr(green, "0.85–1")}  ${sgr(dim, "Jev's probability that the file breaks the rule")}`,
-    );
-    expect(colored).toContain(
-      `  ${sgr("1", "context")}     ${sgr(rose, "0–0.49")} ${less} ${sgr(amber, "0.6")} ${less} ${sgr(green, "0.70–1")}  ${sgr(dim, "its probability that the file shows enough to decide")}`,
-    );
-  });
-
-  it("puts the run's threshold in the legend with its ranges either side, and no range below one too low to have it", () => {
-    const confidence = (threshold: number) =>
-      render(result, { threshold })
-        .find((line) => line.startsWith("  confidence"))
-        ?.replace(/ +/g, " ")
-        .replace(" confidence ", "")
-        .replace(" Jev's probability that the file breaks the rule", "");
-    expect(confidence(0.7)).toBe("0–0.62 < 0.7 < 0.78–1");
-    expect(confidence(0.9)).toBe("0–0.87 < 0.9 < 0.93–1");
-    expect(confidence(0.75)).toBe("0–0.68 < 0.75 < 0.82–1");
-    expect(confidence(1)).toBe("0–0.99 < 1 < 1–1");
-    expect(confidence(0)).toBe("0 < 0.25–1");
-    // Its cells stay under context's, whose columns they share.
-    expect(render(result, { threshold: 0 })).toContain(
-      "  confidence           0   < 0.25–1  Jev's probability that the file breaks the rule",
-    );
-  });
-
-  it("leaves the legend out of a report with no findings", () => {
-    expect(render({ ...result, findings: [] })).toEqual([
-      "Found 0 errors.",
-      "1 file, 1 judged, 0 cached.",
-    ]);
-  });
-
-  it("highlights the section and the hint on a terminal", () => {
-    const colored = render(result, { color: true });
-    expect(colored).toContain(
-      ` ${sgr("2", "2")} │   ${sgr("34", "const")} port: ${sgr("36", "number")} = ${sgr("36", "Number")}(process.env.PORT);`,
-    );
-    expect(colored).toContain(
-      `${sgr("38;2;242;205;205", "  hint: ")}${sgr("34", "const")} ${sgr("36", "Port")} = ${sgr("36", "Schema")}.${sgr("36", "Int")}.pipe(${sgr("36", "Schema")}.brand(${sgr("32", '"Port"')}))`,
-    );
-  });
-
-  it("adds color and nothing else, and closes every color on the line that opens it", () => {
-    const code = "/* Decoded once,\n\n   at the edge. */\nconst message = `${file}:\n  ${line}`;";
-    const findings = [{ ...findingA, examples: { good: { word: "must" as const, code } } }];
-    const colored = render({ ...result, findings }, { color: true });
-    expect(colored.map((line) => stripVTControlCharacters(line))).toEqual(
-      render({ ...result, findings }),
-    );
-    for (const line of colored) {
-      expect(line.split("\u001b[").length - 1).toBe(2 * (line.split("\u001b[0m").length - 1));
-    }
-  });
-});
-
-describe("credentials", () => {
-  const FILE = "/config/adhere/credentials.json";
-  const SAVED = { [FILE]: '{"apiKey":"tsk_saved"}\n' };
-
-  /** Files in a map, each with the mode it was created with, and each made directory's mode. */
-  const memoryFiles = (seed: Readonly<Record<string, string>> = {}) => {
-    const files = new Map<string, { readonly text: string; readonly mode?: number | undefined }>(
-      Object.entries(seed).map(([path, text]) => [path, { text }]),
-    );
-    const directories = new Map<string, number | undefined>();
-    const layer = FileSystem.layerNoop({
-      exists: (path) => Effect.succeed(files.has(path)),
-      readFileString: (path) => Effect.succeed(files.get(path)?.text ?? ""),
-      writeFileString: (path, text, options) =>
-        Effect.sync(() => {
-          files.set(path, { text, mode: options?.mode });
-        }),
-      rename: (from, to) =>
-        Effect.sync(() => {
-          const file = files.get(from);
-          files.delete(from);
-          if (file !== undefined) files.set(to, file);
-        }),
-      remove: (path) =>
-        Effect.sync(() => {
-          files.delete(path);
-        }),
-      makeDirectory: (path, options) =>
-        Effect.sync(() => {
-          directories.set(path, options?.mode);
-        }),
-    });
-    return { files, directories, layer };
-  };
-
-  /** The live service over `fs`, with `env` as the whole environment. */
-  const run = <A, E>(
-    env: Readonly<Record<string, string>>,
-    fs: Layer.Layer<FileSystem.FileSystem>,
-    program: Effect.Effect<A, E, Credentials>,
-  ) =>
-    Effect.runPromise(
-      program.pipe(
-        Effect.provide(
-          Layer.merge(
-            CredentialsLive.pipe(Layer.provide(Layer.merge(fs, Path.layer))),
-            ConfigProvider.layer(ConfigProvider.fromEnv({ env })),
-          ),
-        ),
-      ),
-    );
-
-  const apiKey = Effect.gen(function* () {
-    return Redacted.value(yield* (yield* Credentials).key("typesafe"));
-  });
-
-  it("saves a key under XDG_CONFIG_HOME, readable only by the user, and reads it back", async () => {
-    const memory = memoryFiles();
-    const saved = Effect.gen(function* () {
-      yield* (yield* Credentials).save("typesafe", Redacted.make("tsk_saved"));
-      return yield* apiKey;
-    });
-    expect(await run({ XDG_CONFIG_HOME: "/config" }, memory.layer, saved)).toBe("tsk_saved");
-    expect(Object.fromEntries(memory.files)).toEqual({
-      [FILE]: { text: '{"apiKey":"tsk_saved"}\n', mode: 0o600 },
-    });
-    expect(memory.directories.get("/config/adhere")).toBe(0o700);
-  });
-
-  it("keeps the key under ~/.config without XDG_CONFIG_HOME", async () => {
-    const file = Effect.gen(function* () {
-      return yield* (yield* Credentials).file;
-    });
-    expect(await run({ HOME: "/home/me" }, memoryFiles().layer, file)).toBe(
-      "/home/me/.config/adhere/credentials.json",
-    );
-  });
-
-  it("prefers TYPESAFE_API_KEY to the saved key, and uses the saved key without it", async () => {
-    const env = { XDG_CONFIG_HOME: "/config" };
-    const fromEnvironment = { ...env, TYPESAFE_API_KEY: "tsk_env" };
-    expect(await run(fromEnvironment, memoryFiles(SAVED).layer, apiKey)).toBe("tsk_env");
-    expect(await run(env, memoryFiles(SAVED).layer, apiKey)).toBe("tsk_saved");
-  });
-
-  it("refuses without a key, naming adhere login, and refuses a file that holds none", async () => {
-    const env = { XDG_CONFIG_HOME: "/config" };
-    const missing = await run(env, memoryFiles().layer, Effect.flip(apiKey));
-    expect(missing.message).toBe(
-      "No TypeSafe AI API key. Run `adhere login` to save one, or set TYPESAFE_API_KEY.",
-    );
-    const broken = await run(env, memoryFiles({ [FILE]: "{}" }).layer, Effect.flip(apiKey));
-    expect(broken.message).toBe(
-      `${FILE} holds no API key. Run \`adhere login\` to save one again.`,
-    );
-  });
-
-  it("refuses a file that does not read as keys, and writes nothing over it", async () => {
-    const env = { XDG_CONFIG_HOME: "/config" };
-    const text = '{"apiKey":"tsk_saved",';
-    const memory = memoryFiles({ [FILE]: text });
-    const message = `${FILE} does not hold keys as \`adhere login\` saves them. Fix it, or delete it and run \`adhere login\` again.`;
-    expect((await run(env, memory.layer, Effect.flip(apiKey))).message).toBe(message);
-    const writes = Effect.gen(function* () {
-      const credentials = yield* Credentials;
-      return [
-        yield* Effect.flip(credentials.save("openai", Redacted.make("sk-new"))),
-        yield* Effect.flip(credentials.remove("typesafe")),
-      ];
-    });
-    const refused = await run(env, memory.layer, writes);
-    expect(refused.map((problem) => problem.message)).toEqual([message, message]);
-    expect(memory.files.get(FILE)?.text).toBe(text);
-  });
-
-  it("refuses to save a key with a space, and writes nothing", async () => {
-    const memory = memoryFiles();
-    const save = Effect.gen(function* () {
-      yield* (yield* Credentials).save("typesafe", Redacted.make("tsk one"));
-    });
-    const refused = await run({ XDG_CONFIG_HOME: "/config" }, memory.layer, Effect.flip(save));
-    expect(refused.message).toBe("An API key is one word, with no spaces or line breaks.");
-    expect(memory.files.size).toBe(0);
-  });
-
-  it("deletes the saved key, and says when there was none", async () => {
-    const memory = memoryFiles(SAVED);
-    const removed = Effect.gen(function* () {
-      const credentials = yield* Credentials;
-      return [yield* credentials.remove("typesafe"), yield* credentials.remove("typesafe")];
-    });
-    expect(await run({ XDG_CONFIG_HOME: "/config" }, memory.layer, removed)).toEqual([true, false]);
-    expect(memory.files.size).toBe(0);
-  });
-
-  it("keeps the OpenAI key beside TypeSafe AI's, prefers OPENAI_API_KEY, and deletes only the one asked", async () => {
-    const env = { XDG_CONFIG_HOME: "/config" };
-    const memory = memoryFiles(SAVED);
-    const openai = Effect.gen(function* () {
-      const credentials = yield* Credentials;
-      yield* credentials.save("openai", Redacted.make("sk-saved"));
-      return Redacted.value(yield* credentials.key("openai"));
-    });
-    expect(await run(env, memory.layer, openai)).toBe("sk-saved");
-    expect(memory.files.get(FILE)?.text).toBe('{"apiKey":"tsk_saved","openaiApiKey":"sk-saved"}\n');
-    const openaiKey = Effect.gen(function* () {
-      return Redacted.value(yield* (yield* Credentials).key("openai"));
-    });
-    expect(await run({ ...env, OPENAI_API_KEY: "sk-env" }, memory.layer, openaiKey)).toBe("sk-env");
-    const removed = Effect.gen(function* () {
-      return yield* (yield* Credentials).remove("openai");
-    });
-    expect(await run(env, memory.layer, removed)).toBe(true);
-    expect(memory.files.get(FILE)?.text).toBe('{"apiKey":"tsk_saved"}\n');
-    expect(await run(env, memory.layer, apiKey)).toBe("tsk_saved");
-    const none = await run(env, memory.layer, Effect.flip(openaiKey));
-    expect(none.message).toBe(
-      `${FILE} holds no OpenAI API key. Run \`adhere login --openai\` to save one.`,
-    );
-  });
-});
-
-describe("jev over http", () => {
-  /** The file a rule's appendState gets, beside the lines Jev reads. */
-  const judgedFile = { path: "/repo/src/server.ts", contents: "const port = 3000;" };
-
-  /** A fetch for Jev's provider, answering each request with `respond`, given its body and headers. */
-  const fetchFrom = (
-    respond: (body: SystemOneRequest, headers: Headers) => Response,
-  ): typeof globalThis.fetch =>
-    (async (_url: unknown, init?: RequestInit) =>
-      respond(
-        JSON.parse(String(init?.body)),
-        new Headers(init?.headers),
-      )) as typeof globalThis.fetch;
-
-  it("sends at most --rpm requests a minute, evenly spaced", async () => {
-    const sent: Array<number> = [];
-    const fetch = fetchFrom(() => {
-      sent.push(Date.now());
-      return Response.json({ answers: { a: { noul: 0.25 } } });
-    });
-    const layer = JevLive.pipe(
-      Layer.provide([
-        Layer.succeed(FetchHttpClient.Fetch, fetch),
-        // 1200 a minute is one every 50 milliseconds.
-        Layer.succeed(AdhereConfig, {
-          model: "jev-latest",
-          threshold: 0.7,
-          sufficiencyThreshold: 0.7,
-          reads: [],
-          rules: {},
-          rpm: 1200,
-        }),
-        Layer.succeed(Credentials, {
-          key: () => Effect.succeed(Redacted.make("tsk_saved")),
-          file: Effect.succeed("/config/adhere/credentials.json"),
-          save: () => Effect.void,
-          remove: () => Effect.succeed(false),
-        }),
-      ]),
-    );
-    const four = Effect.gen(function* () {
-      const jev = yield* Jev;
-      for (let request = 0; request < 4; request++) {
-        yield* jev.judge(["const port = 3000;"], { a }, [], judgedFile);
-      }
-    });
-    await Effect.runPromise(Effect.provide(four, layer));
-    const first = sent[0] ?? 0;
-    expect(sent).toHaveLength(4);
-    expect((sent.at(-1) ?? first) - first).toBeGreaterThanOrEqual(140);
-  });
-
-  /**
-   * Judges one file through the live client, which answers 0.25 to every
-   * question it is sent, or sends `reply` instead, recording each request's
-   * authorization header and question ids.
-   */
-  const judge = (
-    key: Effect.Effect<Redacted.Redacted<string>, CredentialsUnavailable>,
-    judgedRules: Rules = { a },
-    reply?: () => Response,
-  ) => {
-    const authorizations: Array<string | undefined> = [];
-    const asked: Array<ReadonlyArray<string>> = [];
-    const fetch = fetchFrom((body, headers) => {
-      authorizations.push(headers.get("authorization") ?? undefined);
-      const ids = Object.keys(body.questions);
-      asked.push(ids);
-      const answers = Object.fromEntries(ids.map((id) => [id, { noul: 0.25 }]));
-      return reply?.() ?? Response.json({ answers });
-    });
-    const layer = JevLive.pipe(
-      Layer.provide([
-        Layer.succeed(FetchHttpClient.Fetch, fetch),
-        Layer.succeed(AdhereConfig, {
-          model: "jev-latest",
-          threshold: 0.7,
-          sufficiencyThreshold: 0.7,
-          reads: [],
-          rules: {},
-        }),
-        Layer.succeed(Credentials, {
-          key: () => key,
-          file: Effect.succeed("/config/adhere/credentials.json"),
-          save: () => Effect.void,
-          remove: () => Effect.succeed(false),
-        }),
-      ]),
-    );
-    const judged = Effect.gen(function* () {
-      return yield* (yield* Jev).judge(["const port = 3000;"], judgedRules, [], judgedFile);
-    });
-    const result = Effect.runPromise(Effect.result(Effect.provide(judged, layer)));
-    return { authorizations, asked, judged: result };
-  };
-
-  it("locates each rule in the section Jev chooses, with its sufficiency, and chooses nothing in a file of one section", async () => {
-    const sent: Array<ReadonlyArray<string>> = [];
-    const fetch = fetchFrom((body) => {
-      const ids = Object.keys(body.questions);
-      sent.push(ids);
-      // b's choice names no section, which leaves it unlocated.
-      const answers = Object.fromEntries(
-        ids.map((id) => [
-          id,
-          id.startsWith("sufficient:")
-            ? { noul: 0.4 }
-            : // a starts on 35 and ends on 33 of section 2, lines 31 to 60; the edges are ordered.
-              { choice: { a: "2", b: "9", "start:a:2": "35", "end:a:2": "33" }[id] ?? "1" },
-        ]),
-      );
-      return Response.json({ answers });
-    });
-    const layer = JevLive.pipe(
-      Layer.provide([
-        Layer.succeed(FetchHttpClient.Fetch, fetch),
-        Layer.succeed(AdhereConfig, {
-          model: "jev-latest",
-          threshold: 0.7,
-          sufficiencyThreshold: 0.7,
-          reads: [],
-          rules: {},
-        }),
-        Layer.succeed(Credentials, {
-          key: () => Effect.succeed(Redacted.make("tsk_saved")),
-          file: Effect.succeed("/config/adhere/credentials.json"),
-          save: () => Effect.void,
-          remove: () => Effect.succeed(false),
-        }),
-      ]),
-    );
-    const long = Array.from({ length: 70 }, (_, index) => `const v${index + 1} = ${index + 1};`);
-    const located = Effect.gen(function* () {
-      const jev = yield* Jev;
-      return [
-        yield* jev.locate(long, { a, b }, judgedFile),
-        yield* jev.locate(["const x = 1;"], { a }, judgedFile),
-      ];
-    });
-    const [three, one] = await Effect.runPromise(Effect.provide(located, layer));
-    expect(three).toEqual({
-      a: { section: sectionsOf(long)[1], sufficiency: 0.4, lines: { first: 33, last: 35 } },
-    });
-    expect(one).toEqual({
-      a: { section: { first: 1, last: 1 }, sufficiency: 0.4, lines: { first: 1, last: 1 } },
-    });
-    expect(sent[0]).toContain("start:b:3");
-    expect(sent[1]).toEqual(["start:a:1", "end:a:1", "sufficient:a"]);
-  });
-
-  /** Jev over a client that records each request's state and question ids, and says yes to each. */
-  const recordedJev = (
-    config: Partial<Pick<ResolvedConfig, "reads" | "workspacePackages">> = {},
-  ) => {
-    const sent: Array<{ readonly state: unknown; readonly ids: ReadonlyArray<string> }> = [];
-    const fetch = fetchFrom((body) => {
-      sent.push({ state: body.state, ids: Object.keys(body.questions) });
-      const answers = Record.map(body.questions, ({ type }) =>
-        type === "noul" ? { noul: 0.9 } : { choice: "1" },
-      );
-      return Response.json({ answers });
-    });
-    const layer = JevLive.pipe(
-      Layer.provide([
-        Layer.succeed(FetchHttpClient.Fetch, fetch),
-        Layer.succeed(AdhereConfig, {
-          model: "jev-latest",
-          threshold: 0.7,
-          sufficiencyThreshold: 0.7,
-          rules: {},
-          ...config,
-          reads: config.reads ?? [],
-        }),
-        Layer.succeed(Credentials, {
-          key: () => Effect.succeed(Redacted.make("tsk_saved")),
-          file: Effect.succeed("/config/adhere/credentials.json"),
-          save: () => Effect.void,
-          remove: () => Effect.succeed(false),
-        }),
-      ]),
-    );
-    return { sent, layer };
-  };
-
-  it("runs a rule's appendState right before its isolated requests, over the shared prepared state", async () => {
-    const workspacePackages = { "orders-core": "packages/orders" };
-    const readState = { workspacePackages };
-    // It adds a key and replaces the code, and nothing stops it.
-    const appendState: AppendState = (state, file) => ({
-      code: { "1": "const replaced = true;" },
-      seen: {
-        sections: Object.keys(state.code),
-        path: file.path,
-        contents: file.contents,
-        workspacePackages: state.workspacePackages,
-      },
-    });
-    const hooked = { ...b, appendState };
-    const { sent, layer } = recordedJev({ reads: ["workspacePackages"] });
-    const asked = Effect.gen(function* () {
-      const jev = yield* Jev;
-      const judged = yield* jev.judge(code1, { a, b, hooked }, [], judgedFile, readState);
-      yield* jev.locate(code1, { hooked }, judgedFile, readState);
-      return judged;
-    });
-
-    const judged = await Effect.runPromise(Effect.provide(asked, layer));
-
-    expect(judged.probabilities).toEqual({ a: 0.9, b: 0.9, hooked: 0.9 });
-    const appended = {
-      workspacePackages,
-      code: { "1": "const replaced = true;" },
-      seen: {
-        sections: ["1"],
-        path: "/repo/src/server.ts",
-        contents: "const port = 3000;",
-        workspacePackages,
-      },
-    };
-    expect(sent).toEqual([
-      { state: { workspacePackages, code: { "1": "const port = 3000;" } }, ids: ["a", "b"] },
-      { state: appended, ids: ["hooked"] },
-      { state: appended, ids: ["start:hooked:1", "end:hooked:1", "sufficient:hooked"] },
-    ]);
-  });
-
-  it("inherits execution-time native context in isolated hooks without retaining it on the plan", async () => {
-    const workspacePackages = { "orders-core": "packages/orders" };
-    const catalog = { ...workspacePackages, unused: "packages/unused" };
-    const lines = [...code1, 'import type { Order } from "orders-core/types";'];
-    const symbols = { "1": [{ name: "port", referenceCount: 1 }] };
-    const references = { files: { "caller.ts": "use(port);\n" } };
-    const seen: ReadState[] = [];
-    const hooked = {
-      ...b,
-      appendState: (state: ReadState) => {
-        seen.push(state);
-        return { private: true };
-      },
-    };
-    const sourceReads = Layer.succeed(SourceReads, {
-      prepare: () => Effect.void,
-      read: () => Effect.succeed({ symbols, references }),
-    });
-    const cache = memoryCache();
-    const planned = await planOf({
-      rules: { a, b, hooked },
-      reads: DEFAULT_READS,
-      files: [{ path: judgedFile.path, lines }],
-      cache,
-      sourceReads,
-      workspacePackages: catalog,
-    });
-    expect(seen).toEqual([]);
-    expect(planned.files[0]?.readState).toEqual({ workspacePackages });
-    const { sent, layer } = recordedJev({ reads: DEFAULT_READS, workspacePackages: catalog });
-    await Effect.runPromise(
-      executeAudit(planned).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            layer,
-            cache,
-            sourceReads,
-            fixtureWalker([{ path: judgedFile.path, lines }]),
-            testCrypto,
-          ),
-        ),
-      ),
-    );
-    const state = { code: { "1": lines.join("\n") }, workspacePackages, symbols, references };
-    expect(seen).toEqual([state, state]);
-    expect(sent.map(({ state }) => state)).toEqual([
-      state,
-      { ...state, private: true },
-      state,
-      { ...state, private: true },
-    ]);
-    expect(sent[0]?.ids).toEqual(["a", "b", "linter:a", "linter:b"]);
-    expect(sent[1]?.ids).toEqual(["hooked", "linter:hooked"]);
-    expect(sent[2]?.ids).not.toContain("sufficient:hooked");
-    expect(sent[3]?.ids).toEqual(["start:hooked:1", "end:hooked:1", "sufficient:hooked"]);
-    expect(planned.files[0]?.readState).toEqual({ workspacePackages });
-    expect(JSON.stringify(planned)).not.toContain("caller.ts");
-  });
-
-  it("sends config-prepared workspace packages to every rule in one request and keeps them when locating", async () => {
-    const workspacePackages = { "orders-core": "packages/orders" };
-    const readState = { workspacePackages };
-    const { sent, layer } = recordedJev({ reads: ["workspacePackages"], workspacePackages });
-    const asked = Effect.gen(function* () {
-      const jev = yield* Jev;
-      yield* jev.judge(code1, rules, [], judgedFile, readState);
-      yield* jev.locate(code1, { b }, judgedFile, readState);
-    });
-
-    await Effect.runPromise(Effect.provide(asked, layer));
-
-    const state = { code: { "1": "const port = 3000;" }, workspacePackages };
-    expect(sent).toEqual([
-      { state, ids: ["a", "b"] },
-      { state, ids: ["start:b:1", "end:b:1", "sufficient:b"] },
-    ]);
-  });
-
-  it("does not prepare workspace context in HTTP when shared state is omitted", async () => {
-    for (const reads of [[], ["workspacePackages"], DEFAULT_READS] as const) {
-      const { sent, layer } = recordedJev({
-        reads,
-        workspacePackages: { "orders-core": "packages/orders" },
-      });
-      await Effect.runPromise(
-        Effect.gen(function* () {
-          const jev = yield* Jev;
-          yield* jev.judge(code1, rules, [], judgedFile);
-          yield* jev.locate(code1, { b }, judgedFile);
-        }).pipe(Effect.provide(layer)),
-      );
-      const state = { code: { "1": "const port = 3000;" } };
-      expect(sent).toEqual([
-        { state, ids: ["a", "b"] },
-        { state, ids: ["start:b:1", "end:b:1", "sufficient:b"] },
-      ]);
-    }
-  });
-
-  it("carries the full shared prepared context through judge and locate without replacing it from config", async () => {
-    const readState = {
-      workspacePackages: { "orders-core": "packages/orders" },
-      symbols: { "1": [{ name: "port", referenceCount: 1 }] },
-      references: { files: { "caller.ts": "use(port);\n" } },
-    };
-    const { sent, layer } = recordedJev({
-      reads: ["workspacePackages", "symbols", "references"],
-      workspacePackages: { stale: "packages/stale" },
-    });
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const jev = yield* Jev;
-        yield* jev.judge(code1, rules, [], judgedFile, readState);
-        yield* jev.locate(code1, { b }, judgedFile, readState);
-      }).pipe(Effect.provide(layer)),
-    );
-    const state = { ...readState, code: { "1": "const port = 3000;" } };
-    expect(sent).toEqual([
-      { state, ids: ["a", "b"] },
-      { state, ids: ["start:b:1", "end:b:1", "sufficient:b"] },
-    ]);
-  });
-
-  it("refuses when a rule's appendState fails, naming the rule, and sends nothing for it", async () => {
-    const hooked = {
-      ...b,
-      appendState: () => Promise.reject(new Error("db/schema.sql is missing")),
-    };
-    const { sent, layer } = recordedJev();
-
-    const judged = Effect.gen(function* () {
-      return yield* (yield* Jev).judge(["const port = 3000;"], { hooked }, [], judgedFile);
-    });
-
-    const refused = await Effect.runPromise(Effect.flip(Effect.provide(judged, layer)));
-
-    expect(refused.message).toBe("the appendState of hooked failed: db/schema.sql is missing");
-    expect(sent).toEqual([]);
-  });
-
-  it("sends the key from Credentials as a bearer token", async () => {
-    const { authorizations, judged } = judge(Effect.succeed(Redacted.make("tsk_saved")));
-    expect(await judged).toMatchObject({
-      _tag: "Success",
-      success: { probabilities: { a: 0.25 }, linter: {} },
-    });
-    expect(authorizations).toEqual(["Bearer tsk_saved"]);
-  });
-
-  it("asks each matcher beside its rule, in one request, and reads its score back", async () => {
-    const scoped = { ...a, appliesTo: ["a port"], excludeIf: ["a test port", "a fixed port"] };
-    const { asked, judged } = judge(Effect.succeed(Redacted.make("tsk_saved")), {
-      a: scoped,
-      b,
-    });
-    expect(await judged).toMatchObject({
-      _tag: "Success",
-      success: {
-        probabilities: { a: 0.25, b: 0.25 },
-        matchers: { a: { appliesTo: [0.25], excludeIf: [0.25, 0.25] } },
-      },
-    });
-    expect(asked).toEqual([["a", "b", "appliesTo:a:0", "excludeIf:a:0", "excludeIf:a:1"]]);
-  });
-
-  it("refuses an answer outside 2xx with its status and what Jev said about it", async () => {
-    const { judged } = judge(
-      Effect.succeed(Redacted.make("tsk_saved")),
-      { a },
-      () => new Response('{\n  "detail": "request too large"\n}', { status: 413 }),
-    );
-    expect(await judged).toMatchObject({
-      _tag: "Failure",
-      failure: {
-        _tag: "JevUnavailable",
-        message: 'Jev answered HTTP 413: { "detail": "request too large" }',
-      },
-    });
-  });
-
-  it("refuses with Credentials' reason, before sending anything", async () => {
-    const message = "No TypeSafe AI API key. Run `adhere login` to save one.";
-    const { authorizations, judged } = judge(Effect.fail(CredentialsUnavailable.make({ message })));
-    expect(await judged).toMatchObject({
-      _tag: "Failure",
-      failure: { _tag: "JevUnavailable", message },
-    });
-    expect(authorizations).toEqual([]);
-  });
-
-  it("asks what one request cannot hold over several, and merges the answers", async () => {
-    // About 30k tokens a question: two fit in a 64k request, a third does not.
-    const big = { description: "Big.", must: "x".repeat(90_000) };
-    const { asked, judged } = judge(Effect.succeed(Redacted.make("tsk_saved")), {
-      a: big,
-      b: big,
-      c: big,
-    });
-    expect(await judged).toMatchObject({
-      _tag: "Success",
-      success: { probabilities: { a: 0.25, b: 0.25, c: 0.25 }, linter: {} },
-    });
-    expect(asked).toEqual([["a", "b"], ["c"]]);
-  });
-
-  it("reads the firewall's HTML page as a block with its Ray ID, and a JSON 403 as a refusal", async () => {
-    const key = Effect.succeed(Redacted.make("tsk_saved"));
-    const page = () =>
-      new Response(
-        '<!DOCTYPE html>\n<html class="no-js ie6 oldie">Sorry, you have been blocked</html>',
-        {
-          status: 403,
-          headers: { "content-type": "text/html; charset=UTF-8", "cf-ray": "a3fb098cae4f55a3-LAX" },
-        },
-      );
-    expect(await judge(key, { a }, page).judged).toMatchObject({
-      _tag: "Failure",
-      failure: { _tag: "JevBlocked", ray: "a3fb098cae4f55a3-LAX" },
-    });
-
-    const denied = () => Response.json({ detail: "this key has no access" }, { status: 403 });
-    expect(await judge(key, { a }, denied).judged).toMatchObject({
-      _tag: "Failure",
-      failure: { _tag: "JevUnavailable" },
-    });
-  });
-
-  it("reads Jev's max_tokens_exceeded as an overflow, and any other 400 as a refusal", async () => {
-    const key = Effect.succeed(Redacted.make("tsk_saved"));
-    const overflow = () =>
-      Response.json({ detail: { error_type: "max_tokens_exceeded" } }, { status: 400 });
-    expect(await judge(key, { a }, overflow).judged).toMatchObject({
-      _tag: "Failure",
-      failure: { _tag: "JevOverflow" },
-    });
-
-    const invalid = () => Response.json({ detail: "questions: field required" }, { status: 400 });
-    expect(await judge(key, { a }, invalid).judged).toMatchObject({
-      _tag: "Failure",
-      failure: { _tag: "JevUnavailable" },
-    });
-  });
-});
-
-describe("cache files", () => {
-  const directory = join(process.cwd(), ".adhere", "cache");
-  const sha = (text: string) => createHash("sha256").update(text).digest("hex");
-  const sha256Crypto = Layer.succeed(
-    Crypto.Crypto,
-    Crypto.make({
-      randomBytes: (size) => new Uint8Array(size),
-      digest: (_algorithm, data) =>
-        Effect.sync(() => new Uint8Array(createHash("sha256").update(data).digest())),
-    }),
-  );
-
-  /** Files in a map of path to text; listing a directory gives its direct children. */
-  const memoryFiles = (seed: Readonly<Record<string, string>> = {}) => {
-    const files = new Map(Object.entries(seed));
-    const layer = FileSystem.layerNoop({
-      readDirectory: (path) =>
-        Effect.sync(() => [
-          ...new Set(
-            [...files.keys()]
-              .filter((file) => file.startsWith(`${path}/`))
-              .map((file) => file.slice(path.length + 1).split("/")[0] ?? ""),
-          ),
-        ]),
-      readFileString: (path) => Effect.succeed(files.get(path) ?? ""),
-      writeFileString: (path, text) =>
-        Effect.sync(() => {
-          files.set(path, text);
-        }),
-      makeDirectory: () => Effect.void,
-      remove: (path) =>
-        Effect.sync(() => {
-          files.delete(path);
-        }),
-    });
-    return { files, layer };
-  };
-
-  const run = <A>(
-    fs: Layer.Layer<FileSystem.FileSystem>,
-    program: Effect.Effect<A, never, AuditCache>,
-  ) =>
-    Effect.runPromise(
-      program.pipe(
-        Effect.provide(
-          AuditCacheLive.pipe(Layer.provide(Layer.mergeAll(fs, Path.layer, sha256Crypto))),
-        ),
-      ),
-    );
-
-  /** The names of the cache's files in `folder`, in order. */
-  const listed = (files: ReadonlyMap<string, string>, folder: string) =>
-    [...files.keys()]
-      .filter((file) => file.startsWith(`${directory}/${folder}/`))
-      .map((file) => file.slice(`${directory}/${folder}/`.length))
-      .sort();
-
-  it("adds a file for each new set of answers, named for the content and its own text, and reads their union", async () => {
-    const memory = memoryFiles();
-    const union = await run(
-      memory.layer,
-      Effect.gen(function* () {
-        const cache = yield* AuditCache;
-        yield* cache.put("c0ffee", { f1: { probability: 0.1 } });
-        yield* cache.put("c0ffee", { f2: { probability: 0.9, section: { first: 3, last: 3 } } });
-        yield* cache.put("c0ffee", { f2: { probability: 0.9, section: { first: 3, last: 3 } } });
-        return yield* cache.get("c0ffee", join(process.cwd(), "src/a.ts"));
-      }),
-    );
-    expect(union).toEqual({
-      f1: { probability: 0.1 },
-      f2: { probability: 0.9, section: { first: 3, last: 3 } },
-    });
-    const first = '{\n  "answers": {\n    "f1": {\n      "probability": 0.1\n    }\n  }\n}\n';
-    expect(listed(memory.files, "files")).toHaveLength(2);
-    expect(memory.files.get(`${directory}/files/c0ffee.${sha(first).slice(0, 16)}.json`)).toBe(
-      first,
-    );
-  });
-
-  it("carries entries and tallies over from the layout before content keys, with relative paths", async () => {
-    const file = join(process.cwd(), "src/a.ts");
-    const memory = memoryFiles({
-      [`${directory}/${sha(file)}`]: JSON.stringify({
-        hash: "c0ffee",
-        judgments: { a: { fingerprint: "f1", probability: 0.8, line: 2 } },
-      }),
-      [`${directory}/${sha("\u0000tally\u0000k1")}`]: JSON.stringify({ files: { [file]: 0.3 } }),
-    });
-    const [answers, stale, tally] = await run(
-      memory.layer,
-      Effect.gen(function* () {
-        const cache = yield* AuditCache;
-        return [
-          yield* cache.get("c0ffee", file),
-          // The same path with other content: the old entry was about an earlier version.
-          yield* cache.get("decade", file),
-          yield* cache.tally("k1"),
-        ] as const;
-      }),
-    );
-    // Its line, from before sections, is dropped.
-    expect(answers).toEqual({ f1: { probability: 0.8 } });
-    expect(stale).toEqual({});
-    expect(tally).toEqual({ files: { [file]: 0.3 } });
-    expect(listed(memory.files, "files")).toHaveLength(1);
-    const [kept] = listed(memory.files, "tallies");
-    expect(memory.files.get(`${directory}/tallies/${kept}`)).toBe(
-      '{\n  "files": {\n    "src/a.ts": 0.3\n  }\n}\n',
-    );
-  });
-
-  it("prunes answers about content no file has, keeps every rule's answers and tallies, and folds each group", async () => {
-    const memory = memoryFiles({ [`${directory}/${"0".repeat(64)}`]: "{}" });
-    const [deleted, kept] = await run(
-      memory.layer,
-      Effect.gen(function* () {
-        const cache = yield* AuditCache;
-        yield* cache.put("live", { f1: { probability: 0.1 } });
-        yield* cache.put("live", {
-          f1: { probability: 0.1, section: { first: 4, last: 4 } },
-          other: { probability: 0.5 },
-        });
-        yield* cache.put("gone", { f1: { probability: 0.2 } });
-        yield* cache.putTally("k1", { files: { [join(process.cwd(), "src/a.ts")]: 0.3 } });
-        yield* cache.putTally("k1", { files: { [join(process.cwd(), "src/b.ts")]: 0.6 } });
-        yield* cache.putTally("k2", { files: {} });
-        const deleted = yield* cache.prune({ hashes: new Set(["live"]), tallies: new Set(["k1"]) });
-        return [deleted, yield* cache.get("live", join(process.cwd(), "src/a.ts"))] as const;
-      }),
-    );
-    // "other" answers a rule the run left out, such as another preset's: it stays.
-    expect(kept).toEqual({
-      f1: { probability: 0.1, section: { first: 4, last: 4 } },
-      other: { probability: 0.5 },
-    });
-    const folded =
-      '{\n  "answers": {\n    "f1": {\n      "probability": 0.1,\n      "section": {\n        "first": 4,\n        "last": 4\n      }\n    },\n    "other": {\n      "probability": 0.5\n    }\n  }\n}\n';
-    expect(listed(memory.files, "files")).toEqual([`live.${sha(folded).slice(0, 16)}.json`]);
-    const tallies = listed(memory.files, "tallies");
-    // k2 is the tally of a rule the run left out: it stays too.
-    expect(tallies.map((name) => name.split(".")[0]).sort()).toEqual(["k1", "k2"]);
-    const k1 = tallies.find((name) => name.startsWith("k1."));
-    expect(memory.files.get(`${directory}/tallies/${k1}`)).toBe(
-      '{\n  "files": {\n    "src/a.ts": 0.3,\n    "src/b.ts": 0.6\n  }\n}\n',
-    );
-    expect(memory.files.has(`${directory}/${"0".repeat(64)}`)).toBe(false);
-    // Live's first file, which its second holds all of; gone's file; both of k1's; and the old file.
-    expect(deleted).toBe(5);
   });
 });

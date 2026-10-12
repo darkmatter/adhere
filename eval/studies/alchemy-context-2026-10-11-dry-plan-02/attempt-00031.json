@@ -1,0 +1,810 @@
+{
+  "arm": "symbols+references",
+  "file": "packages/alchemy/src/AWS/CodeDeploy/DeploymentConfig.ts",
+  "kind": "locate",
+  "ordinal": 31,
+  "artifact": "attempt-00031.json",
+  "started": "2026-10-11T03:20:28.448Z",
+  "estimatedTokens": 28700,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.20991499999945518,
+  "referencesPresent": true,
+  "bodyDigest": "63c9a627fdd75638d0f05ee28409246dc4c9e98e4698ca65238ada6b2282a679",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "20",
+    "end:providers/idempotent-delete:2": "20",
+    "start:providers/idempotent-delete:3": "40",
+    "end:providers/idempotent-delete:3": "40",
+    "start:providers/idempotent-delete:4": "70",
+    "end:providers/idempotent-delete:4": "70",
+    "start:providers/idempotent-delete:5": "85",
+    "end:providers/idempotent-delete:5": "85",
+    "start:providers/idempotent-delete:6": "131",
+    "end:providers/idempotent-delete:6": "131",
+    "start:providers/idempotent-delete:7": "162",
+    "end:providers/idempotent-delete:7": "162",
+    "start:providers/idempotent-delete:8": "190",
+    "end:providers/idempotent-delete:8": "190",
+    "start:providers/idempotent-delete:9": "217",
+    "end:providers/idempotent-delete:9": "217",
+    "start:providers/idempotent-delete:10": "244",
+    "end:providers/idempotent-delete:10": "244",
+    "start:providers/idempotent-delete:11": "266",
+    "end:providers/idempotent-delete:11": "266",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "_tag": "```typescript\n\"AWS::CredentialProviderError\" | \"AWS::SigV4::CryptoError\" | \"AWS::SigV4::InvalidSigningHeaders\" | \"AWS::SigV4::InvalidSigningUrl\" | \"AccessDeniedException\" | \"Alchemy::AWS::ConflictingSSORegion\" | \"Alchemy::AWS::ConflictingSSOStartUrl\" | \"Al",
+        "account": "```typescript\nstring\n```",
+        "accountId": "```typescript\nstring\n```",
+        "action": "```typescript\n\"replace\"\n```",
+        "AWSEnvironment": "```typescript\ntypeof AWSEnvironment\n```",
+        "catchTag": "```typescript\n{ <const K extends import(\"effect/Types\").Tags<E> | import(\"effect/Array\").NonEmptyReadonlyArray<import(\"effect/Types\").Tags<E>>, E, A1, E1, R1, A2 = import(\"effect/Types\").unassigned, E2 = never, R2 = never>(k: K, f: (e: import(\"effect/Types",
+        "chunk": "```typescript\ncodedeploy.ListDeploymentConfigsOutput[]\n```",
+        "codedeploy": "```typescript\ntypeof codedeploy\n```",
+        "computePlatform": "```typescript\nstring\n```\n\nThe compute platform (`Lambda`, `Server`, or `ECS`).\n\n---\n\n```typescript\n\"ECS\" | \"Lambda\" | \"Server\" | undefined\n```\n\nThe compute platform the configuration applies to. Immutable — changing\nit replaces the configuration.\n\n**@defau",
+        "config": "```typescript\ncodedeploy.DeploymentConfigInfo | undefined\n```\n\n```typescript\ncodedeploy.DeploymentConfigInfo\n```\n\n---\n\n```typescript\ncodedeploy.DeploymentConfigInfo | undefined\n```",
+        "createDeploymentConfig": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<codedeploy.CreateDeploymentConfigInput, codedeploy.CreateDeploymentConfigOutput, codedeploy.CreateDeploymentConfigError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effe",
+        "createPhysicalName": "```typescript\n(args_0: { id: string; prefix?: string; instanceId?: string; suffixLength?: number; maxLength?: number; delimiter?: string; lowercase?: boolean; forbiddenPrefixes?: string[]; }) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").In",
+        "current": "```typescript\nEffect.Effect<import(\"../Environment.ts\").AWSEnvironmentShape, never, AWSEnvironment>\n```",
+        "delete": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: DeploymentConfigProps; output: { deploymentConfigName: string; deploymentConfigId: string; deploymentConfigArn: string; computePlatform: string; }; session: import(\"../../Report.ts",
+        "deleteDeploymentConfig": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<codedeploy.DeleteDeploymentConfigInput, codedeploy.DeleteDeploymentConfigResponse, codedeploy.DeleteDeploymentConfigError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"ef",
+        "DeploymentConfig": "```typescript\nimport(\"../../Resource.ts\").ResourceClass<DeploymentConfig>\n```\n\nA custom AWS CodeDeploy deployment configuration — the rules for how\ntraffic shifts during a deployment (canary/linear traffic routing for\n`Lambda`/`ECS`, minimum-healthy-hosts ",
+        "deploymentConfigArn": "```typescript\nstring\n```\n\nARN of the deployment configuration.\n\n---\n\n```typescript\nstring\n```\n\n---\n\n```typescript\n(region: string, account: string, name: string) => string\n```\n\nBuild the ARN for a CodeDeploy deployment configuration.",
+        "deploymentConfigId": "```typescript\nstring\n```\n\nUnique CodeDeploy-assigned deployment-config ID.\n\n---\n\n```typescript\nstring | undefined\n```\n\n```typescript\nstring\n```\n\n---\n\n```typescript\nstring\n```",
+        "deploymentConfigInfo": "```typescript\ncodedeploy.DeploymentConfigInfo | undefined\n```",
+        "deploymentConfigName": "```typescript\nstring | undefined\n```\n\n```typescript\nstring\n```\n\nName of the deployment configuration (1-100 chars). If omitted a\ndeterministic physical name is generated. Changing the name replaces\nthe configuration.\n\n---\n\n```typescript\nstring\n```\n\n---\n\n``",
+        "DeploymentConfigProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<DeploymentConfig>, never, AWSEnvironment | import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient | import(\"../../Stack.ts\").Stack | i",
+        "deploymentConfigsList": "```typescript\nstring[] | undefined\n```",
+        "diff": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: DeploymentConfigProps; news: import(\"../../Input.ts\").Input<DeploymentConfigProps>; oldBindings: import(\"../../Resource.ts\").ResourceBinding<never>[]; newBindings: import(\"../../In",
+        "e": "```typescript\ncodedeploy.DeleteDeploymentConfigError\n```",
+        "effect": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike, Req = never, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../../Resource.",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "firstZoneMonitorDuration": "```typescript\nDuration.Input | undefined\n```\n\nHow long to monitor the FIRST zone after it finishes before starting\nthe next zone. Wire unit: whole seconds.\n\n**@default** monitorDuration",
+        "firstZoneMonitorDurationInSeconds": "```typescript\nnumber | undefined\n```",
+        "fixed": "```typescript\n(interval: Duration.Input) => Schedule.Schedule<number>\n```\n\nReturns a `Schedule` that recurs on the specified fixed `interval` and\noutputs the number of repetitions of the schedule so far.\n\n**When to use**\n\nUse when recurrences should stay a",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "getConfig": "```typescript\n(name: string) => Effect.Effect<codedeploy.DeploymentConfigInfo | undefined, codedeploy.DeploymentConfigNameRequiredException | codedeploy.InvalidComputePlatformException | codedeploy.InvalidDeploymentConfigNameException | import(\"@distilled.",
+        "getDeploymentConfig": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<codedeploy.GetDeploymentConfigInput, codedeploy.GetDeploymentConfigOutput, codedeploy.GetDeploymentConfigError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstab",
+        "id": "```typescript\nstring\n```",
+        "Input": "Valid input types that can be converted to a Duration.\n\n**When to use**\n\nUse when an API should accept any value that Effect can convert into a\n`Duration`, including existing durations, millisecond numbers, nanosecond\nbigints, high-resolution tuples, durat",
+        "isResolved": "```typescript\n<T>(value: import(\"../../Input.ts\").Input<T>) => value is T\n```",
+        "key": "```typescript\n(props: Partial<DeploymentConfigProps>) => string\n```",
+        "list": "```typescript\n() => Effect.Effect<{ deploymentConfigName: string; deploymentConfigId: string; deploymentConfigArn: string; computePlatform: string; }[], codedeploy.ListDeploymentConfigsError, AWSEnvironment | import(\"@distilled.cloud/aws/Credentials\").Cred",
+        "listDeploymentConfigs": "```typescript\nimport(\"@distilled.cloud/core/api\").PaginatedOperationMethod<codedeploy.ListDeploymentConfigsInput, codedeploy.ListDeploymentConfigsOutput, codedeploy.ListDeploymentConfigsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import",
+        "map": "```typescript\n{ <A, B>(f: (a: A) => B): <E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<B, E, R>; <A, E, R, B>(self: Effect.Effect<A, E, R>, f: (a: A) => B): Effect.Effect<B, E, R>; }\n```\n\nTransforms the value inside an effect by applying a function ",
+        "max": "```typescript\n<const Schedules extends import(\"effect/Array\").NonEmptyReadonlyArray<Schedule.Schedule<any, any, any, any>>>(schedules: Schedules) => Schedule.Schedule<Duration.Duration, import(\"effect/Types\").UnionToIntersection<Schedule.Input<Schedules[nu",
+        "maxLength": "```typescript\nnumber\n```",
+        "minimumHealthyHosts": "```typescript\ncodedeploy.MinimumHealthyHosts | undefined\n```\n\nMinimum healthy hosts during the deployment (`HOST_COUNT` or\n`FLEET_PERCENT`). `Server` platform only.\n\n---\n\n```typescript\ncodedeploy.MinimumHealthyHosts | undefined\n```",
+        "minimumHealthyHostsPerZone": "```typescript\ncodedeploy.MinimumHealthyHostsPerZone | undefined\n```\n\n---\n\n```typescript\ncodedeploy.MinimumHealthyHostsPerZone | undefined\n```\n\nMinimum healthy hosts required per Availability Zone while deploying.",
+        "monitorDuration": "```typescript\nDuration.Input | undefined\n```\n\nHow long to monitor each subsequent zone after it finishes before\nstarting the next one. Wire unit: whole seconds.\n\n**@default** 0",
+        "monitorDurationInSeconds": "```typescript\nnumber | undefined\n```",
+        "name": "```typescript\nstring\n```",
+        "names": "```typescript\nstring[]\n```",
+        "news": "```typescript\nimport(\"../../Input.ts\").Input<DeploymentConfigProps>\n```\n\n```typescript\nDeploymentConfigProps\n```\n\n---\n\n```typescript\nDeploymentConfigProps\n```",
+        "note": "```typescript\n(note: string, options?: { readonly kind?: import(\"../../Report.ts\").NoteKind; }) => Effect.Effect<void>\n```",
+        "olds": "```typescript\nDeploymentConfigProps\n```",
+        "output": "```typescript\n{ deploymentConfigName: string; deploymentConfigId: string; deploymentConfigArn: string; computePlatform: string; } | undefined\n```\n\n---\n\n```typescript\n{ deploymentConfigName: string; deploymentConfigId: string; deploymentConfigArn: string; c",
+        "page": "```typescript\ncodedeploy.ListDeploymentConfigsOutput\n```",
+        "pages": "```typescript\n(input: codedeploy.ListDeploymentConfigsInput) => Stream.Stream<codedeploy.ListDeploymentConfigsOutput, codedeploy.ListDeploymentConfigsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "props": "```typescript\nZonalConfigProps | undefined\n```\n\n```typescript\nZonalConfigProps\n```\n\n---\n\n```typescript\nPartial<DeploymentConfigProps>\n```",
+        "Provider": "```typescript\ntypeof Provider\n```",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: DeploymentConfigProps; output: { deploymentConfigName: string; deploymentConfigId: string; deploymentConfigArn: string; computePlatform: string; } | undefined; }) => Effect.Effect<",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: DeploymentConfigProps; olds: DeploymentConfigProps | undefined; output: { deploymentConfigName: string; deploymentConfigId: string; deploymentConfigArn: string; computePlatform: st",
+        "recurs": "```typescript\n(times: number) => Schedule.Schedule<number>\n```\n\nReturns a `Schedule` which can only be stepped the specified number of\n`times` before it terminates.\n\n**When to use**\n\nUse when you need a counter schedule with no additional delay.\n\n**Gotchas",
+        "region": "```typescript\nstring\n```",
+        "Resource": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../../Resource.ts\").ResourceOptions) => import(\"../../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nTh",
+        "response": "```typescript\ncodedeploy.GetDeploymentConfigOutput | undefined\n```",
+        "retry": "```typescript\n{ <E, O extends Effect.Retry.Options<E>>(options: O): <A, R>(self: Effect.Effect<A, E, R>) => Effect.Retry.Return<R, E, A, O>; <B, E, Error, Env>(policy: Schedule.Schedule<B, import(\"effect/Types\").NoInfer<E>, Error, Env>): <A, R>(self: Effec",
+        "runCollect": "```typescript\n<A, E, R>(self: Stream.Stream<A, E, R>) => Effect.Effect<Array<A>, E, R>\n```\n\nRuns the stream and collects all elements into an array.\n\n**Example** (Collecting stream values)\n\n```ts import.meta.vitest\nimport { Effect, Stream } from \"effect\"\n\n",
+        "schedule": "```typescript\nSchedule.Schedule<Duration.Duration, unknown, never, never>\n```",
+        "Schedule": "```typescript\ntypeof Schedule\n```",
+        "session": "```typescript\nimport(\"../../Report.ts\").ScopedPlanStatusSession\n```",
+        "stables": "```typescript\n(\"computePlatform\" | \"deploymentConfigId\" | \"deploymentConfigName\")[]\n```",
+        "Stream": "```typescript\ntypeof Stream\n```",
+        "succeed": "```typescript\n<A>(value: A) => Effect.Effect<A>\n```\n\nCreates an `Effect` that always succeeds with a given value.\n\n**When to use**\n\nUse when an effect should complete successfully with a specific value without any errors\nor external dependencies.\n\n**Exampl",
+        "toName": "```typescript\n(id: string, props: Partial<DeploymentConfigProps>) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").InstanceId | import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```",
+        "toWireSeconds": "```typescript\n(input: Duration.Input | undefined) => number | undefined\n```\n\nConvert a Duration.Input to whole seconds for a wire/API field,\nnormalizing any persisted-state `Duration` JSON first. Returns `undefined`\nwhen `input` is `undefined` so call site",
+        "toWireZonalConfig": "```typescript\n(props: ZonalConfigProps | undefined) => codedeploy.ZonalConfig | undefined\n```\n\nConvert the zonal-config props to the CodeDeploy wire shape (seconds).",
+        "trafficRoutingConfig": "```typescript\ncodedeploy.TrafficRoutingConfig | undefined\n```\n\nHow traffic shifts to the new version (`TimeBasedCanary`,\n`TimeBasedLinear`, or `AllAtOnce`). `Lambda`/`ECS` platforms. The\n`canaryInterval`/`linearInterval` fields are whole minutes (the wire\n",
+        "while": "```typescript\n(e: codedeploy.DeleteDeploymentConfigError) => boolean\n```",
+        "zonalConfig": "```typescript\nZonalConfigProps | undefined\n```\n\nDeploy one Availability Zone at a time with per-zone monitor\ndurations. `Server` platform only.\n\n---\n\n```typescript\ncodedeploy.ZonalConfig | undefined\n```",
+        "ZonalConfigProps": "Zonal deployment behaviour (EC2/on-prem `Server` platform): deploy one\nAvailability Zone at a time, monitoring each zone before moving on.\nMirrors the wire `ZonalConfig` with `Duration.Input` monitor durations\n(CodeDeploy's wire unit for both is whole seco"
+      },
+      "references": {
+        "__comment": "Declarations of symbols used in `code`. Each key is `symbol:pathname`: the symbol name as used in `code` followed by its repository-relative declaration path. Each value is a complete declaration excerpt.",
+        "AWSEnvironment:packages/alchemy/src/AWS/Environment.ts": "export class AWSEnvironment extends Context.Service<\n  AWSEnvironment,\n  Effect.Effect<AWSEnvironmentShape>\n>()(\"AWS::Environment\") {\n  static current = AWSEnvironment.use((env) => env);\n\n\n\n\n\n\n  static isLocalEmulator = Effect.map(\n    AWSEnvironment.current,\n    (env) => env.accountId === LOCAL_ACCOUNT_ID,\n  );\n  readonly kind = \"Environment\" as const;\n}",
+        "createPhysicalName:packages/alchemy/src/PhysicalName.ts": "export const createPhysicalName = Effect.fn(function* ({\n  id,\n  prefix: _prefix,\n\n  instanceId,\n  suffixLength = 16,\n  maxLength = 64,\n  delimiter = \"-\",\n  lowercase = false,\n  forbiddenPrefixes = [],\n}: {\n  id: string;\n\n\n\n\n\n  prefix?: string;\n\n\n\n\n\n  instanceId?: string;\n  suffixLength?: number;\n\n\n\n\n\n\n\n  maxLength?: number;\n\n  delimiter?: string;\n\n  lowercase?: boolean;\n\n\n\n\n\n\n\n  forbiddenPrefixes?: string[];\n}) {\n\n\n  const sanitize = (name: string) =>\n    (lowercase ? name.toLowerCase() : name).replaceAll(\n      lowercase ? /[^a-z0-9-]/g : /[^a-zA-Z0-9-]/g,\n      delimiter,\n    );\n  const stack = yield* Stack;\n  const stage = yield* Stage;\n  let prefix =\n    _prefix ?? `${stack.name}${delimiter}${id}${delimiter}${stage}${delimiter}`;\n  if (\n    forbiddenPrefixes.some((forbidden) =>\n      prefix.toLowerCase().startsWith(forbidden.toLowerCase()),\n    )\n  ) {\n    prefix = `x${delimiter}${prefix}`;\n  }\n  const randomId = base32(\n    Buffer.from(instanceId ?? (yield* InstanceId), \"hex\"),\n  );\n  const suffix = randomId.slice(0, suffixLength);\n  const name = `${prefix}${suffix}`;\n  if (maxLength && name.length > maxLength) {\n\n\n\n\n\n    const hash = yield* Effect.sync(() =>\n      base32(createHash(\"sha256\").update(name).digest()).slice(\n        0,\n        TRUNCATION_HASH_LENGTH,\n      ),\n    );\n\n\n\n\n    const tail = `${hash}${suffix}`.slice(0, maxLength);\n    return sanitize(\n      `${prefix.slice(0, Math.max(0, maxLength - tail.length))}${tail}`,\n    );\n  }\n  return sanitize(name);\n});",
+        "current:packages/alchemy/src/AWS/Environment.ts": "  static current = AWSEnvironment.use((env) => env);",
+        "effect:packages/alchemy/src/Provider.ts": "export const effect = <\n  R extends ResourceLike,\n  Req = never,\n  ReadReq = never,\n  DiffReq = never,\n  PrecreateReq = never,\n  ReconcileReq = never,\n  DeleteReq = never,\n  TailReq = never,\n  LogsReq = never,\n  ListReq = never,\n>(\n  cls: ResourceClassLike<R> | Platform<R, any, any, any, any, any>,\n  eff: Effect.Effect<\n    ProviderServiceInput<\n      R,\n      ReadReq,\n      DiffReq,\n      PrecreateReq,\n      ReconcileReq,\n      DeleteReq,\n      TailReq,\n      LogsReq,\n      ListReq\n    >,\n    never,\n    Req\n  >,\n): Layer.Layer<\n  Provider<R>,\n  never,\n  Exclude<\n    Req | ReadReq | DiffReq | PrecreateReq | ReconcileReq | DeleteReq | ListReq,\n    LifecycleServices\n  >\n> =>\n  Layer.effect(\n\n    Provider(cls.Type),\n    Effect.map(eff, (service) => ({\n      aliases: \"Aliases\" in cls ? cls.Aliases : undefined,\n      ...withDefaultList(service),\n    })),\n  ) as any;",
+        "isResolved:packages/alchemy/src/Diff.ts": "export const isResolved = <T>(value: Input<T>): value is T =>\n  !_hasUnresolved(value);",
+        "note:packages/alchemy/src/Report.ts": "  note: (\n    note: string,\n    options?: { readonly kind?: NoteKind },\n  ) => Effect.Effect<void>;",
+        "Provider:packages/alchemy/src/Provider.ts": "import * as Context from \"effect/Context\";\nimport * as Data from \"effect/Data\";\nimport * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport * as Option from \"effect/Option\";\nimport * as Predicate from \"effect/Predicate\";\nimport type * as Stream from \"effect/Stream\";\nimport type { Artifacts } from \"./Artifacts.ts\";\nimport type { ScopedPlanStatusSession } from \"./Report.ts\";\nimport type { Diff } from \"./Diff.ts\";\nimport type { Input } from \"./Input.ts\";\nimport type { InstanceId } from \"./InstanceId.ts\";\nimport type { Platform } from \"./Platform.ts\";\nimport { defaultProviderMode, type ProviderMode } from \"./ProviderMode.ts\";\nimport type {\n  ResourceBinding,\n  ResourceClass,\n  ResourceClassLike,\n  ResourceLike,\n} from \"./Resource.ts\";\n\nexport interface Provider<\n  R extends ResourceLike = ResourceLike,\n> extends Effect.Effect<ProviderService<R>, never, Provider<R>> {\n  asEffect: () => Effect.Effect<ProviderService<R>, never, Provider<R>>;\n  [Symbol.iterator]: () => Effect.EffectIterator<Provider<R>>;\n  of: <\n    ReadReq = never,\n    DiffReq = never,\n    PrecreateReq = never,\n    ReconcileReq = never,\n    DeleteReq = never,\n    TailReq = never,\n    LogsReq = never,\n    ListReq = never,\n  >(\n    service: Omit<\n      ProviderService<\n        R,\n        ReadReq,\n        DiffReq,\n        PrecreateReq,\n        ReconcileReq,\n        DeleteReq,\n        TailReq,\n        LogsReq,\n        ListReq\n      >,\n      \"Type\"\n    >,\n  ) => ProviderService<\n    R,\n    ReadReq,\n    DiffReq,\n    PrecreateReq,\n    ReconcileReq,\n    DeleteReq,\n    TailReq,\n    LogsReq,\n    ListReq\n  >;\n}\n\ntype LifecycleServices = InstanceId | Artifacts;\n\nexport const Provider = <R extends ResourceLike>(\n  type: R[\"Type\"],\n): Provider<R> =>\n  Context.Service<Provider<R>, ProviderService<R>>()(type) as any;\n\ntype BindingData<Res extends ResourceLike> = [Res] extends [\n  { Binding: infer B },\n]\n  ? ResourceBinding<B>[]\n  : any[];\n\ntype Props<Res extends ResourceLike> = keyof Res[\"Props\"] extends never\n  ? Res[\"Props\"] | undefined\n  : Res[\"Props\"];\n\nexport interface LogLine {\n  timestamp: Date;\n  message: string;\n}\n\nexport interface LogsInput {\n  since?: Date;\n  limit?: number;\n}\n\nexport interface ProviderService<\n  Res extends ResourceLike = ResourceLike,\n  ReadReq = never,\n  DiffReq = never,\n  PrecreateReq = never,\n  ReconcileReq = never,\n  DeleteReq = never,\n  TailReq = never,\n  LogsReq = never,\n  ListReq = never,\n> {\n\n\n\n\n\n  version?: number;\n\n\n\n\n\n\n\n  aliases?: readonly string[];\n\n\n\n\n\n\n\n\n\n\n  mode?: ProviderMode;\n\n\n\n\n\n\n\n\n\n  modes?: { readonly [M in ProviderMode]: Effect.Effect<ProviderService<Res>> };\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n  localDataPlane?: () => Layer.Layer<any, any, never>;\n\n\n\n\n\n\n\n\n  liveDataPlane?: () => Layer.Layer<any, any, never>;\n\n\n\n\n\n\n  nuke?: {\n\n\n\n\n\n\n\n\n    singleton?: boolean;\n\n\n\n\n\n\n    skip?: boolean;\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n    dependsOn?: readonly string[];\n  };\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n  list(): Effect.Effect<Res[\"Attributes\"][], any, ListReq>;\n\n\n\n\n  tail?(input: {\n    id: string;\n\n\n\n\n    fqn: string;\n    instanceId: string;\n    props: Props<Res>;\n    output: Res[\"Attributes\"];\n  }): Stream.Stream<LogLine, any, TailReq>;\n\n\n\n\n  logs?(input: {\n    id: string;\n\n\n\n\n    fqn: string;\n    instanceId: string;\n    props: Props<Res>;\n    output: Res[\"Attributes\"];\n    options: LogsInput;\n  }): Effect.Effect<LogLine[], any, LogsReq>;\n\n\n\n\n\n  read?(input: {\n    id: string;\n\n\n\n\n    fqn: string;\n    instanceId: string;\n    olds: Props<Res>;\n\n    output: Res[\"Attributes\"] | undefined;\n  }): Effect.Effect<Res[\"Attributes\"] | undefined, any, ReadReq>;\n\n\n\n  stables?: Extract<keyof Res[\"Attributes\"], string>[];\n  diff?(input: {\n    id: string;\n\n\n\n\n    fqn: string;\n    instanceId: string;\n    olds: Props<Res>;\n\n\n    news: Input<Props<Res>>;\n    oldBindings: BindingData<Res>;\n    newBindings: Input<BindingData<Res>>;\n    output: Res[\"Attributes\"] | undefined;\n  }): Effect.Effect<Diff | void, any, DiffReq>;\n\n  precreate?(input: {\n    id: string;\n\n\n\n\n    fqn: string;\n    news: Props<Res>;\n    instanceId: string;\n    session: ScopedPlanStatusSession;\n    bindings: BindingData<Res>;\n  }): Effect.Effect<Res[\"Attributes\"], any, PrecreateReq>;\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n  reconcile(input: {\n    id: string;\n\n\n\n\n    fqn: string;\n    instanceId: string;\n    news: Props<Res>;\n    olds: Props<Res> | undefined;\n    output: Res[\"Attributes\"] | undefined;\n    session: ScopedPlanStatusSession;\n    bindings: BindingData<Res>;\n  }): Effect.Effect<Res[\"Attributes\"], any, ReconcileReq>;\n  delete(input: {\n    id: string;\n\n\n\n\n    fqn: string;\n    instanceId: string;\n    olds: Props<Res>;\n    output: Res[\"Attributes\"];\n    session: ScopedPlanStatusSession;\n    bindings: BindingData<Res>;\n\n\n\n\n\n\n\n\n\n    force?: boolean;\n  }): Effect.Effect<void, any, DeleteReq>;\n}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport type ProviderServiceInput<\n  Res extends ResourceLike = ResourceLike,\n  ReadReq = never,\n  DiffReq = never,\n  PrecreateReq = never,\n  ReconcileReq = never,\n  DeleteReq = never,\n  TailReq = never,\n  LogsReq = never,\n  ListReq = never,\n> = Omit<\n  ProviderService<\n    Res,\n    ReadReq,\n    DiffReq,\n    PrecreateReq,\n    ReconcileReq,\n    DeleteReq,\n    TailReq,\n    LogsReq,\n    ListReq\n  >,\n  \"list\"\n> &\n  Partial<\n    Pick<\n      ProviderService<\n        Res,\n        ReadReq,\n        DiffReq,\n        PrecreateReq,\n        ReconcileReq,\n        DeleteReq,\n        TailReq,\n        LogsReq,\n        ListReq\n      >,\n      \"list\"\n    >\n  >;\n\nconst withDefaultList = <S extends { list?: unknown }>(service: S): S =>\n  service.list ? service : { ...service, list: () => Effect.succeed([]) };\n\nexport const effect = <\n  R extends ResourceLike,\n  Req = never,\n  ReadReq = never,\n  DiffReq = never,\n  PrecreateReq = never,\n  ReconcileReq = never,\n  DeleteReq = never,\n  TailReq = never,\n  LogsReq = never,\n  ListReq = never,\n>(\n  cls: ResourceClassLike<R> | Platform<R, any, any, any, any, any>,\n  eff: Effect.Effect<\n    ProviderServiceInput<\n      R,\n      ReadReq,\n      DiffReq,\n      PrecreateReq,\n      ReconcileReq,\n      DeleteReq,\n      TailReq,\n      LogsReq,\n      ListReq\n    >,\n    never,\n    Req\n  >,\n): Layer.Layer<\n  Provider<R>,\n  never,\n  Exclude<\n    Req | ReadReq | DiffReq | PrecreateReq | ReconcileReq | DeleteReq | ListReq,\n    LifecycleServices\n  >\n> =>\n  Layer.effect(\n\n    Provider(cls.Type),\n    Effect.map(eff, (service) => ({\n      aliases: \"Aliases\" in cls ? cls.Aliases : undefined,\n      ...withDefaultList(service),\n    })),\n  ) as any;\n\nexport const succeed = <\n  R extends ResourceLike,\n  ReadReq = never,\n  DiffReq = never,\n  PrecreateReq = never,\n  ReconcileReq = never,\n  DeleteReq = never,\n  TailReq = never,\n  LogsReq = never,\n  ListReq = never,\n>(\n  cls: ResourceClass<R> | Platform<R, any, any, any, any, any>,\n  service: ProviderServiceInput<\n    R,\n    ReadReq,\n    DiffReq,\n    PrecreateReq,\n    ReconcileReq,\n    DeleteReq,\n    TailReq,\n    LogsReq,\n    ListReq\n  >,\n): Layer.Layer<\n  Provider<R>,\n  never,\n  Exclude<\n    ReadReq | DiffReq | PrecreateReq | ReconcileReq | DeleteReq | ListReq,\n    LifecycleServices\n  >\n> =>\n\n  Layer.succeed(Provider(cls.Type), {\n    aliases: \"Aliases\" in cls ? cls.Aliases : undefined,\n    ...withDefaultList(service),\n  });\n\nexport interface ProviderCollectionLike {\n  kind: \"ProviderCollection\";\n}\n\nexport interface ProviderCollectionShape<Identifier extends string>\n  extends\n    Context.ServiceClass.Shape<Identifier, ProviderCollectionService>,\n    ProviderCollectionLike {}\n\nexport interface ProviderCollection<Self, Identifier extends string>\n  extends\n    Context.Service<Self, ProviderCollectionService>,\n    ProviderCollectionLike {\n  readonly key: Identifier;\n  new (_: never): ProviderCollectionShape<Identifier>;\n}\n\nexport const ProviderCollection =\n  <Self>() =>\n  <const ProviderId extends string>(id: ProviderId) =>\n    Context.Service<Self, ProviderCollectionService>()(\n      id,\n    ) as ProviderCollection<Self, ProviderId>;\n\nexport interface ProviderCollectionService {\n  kind: \"ProviderCollection\";\n  get<Resource extends ResourceLike>(\n    service: string,\n  ): ProviderService<Resource> | undefined;\n\n\n\n\n\n\n  readonly providers: Record<string, ProviderService>;\n}\n\nexport const collection = <\n  R extends ResourceClassLike<any> | Platform<any, any, any, any, any, any>,\n>(\n  resources: R[],\n): Effect.Effect<\n  ProviderCollectionService,\n  never,\n  R extends ResourceClass<infer R> | Platform<infer R, any, any, any, any, any>\n    ? Provider<R>\n    : never\n> =>\n  Effect.gen(function* () {\n    const context = yield* Effect.context();\n\n    const providers = Object.fromEntries(\n      yield* Effect.all(\n        resources.map((resource) =>\n          \"Provider\" in resource\n            ? resource.Provider.pipe(\n                Effect.map((provider) => [resource.Type, provider] as const),\n              )\n            : Effect.succeed([\n                (resource as { key: string }).key,\n                context.mapUnsafe.get((resource as { key: string }).key),\n              ] as const),\n        ),\n        { concurrency: \"unbounded\" },\n      ),\n    );\n\n    return {\n      kind: \"ProviderCollection\" as const,\n      get: (service: string) => providers[service],\n      providers,\n    };\n  }) as any;\n\nexport const isProviderCollectionService = (\n  value: unknown,\n): value is ProviderCollectionService => {\n  return (\n    Predicate.isObject(value) &&\n    Predicate.hasProperty(value, \"kind\") &&\n    value.kind === \"ProviderCollection\"\n  );\n};\n\n\n\n\n\n\n\nexport const isProviderService = (value: unknown): value is ProviderService =>\n  Predicate.isObject(value) &&\n  Predicate.hasProperty(value, \"reconcile\") &&\n  Predicate.isFunction(value.reconcile) &&\n  Predicate.hasProperty(value, \"delete\") &&\n  Predicate.isFunction(value.delete);\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const providerForMode = <R extends ResourceLike>(\n  service: ProviderService<R>,\n  mode: ProviderMode | undefined,\n): Effect.Effect<ProviderService<R>> =>\n  mode !== undefined && service.modes !== undefined\n    ? service.modes[mode]\n    : Effect.succeed(service);\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport type DataPlaneResolution =\n  | { readonly kind: \"local\"; readonly layer: Layer.Layer<any, any, never> }\n  | {\n      readonly kind: \"live\";\n      readonly layer?: Layer.Layer<any, any, never> | undefined;\n    }\n  | { readonly kind: \"undeclared\"; readonly providerType: string }\n  | { readonly kind: \"agnostic\" }\n  | { readonly kind: \"unregistered\" };\n\n\n\n\n\n\n\n\nexport const describeDataPlane = (resource: {\n  readonly Type: string;\n  readonly Mode?: ProviderMode | undefined;\n}): Effect.Effect<DataPlaneResolution> =>\n  Effect.gen(function* () {\n    const found = yield* tryFindProviderRegistrationByType(resource.Type);\n    if (Option.isNone(found)) return { kind: \"unregistered\" as const };\n    const provider = found.value;\n    if (provider.modes === undefined) return { kind: \"agnostic\" as const };\n    const mode = resource.Mode ?? (yield* defaultProviderMode);\n    if (mode !== \"local\") {\n      const layer = provider.liveDataPlane?.();\n      return layer !== undefined\n        ? { kind: \"live\" as const, layer }\n        : { kind: \"live\" as const };\n    }\n    if (provider.localDataPlane === undefined) {\n      return { kind: \"undeclared\" as const, providerType: resource.Type };\n    }\n    return { kind: \"local\" as const, layer: provider.localDataPlane() };\n  });\n\n\n\n\n\n\nexport const resolveLocalDataPlane = (resource: {\n  readonly Type: string;\n  readonly Mode?: ProviderMode | undefined;\n}): Effect.Effect<Layer.Layer<any, any, never> | undefined> =>\n  describeDataPlane(resource).pipe(\n    Effect.map((plane) => (plane.kind === \"local\" ? plane.layer : undefined)),\n  );\n\nexport const findProviderByType: {\n  <R extends ResourceLike>(\n    resourceType: R[\"Type\"],\n    mode?: ProviderMode,\n  ): Effect.Effect<ProviderService<R>>;\n} = ((type: string, mode?: ProviderMode) =>\n  tryFindProviderByType(type, mode).pipe(\n    Effect.flatMap(\n      Option.match({\n        onNone: () => Effect.die(`Provider not found for ${type}`),\n        onSome: (provider) => Effect.succeed(provider),\n      }),\n    ),\n  )) as any;\n\n\n\n\n\n\n\n\nexport const findProvider: {\n  <R extends ResourceLike>(\n    resource: ResourceClassLike<R> | Platform<R, any, any, any, any, any>,\n    mode?: ProviderMode,\n  ): Effect.Effect<ProviderService<R>>;\n} = (resource: { Type?: string; key?: string }, mode?: ProviderMode) =>\n  findProviderByType((resource.Type ?? resource.key) as string, mode) as any;\n\n\n\n\n\n\n\n\n\n\n\n\nexport class MissingProviderError extends Data.TaggedError(\n  \"MissingProviderError\",\n)<{\n  message: string;\n  resourceType: string;\n  fqn: string;\n}> {}\n\n\nexport const missingProviderError = (\n  resourceType: string,\n  fqn: string,\n): MissingProviderError =>\n  new MissingProviderError({\n    message:\n      `No provider is registered for resource type '${resourceType}' ` +\n      `(state row '${fqn}'). The type was removed from the program or ` +\n      \"renamed without an alias. Re-register the provider (or add the \" +\n      \"old name to the resource's `aliases`) so this row can be \" +\n      \"destroyed, or clear the state row manually if the physical \" +\n      \"resource is already gone.\",\n    resourceType,\n    fqn,\n  });\n\n\nexport const tryFindProviderByType = <R extends ResourceLike>(\n  resourceType: R[\"Type\"],\n  mode?: ProviderMode,\n): Effect.Effect<Option.Option<ProviderService<R>>> =>\n  Effect.gen(function* () {\n    const found = yield* tryFindProviderRegistrationByType<R>(resourceType);\n    if (Option.isNone(found)) return found;\n    return Option.some(\n      yield* providerForMode(found.value, mode ?? (yield* defaultProviderMode)),\n    );\n  });\n\n\nexport const tryFindProviderRegistrationByType: {\n  <R extends ResourceLike>(\n    resourceType: R[\"Type\"],\n  ): Effect.Effect<Option.Option<ProviderService<R>>>;\n} = Effect.fn(function* <R extends ResourceLike>(resourceType: R[\"Type\"]) {\n  const found = yield* Effect.gen(function* () {\n    const Tag = Provider<R>(resourceType) as unknown as Context.Service<\n      Provider<R>,\n      any\n    >;\n    const direct = yield* Effect.serviceOption(Tag);\n    if (Option.isSome(direct)) {\n      return direct;\n    }\n\n    const context = yield* Effect.context<never>();\n    for (const value of context.mapUnsafe.values()) {\n      if (isProviderCollectionService(value)) {\n        const provider = value.get(resourceType);\n        if (provider) {\n          return Option.some(provider);\n        }\n      }\n    }\n\n\n\n\n\n    for (const value of context.mapUnsafe.values()) {\n      if (isProviderCollectionService(value)) {\n        for (const provider of Object.values(value.providers)) {\n          if (provider.aliases?.includes(resourceType)) {\n            return Option.some(provider);\n          }\n        }\n      } else if (\n        isProviderService(value) &&\n        value.aliases?.includes(resourceType)\n      ) {\n        return Option.some(value);\n      }\n    }\n    return Option.none();\n  });\n  return found;\n}) as any;",
+        "Providers:packages/alchemy/src/AWS/Providers.ts": "export class Providers extends Provider.ProviderCollection<Providers>()(\n  \"AWS\",\n) {}",
+        "Resource:packages/alchemy/src/Resource.ts": "export type Resource<\n  Type extends string = any,\n  Props extends object | undefined = any,\n  Attributes extends object = any,\n  Binding = never,\n  Providers = undefined,\n> = Pipeable &\n  ResourceLike<Type, Props, Attributes, Binding, Providers> & {\n    bind(sid: Input<string>, binding: Input<Binding>): Effect.Effect<void>;\n    bind(\n      template: TemplateStringsArray,\n      ...args: any[]\n    ): (binding: Input<Binding>) => Effect.Effect<void>;\n  } & {\n    [attr in keyof Attributes]-?: AttrOutput<Attributes[attr]>;\n  };\n…\nexport function Resource<R extends ResourceLike>(\n  type: R[\"Type\"],\n  options?: ResourceOptions,\n): ResourceClass<R> {\n  const defaultRemovalPolicy = options?.defaultRemovalPolicy ?? \"destroy\";\n  type Props = Input<R[\"Props\"]>;\n  const self = Self<R>(type);\n  const constructor = (\n    id: string,\n    props: Props | Effect.Effect<Props> | undefined,\n  ) =>\n    Effect.gen(function* () {\n      const stack = yield* Stack;\n      const namespace = yield* CurrentNamespace;\n      const fqn = toFqn(namespace, id);\n\n\n\n\n\n      const ambientPolicy = yield* ProviderModePolicy;\n      const ambientMode: ProviderMode | undefined = ambientPolicy\n        ? \"live\"\n        : undefined;\n\n      const existing = stack.resources[fqn];\n      if (existing) {\n\n\n\n\n\n\n\n        if (ambientPolicy !== undefined && existing.Mode !== ambientMode) {\n          return yield* Effect.die(\n            new ConflictingProviderModeError({\n              message:\n                `Resource '${fqn}' was registered with provider mode ` +\n                `'${existing.Mode ?? \"default\"}' but is now being registered ` +\n                `with conflicting mode '${ambientMode ?? \"default\"}'. A ` +\n                \"resource must resolve to a single provider mode: register \" +\n                \"it once and close over the returned value, or make both \" +\n                \"registration sites agree (e.g. wrap both in the same \" +\n                \"`remote()` scope).\",\n              fqn,\n              existingMode: existing.Mode,\n              conflictingMode: ambientMode,\n            }),\n          );\n        }\n\n        return existing;\n      }\n      const bind = (\n        ...args:\n          | [sid: string, data: R[\"Binding\"]]\n          | [template: TemplateStringsArray, ...args: any[]]\n      ) =>\n        typeof args[0] === \"string\"\n          ? Effect.gen(function* () {\n              const [sid, data] = args as [sid: string, data: R[\"Binding\"]];\n              (stack.bindings[fqn] ??= []).push({\n                sid,\n                data,\n              });\n              return undefined;\n            })\n          : (data: R[\"Binding\"]) => {\n              const stringifyBindArg = (arg: any): string | undefined => {\n                if (arg === undefined) {\n                  return undefined;\n                }\n\n                if (Array.isArray(arg)) {\n                  return arg\n                    .flatMap((item) => {\n                      const stringified = stringifyBindArg(item);\n                      return stringified === undefined ? [] : [stringified];\n                    })\n                    .join(\", \");\n                }\n\n                if (\n                  arg &&\n                  (typeof arg === \"object\" || typeof arg === \"function\")\n                ) {\n                  if (\"LogicalId\" in arg && typeof arg.LogicalId === \"string\") {\n                    return arg.LogicalId;\n                  }\n\n                  if (\"id\" in arg && typeof arg.id === \"string\") {\n                    return arg.id;\n                  }\n                }\n\n                return String(arg);\n              };\n\n              return bind(\n                `${(args[0] as TemplateStringsArray)\n                  .flatMap((text, i) => {\n                    const stringified = stringifyBindArg(args[i + 1]);\n                    return stringified !== undefined\n                      ? [text, stringified]\n                      : [text];\n                  })\n                  .join(\"\")}`,\n                data,\n              );\n            };\n\n      const target: any = {\n        Type: type,\n        Namespace: namespace,\n        FQN: fqn,\n        LogicalId: id,\n        Props: props,\n        Provider: ProviderTag as Provider<any>,\n        RemovalPolicy: yield* Effect.serviceOption(RemovalPolicy).pipe(\n          Effect.map(Option.getOrElse(() => defaultRemovalPolicy)),\n        ),\n        Adopt: yield* Effect.serviceOption(AdoptPolicy).pipe(\n          Effect.map(Option.getOrUndefined),\n        ),\n        Mode: ambientMode,\n        RequiresImplementation: options?.requiresImplementation || undefined,\n\n\n\n\n        FormerFqns: yield* Effect.serviceOption(RenamePolicy).pipe(\n          Effect.map(\n            Option.match({\n              onNone: () => undefined,\n              onSome: (formerIds) =>\n                formerIds.map((formerId) =>\n                  typeof formerId === \"string\"\n                    ? toFqn(namespace, formerId)\n                    : formerId.fqn,\n                ),\n            }),\n          ),\n        ),\n        bind,\n        toString(this: typeof target) {\n          return `Resource<${this.Type}>(${this.LogicalId})`;\n        },\n        [Symbol.toPrimitive](this: typeof target, hint: string) {\n          return hint === \"number\" ? NaN : this.toString();\n        },\n      };\n\n      const Resource: R = (stack.resources[fqn] = new Proxy(target, {\n        set: (t, prop, value) => {\n          t[prop as keyof typeof t] = value;\n          return true;\n        },\n        get: (t, prop) =>\n          typeof prop === \"symbol\" || prop in t\n            ? t[prop as keyof typeof t]\n            : new Output.PropExpr<any, string>(Output.of(Resource), prop),\n      })) as R;\n      Resource.Props = Effect.isEffect(props)\n        ?\n          yield* props.pipe(\n            Effect.provide(\n              Layer.mergeAll(\n                Layer.succeed(Self, Resource),\n                Layer.succeed(Self(type), Resource),\n              ),\n            ),\n          )\n        : props;\n      return Resource;\n    });\n\n  const ProviderTag = Provider(type);\n\n  const Service = {\n\n\n\n\n\n\n\n\n    ref: (\n      id: string,\n      options?: { stage?: string; stack?: string },\n    ): Effect.Effect<R> =>\n      Effect.succeed(Output.of(makeRef<R>(id, options, type)) as unknown as R),\n\n    Type: type,\n    Provider: ProviderTag,\n    Self: self,\n    Aliases: options?.aliases,\n  };\n\n  const ResourceClass = Object.assign(\n    (...args: [id: string, props: R[\"Props\"]] | [methods: object]) =>\n      typeof args[0] === \"object\"\n        ? Object.assign(ResourceClass, args[0])\n        : constructor(...(args as [string, R[\"Props\"]])),\n    Service,\n\n\n\n    Effectable.Prototype({\n      label: `Resource<${type}>`,\n      evaluate: () =>\n        Effect.succeed((id: string, props: R[\"Props\"]) =>\n          constructor(id, props),\n        ),\n    }),\n  ) as any;\n\n  return ResourceClass;\n}",
+        "toWireSeconds:packages/alchemy/src/Util/Duration.ts": "export const toWireSeconds = wire(Duration.toSeconds);"
+      },
+      "code": {
+        "1": "import * as codedeploy from \"@distilled.cloud/aws/codedeploy\";\nimport type * as Duration from \"effect/Duration\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { toWireSeconds } from \"../../Util/Duration.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";",
+        "2": "\n\n\n\n\n\n\nexport interface ZonalConfigProps {\n\n\n\n\n\n  firstZoneMonitorDuration?: Duration.Input;\n\n\n\n\n\n  monitorDuration?: Duration.Input;\n\n\n\n  minimumHealthyHostsPerZone?: codedeploy.MinimumHealthyHostsPerZone;\n}",
+        "3": "\n\nconst toWireZonalConfig = (\n  props: ZonalConfigProps | undefined,\n): codedeploy.ZonalConfig | undefined =>\n  props === undefined\n    ? undefined\n    : {\n        firstZoneMonitorDurationInSeconds: toWireSeconds(\n          props.firstZoneMonitorDuration,\n        ),\n        monitorDurationInSeconds: toWireSeconds(props.monitorDuration),\n        minimumHealthyHostsPerZone: props.minimumHealthyHostsPerZone,\n      };\n\nexport interface DeploymentConfigProps {\n\n\n\n\n\n  deploymentConfigName?: string;\n\n\n\n\n\n  computePlatform?: \"Server\" | \"Lambda\" | \"ECS\";",
+        "4": "\n\n\n\n  minimumHealthyHosts?: codedeploy.MinimumHealthyHosts;\n\n\n\n\n\n\n  trafficRoutingConfig?: codedeploy.TrafficRoutingConfig;\n\n\n\n\n  zonalConfig?: ZonalConfigProps;\n}",
+        "5": "\nexport interface DeploymentConfig extends Resource<\n  \"AWS.CodeDeploy.DeploymentConfig\",\n  DeploymentConfigProps,\n  {\n\n    deploymentConfigName: string;\n\n    deploymentConfigId: string;\n\n    deploymentConfigArn: string;\n\n    computePlatform: string;\n  },\n  never,\n  Providers\n> {}",
+        "6": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const DeploymentConfig = Resource<DeploymentConfig>(\n  \"AWS.CodeDeploy.DeploymentConfig\",\n);\n\n\nconst deploymentConfigArn = (\n  region: string,\n  account: string,\n  name: string,\n): string => `arn:aws:codedeploy:${region}:${account}:deploymentconfig:${name}`;\n\nexport const DeploymentConfigProvider = () =>\n  Provider.effect(\n    DeploymentConfig,\n    Effect.gen(function* () {\n      const toName = (id: string, props: Partial<DeploymentConfigProps>) =>\n        props.deploymentConfigName\n          ? Effect.succeed(props.deploymentConfigName)\n          : createPhysicalName({ id, maxLength: 100 });\n\n      const getConfig = Effect.fn(function* (name: string) {\n        const response = yield* codedeploy\n          .getDeploymentConfig({ deploymentConfigName: name })\n          .pipe(\n            Effect.catchTag(\"DeploymentConfigDoesNotExistException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n        return response?.deploymentConfigInfo;\n      });",
+        "7": "\n      return {\n        stables: [\n          \"deploymentConfigName\",\n          \"deploymentConfigId\",\n          \"computePlatform\",\n        ],\n\n        diff: Effect.fn(function* ({ id, olds, news }) {\n          if (!isResolved(news)) return undefined;\n          if (\n            (yield* toName(id, olds ?? {})) !== (yield* toName(id, news ?? {}))\n          ) {\n            return { action: \"replace\" } as const;\n          }\n\n\n          const key = (props: Partial<DeploymentConfigProps>) =>\n            JSON.stringify([\n              props.computePlatform ?? \"Server\",\n              props.minimumHealthyHosts,\n              props.trafficRoutingConfig,\n              toWireZonalConfig(props.zonalConfig),\n            ]);\n          if (key(olds ?? {}) !== key(news ?? {})) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "8": "\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name =\n            output?.deploymentConfigName ?? (yield* toName(id, olds ?? {}));\n          const config = yield* getConfig(name);\n          if (config?.deploymentConfigId === undefined) return undefined;\n\n\n          return {\n            deploymentConfigName: config.deploymentConfigName ?? name,\n            deploymentConfigId: config.deploymentConfigId,\n            deploymentConfigArn: deploymentConfigArn(region, accountId, name),\n            computePlatform: config.computePlatform ?? \"Server\",\n          };\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name =\n            output?.deploymentConfigName ?? (yield* toName(id, news));\n          const computePlatform = news.computePlatform ?? \"Server\";\n\n\n          let config = yield* getConfig(name);",
+        "9": "\n\n\n          if (config?.deploymentConfigId === undefined) {\n            yield* codedeploy\n              .createDeploymentConfig({\n                deploymentConfigName: name,\n                computePlatform,\n                minimumHealthyHosts: news.minimumHealthyHosts,\n                trafficRoutingConfig: news.trafficRoutingConfig,\n                zonalConfig: toWireZonalConfig(news.zonalConfig),\n              })\n              .pipe(\n                Effect.catchTag(\"DeploymentConfigAlreadyExistsException\", () =>\n                  Effect.succeed(undefined),\n                ),\n              );\n            config = yield* getConfig(name);\n          }\n\n\n          yield* session.note(name);\n          return {\n            deploymentConfigName: config?.deploymentConfigName ?? name,\n            deploymentConfigId: config?.deploymentConfigId ?? \"\",\n            deploymentConfigArn: deploymentConfigArn(region, accountId, name),\n            computePlatform: config?.computePlatform ?? computePlatform,\n          };\n        }),",
+        "10": "\n        delete: Effect.fn(function* ({ output }) {\n\n\n\n\n\n          yield* codedeploy\n            .deleteDeploymentConfig({\n              deploymentConfigName: output.deploymentConfigName,\n            })\n            .pipe(\n              Effect.retry({\n                while: (e): boolean =>\n                  e._tag === \"DeploymentConfigInUseException\",\n                schedule: Schedule.max([\n                  Schedule.fixed(3000),\n                  Schedule.recurs(10),\n                ]),\n              }),\n            );\n        }),",
+        "11": "\n        list: () =>\n          Effect.gen(function* () {\n            const { accountId, region } = yield* AWSEnvironment.current;\n            const names = yield* codedeploy.listDeploymentConfigs\n              .pages({})\n              .pipe(\n                Stream.runCollect,\n                Effect.map((chunk) =>\n                  Array.from(chunk).flatMap(\n                    (page) => page.deploymentConfigsList ?? [],\n                  ),\n                ),\n              );\n            return (\n              names\n\n\n                .filter((name) => !name.startsWith(\"CodeDeployDefault.\"))\n                .map((name) => ({\n                  deploymentConfigName: name,\n                  deploymentConfigId: \"\",\n                  deploymentConfigArn: deploymentConfigArn(\n                    region,\n                    accountId,\n                    name,\n                  ),\n                  computePlatform: \"\",\n                }))\n            );\n          }),\n      };\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null,
+          "11": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as codedeploy from \"@distilled.cloud/aws/codedeploy\";",
+          "2": "import type * as Duration from \"effect/Duration\";",
+          "3": "import * as Effect from \"effect/Effect\";",
+          "4": "import * as Schedule from \"effect/Schedule\";",
+          "5": "import * as Stream from \"effect/Stream\";",
+          "6": "import { isResolved } from \"../../Diff.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import { toWireSeconds } from \"../../Util/Duration.ts\";",
+          "11": "import { AWSEnvironment } from \"../Environment.ts\";",
+          "12": "import type { Providers } from \"../Providers.ts\";"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as codedeploy from \"@distilled.cloud/aws/codedeploy\";",
+          "2": "import type * as Duration from \"effect/Duration\";",
+          "3": "import * as Effect from \"effect/Effect\";",
+          "4": "import * as Schedule from \"effect/Schedule\";",
+          "5": "import * as Stream from \"effect/Stream\";",
+          "6": "import { isResolved } from \"../../Diff.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import { toWireSeconds } from \"../../Util/Duration.ts\";",
+          "11": "import { AWSEnvironment } from \"../Environment.ts\";",
+          "12": "import type { Providers } from \"../Providers.ts\";"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "20": "export interface ZonalConfigProps {",
+          "26": "firstZoneMonitorDuration?: Duration.Input;",
+          "32": "monitorDuration?: Duration.Input;",
+          "36": "minimumHealthyHostsPerZone?: codedeploy.MinimumHealthyHostsPerZone;",
+          "37": "}"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "20": "export interface ZonalConfigProps {",
+          "26": "firstZoneMonitorDuration?: Duration.Input;",
+          "32": "monitorDuration?: Duration.Input;",
+          "36": "minimumHealthyHostsPerZone?: codedeploy.MinimumHealthyHostsPerZone;",
+          "37": "}"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "40": "const toWireZonalConfig = (",
+          "41": "props: ZonalConfigProps | undefined,",
+          "42": "): codedeploy.ZonalConfig | undefined =>",
+          "43": "props === undefined",
+          "44": "? undefined",
+          "45": ": {",
+          "46": "firstZoneMonitorDurationInSeconds: toWireSeconds(",
+          "47": "props.firstZoneMonitorDuration,",
+          "48": "),",
+          "49": "monitorDurationInSeconds: toWireSeconds(props.monitorDuration),",
+          "50": "minimumHealthyHostsPerZone: props.minimumHealthyHostsPerZone,",
+          "51": "};",
+          "53": "export interface DeploymentConfigProps {",
+          "59": "deploymentConfigName?: string;",
+          "65": "computePlatform?: \"Server\" | \"Lambda\" | \"ECS\";"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "40": "const toWireZonalConfig = (",
+          "41": "props: ZonalConfigProps | undefined,",
+          "42": "): codedeploy.ZonalConfig | undefined =>",
+          "43": "props === undefined",
+          "44": "? undefined",
+          "45": ": {",
+          "46": "firstZoneMonitorDurationInSeconds: toWireSeconds(",
+          "47": "props.firstZoneMonitorDuration,",
+          "48": "),",
+          "49": "monitorDurationInSeconds: toWireSeconds(props.monitorDuration),",
+          "50": "minimumHealthyHostsPerZone: props.minimumHealthyHostsPerZone,",
+          "51": "};",
+          "53": "export interface DeploymentConfigProps {",
+          "59": "deploymentConfigName?: string;",
+          "65": "computePlatform?: \"Server\" | \"Lambda\" | \"ECS\";"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "70": "minimumHealthyHosts?: codedeploy.MinimumHealthyHosts;",
+          "77": "trafficRoutingConfig?: codedeploy.TrafficRoutingConfig;",
+          "82": "zonalConfig?: ZonalConfigProps;",
+          "83": "}"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "70": "minimumHealthyHosts?: codedeploy.MinimumHealthyHosts;",
+          "77": "trafficRoutingConfig?: codedeploy.TrafficRoutingConfig;",
+          "82": "zonalConfig?: ZonalConfigProps;",
+          "83": "}"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "85": "export interface DeploymentConfig extends Resource<",
+          "86": "\"AWS.CodeDeploy.DeploymentConfig\",",
+          "87": "DeploymentConfigProps,",
+          "88": "{",
+          "90": "deploymentConfigName: string;",
+          "92": "deploymentConfigId: string;",
+          "94": "deploymentConfigArn: string;",
+          "96": "computePlatform: string;",
+          "97": "},",
+          "98": "never,",
+          "99": "Providers",
+          "100": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "85": "export interface DeploymentConfig extends Resource<",
+          "86": "\"AWS.CodeDeploy.DeploymentConfig\",",
+          "87": "DeploymentConfigProps,",
+          "88": "{",
+          "90": "deploymentConfigName: string;",
+          "92": "deploymentConfigId: string;",
+          "94": "deploymentConfigArn: string;",
+          "96": "computePlatform: string;",
+          "97": "},",
+          "98": "never,",
+          "99": "Providers",
+          "100": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "131": "export const DeploymentConfig = Resource<DeploymentConfig>(",
+          "132": "\"AWS.CodeDeploy.DeploymentConfig\",",
+          "133": ");",
+          "136": "const deploymentConfigArn = (",
+          "137": "region: string,",
+          "138": "account: string,",
+          "139": "name: string,",
+          "140": "): string => `arn:aws:codedeploy:${region}:${account}:deploymentconfig:${name}`;",
+          "142": "export const DeploymentConfigProvider = () =>",
+          "143": "Provider.effect(",
+          "144": "DeploymentConfig,",
+          "145": "Effect.gen(function* () {",
+          "146": "const toName = (id: string, props: Partial<DeploymentConfigProps>) =>",
+          "147": "props.deploymentConfigName",
+          "148": "? Effect.succeed(props.deploymentConfigName)",
+          "149": ": createPhysicalName({ id, maxLength: 100 });",
+          "151": "const getConfig = Effect.fn(function* (name: string) {",
+          "152": "const response = yield* codedeploy",
+          "153": ".getDeploymentConfig({ deploymentConfigName: name })",
+          "154": ".pipe(",
+          "155": "Effect.catchTag(\"DeploymentConfigDoesNotExistException\", () =>",
+          "156": "Effect.succeed(undefined),",
+          "157": "),",
+          "158": ");",
+          "159": "return response?.deploymentConfigInfo;",
+          "160": "});"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "131": "export const DeploymentConfig = Resource<DeploymentConfig>(",
+          "132": "\"AWS.CodeDeploy.DeploymentConfig\",",
+          "133": ");",
+          "136": "const deploymentConfigArn = (",
+          "137": "region: string,",
+          "138": "account: string,",
+          "139": "name: string,",
+          "140": "): string => `arn:aws:codedeploy:${region}:${account}:deploymentconfig:${name}`;",
+          "142": "export const DeploymentConfigProvider = () =>",
+          "143": "Provider.effect(",
+          "144": "DeploymentConfig,",
+          "145": "Effect.gen(function* () {",
+          "146": "const toName = (id: string, props: Partial<DeploymentConfigProps>) =>",
+          "147": "props.deploymentConfigName",
+          "148": "? Effect.succeed(props.deploymentConfigName)",
+          "149": ": createPhysicalName({ id, maxLength: 100 });",
+          "151": "const getConfig = Effect.fn(function* (name: string) {",
+          "152": "const response = yield* codedeploy",
+          "153": ".getDeploymentConfig({ deploymentConfigName: name })",
+          "154": ".pipe(",
+          "155": "Effect.catchTag(\"DeploymentConfigDoesNotExistException\", () =>",
+          "156": "Effect.succeed(undefined),",
+          "157": "),",
+          "158": ");",
+          "159": "return response?.deploymentConfigInfo;",
+          "160": "});"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "162": "return {",
+          "163": "stables: [",
+          "164": "\"deploymentConfigName\",",
+          "165": "\"deploymentConfigId\",",
+          "166": "\"computePlatform\",",
+          "167": "],",
+          "169": "diff: Effect.fn(function* ({ id, olds, news }) {",
+          "170": "if (!isResolved(news)) return undefined;",
+          "171": "if (",
+          "172": "(yield* toName(id, olds ?? {})) !== (yield* toName(id, news ?? {}))",
+          "173": ") {",
+          "174": "return { action: \"replace\" } as const;",
+          "175": "}",
+          "178": "const key = (props: Partial<DeploymentConfigProps>) =>",
+          "179": "JSON.stringify([",
+          "180": "props.computePlatform ?? \"Server\",",
+          "181": "props.minimumHealthyHosts,",
+          "182": "props.trafficRoutingConfig,",
+          "183": "toWireZonalConfig(props.zonalConfig),",
+          "184": "]);",
+          "185": "if (key(olds ?? {}) !== key(news ?? {})) {",
+          "186": "return { action: \"replace\" } as const;",
+          "187": "}",
+          "188": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "162": "return {",
+          "163": "stables: [",
+          "164": "\"deploymentConfigName\",",
+          "165": "\"deploymentConfigId\",",
+          "166": "\"computePlatform\",",
+          "167": "],",
+          "169": "diff: Effect.fn(function* ({ id, olds, news }) {",
+          "170": "if (!isResolved(news)) return undefined;",
+          "171": "if (",
+          "172": "(yield* toName(id, olds ?? {})) !== (yield* toName(id, news ?? {}))",
+          "173": ") {",
+          "174": "return { action: \"replace\" } as const;",
+          "175": "}",
+          "178": "const key = (props: Partial<DeploymentConfigProps>) =>",
+          "179": "JSON.stringify([",
+          "180": "props.computePlatform ?? \"Server\",",
+          "181": "props.minimumHealthyHosts,",
+          "182": "props.trafficRoutingConfig,",
+          "183": "toWireZonalConfig(props.zonalConfig),",
+          "184": "]);",
+          "185": "if (key(olds ?? {}) !== key(news ?? {})) {",
+          "186": "return { action: \"replace\" } as const;",
+          "187": "}",
+          "188": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "190": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "191": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "192": "const name =",
+          "193": "output?.deploymentConfigName ?? (yield* toName(id, olds ?? {}));",
+          "194": "const config = yield* getConfig(name);",
+          "195": "if (config?.deploymentConfigId === undefined) return undefined;",
+          "198": "return {",
+          "199": "deploymentConfigName: config.deploymentConfigName ?? name,",
+          "200": "deploymentConfigId: config.deploymentConfigId,",
+          "201": "deploymentConfigArn: deploymentConfigArn(region, accountId, name),",
+          "202": "computePlatform: config.computePlatform ?? \"Server\",",
+          "203": "};",
+          "204": "}),",
+          "206": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "207": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "208": "const name =",
+          "209": "output?.deploymentConfigName ?? (yield* toName(id, news));",
+          "210": "const computePlatform = news.computePlatform ?? \"Server\";",
+          "213": "let config = yield* getConfig(name);"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "190": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "191": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "192": "const name =",
+          "193": "output?.deploymentConfigName ?? (yield* toName(id, olds ?? {}));",
+          "194": "const config = yield* getConfig(name);",
+          "195": "if (config?.deploymentConfigId === undefined) return undefined;",
+          "198": "return {",
+          "199": "deploymentConfigName: config.deploymentConfigName ?? name,",
+          "200": "deploymentConfigId: config.deploymentConfigId,",
+          "201": "deploymentConfigArn: deploymentConfigArn(region, accountId, name),",
+          "202": "computePlatform: config.computePlatform ?? \"Server\",",
+          "203": "};",
+          "204": "}),",
+          "206": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "207": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "208": "const name =",
+          "209": "output?.deploymentConfigName ?? (yield* toName(id, news));",
+          "210": "const computePlatform = news.computePlatform ?? \"Server\";",
+          "213": "let config = yield* getConfig(name);"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "217": "if (config?.deploymentConfigId === undefined) {",
+          "218": "yield* codedeploy",
+          "219": ".createDeploymentConfig({",
+          "220": "deploymentConfigName: name,",
+          "221": "computePlatform,",
+          "222": "minimumHealthyHosts: news.minimumHealthyHosts,",
+          "223": "trafficRoutingConfig: news.trafficRoutingConfig,",
+          "224": "zonalConfig: toWireZonalConfig(news.zonalConfig),",
+          "225": "})",
+          "226": ".pipe(",
+          "227": "Effect.catchTag(\"DeploymentConfigAlreadyExistsException\", () =>",
+          "228": "Effect.succeed(undefined),",
+          "229": "),",
+          "230": ");",
+          "231": "config = yield* getConfig(name);",
+          "232": "}",
+          "235": "yield* session.note(name);",
+          "236": "return {",
+          "237": "deploymentConfigName: config?.deploymentConfigName ?? name,",
+          "238": "deploymentConfigId: config?.deploymentConfigId ?? \"\",",
+          "239": "deploymentConfigArn: deploymentConfigArn(region, accountId, name),",
+          "240": "computePlatform: config?.computePlatform ?? computePlatform,",
+          "241": "};",
+          "242": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "217": "if (config?.deploymentConfigId === undefined) {",
+          "218": "yield* codedeploy",
+          "219": ".createDeploymentConfig({",
+          "220": "deploymentConfigName: name,",
+          "221": "computePlatform,",
+          "222": "minimumHealthyHosts: news.minimumHealthyHosts,",
+          "223": "trafficRoutingConfig: news.trafficRoutingConfig,",
+          "224": "zonalConfig: toWireZonalConfig(news.zonalConfig),",
+          "225": "})",
+          "226": ".pipe(",
+          "227": "Effect.catchTag(\"DeploymentConfigAlreadyExistsException\", () =>",
+          "228": "Effect.succeed(undefined),",
+          "229": "),",
+          "230": ");",
+          "231": "config = yield* getConfig(name);",
+          "232": "}",
+          "235": "yield* session.note(name);",
+          "236": "return {",
+          "237": "deploymentConfigName: config?.deploymentConfigName ?? name,",
+          "238": "deploymentConfigId: config?.deploymentConfigId ?? \"\",",
+          "239": "deploymentConfigArn: deploymentConfigArn(region, accountId, name),",
+          "240": "computePlatform: config?.computePlatform ?? computePlatform,",
+          "241": "};",
+          "242": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "244": "delete: Effect.fn(function* ({ output }) {",
+          "250": "yield* codedeploy",
+          "251": ".deleteDeploymentConfig({",
+          "252": "deploymentConfigName: output.deploymentConfigName,",
+          "253": "})",
+          "254": ".pipe(",
+          "255": "Effect.retry({",
+          "256": "while: (e): boolean =>",
+          "257": "e._tag === \"DeploymentConfigInUseException\",",
+          "258": "schedule: Schedule.max([",
+          "259": "Schedule.fixed(3000),",
+          "260": "Schedule.recurs(10),",
+          "261": "]),",
+          "262": "}),",
+          "263": ");",
+          "264": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "244": "delete: Effect.fn(function* ({ output }) {",
+          "250": "yield* codedeploy",
+          "251": ".deleteDeploymentConfig({",
+          "252": "deploymentConfigName: output.deploymentConfigName,",
+          "253": "})",
+          "254": ".pipe(",
+          "255": "Effect.retry({",
+          "256": "while: (e): boolean =>",
+          "257": "e._tag === \"DeploymentConfigInUseException\",",
+          "258": "schedule: Schedule.max([",
+          "259": "Schedule.fixed(3000),",
+          "260": "Schedule.recurs(10),",
+          "261": "]),",
+          "262": "}),",
+          "263": ");",
+          "264": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "266": "list: () =>",
+          "267": "Effect.gen(function* () {",
+          "268": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "269": "const names = yield* codedeploy.listDeploymentConfigs",
+          "270": ".pages({})",
+          "271": ".pipe(",
+          "272": "Stream.runCollect,",
+          "273": "Effect.map((chunk) =>",
+          "274": "Array.from(chunk).flatMap(",
+          "275": "(page) => page.deploymentConfigsList ?? [],",
+          "276": "),",
+          "277": "),",
+          "278": ");",
+          "279": "return (",
+          "280": "names",
+          "283": ".filter((name) => !name.startsWith(\"CodeDeployDefault.\"))",
+          "284": ".map((name) => ({",
+          "285": "deploymentConfigName: name,",
+          "286": "deploymentConfigId: \"\",",
+          "287": "deploymentConfigArn: deploymentConfigArn(",
+          "288": "region,",
+          "289": "accountId,",
+          "290": "name,",
+          "291": "),",
+          "292": "computePlatform: \"\",",
+          "293": "}))",
+          "294": ");",
+          "295": "}),",
+          "296": "};",
+          "297": "}),",
+          "298": ");"
+        }
+      },
+      "end:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "266": "list: () =>",
+          "267": "Effect.gen(function* () {",
+          "268": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "269": "const names = yield* codedeploy.listDeploymentConfigs",
+          "270": ".pages({})",
+          "271": ".pipe(",
+          "272": "Stream.runCollect,",
+          "273": "Effect.map((chunk) =>",
+          "274": "Array.from(chunk).flatMap(",
+          "275": "(page) => page.deploymentConfigsList ?? [],",
+          "276": "),",
+          "277": "),",
+          "278": ");",
+          "279": "return (",
+          "280": "names",
+          "283": ".filter((name) => !name.startsWith(\"CodeDeployDefault.\"))",
+          "284": ".map((name) => ({",
+          "285": "deploymentConfigName: name,",
+          "286": "deploymentConfigId: \"\",",
+          "287": "deploymentConfigArn: deploymentConfigArn(",
+          "288": "region,",
+          "289": "accountId,",
+          "290": "name,",
+          "291": "),",
+          "292": "computePlatform: \"\",",
+          "293": "}))",
+          "294": ");",
+          "295": "}),",
+          "296": "};",
+          "297": "}),",
+          "298": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols` and `references`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` and `references` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` and `references` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

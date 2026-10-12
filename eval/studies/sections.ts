@@ -25,20 +25,21 @@ import { readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { isNote, withoutComments } from "#comments.ts";
 import type { Rule } from "#config.ts";
 import { type Range, sectionsOf } from "#excerpt.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { judgeQuestion, locateBody } from "#services/Jev.ts";
 
-interface Labeled {
-  readonly repo: string;
-  readonly file: string;
-  readonly line: number;
-  readonly rule: string;
-  readonly label: "real" | "false" | "debatable";
-}
+const Labeled = Schema.Struct({
+  repo: Schema.String,
+  file: Schema.String,
+  line: Schema.Natural,
+  rule: Schema.String,
+  label: Schema.Literals(["real", "false", "debatable"]),
+});
+type Labeled = typeof Labeled.Type;
 
 type Lines = ReadonlyArray<string>;
 
@@ -210,7 +211,16 @@ const aboutCode = (rule: Rule) => {
   };
 };
 
-type Answers = Record<string, { noul?: number; choice?: string }>;
+const Response = Schema.Struct({
+  answers: Schema.Record(
+    Schema.String,
+    Schema.Struct({
+      noul: Schema.optionalKey(Schema.Finite),
+      choice: Schema.optionalKey(Schema.String),
+    }),
+  ),
+});
+type Answers = typeof Response.Type.answers;
 
 const ask = async (key: string, body: unknown): Promise<Answers> => {
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -218,8 +228,9 @@ const ask = async (key: string, body: unknown): Promise<Answers> => {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
     });
-    if (response.ok) return ((await response.json()) as { answers: Answers }).answers;
+    if (response.ok) return Schema.decodeUnknownSync(Response)(await response.json()).answers;
     if (response.status !== 429 && response.status < 500) {
       throw new Error(`HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`);
     }
@@ -243,10 +254,8 @@ const key = process.env.TYPESAFE_API_KEY;
 if (key === undefined) {
   throw new Error("usage: TYPESAFE_API_KEY=… bun eval/studies/sections.ts [results.json] [arm…]");
 }
-const labeled = (
-  JSON.parse(
-    await readFile(new URL("presets-labels.json", import.meta.url), "utf8"),
-  ) as ReadonlyArray<Labeled>
+const labeled = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(Labeled)))(
+  await readFile(new URL("presets-labels.json", import.meta.url), "utf8"),
 ).filter((f) => exists(f.rule));
 const rules = new Map<string, Rule>();
 for (const id of new Set(labeled.map((f) => f.rule))) rules.set(id, await ruleOf(id));

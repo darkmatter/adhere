@@ -17,15 +17,7 @@ import { CredentialsLive } from "#services/Credentials.ts";
 import { judgeBody } from "#services/Jev.ts";
 import { isTestFile } from "#services/SourceWalker.ts";
 import { BunRuntime, BunServices } from "@effect/platform-bun";
-import {
-  Console,
-  Effect,
-  FileSystem,
-  Layer,
-  Path,
-  Record,
-  Schema,
-} from "effect";
+import { Console, Effect, FileSystem, Layer, Path, Record, Schema } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { homedir } from "node:os";
 import { type Arm, askJev, auc, Run, type Sample, table } from "../harness.ts";
@@ -50,32 +42,20 @@ const Labels = Schema.fromJsonString(
 );
 
 const prefixed = (rules: Rules): Rules =>
-  Record.fromEntries(
-    Object.entries(rules).map(([id, rule]) => [`effect/${id}`, rule]),
-  );
+  Record.fromEntries(Object.entries(rules).map(([id, rule]) => [`effect/${id}`, rule]));
 
 /** The preset's rules as a release shipped them, from the repo's history. */
-const shippedRules = Effect.fn("eval.shippedRules")(function* (
-  root: string,
-  ref: string,
-) {
+const shippedRules = Effect.fn("eval.shippedRules")(function* (root: string, ref: string) {
   const path = yield* Path.Path;
-  const directory =
-    yield* (yield* FileSystem.FileSystem).makeTempDirectoryScoped();
+  const directory = yield* (yield* FileSystem.FileSystem).makeTempDirectoryScoped();
   const extracted = Bun.spawnSync(
-    [
-      "sh",
-      "-c",
-      `git archive ${ref} presets/effect | tar -x -C "${directory}"`,
-    ],
+    ["sh", "-c", `git archive ${ref} presets/effect | tar -x -C "${directory}"`],
     {
       cwd: root,
     },
   );
   if (extracted.exitCode !== 0) {
-    return yield* Effect.die(
-      `git archive ${ref}: ${extracted.stderr.toString()}`,
-    );
+    return yield* Effect.die(`git archive ${ref}: ${extracted.stderr.toString()}`);
   }
   return yield* loadRules(path.join(directory, "presets", "effect"));
 });
@@ -89,9 +69,7 @@ const program = Effect.gen(function* () {
   const root = path.resolve(import.meta.dirname, "../..");
 
   const shipped = prefixed(yield* shippedRules(root, SHIPPED));
-  const current = prefixed(
-    yield* loadRules(path.join(root, "presets", "effect")),
-  );
+  const current = prefixed(yield* loadRules(path.join(root, "presets", "effect")));
   const ARMS: ReadonlyArray<readonly [name: string, rules: Rules]> = [
     ["0.14.0", shipped],
     ["0.14.0, again", shipped],
@@ -101,15 +79,11 @@ const program = Effect.gen(function* () {
   const rulesOf = new Map(ARMS);
 
   const labels = yield* Schema.decodeUnknownEffect(Labels)(
-    yield* fs.readFileString(
-      path.join(import.meta.dirname, "domain-scope-labels.json"),
-    ),
+    yield* fs.readFileString(path.join(import.meta.dirname, "domain-scope-labels.json")),
   );
   const nameOf = (entry: { readonly repo: string; readonly file: string }) =>
     `${entry.repo}/${entry.file}`;
-  const files = [
-    ...new Map(labels.map((entry) => [nameOf(entry), entry.file])).entries(),
-  ].sort();
+  const files = [...new Map(labels.map((entry) => [nameOf(entry), entry.file])).entries()].sort();
   const samples = yield* Effect.forEach(
     files,
     ([name, file]) =>
@@ -127,9 +101,7 @@ const program = Effect.gen(function* () {
   const runs: ReadonlyArray<Run> =
     saved === undefined
       ? yield* Effect.forEach([false, true], (test) => {
-          const group: ReadonlyArray<Sample> = samples.filter(
-            (sample) => sample.test === test,
-          );
+          const group: ReadonlyArray<Sample> = samples.filter((sample) => sample.test === test);
           const arms: ReadonlyArray<Arm> = ARMS.map(([arm, rules]) => [
             arm,
             (model, lines) =>
@@ -147,9 +119,7 @@ const program = Effect.gen(function* () {
           ),
         ];
   const run: Run = {
-    models: [
-      ...new Set(runs.flatMap((r) => r.models.split(", ")).filter(Boolean)),
-    ].join(", "),
+    models: [...new Set(runs.flatMap((r) => r.models.split(", ")).filter(Boolean))].join(", "),
     judgments: runs.flatMap((r) => r.judgments),
     requests: runs.flatMap((r) => r.requests),
   };
@@ -159,26 +129,21 @@ const program = Effect.gen(function* () {
   }
 
   const scores = new Map(
-    run.judgments.map((j) => [
-      `${j.arm}\u0000${j.sample}\u0000${j.rule}`,
-      j.probability,
-    ]),
+    run.judgments.map((j) => [`${j.arm}\u0000${j.sample}\u0000${j.rule}`, j.probability]),
   );
   /** A rule the arm does not have scores 0, as lint, which does not ask it, reports nothing. */
   const scoreOf = (arm: string, sample: string, rule: string) =>
     scores.get(`${arm}\u0000${sample}\u0000${rule}`) ?? 0;
 
   const decided = labels.filter((entry) => entry.label !== "debatable");
-  const count = (label: string) =>
-    labels.filter((entry) => entry.label === label).length;
+  const count = (label: string) => labels.filter((entry) => entry.label === label).length;
   yield* Console.log(
     `${run.models}: ${samples.length} files; ${labels.length} labeled findings (${count("real")} real, ${count("false")} false, ${count("debatable")} debatable).\n`,
   );
 
   /** Whether lint reports it: above the rule's own threshold, or the default. */
   const reportedBy = (arm: string, sample: string, rule: string) =>
-    scoreOf(arm, sample, rule) >
-    (rulesOf.get(arm)?.[rule]?.threshold ?? DEFAULT_THRESHOLD);
+    scoreOf(arm, sample, rule) > (rulesOf.get(arm)?.[rule]?.threshold ?? DEFAULT_THRESHOLD);
 
   const rowsOf = (arm: string, entries: typeof decided) =>
     entries.map((entry) => ({
@@ -196,12 +161,7 @@ const program = Effect.gen(function* () {
   );
   yield* Console.log(
     table(
-      [
-        "arm",
-        "AUC",
-        ...THRESHOLDS.map((t) => `real / false at ${t}`),
-        "as lint reports",
-      ],
+      ["arm", "AUC", ...THRESHOLDS.map((t) => `real / false at ${t}`), "as lint reports"],
       ARMS.map(([arm]) => {
         const rows = rowsOf(arm, decided);
         return [
@@ -210,9 +170,7 @@ const program = Effect.gen(function* () {
             rows.filter((row) => row.real).map((row) => row.score),
             rows.filter((row) => !row.real).map((row) => row.score),
           ).toFixed(3),
-          ...THRESHOLDS.map((t) =>
-            counted(rows.filter((row) => row.score > t)),
-          ),
+          ...THRESHOLDS.map((t) => counted(rows.filter((row) => row.score > t))),
           counted(rows.filter((row) => row.reported)),
         ];
       }),
@@ -220,9 +178,7 @@ const program = Effect.gen(function* () {
   );
 
   const labeledRules = [...new Set(labels.map((entry) => entry.rule))].sort();
-  yield* Console.log(
-    "\nPer rule, real / false / debatable as lint reports them:\n",
-  );
+  yield* Console.log("\nPer rule, real / false / debatable as lint reports them:\n");
   yield* Console.log(
     table(
       ["rule", ...ARMS.map(([arm]) => arm)],
@@ -230,11 +186,9 @@ const program = Effect.gen(function* () {
         rule,
         ...ARMS.map(([arm]) => {
           const shown = labels.filter(
-            (entry) =>
-              entry.rule === rule && reportedBy(arm, nameOf(entry), rule),
+            (entry) => entry.rule === rule && reportedBy(arm, nameOf(entry), rule),
           );
-          const of = (label: string) =>
-            shown.filter((entry) => entry.label === label).length;
+          const of = (label: string) => shown.filter((entry) => entry.label === label).length;
           return `${of("real")} / ${of("false")} / ${of("debatable")}`;
         }),
       ]),
@@ -242,9 +196,7 @@ const program = Effect.gen(function* () {
   );
 
   // Findings no one labeled that the new rules report and neither 0.14.0 run does: to label.
-  const labeled = new Set(
-    labels.map((entry) => `${nameOf(entry)}\u0000${entry.rule}`),
-  );
+  const labeled = new Set(labels.map((entry) => `${nameOf(entry)}\u0000${entry.rule}`));
   const reported = (arm: string) =>
     new Set(
       run.judgments
@@ -261,9 +213,7 @@ const program = Effect.gen(function* () {
   );
   for (const pair of fresh.sort()) {
     const [sample = "", rule = ""] = pair.split("\u0000");
-    const each = ARMS.map(([arm]) =>
-      scoreOf(arm, sample, rule).toFixed(2),
-    ).join(" ");
+    const each = ARMS.map(([arm]) => scoreOf(arm, sample, rule).toFixed(2)).join(" ");
     yield* Console.log(`- ${rule} on ${sample}: ${each}`);
   }
 });

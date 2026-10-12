@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { CONFIG_FILES } from "#config.ts";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 
 export interface InitResult {
   readonly created: ReadonlyArray<string>;
@@ -305,6 +305,13 @@ const writeScaffoldFile = (root: string, path: string, contents: string, options
 
 const PACKAGE = "@drkmttr/adhere";
 
+const PackageManifest = Schema.fromJsonString(
+  Schema.Struct({
+    dependencies: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+    devDependencies: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+  }),
+);
+
 type PackageManager = "bun" | "pnpm" | "yarn" | "npm";
 
 /** The first lockfile at the root names the package manager; npm when there is none. */
@@ -342,9 +349,21 @@ const addFlags: Record<PackageManager, ReadonlyArray<string>> = {
 const installPackages = (root: string, shared: boolean) =>
   Effect.tryPromise({
     try: async (): Promise<Install> => {
-      const manifest = await readFile(join(root, "package.json"), "utf8").catch(() => undefined);
+      const manifest = await readFile(join(root, "package.json"), "utf8").catch(
+        (cause: unknown) => {
+          if (
+            typeof cause === "object" &&
+            cause !== null &&
+            "code" in cause &&
+            cause.code === "ENOENT"
+          ) {
+            return undefined;
+          }
+          throw cause;
+        },
+      );
       if (manifest === undefined) return { status: "no-package-json" };
-      const { dependencies, devDependencies } = JSON.parse(manifest);
+      const { dependencies, devDependencies } = Schema.decodeUnknownSync(PackageManifest)(manifest);
       if (
         !shared &&
         (dependencies?.[PACKAGE] !== undefined || devDependencies?.[PACKAGE] !== undefined)

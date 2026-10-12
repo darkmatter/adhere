@@ -220,8 +220,14 @@ export const AdhereConfig = Schema.Struct({
   presets: Schema.Array(Schema.Literals(presetNames)).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed([])),
   ),
-  /** Shared context for every audited file and all its rules. Unset: all built-in reads; []: code only. */
+  /** Workspace context shared by every rule. Defaults to workspacePackages; [] disables it. Native read names do not enable type awareness. */
   reads: Schema.optionalKey(Reads),
+  /** Include both compiler-resolved symbols and declaration excerpts. Defaults to false. */
+  typeAware: Schema.optionalKey(Schema.Boolean),
+  /** Maximum characters of each symbol's complete resolved content. Defaults to 256. */
+  maxSymbolLength: Schema.optionalKey(Schema.Natural),
+  /** Maximum characters of documentation and JSDoc tags per symbol. Defaults to 256; 0 omits them. */
+  maxSymbolDocumentationLength: Schema.optionalKey(Schema.Natural),
   /**
    * A record of rules, or a directory path relative to the config file,
    * which holds its rules as `.adhere/rules/` does. Unset: the rules in
@@ -329,7 +335,9 @@ export type Loaded<T extends { readonly rules?: unknown }> = Omit<T, "rules"> & 
 export const DEFAULT_MODEL = "jev-latest";
 export const DEFAULT_THRESHOLD = 0.8;
 export const DEFAULT_SUFFICIENCY_THRESHOLD = 0.6;
-export const DEFAULT_READS: typeof Reads.Type = ["workspacePackages", "symbols", "references"];
+export const DEFAULT_READS: typeof Reads.Type = ["workspacePackages"];
+export const DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH = 256;
+export const DEFAULT_MAX_SYMBOL_LENGTH = 256;
 
 /** A config with its presets folded in and every default applied. */
 export interface ResolvedConfig {
@@ -349,6 +357,12 @@ export interface ResolvedConfig {
   readonly includeComments?: boolean;
   /** Built-in context shared by every rule, with the default applied. */
   readonly reads: typeof Reads.Type;
+  /** Whether both native symbol and declaration context are enabled. */
+  readonly typeAware: boolean;
+  /** Maximum characters of each symbol's complete resolved content. */
+  readonly maxSymbolLength: number;
+  /** Maximum characters of documentation and JSDoc tags before the complete symbol limit applies. */
+  readonly maxSymbolDocumentationLength: number;
   /**
    * The workspace's packages, each name with its directory from the working
    * directory, read from its manifests on every run when the config's reads
@@ -366,6 +380,8 @@ export interface Flags {
   readonly sufficiencyThreshold?: number | undefined;
   /** Throttles requests to Jev to at most this many a minute. */
   readonly rpm?: number | undefined;
+  /** Replaces the config's native-context opt-in. */
+  readonly typeAware?: boolean | undefined;
 }
 
 /**
@@ -400,6 +416,7 @@ export const resolveConfig = (
   });
   const last = <K extends "model" | "threshold">(key: K) =>
     applied.map((preset) => preset[key]).findLast((value) => value !== undefined);
+  const typeAware = flags.typeAware ?? config.typeAware ?? false;
   return {
     model: config.provider?.model ?? config.model ?? last("model") ?? DEFAULT_MODEL,
     ...(config.provider === undefined ? {} : { provider: config.provider }),
@@ -410,7 +427,14 @@ export const resolveConfig = (
     ...(flags.rpm === undefined ? {} : { rpm: flags.rpm }),
     ...(config.exclude === undefined ? {} : { exclude: config.exclude }),
     ...(config.includeComments === undefined ? {} : { includeComments: config.includeComments }),
-    reads: config.reads ?? DEFAULT_READS,
+    typeAware,
+    reads: [
+      ...(config.reads ?? DEFAULT_READS).filter((read) => read === "workspacePackages"),
+      ...(typeAware ? (["symbols", "references"] as const) : []),
+    ],
+    maxSymbolLength: config.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,
+    maxSymbolDocumentationLength:
+      config.maxSymbolDocumentationLength ?? DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
   };
 };
 

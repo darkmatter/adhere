@@ -14,6 +14,7 @@ import { Credentials } from "#services/Credentials.ts";
 import {
   type Body,
   type ComparedRule,
+  describeState,
   edgeKey,
   conflictBody,
   contradictBody,
@@ -36,6 +37,7 @@ import {
   type Rules,
   sufficiencyKey,
   tokensOf,
+  logRequestPayload,
 } from "#services/Jev.ts";
 import {
   Duration,
@@ -87,7 +89,7 @@ const hooked = (
   return Effect.tryPromise({
     try: async () => ({
       ...body,
-      state: { ...body.state, ...(await appendState(body.state, file, bun)) },
+      state: describeState({ ...body.state, ...(await appendState(body.state, file, bun)) }),
     }),
     catch: (cause) => refused(`the appendState of ${id} failed: ${messageOf(cause)}`),
   });
@@ -190,6 +192,7 @@ export const JevLive = Layer.effect(Jev)(
     const limiter = yield* RateLimiter.RateLimiter;
 
     const provider: Provider = config.provider ?? jev({ model: config.model, fetch });
+    const previewed = new Set<string>();
     // The key it asks with, when it names one `adhere login` saves. Read when
     // a request needs it, not in the layer: a run with nothing pending needs none.
     const apiKey: Effect.Effect<string | undefined, JevUnavailable> =
@@ -226,8 +229,23 @@ export const JevLive = Layer.effect(Jev)(
         yield* Effect.logDebug(
           `${kind}: asking ${provider.model} ${questions} ${questions === 1 ? "question" : "questions"}, about ${tokensOf(body)} tokens`,
         );
+        if ((kind === "judge" || kind === "locate") && !previewed.has(kind)) {
+          previewed.add(kind);
+          yield* logRequestPayload(
+            `${kind}: first ${kind === "locate" ? "match-to-lines " : ""}request payload`,
+            () => body,
+            "Debug",
+          );
+        }
         const [elapsed, answered] = yield* Effect.timed(
-          askProvider(provider, body.state, questionsOf(body.questions), Answers, key, pace),
+          askProvider(provider, body.state, questionsOf(body.questions), Answers, key, pace).pipe(
+            Effect.tapErrorTag("JevOverflow", () =>
+              logRequestPayload(
+                `${kind}: too long request payload (provider overflow)`,
+                () => body,
+              ),
+            ),
+          ),
         );
         yield* Effect.logDebug(
           `${kind}: ${provider.model} answered in ${Math.round(Duration.toMillis(elapsed))} ms`,

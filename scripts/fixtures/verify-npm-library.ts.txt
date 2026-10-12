@@ -1,0 +1,11 @@
+export const outsideBefore = 0;
+
+export const firstPadding = 1;
+export const secondPadding = 2;
+export const thirdPadding = 3;
+/** Double a number. */
+export function twice(value: number): number {
+	return value * 2;
+}
+
+export const outsideAfter = 0;

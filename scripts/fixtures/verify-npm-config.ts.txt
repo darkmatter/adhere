@@ -1,0 +1,40 @@
+import assert from "node:assert/strict";
+import { basename } from "node:path";
+import { defineConfig } from "@drkmttr/adhere";
+
+export default defineConfig({
+  typeAware: true,
+  rules: {
+    nativeSmoke: {
+      description: "Exported functions must keep their callers type-safe.",
+      must: "export function twice(value: number): number { return value * 2; }",
+      appendState(state, file) {
+        assert.equal(basename(file.path), "caller.ts");
+        assert.equal(file.contents, __ADHERE_CALLER__);
+        for (const name of ["workspacePackages", "symbols", "references"]) {
+          assert.equal(typeof state[name].__comment, "string", name + " must describe its context");
+          assert(state[name].__comment.trim().length > 0, name + " must have a nonempty __comment");
+        }
+        assert.deepEqual(state.workspacePackages, {
+          __comment: state.workspacePackages.__comment,
+          "@adhere-smoke/library": "modules/library",
+        });
+        assert.equal(typeof state.symbols.scale, "string");
+        assert(state.symbols.scale.includes("(value: number) => number"));
+        assert(state.symbols.scale.includes("Double a number."), "Compiler reads must include JSDoc");
+        assert.match(state.references.__comment, /declarations?/i,
+          "References must describe declarations of symbols used by the code");
+        assert.deepEqual(state.references, {
+          __comment: state.references.__comment,
+          "scale:library.ts": __ADHERE_DECLARATION__,
+        }, "References must contain complete declarations without neighboring statements, preserving indentation");
+        assert(!JSON.stringify(state.references).includes("outsideBefore"));
+        assert(!JSON.stringify(state.references).includes("outsideAfter"));
+        assert(Object.values(state.code).some((code) => code.includes("\n\texport const second")),
+          "Judged source must preserve indentation too");
+        console.log(__ADHERE_MARKER__);
+        return {};
+      },
+    },
+  },
+});

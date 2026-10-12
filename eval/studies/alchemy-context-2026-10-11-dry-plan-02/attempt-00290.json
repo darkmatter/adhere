@@ -1,0 +1,44 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Fly/WriteSecretHttp.ts",
+  "kind": "judge",
+  "ordinal": 290,
+  "artifact": "attempt-00290.json",
+  "started": "2026-10-11T03:20:45.637Z",
+  "estimatedTokens": 2001,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.039593999998032814,
+  "referencesPresent": false,
+  "bodyDigest": "8cf1e8088710e10fc5becc54e5ecb70e5d064557c939c9129a0a497813890ecc",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as machines from \"@distilled.cloud/fly-io/machines\";\nimport * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport * as FetchHttpClient from \"effect/unstable/http/FetchHttpClient\";\nimport { CredentialsFromAmbientOrEnv } from \"./Credentials.ts\";\nimport type { Secret } from \"./Secret.ts\";\nimport {\n  type SecretAuth,\n  makeHttpSecretBinding,\n  unwrapSecretValue,\n} from \"./SecretHttp.ts\";\nimport { WriteSecret, type WriteSecretClient } from \"./WriteSecret.ts\";",
+        "2": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const WriteSecretHttp = Layer.effect(\n  WriteSecret,\n  Effect.suspend(() =>\n    makeHttpSecretBinding<Secret, WriteSecretClient>({\n      makeClient: secretWriteClient,\n    }),\n  ),\n).pipe(\n  Layer.provide(FetchHttpClient.layer),\n  Layer.provide(CredentialsFromAmbientOrEnv),\n);\n\n\nexport const secretWriteClient = (\n  auth: SecretAuth,\n  appName: Effect.Effect<string>,\n  _secretName: Effect.Effect<string>,\n): WriteSecretClient => {\n  const authorize = auth.authorize;",
+        "3": "  return {\n    create: Effect.fn(\"Fly.Secret.create\")(function* (name, value) {\n      return yield* authorize(\n        machines.createSecret({\n          app_name: yield* appName,\n          secret_name: name,\n          value: unwrapSecretValue(value),\n        }),\n      );\n    }),\n    update: Effect.fn(\"Fly.Secret.update\")(function* (name, value) {\n      return yield* authorize(\n        machines.updateSecrets({\n          app_name: yield* appName,\n          values: { [name]: unwrapSecretValue(value) },\n        }),\n      );\n    }),\n    delete: Effect.fn(\"Fly.Secret.delete\")(function* (name) {\n      return yield* authorize(\n        machines.deleteSecret({\n          app_name: yield* appName,\n          secret_name: name,\n        }),\n      );\n    }),\n  };\n};\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

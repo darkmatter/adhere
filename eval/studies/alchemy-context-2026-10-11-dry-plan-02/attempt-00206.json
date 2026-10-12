@@ -1,0 +1,50 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/MailManager/AddonInstance.ts",
+  "kind": "judge",
+  "ordinal": 206,
+  "artifact": "attempt-00206.json",
+  "started": "2026-10-11T03:20:42.506Z",
+  "estimatedTokens": 3646,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.025688000001537148,
+  "referencesPresent": false,
+  "bodyDigest": "1625436a4b9d6b3846617c4cf0606239351043b1407880a2abd2065100c83477",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as mm from \"@distilled.cloud/aws/mailmanager\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport {\n  createInternalTags,\n  createTagsList,\n  hasAlchemyTags,\n} from \"../../Tags.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport { readMailManagerTags, syncMailManagerTags } from \"./internal.ts\";\n\nexport interface AddonInstanceProps {\n\n\n\n\n  addonSubscriptionId: string;\n\n\n\n\n  tags?: Record<string, string>;\n}",
+        "2": "\nexport interface AddonInstance extends Resource<\n  \"AWS.MailManager.AddonInstance\",\n  AddonInstanceProps,\n  {\n\n    addonInstanceId: string;\n\n    addonInstanceArn: string;\n\n    addonSubscriptionId: string;\n\n    addonName: string | undefined;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const AddonInstance = Resource<AddonInstance>(\n  \"AWS.MailManager.AddonInstance\",\n);\n\nexport const AddonInstanceProvider = () =>\n  Provider.effect(\n    AddonInstance,\n    Effect.gen(function* () {\n      const getById = (addonInstanceId: string) =>\n        mm\n          .getAddonInstance({ AddonInstanceId: addonInstanceId })\n          .pipe(\n            Effect.catchTag(\"ResourceNotFoundException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n\n      const listAll = mm.listAddonInstances.pages({}).pipe(\n        Stream.runCollect,\n        Effect.map((chunk) =>\n          Array.from(chunk).flatMap((page) => page.AddonInstances ?? []),\n        ),\n      );",
+        "4": "\n\n\n      const findByAlchemyTags = Effect.fn(function* (id: string) {\n        const instances = yield* listAll;\n        for (const instance of instances) {\n          if (instance.AddonInstanceArn === undefined) continue;\n          const tags = yield* readMailManagerTags(instance.AddonInstanceArn);\n          if (yield* hasAlchemyTags(id, tags)) return instance;\n        }\n        return undefined;\n      });\n\n      const toAttrs = (instance: mm.AddonInstance) =>\n        instance.AddonInstanceId !== undefined &&\n        instance.AddonInstanceArn !== undefined &&\n        instance.AddonSubscriptionId !== undefined\n          ? {\n              addonInstanceId: instance.AddonInstanceId,\n              addonInstanceArn: instance.AddonInstanceArn,\n              addonSubscriptionId: instance.AddonSubscriptionId,\n              addonName: instance.AddonName,\n            }\n          : undefined;",
+        "5": "\n      const observe = Effect.fn(function* (\n        id: string,\n        output: AddonInstance[\"Attributes\"] | undefined,\n      ) {\n        if (output?.addonInstanceId !== undefined) {\n          const found = yield* getById(output.addonInstanceId);\n          if (found !== undefined) {\n            return {\n              AddonInstanceId: output.addonInstanceId,\n              AddonInstanceArn: found.AddonInstanceArn,\n              AddonSubscriptionId: found.AddonSubscriptionId,\n              AddonName: found.AddonName,\n            } satisfies mm.AddonInstance;\n          }\n        }\n        return yield* findByAlchemyTags(id);\n      });\n\n      return AddonInstance.Provider.of({\n        stables: [\n          \"addonInstanceId\",\n          \"addonInstanceArn\",\n          \"addonSubscriptionId\",\n          \"addonName\",\n        ],",
+        "6": "\n        list: () =>\n          listAll.pipe(\n            Effect.map((instances) =>\n              instances.flatMap((i) => {\n                const attrs = toAttrs(i);\n                return attrs === undefined ? [] : [attrs];\n              }),\n            ),\n          ),\n\n        read: Effect.fn(function* ({ id, output }) {\n          const instance = yield* observe(id, output);\n          if (instance === undefined) return undefined;\n          const attrs = toAttrs(instance);\n          if (attrs === undefined) return undefined;\n          const tags = yield* readMailManagerTags(attrs.addonInstanceArn);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),\n\n\n\n        diff: Effect.fn(function* ({ news, olds }) {\n          if (!isResolved(news)) return undefined;\n          if (\n            olds !== undefined &&\n            olds.addonSubscriptionId !== news.addonSubscriptionId\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "7": "\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...news.tags, ...internalTags };\n\n\n\n          let instance = yield* observe(id, output);",
+        "8": "\n\n\n          if (instance === undefined) {\n            yield* session.note(\n              `creating Add On instance for subscription ${news.addonSubscriptionId}`,\n            );\n            const created = yield* mm\n              .createAddonInstance({\n                AddonSubscriptionId: news.addonSubscriptionId,\n                Tags: createTagsList(desiredTags),\n              })\n              .pipe(\n                Effect.catchTag(\"ConflictException\", () =>\n                  Effect.succeed(undefined),\n                ),\n              );\n            if (created !== undefined) {\n              const found = yield* getById(created.AddonInstanceId);\n              instance = {\n                AddonInstanceId: created.AddonInstanceId,\n                AddonInstanceArn: found?.AddonInstanceArn,\n                AddonSubscriptionId:\n                  found?.AddonSubscriptionId ?? news.addonSubscriptionId,\n                AddonName: found?.AddonName,\n              };\n            } else {\n              instance = yield* findByAlchemyTags(id);\n            }\n          }\n          const attrs = instance !== undefined ? toAttrs(instance) : undefined;",
+        "9": "          if (attrs === undefined) {\n            return yield* Effect.fail(\n              new Error(\n                `Mail Manager Add On instance for subscription '${news.addonSubscriptionId}' not found after create`,\n              ),\n            );\n          }\n\n\n          yield* syncMailManagerTags(attrs.addonInstanceArn, desiredTags);\n\n          yield* session.note(attrs.addonInstanceId);\n          return attrs;\n        }),\n\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* mm\n            .deleteAddonInstance({ AddonInstanceId: output.addonInstanceId })\n            .pipe(Effect.asVoid);\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

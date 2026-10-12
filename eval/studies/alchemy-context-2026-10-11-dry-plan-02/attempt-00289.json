@@ -1,0 +1,435 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/Cloudflare/Tunnel/WriteTunnel.ts",
+  "kind": "locate",
+  "ordinal": 289,
+  "artifact": "attempt-00289.json",
+  "started": "2026-10-11T03:20:45.612Z",
+  "estimatedTokens": 10199,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 2.0198510000009264,
+  "referencesPresent": false,
+  "bodyDigest": "25a50c2246d59ecdfdad77e8bbd5b1f3afe92af73b5b4611d3c68bd4ef46be4d",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "73",
+    "end:providers/idempotent-delete:2": "73",
+    "start:providers/idempotent-delete:3": "104",
+    "end:providers/idempotent-delete:3": "104",
+    "start:providers/idempotent-delete:4": "131",
+    "end:providers/idempotent-delete:4": "131",
+    "start:providers/idempotent-delete:5": "159",
+    "end:providers/idempotent-delete:5": "159",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "accountId": "```typescript\nstring\n```\n\n---\n\n```typescript\nEffect.Effect<string, never, never>\n```",
+        "auth": "```typescript\nTunnelAuth\n```",
+        "authorize": "```typescript\n<A, E>(eff: Effect.Effect<A, E, import(\"@distilled.cloud/cloudflare/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>) => Effect.Effect<A, E, RuntimeContext>\n```",
+        "Binding": "```typescript\ntypeof Binding\n```",
+        "config": "```typescript\nzeroTrust.TunnelsCloudflaredConfigurationsUpdateRequestConfig\n```",
+        "ConfigurationBody": "Tunnel configuration body, minus the account id and tunnel id (positional).",
+        "create": "```typescript\n(request: CreateTunnelRequest) => Effect.Effect<CreateTunnelCloudflaredResponse, CreateTunnelCloudflaredError, RuntimeContext>\n```\n\nCreate a new tunnel.\n\n---\n\n```typescript\n(request: CreateTunnelRequest) => Effect.Effect<CreateTunnelCloudflar",
+        "createTunnelCloudflared": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<CreateTunnelCloudflaredRequest, CreateTunnelCloudflaredResponse, CreateTunnelCloudflaredError, zeroTrust.CloudflareOpContext>\n```\n\nCreates a remotely or locally managed Cloudflare Tunnel in ",
+        "CreateTunnelCloudflaredResponse": "Unwrapped `result` payload of the Cloudflare v4 response envelope.",
+        "CreateTunnelRequest": "Create-tunnel request, minus the account id (supplied by the binding).",
+        "delete": "```typescript\n(tunnelId: string) => Effect.Effect<DeleteTunnelCloudflaredResponse, DeleteTunnelCloudflaredError, RuntimeContext>\n```\n\nDelete a tunnel by id.\n\n---\n\n```typescript\n(tunnelId: string) => Effect.Effect<DeleteTunnelCloudflaredResponse, zeroTrust.",
+        "deleteTunnelCloudflared": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<zeroTrust.DeleteTunnelCloudflaredRequest, DeleteTunnelCloudflaredResponse, zeroTrust.CloudflareOpError, zeroTrust.CloudflareOpContext>\n```\n\nPermanently deletes a Cloudflare Tunnel from an ac",
+        "DeleteTunnelCloudflaredResponse": "Unwrapped `result` payload of the Cloudflare v4 response envelope.",
+        "Effect": "The `Effect` interface defines a value that lazily describes a workflow or\njob. The workflow requires some context `R`, and may fail with an error of\ntype `E`, or succeed with a value of type `A`.\n\n**When to use**\n\nUse when you need to represent a lazy, co",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "patchTunnelCloudflared": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<PatchTunnelCloudflaredRequest, PatchTunnelCloudflaredResponse, PatchTunnelCloudflaredError, zeroTrust.CloudflareOpContext>\n```\n\nUpdates the name or secret of an existing Cloudflare Tunnel.",
+        "PatchTunnelCloudflaredResponse": "Unwrapped `result` payload of the Cloudflare v4 response envelope.",
+        "putConfiguration": "```typescript\n(tunnelId: string, config: ConfigurationBody) => Effect.Effect<PutTunnelCloudflaredConfigurationResponse, PutTunnelCloudflaredConfigurationError, RuntimeContext>\n```\n\nReplace the remotely-managed configuration (ingress rules) for a tunnel.\n\n-",
+        "putTunnelCloudflaredConfiguration": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<PutTunnelCloudflaredConfigurationRequest, PutTunnelCloudflaredConfigurationResponse, PutTunnelCloudflaredConfigurationError, zeroTrust.CloudflareOpContext>\n```\n\nReplaces the configuration fo",
+        "PutTunnelCloudflaredConfigurationResponse": "Unwrapped `result` payload of the Cloudflare v4 response envelope.",
+        "request": "```typescript\nCreateTunnelRequest\n```\n\n---\n\n```typescript\nUpdateTunnelRequest\n```",
+        "RuntimeContext": "Context of the runtime environment.\n\nE.g. the context of a running Worker, Task, Process, Function",
+        "Service": "```typescript\n<Self extends Binding.ServiceLike & { readonly key: string; }>(id: Self[\"key\"]) => Self\n```\n\nThe combined tag + callable + type form of a binding (the `Resource.ts`-style\nsingle-identifier pattern). `interface X extends Binding.Service<X, Id,",
+        "TunnelAuth": "Injectable auth for the tunnel client builders. Both the scoped-token\n(`*Binding`) and current-credentials (`*Local`) variants supply an\n`authorize` (which provides `Credentials` + `HttpClient` to a raw SDK op)\nand an `accountId`, so the client builders ar",
+        "tunnelId": "```typescript\nstring\n```",
+        "update": "```typescript\n(tunnelId: string, request: UpdateTunnelRequest) => Effect.Effect<PatchTunnelCloudflaredResponse, PatchTunnelCloudflaredError, RuntimeContext>\n```\n\nUpdate a tunnel's mutable fields (name, secret).\n\n---\n\n```typescript\n(tunnelId: string, reques",
+        "UpdateTunnelRequest": "Update-tunnel request, minus the account id and tunnel id (positional).",
+        "Worker": "A Cloudflare Worker host with deploy-time binding support and runtime export\ncollection.\n\nA Worker follows a two-phase pattern. The outer `Effect.gen` runs at\ndeploy time to bind resources (KV, R2, Durable Objects, etc.). It returns\nan object whose propert",
+        "writeClient": "```typescript\n(auth: TunnelAuth) => WriteTunnelClient\n```\n\nBuild the write client over an injectable TunnelAuth.",
+        "WriteTunnel": "Binding that lets a Worker create, update, and delete Cloudflare Tunnels at\nruntime.\n\nCreates a scoped AccountApiToken with only the `Cloudflare Tunnel\nWrite` permission and binds its outputs into the Worker (the token value as a\n`secret_text` binding) so ",
+        "WriteTunnelClient": "Mutating tunnel operations. Backed by the `Cloudflare Tunnel Write`\npermission group.",
+        "zeroTrust": "```typescript\ntypeof zeroTrust\n```"
+      },
+      "code": {
+        "1": "import type {\n  CreateTunnelCloudflaredError,\n  CreateTunnelCloudflaredRequest,\n  CreateTunnelCloudflaredResponse,\n  DeleteTunnelCloudflaredError,\n  DeleteTunnelCloudflaredResponse,\n  PatchTunnelCloudflaredError,\n  PatchTunnelCloudflaredRequest,\n  PatchTunnelCloudflaredResponse,\n  PutTunnelCloudflaredConfigurationError,\n  PutTunnelCloudflaredConfigurationRequest,\n  PutTunnelCloudflaredConfigurationResponse,\n} from \"@distilled.cloud/cloudflare/zero-trust\";\nimport * as zeroTrust from \"@distilled.cloud/cloudflare/zero-trust\";\nimport * as Effect from \"effect/Effect\";\nimport * as Binding from \"../../Binding.ts\";\nimport type { Worker } from \"../Workers/Worker.ts\";\nimport type { CloudflareEnvironment } from \"../CloudflareEnvironment.ts\";\nimport type { RuntimeContext } from \"../../RuntimeContext.ts\";\nimport { type TunnelAuth } from \"./TunnelBinding.ts\";",
+        "2": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport interface WriteTunnel extends Binding.Service<\n  WriteTunnel,\n  \"Cloudflare.Tunnel.WriteTunnel\",\n  () => Effect.Effect<WriteTunnelClient, never, Worker | CloudflareEnvironment>\n> {}\n\nexport const WriteTunnel = Binding.Service<WriteTunnel>(\n  \"Cloudflare.Tunnel.WriteTunnel\",\n);\n\n\nexport type CreateTunnelRequest = Omit<\n  CreateTunnelCloudflaredRequest,\n  \"accountId\"\n>;\n\n\nexport type UpdateTunnelRequest = Omit<\n  PatchTunnelCloudflaredRequest,\n  \"accountId\" | \"tunnelId\"\n>;\n\n\nexport type ConfigurationBody = NonNullable<\n  PutTunnelCloudflaredConfigurationRequest[\"config\"]\n>;",
+        "3": "\n\n\n\n\nexport interface WriteTunnelClient {\n\n  create(\n    request: CreateTunnelRequest,\n  ): Effect.Effect<\n    CreateTunnelCloudflaredResponse,\n    CreateTunnelCloudflaredError,\n    RuntimeContext\n  >;\n\n  update(\n    tunnelId: string,\n    request: UpdateTunnelRequest,\n  ): Effect.Effect<\n    PatchTunnelCloudflaredResponse,\n    PatchTunnelCloudflaredError,\n    RuntimeContext\n  >;\n\n  delete(\n    tunnelId: string,\n  ): Effect.Effect<\n    DeleteTunnelCloudflaredResponse,\n    DeleteTunnelCloudflaredError,\n    RuntimeContext\n  >;",
+        "4": "\n  putConfiguration(\n    tunnelId: string,\n    config: ConfigurationBody,\n  ): Effect.Effect<\n    PutTunnelCloudflaredConfigurationResponse,\n    PutTunnelCloudflaredConfigurationError,\n    RuntimeContext\n  >;\n}\n\n\nexport const writeClient = (auth: TunnelAuth): WriteTunnelClient => {\n  const { authorize } = auth;\n  return {\n    create: Effect.fn(\"Cloudflare.Tunnel.create\")(function* (request) {\n      const accountId = yield* auth.accountId;\n      return yield* authorize(\n        zeroTrust.createTunnelCloudflared({ accountId, ...request }),\n      );\n    }),\n    update: Effect.fn(\"Cloudflare.Tunnel.update\")(\n      function* (tunnelId, request) {\n        const accountId = yield* auth.accountId;\n        return yield* authorize(\n          zeroTrust.patchTunnelCloudflared({ accountId, tunnelId, ...request }),\n        );\n      },\n    ),",
+        "5": "    delete: Effect.fn(\"Cloudflare.Tunnel.delete\")(function* (tunnelId) {\n      const accountId = yield* auth.accountId;\n      return yield* authorize(\n        zeroTrust.deleteTunnelCloudflared({ accountId, tunnelId }),\n      );\n    }),\n    putConfiguration: Effect.fn(\"Cloudflare.Tunnel.putConfiguration\")(\n      function* (tunnelId, config) {\n        const accountId = yield* auth.accountId;\n        return yield* authorize(\n          zeroTrust.putTunnelCloudflaredConfiguration({\n            accountId,\n            tunnelId,\n            config,\n          }),\n        );\n      },\n    ),\n  };\n};\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import type {",
+          "2": "CreateTunnelCloudflaredError,",
+          "3": "CreateTunnelCloudflaredRequest,",
+          "4": "CreateTunnelCloudflaredResponse,",
+          "5": "DeleteTunnelCloudflaredError,",
+          "6": "DeleteTunnelCloudflaredResponse,",
+          "7": "PatchTunnelCloudflaredError,",
+          "8": "PatchTunnelCloudflaredRequest,",
+          "9": "PatchTunnelCloudflaredResponse,",
+          "10": "PutTunnelCloudflaredConfigurationError,",
+          "11": "PutTunnelCloudflaredConfigurationRequest,",
+          "12": "PutTunnelCloudflaredConfigurationResponse,",
+          "13": "} from \"@distilled.cloud/cloudflare/zero-trust\";",
+          "14": "import * as zeroTrust from \"@distilled.cloud/cloudflare/zero-trust\";",
+          "15": "import * as Effect from \"effect/Effect\";",
+          "16": "import * as Binding from \"../../Binding.ts\";",
+          "17": "import type { Worker } from \"../Workers/Worker.ts\";",
+          "18": "import type { CloudflareEnvironment } from \"../CloudflareEnvironment.ts\";",
+          "19": "import type { RuntimeContext } from \"../../RuntimeContext.ts\";",
+          "20": "import { type TunnelAuth } from \"./TunnelBinding.ts\";"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import type {",
+          "2": "CreateTunnelCloudflaredError,",
+          "3": "CreateTunnelCloudflaredRequest,",
+          "4": "CreateTunnelCloudflaredResponse,",
+          "5": "DeleteTunnelCloudflaredError,",
+          "6": "DeleteTunnelCloudflaredResponse,",
+          "7": "PatchTunnelCloudflaredError,",
+          "8": "PatchTunnelCloudflaredRequest,",
+          "9": "PatchTunnelCloudflaredResponse,",
+          "10": "PutTunnelCloudflaredConfigurationError,",
+          "11": "PutTunnelCloudflaredConfigurationRequest,",
+          "12": "PutTunnelCloudflaredConfigurationResponse,",
+          "13": "} from \"@distilled.cloud/cloudflare/zero-trust\";",
+          "14": "import * as zeroTrust from \"@distilled.cloud/cloudflare/zero-trust\";",
+          "15": "import * as Effect from \"effect/Effect\";",
+          "16": "import * as Binding from \"../../Binding.ts\";",
+          "17": "import type { Worker } from \"../Workers/Worker.ts\";",
+          "18": "import type { CloudflareEnvironment } from \"../CloudflareEnvironment.ts\";",
+          "19": "import type { RuntimeContext } from \"../../RuntimeContext.ts\";",
+          "20": "import { type TunnelAuth } from \"./TunnelBinding.ts\";"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "73": "export interface WriteTunnel extends Binding.Service<",
+          "74": "WriteTunnel,",
+          "75": "\"Cloudflare.Tunnel.WriteTunnel\",",
+          "76": "() => Effect.Effect<WriteTunnelClient, never, Worker | CloudflareEnvironment>",
+          "77": "> {}",
+          "79": "export const WriteTunnel = Binding.Service<WriteTunnel>(",
+          "80": "\"Cloudflare.Tunnel.WriteTunnel\",",
+          "81": ");",
+          "84": "export type CreateTunnelRequest = Omit<",
+          "85": "CreateTunnelCloudflaredRequest,",
+          "86": "\"accountId\"",
+          "87": ">;",
+          "90": "export type UpdateTunnelRequest = Omit<",
+          "91": "PatchTunnelCloudflaredRequest,",
+          "92": "\"accountId\" | \"tunnelId\"",
+          "93": ">;",
+          "96": "export type ConfigurationBody = NonNullable<",
+          "97": "PutTunnelCloudflaredConfigurationRequest[\"config\"]",
+          "98": ">;"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "73": "export interface WriteTunnel extends Binding.Service<",
+          "74": "WriteTunnel,",
+          "75": "\"Cloudflare.Tunnel.WriteTunnel\",",
+          "76": "() => Effect.Effect<WriteTunnelClient, never, Worker | CloudflareEnvironment>",
+          "77": "> {}",
+          "79": "export const WriteTunnel = Binding.Service<WriteTunnel>(",
+          "80": "\"Cloudflare.Tunnel.WriteTunnel\",",
+          "81": ");",
+          "84": "export type CreateTunnelRequest = Omit<",
+          "85": "CreateTunnelCloudflaredRequest,",
+          "86": "\"accountId\"",
+          "87": ">;",
+          "90": "export type UpdateTunnelRequest = Omit<",
+          "91": "PatchTunnelCloudflaredRequest,",
+          "92": "\"accountId\" | \"tunnelId\"",
+          "93": ">;",
+          "96": "export type ConfigurationBody = NonNullable<",
+          "97": "PutTunnelCloudflaredConfigurationRequest[\"config\"]",
+          "98": ">;"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "104": "export interface WriteTunnelClient {",
+          "106": "create(",
+          "107": "request: CreateTunnelRequest,",
+          "108": "): Effect.Effect<",
+          "109": "CreateTunnelCloudflaredResponse,",
+          "110": "CreateTunnelCloudflaredError,",
+          "111": "RuntimeContext",
+          "112": ">;",
+          "114": "update(",
+          "115": "tunnelId: string,",
+          "116": "request: UpdateTunnelRequest,",
+          "117": "): Effect.Effect<",
+          "118": "PatchTunnelCloudflaredResponse,",
+          "119": "PatchTunnelCloudflaredError,",
+          "120": "RuntimeContext",
+          "121": ">;",
+          "123": "delete(",
+          "124": "tunnelId: string,",
+          "125": "): Effect.Effect<",
+          "126": "DeleteTunnelCloudflaredResponse,",
+          "127": "DeleteTunnelCloudflaredError,",
+          "128": "RuntimeContext",
+          "129": ">;"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "104": "export interface WriteTunnelClient {",
+          "106": "create(",
+          "107": "request: CreateTunnelRequest,",
+          "108": "): Effect.Effect<",
+          "109": "CreateTunnelCloudflaredResponse,",
+          "110": "CreateTunnelCloudflaredError,",
+          "111": "RuntimeContext",
+          "112": ">;",
+          "114": "update(",
+          "115": "tunnelId: string,",
+          "116": "request: UpdateTunnelRequest,",
+          "117": "): Effect.Effect<",
+          "118": "PatchTunnelCloudflaredResponse,",
+          "119": "PatchTunnelCloudflaredError,",
+          "120": "RuntimeContext",
+          "121": ">;",
+          "123": "delete(",
+          "124": "tunnelId: string,",
+          "125": "): Effect.Effect<",
+          "126": "DeleteTunnelCloudflaredResponse,",
+          "127": "DeleteTunnelCloudflaredError,",
+          "128": "RuntimeContext",
+          "129": ">;"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "131": "putConfiguration(",
+          "132": "tunnelId: string,",
+          "133": "config: ConfigurationBody,",
+          "134": "): Effect.Effect<",
+          "135": "PutTunnelCloudflaredConfigurationResponse,",
+          "136": "PutTunnelCloudflaredConfigurationError,",
+          "137": "RuntimeContext",
+          "138": ">;",
+          "139": "}",
+          "142": "export const writeClient = (auth: TunnelAuth): WriteTunnelClient => {",
+          "143": "const { authorize } = auth;",
+          "144": "return {",
+          "145": "create: Effect.fn(\"Cloudflare.Tunnel.create\")(function* (request) {",
+          "146": "const accountId = yield* auth.accountId;",
+          "147": "return yield* authorize(",
+          "148": "zeroTrust.createTunnelCloudflared({ accountId, ...request }),",
+          "149": ");",
+          "150": "}),",
+          "151": "update: Effect.fn(\"Cloudflare.Tunnel.update\")(",
+          "152": "function* (tunnelId, request) {",
+          "153": "const accountId = yield* auth.accountId;",
+          "154": "return yield* authorize(",
+          "155": "zeroTrust.patchTunnelCloudflared({ accountId, tunnelId, ...request }),",
+          "156": ");",
+          "157": "},",
+          "158": "),"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "131": "putConfiguration(",
+          "132": "tunnelId: string,",
+          "133": "config: ConfigurationBody,",
+          "134": "): Effect.Effect<",
+          "135": "PutTunnelCloudflaredConfigurationResponse,",
+          "136": "PutTunnelCloudflaredConfigurationError,",
+          "137": "RuntimeContext",
+          "138": ">;",
+          "139": "}",
+          "142": "export const writeClient = (auth: TunnelAuth): WriteTunnelClient => {",
+          "143": "const { authorize } = auth;",
+          "144": "return {",
+          "145": "create: Effect.fn(\"Cloudflare.Tunnel.create\")(function* (request) {",
+          "146": "const accountId = yield* auth.accountId;",
+          "147": "return yield* authorize(",
+          "148": "zeroTrust.createTunnelCloudflared({ accountId, ...request }),",
+          "149": ");",
+          "150": "}),",
+          "151": "update: Effect.fn(\"Cloudflare.Tunnel.update\")(",
+          "152": "function* (tunnelId, request) {",
+          "153": "const accountId = yield* auth.accountId;",
+          "154": "return yield* authorize(",
+          "155": "zeroTrust.patchTunnelCloudflared({ accountId, tunnelId, ...request }),",
+          "156": ");",
+          "157": "},",
+          "158": "),"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "159": "delete: Effect.fn(\"Cloudflare.Tunnel.delete\")(function* (tunnelId) {",
+          "160": "const accountId = yield* auth.accountId;",
+          "161": "return yield* authorize(",
+          "162": "zeroTrust.deleteTunnelCloudflared({ accountId, tunnelId }),",
+          "163": ");",
+          "164": "}),",
+          "165": "putConfiguration: Effect.fn(\"Cloudflare.Tunnel.putConfiguration\")(",
+          "166": "function* (tunnelId, config) {",
+          "167": "const accountId = yield* auth.accountId;",
+          "168": "return yield* authorize(",
+          "169": "zeroTrust.putTunnelCloudflaredConfiguration({",
+          "170": "accountId,",
+          "171": "tunnelId,",
+          "172": "config,",
+          "173": "}),",
+          "174": ");",
+          "175": "},",
+          "176": "),",
+          "177": "};",
+          "178": "};"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "159": "delete: Effect.fn(\"Cloudflare.Tunnel.delete\")(function* (tunnelId) {",
+          "160": "const accountId = yield* auth.accountId;",
+          "161": "return yield* authorize(",
+          "162": "zeroTrust.deleteTunnelCloudflared({ accountId, tunnelId }),",
+          "163": ");",
+          "164": "}),",
+          "165": "putConfiguration: Effect.fn(\"Cloudflare.Tunnel.putConfiguration\")(",
+          "166": "function* (tunnelId, config) {",
+          "167": "const accountId = yield* auth.accountId;",
+          "168": "return yield* authorize(",
+          "169": "zeroTrust.putTunnelCloudflaredConfiguration({",
+          "170": "accountId,",
+          "171": "tunnelId,",
+          "172": "config,",
+          "173": "}),",
+          "174": ");",
+          "175": "},",
+          "176": "),",
+          "177": "};",
+          "178": "};"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

@@ -37,30 +37,35 @@ const failed = (what: string) => (cause: unknown) =>
 const cloned = (source: Source) =>
   Effect.acquireRelease(
     Effect.tryPromise({
-      try: async () => {
-        const directory = await mkdtemp(join(tmpdir(), "adhere-install-"));
-        const branch = source.ref === undefined ? [] : ["--branch", source.ref];
-        const url = `https://github.com/${source.repo}.git`;
-        await new Promise<void>((resolve, reject) => {
-          let stderr = "";
-          spawn("git", ["clone", "--quiet", "--depth", "1", ...branch, url, directory], {
-            stdio: ["inherit", "ignore", "pipe"],
-          })
-            .on("error", reject)
-            .on("exit", (code) =>
-              code === 0
-                ? resolve()
-                : reject(new Error(stderr.trim() || `git exited with ${code}`)),
-            )
-            .stderr?.on("data", (chunk) => {
-              stderr += chunk;
-            });
-        });
-        return directory;
-      },
-      catch: failed(`Could not clone ${source.repo}`),
+      try: () => mkdtemp(join(tmpdir(), "adhere-install-")),
+      catch: failed(`Could not create a temporary directory for ${source.repo}`),
     }),
     (directory) => Effect.promise(() => rm(directory, { recursive: true, force: true })),
+  ).pipe(
+    Effect.tap((directory) =>
+      Effect.tryPromise({
+        try: async () => {
+          const branch = source.ref === undefined ? [] : ["--branch", source.ref];
+          const url = `https://github.com/${source.repo}.git`;
+          await new Promise<void>((resolve, reject) => {
+            let stderr = "";
+            spawn("git", ["clone", "--quiet", "--depth", "1", ...branch, url, directory], {
+              stdio: ["inherit", "ignore", "pipe"],
+            })
+              .on("error", reject)
+              .on("exit", (code) =>
+                code === 0
+                  ? resolve()
+                  : reject(new Error(stderr.trim() || `git exited with ${code}`)),
+              )
+              .stderr?.on("data", (chunk) => {
+                stderr += chunk;
+              });
+          });
+        },
+        catch: failed(`Could not clone ${source.repo}`),
+      }),
+    ),
   );
 
 /**
@@ -103,7 +108,8 @@ export const listRules = (source: Source) =>
       const rules = yield* rulesIn(source, yield* cloned(source));
       return yield* Effect.forEach(rules, ({ id, name, directory }) =>
         Effect.gen(function* () {
-          if (name === "RULE.ts") return { id, description: "(TypeScript, which list does not run)" };
+          if (name === "RULE.ts")
+            return { id, description: "(TypeScript, which list does not run)" };
           const text = yield* Effect.tryPromise({
             try: () => readFile(join(directory, name), "utf8"),
             catch: failed(`Could not read ${id}`),

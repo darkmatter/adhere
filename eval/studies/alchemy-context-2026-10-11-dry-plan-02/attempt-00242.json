@@ -1,0 +1,49 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/StepFunctions/Activity.ts",
+  "kind": "judge",
+  "ordinal": 242,
+  "artifact": "attempt-00242.json",
+  "started": "2026-10-11T03:20:43.866Z",
+  "estimatedTokens": 3427,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.06906000000162749,
+  "referencesPresent": false,
+  "bodyDigest": "36c3a435618355aa1fd0d9246e3f38a99c41e51bdb2643854264b4e815be9f8b",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as sfn from \"@distilled.cloud/aws/sfn\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, diffTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface ActivityProps {\n\n\n\n\n\n\n  activityName?: string;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "2": "\nexport interface Activity extends Resource<\n  \"AWS.StepFunctions.Activity\",\n  ActivityProps,\n  {\n\n\n\n    activityName: string;\n\n\n\n\n    activityArn: string;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Activity = Resource<Activity>(\"AWS.StepFunctions.Activity\");\n\nconst toSfnTags = (tags: Record<string, string>): sfn.Tag[] =>\n  Object.entries(tags).map(([key, value]) => ({ key, value }));\n\nconst fromSfnTags = (\n  tags: ReadonlyArray<sfn.Tag> | undefined,\n): Record<string, string> =>\n  Object.fromEntries(\n    (tags ?? [])\n      .filter(\n        (tag): tag is { key: string; value: string } =>\n          typeof tag.key === \"string\" && typeof tag.value === \"string\",\n      )\n      .map((tag) => [tag.key, tag.value]),\n  );\n\nexport const ActivityProvider = () =>\n  Provider.effect(\n    Activity,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: Pick<ActivityProps, \"activityName\">,\n      ) {\n        return (\n          props.activityName ??\n          (yield* createPhysicalName({ id, maxLength: 80 }))\n        );\n      });",
+        "4": "\n      const activityArnOf = (region: string, accountId: string, name: string) =>\n        `arn:aws:states:${region}:${accountId}:activity:${name}`;\n\n      const describeOrUndefined = Effect.fn(function* (activityArn: string) {\n        return yield* sfn\n          .describeActivity({ activityArn })\n          .pipe(\n            Effect.catchTag(\"ActivityDoesNotExist\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n      });\n\n      const fetchObservedTags = Effect.fn(function* (resourceArn: string) {\n        return yield* sfn.listTagsForResource({ resourceArn }).pipe(\n          Effect.map((r) => fromSfnTags(r.tags)),\n          Effect.catchTag(\"ResourceNotFound\", () =>\n            Effect.succeed({} as Record<string, string>),\n          ),\n        );\n      });\n\n      return Activity.Provider.of({\n        stables: [\"activityName\", \"activityArn\"],",
+        "5": "\n        list: () =>\n          Effect.gen(function* () {\n            const pages = yield* sfn.listActivities\n              .pages({})\n              .pipe(Stream.runCollect);\n            return Array.from(pages)\n              .flatMap((page) => page.activities ?? [])\n              .map((activity) => ({\n                activityName: activity.name,\n                activityArn: activity.activityArn,\n              }));\n          }),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name =\n            output?.activityName ?? (yield* createName(id, olds ?? {}));\n          const activityArn =\n            output?.activityArn ?? activityArnOf(region, accountId, name);\n          const found = yield* describeOrUndefined(activityArn);\n          if (!found) return undefined;\n          const attrs = {\n            activityName: found.name,\n            activityArn: found.activityArn,\n          };\n          const tags = yield* fetchObservedTags(activityArn);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),",
+        "6": "\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds ?? {});\n          const newName = yield* createName(id, news ?? {});\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n\n\n          const props = news ?? {};\n          const name = output?.activityName ?? (yield* createName(id, props));\n          const activityArn = activityArnOf(region, accountId, name);\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...props.tags, ...internalTags };\n\n\n          const observed = yield* describeOrUndefined(activityArn);",
+        "7": "\n\n\n\n\n          if (observed === undefined) {\n            yield* sfn\n              .createActivity({ name, tags: toSfnTags(desiredTags) })\n              .pipe(\n                Effect.catchTag(\"ActivityAlreadyExists\", () => Effect.void),\n              );\n          }\n\n\n\n          const observedTags = yield* fetchObservedTags(activityArn);\n          const { upsert, removed } = diffTags(observedTags, desiredTags);\n          if (upsert.length > 0) {\n            yield* sfn.tagResource({\n              resourceArn: activityArn,\n              tags: upsert.map(({ Key, Value }) => ({\n                key: Key,\n                value: Value,\n              })),\n            });\n          }\n          if (removed.length > 0) {\n            yield* sfn.untagResource({\n              resourceArn: activityArn,\n              tagKeys: removed,\n            });\n          }\n\n          yield* session.note(activityArn);",
+        "8": "          return { activityName: name, activityArn };\n        }),\n\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* sfn.deleteActivity({ activityArn: output.activityArn });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

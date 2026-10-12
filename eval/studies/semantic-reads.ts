@@ -11,7 +11,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { isNote, withoutComments } from "#comments.ts";
-import { type ReadState, type Rules } from "#config.ts";
+import {
+  DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+  DEFAULT_MAX_SYMBOL_LENGTH,
+  type ReadState,
+  type Rules,
+} from "#config.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { priceOf } from "#pricing.ts";
 import { CredentialsLive } from "#services/Credentials.ts";
@@ -26,7 +31,7 @@ import { contextCases, type ContextCase } from "./semantic-reads-cases.ts";
 
 const MODEL = "jev-1.13.0";
 const THRESHOLD = 0.8;
-const CONTEXT_FORMAT = "compiler-types-declaration-scopes-v1";
+const CONTEXT_FORMAT = "compiler-types-flat-declaration-scopes-v2";
 const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const CASE_DIGEST = digest(contextCases);
 const definitions = [
@@ -249,6 +254,8 @@ const program = Effect.gen(function* () {
         symbols: true,
         references: true,
         includeComments: false,
+        maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+        maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
       }),
     ).pipe(Effect.provide(SourceReadsLive(directory)))) as SourceReadState;
     assert(state.symbols, "Native provider must return requested compiler type/docs strings");
@@ -272,12 +279,10 @@ const program = Effect.gen(function* () {
       state.references,
       helper
         ? {
-            [helper]: {
-              "neighbor.ts": sample.files["neighbor.ts"]!.slice(
-                0,
-                sample.files["neighbor.ts"]!.indexOf("\n}") + 2,
-              ),
-            },
+            [`${helper}:neighbor.ts`]: sample.files["neighbor.ts"]!.slice(
+              0,
+              sample.files["neighbor.ts"]!.indexOf("\n}") + 2,
+            ),
           }
         : {},
       `${sample.name}: expected the complete helper declaration without neighboring functions or location/count metadata`,
@@ -349,12 +354,7 @@ const program = Effect.gen(function* () {
           [...new Set(Object.values(contexts[sample.name]!.references!).flatMap(Object.keys))].join(
             ", ",
           ),
-          String(
-            Object.values(contexts[sample.name]!.references!).reduce(
-              (n, paths) => n + Object.keys(paths).length,
-              0,
-            ),
-          ),
+          String(Object.keys(contexts[sample.name]!.references!).length),
           sample.note,
         ]),
       ),

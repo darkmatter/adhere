@@ -1,0 +1,275 @@
+{
+  "arm": "symbols+references",
+  "file": "packages/alchemy/src/Cloudflare/SecretsStore/LocalSecretsStoreGateway.ts",
+  "kind": "locate",
+  "ordinal": 83,
+  "artifact": "attempt-00083.json",
+  "started": "2026-10-11T03:20:36.386Z",
+  "estimatedTokens": 6958,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.11193999999886728,
+  "referencesPresent": true,
+  "bodyDigest": "e22a4b659387ad6f14fb4f3001db99646d619dae228b2db6fcad48703b9e1ff5",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "19",
+    "end:providers/idempotent-delete:1": "19",
+    "start:providers/idempotent-delete:2": "40",
+    "end:providers/idempotent-delete:2": "40",
+    "start:providers/idempotent-delete:3": "56",
+    "end:providers/idempotent-delete:3": "56",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "admin": "```typescript\n(props: { binding: string; storeId: string; }) => import(\"@alchemy.run/cloudflare-runtime/core\").BindingHook<SecretsStore.SecretsStore>\n```\n\nBind a local Secrets Store *store* as a raw KV namespace\n(`env.<binding>.put(secretName, value)` / `.",
+        "binding": "```typescript\nstring\n```",
+        "bindings": "```typescript\nimport(\"@alchemy.run/cloudflare-runtime/core\").BindingHook<SecretsStore.SecretsStore>[]\n```",
+        "catch": "```typescript\n(cause: unknown) => LocalSecretsStoreError\n```",
+        "cause": "```typescript\nunknown\n```",
+        "Data": "```typescript\ntypeof Data\n```",
+        "delete": "```typescript\n(key: string) => Promise<void>\n```",
+        "deleteLocalSecret": "```typescript\n(storeId: string, secretName: string) => Effect.Effect<void, LocalSecretsStoreError | import(\"@alchemy.run/cloudflare-runtime/core\").RuntimeError, import(\"@alchemy.run/cloudflare-runtime/core\").Runtime | SecretsStore.SecretsStore>\n```\n\nRemove",
+        "Effect": "The `Effect` interface defines a value that lazily describes a workflow or\njob. The workflow requires some context `R`, and may fail with an error of\ntype `E`, or succeed with a value of type `A`.\n\n**When to use**\n\nUse when you need to represent a lazy, co",
+        "env": "```typescript\nRecord<string, unknown>\n```\n\nEnvironment object containing the instance's bindings.",
+        "gatewayName": "```typescript\n(prefix: string, id: string) => string\n```\n\nSanitize an id into a workerd instance-name-safe suffix.",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "LocalSecretsStoreError": "```typescript\ntypeof LocalSecretsStoreError\n```",
+        "message": "```typescript\nstring\n```",
+        "name": "```typescript\nstring\n```",
+        "open": "```typescript\n<B extends import(\"@alchemy.run/cloudflare-runtime/core\").BindingHooks, Env = Record<string, unknown>>(options: import(\"@alchemy.run/cloudflare-runtime/core/platform-proxy\").PlatformProxyOptions<B>) => Effect.Effect<import(\"@alchemy.run/cloud",
+        "proxy": "```typescript\nimport(\"@alchemy.run/cloudflare-runtime/core/platform-proxy\").PlatformProxyInstance<Record<string, unknown>>\n```",
+        "put": "```typescript\n(key: string, value: string | ArrayBuffer | ArrayBufferView | runtime.ReadableStream, options?: runtime.KVNamespacePutOptions) => Promise<void>\n```",
+        "scoped": "```typescript\n<A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E, Exclude<R, import(\"effect/Scope\").Scope>>\n```\n\nRuns an effect with a scope that closes when the effect completes.\n\n**When to use**\n\nUse to acquire scoped resources for the duratio",
+        "secretName": "```typescript\nstring\n```",
+        "SecretsStore": "```typescript\ntypeof SecretsStore\n```",
+        "seedLocalSecret": "```typescript\n(storeId: string, secretName: string, value: string) => Effect.Effect<void, LocalSecretsStoreError | import(\"@alchemy.run/cloudflare-runtime/core\").RuntimeError, import(\"@alchemy.run/cloudflare-runtime/core\").Runtime | SecretsStore.SecretsSto",
+        "store": "```typescript\nruntime.KVNamespace<string>\n```",
+        "storeId": "```typescript\nstring\n```",
+        "TaggedError": "```typescript\n<Tag extends string>(tag: Tag) => new <A extends Record<string, any> = {}>(args: import(\"effect/Types\").VoidIfEmpty<{ readonly [P in keyof A as P extends \"_tag\" ? never : P]: A[P]; }>) => import(\"effect/Cause\").YieldableError & { readonly _ta",
+        "try": "```typescript\n() => Promise<void>\n```",
+        "tryPromise": "```typescript\n{ <A>(options: (signal: AbortSignal) => PromiseLike<A>): Effect.Effect<A, import(\"effect/Cause\").UnknownError>; <A, E>(options: { readonly try: (signal: AbortSignal) => PromiseLike<A>; readonly catch: (error: unknown) => E; }): Effect.Effect<",
+        "use": "```typescript\n(store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>\n```",
+        "value": "```typescript\nstring\n```",
+        "withLocalSecretsStore": "```typescript\n<A, E, R>(storeId: string, use: (store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>) => Effect.Effect<A, E | import(\"@alchemy.run/cloudflare-runtime/core\").RuntimeError, import(\"@alchemy.run/cloudflare-runtime/core\").Runtime | Secr"
+      },
+      "references": {
+        "__comment": "Declarations of symbols used in `code`. Each key is `symbol:pathname`: the symbol name as used in `code` followed by its repository-relative declaration path. Each value is a complete declaration excerpt.",
+        "gatewayName:packages/alchemy/src/Cloudflare/LocalGateway.ts": "export const gatewayName = (prefix: string, id: string) =>\n  `${prefix}-${id.replace(/[^a-zA-Z0-9_-]/g, \"-\")}`;"
+      },
+      "code": {
+        "1": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nimport type * as runtime from \"@cloudflare/workers-types\";\nimport { SecretsStore } from \"@alchemy.run/cloudflare-runtime/core/bindings\";\nimport { open } from \"@alchemy.run/cloudflare-runtime/core/platform-proxy\";\nimport * as Data from \"effect/Data\";\nimport * as Effect from \"effect/Effect\";\nimport { gatewayName } from \"../LocalGateway.ts\";\n\nexport class LocalSecretsStoreError extends Data.TaggedError(\n  \"LocalSecretsStoreError\",\n)<{\n  message: string;\n  cause?: unknown;\n}> {}\n\n\n\n\n\n\n\nexport const withLocalSecretsStore = <A, E, R>(",
+        "2": "  storeId: string,\n  use: (store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>,\n) =>\n  Effect.scoped(\n    Effect.gen(function* () {\n      const proxy = yield* open({\n        name: gatewayName(\"alchemy-secrets-store-gateway\", storeId),\n        bindings: [SecretsStore.admin({ binding: \"STORE\", storeId })],\n      });\n      const store = (proxy.env as Record<string, unknown>)\n        .STORE as runtime.KVNamespace<string>;\n      return yield* use(store);\n    }),\n  );",
+        "3": "\n\nexport const seedLocalSecret = (\n  storeId: string,\n  secretName: string,\n  value: string,\n) =>\n  withLocalSecretsStore(storeId, (store) =>\n    Effect.tryPromise({\n      try: () => store.put(secretName, value),\n      catch: (cause) =>\n        new LocalSecretsStoreError({\n          message: `Failed to seed secret \"${secretName}\" into the local Secrets Store`,\n          cause,\n        }),\n    }),\n  );\n\n\nexport const deleteLocalSecret = (storeId: string, secretName: string) =>\n  withLocalSecretsStore(storeId, (store) =>\n    Effect.tryPromise({\n      try: () => store.delete(secretName),\n      catch: (cause) =>\n        new LocalSecretsStoreError({\n          message: `Failed to delete secret \"${secretName}\" from the local Secrets Store`,\n          cause,\n        }),\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "19": "import type * as runtime from \"@cloudflare/workers-types\";",
+          "20": "import { SecretsStore } from \"@alchemy.run/cloudflare-runtime/core/bindings\";",
+          "21": "import { open } from \"@alchemy.run/cloudflare-runtime/core/platform-proxy\";",
+          "22": "import * as Data from \"effect/Data\";",
+          "23": "import * as Effect from \"effect/Effect\";",
+          "24": "import { gatewayName } from \"../LocalGateway.ts\";",
+          "26": "export class LocalSecretsStoreError extends Data.TaggedError(",
+          "27": "\"LocalSecretsStoreError\",",
+          "28": ")<{",
+          "29": "message: string;",
+          "30": "cause?: unknown;",
+          "31": "}> {}",
+          "39": "export const withLocalSecretsStore = <A, E, R>("
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "19": "import type * as runtime from \"@cloudflare/workers-types\";",
+          "20": "import { SecretsStore } from \"@alchemy.run/cloudflare-runtime/core/bindings\";",
+          "21": "import { open } from \"@alchemy.run/cloudflare-runtime/core/platform-proxy\";",
+          "22": "import * as Data from \"effect/Data\";",
+          "23": "import * as Effect from \"effect/Effect\";",
+          "24": "import { gatewayName } from \"../LocalGateway.ts\";",
+          "26": "export class LocalSecretsStoreError extends Data.TaggedError(",
+          "27": "\"LocalSecretsStoreError\",",
+          "28": ")<{",
+          "29": "message: string;",
+          "30": "cause?: unknown;",
+          "31": "}> {}",
+          "39": "export const withLocalSecretsStore = <A, E, R>("
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "40": "storeId: string,",
+          "41": "use: (store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>,",
+          "42": ") =>",
+          "43": "Effect.scoped(",
+          "44": "Effect.gen(function* () {",
+          "45": "const proxy = yield* open({",
+          "46": "name: gatewayName(\"alchemy-secrets-store-gateway\", storeId),",
+          "47": "bindings: [SecretsStore.admin({ binding: \"STORE\", storeId })],",
+          "48": "});",
+          "49": "const store = (proxy.env as Record<string, unknown>)",
+          "50": ".STORE as runtime.KVNamespace<string>;",
+          "51": "return yield* use(store);",
+          "52": "}),",
+          "53": ");"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "40": "storeId: string,",
+          "41": "use: (store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>,",
+          "42": ") =>",
+          "43": "Effect.scoped(",
+          "44": "Effect.gen(function* () {",
+          "45": "const proxy = yield* open({",
+          "46": "name: gatewayName(\"alchemy-secrets-store-gateway\", storeId),",
+          "47": "bindings: [SecretsStore.admin({ binding: \"STORE\", storeId })],",
+          "48": "});",
+          "49": "const store = (proxy.env as Record<string, unknown>)",
+          "50": ".STORE as runtime.KVNamespace<string>;",
+          "51": "return yield* use(store);",
+          "52": "}),",
+          "53": ");"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "56": "export const seedLocalSecret = (",
+          "57": "storeId: string,",
+          "58": "secretName: string,",
+          "59": "value: string,",
+          "60": ") =>",
+          "61": "withLocalSecretsStore(storeId, (store) =>",
+          "62": "Effect.tryPromise({",
+          "63": "try: () => store.put(secretName, value),",
+          "64": "catch: (cause) =>",
+          "65": "new LocalSecretsStoreError({",
+          "66": "message: `Failed to seed secret \"${secretName}\" into the local Secrets Store`,",
+          "67": "cause,",
+          "68": "}),",
+          "69": "}),",
+          "70": ");",
+          "73": "export const deleteLocalSecret = (storeId: string, secretName: string) =>",
+          "74": "withLocalSecretsStore(storeId, (store) =>",
+          "75": "Effect.tryPromise({",
+          "76": "try: () => store.delete(secretName),",
+          "77": "catch: (cause) =>",
+          "78": "new LocalSecretsStoreError({",
+          "79": "message: `Failed to delete secret \"${secretName}\" from the local Secrets Store`,",
+          "80": "cause,",
+          "81": "}),",
+          "82": "}),",
+          "83": ");"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "56": "export const seedLocalSecret = (",
+          "57": "storeId: string,",
+          "58": "secretName: string,",
+          "59": "value: string,",
+          "60": ") =>",
+          "61": "withLocalSecretsStore(storeId, (store) =>",
+          "62": "Effect.tryPromise({",
+          "63": "try: () => store.put(secretName, value),",
+          "64": "catch: (cause) =>",
+          "65": "new LocalSecretsStoreError({",
+          "66": "message: `Failed to seed secret \"${secretName}\" into the local Secrets Store`,",
+          "67": "cause,",
+          "68": "}),",
+          "69": "}),",
+          "70": ");",
+          "73": "export const deleteLocalSecret = (storeId: string, secretName: string) =>",
+          "74": "withLocalSecretsStore(storeId, (store) =>",
+          "75": "Effect.tryPromise({",
+          "76": "try: () => store.delete(secretName),",
+          "77": "catch: (cause) =>",
+          "78": "new LocalSecretsStoreError({",
+          "79": "message: `Failed to delete secret \"${secretName}\" from the local Secrets Store`,",
+          "80": "cause,",
+          "81": "}),",
+          "82": "}),",
+          "83": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols` and `references`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` and `references` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` and `references` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

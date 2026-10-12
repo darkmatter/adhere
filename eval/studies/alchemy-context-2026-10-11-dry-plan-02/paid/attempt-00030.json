@@ -1,0 +1,57 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/AutoScaling/ScheduledAction.ts",
+  "kind": "judge",
+  "ordinal": 30,
+  "artifact": "attempt-00030.json",
+  "started": "2026-10-11T03:27:21.918Z",
+  "estimatedTokens": 4161,
+  "reservedTokens": 64000,
+  "chargedTokens": 2619,
+  "outcome": "answered",
+  "milliseconds": 77.77913799999988,
+  "referencesPresent": false,
+  "bodyDigest": "e7c815ed75f48df34777dda29c920c41c7ed089f8bf6a162cf8b45ff86e53402",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.83}},\"usage\":{\"input_tokens\":2619,\"output_tokens\":25}}",
+  "inputTokens": 2619,
+  "answers": {
+    "providers/idempotent-delete": 0.83
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as autoscaling from \"@distilled.cloud/aws/auto-scaling\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { deepEqual, isResolved } from \"../../Diff.ts\";\nimport type { Input } from \"../../Input.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport type { AutoScalingGroup as AutoScalingGroupResource } from \"./AutoScalingGroup.ts\";\n\nexport type ScheduledActionName = string;\n\nexport interface ScheduledActionProps {\n\n\n\n  scheduledActionName?: string;\n\n\n\n  autoScalingGroup: Input<string> | AutoScalingGroupResource;\n\n\n\n\n  recurrence?: string;",
+        "2": "\n\n\n\n  startTime?: string;\n\n\n\n  endTime?: string;\n\n\n\n  timeZone?: string;\n\n\n\n  minSize?: number;\n\n\n\n  maxSize?: number;\n\n\n\n  desiredCapacity?: number;\n}\n\nexport interface ScheduledAction extends Resource<\n  \"AWS.AutoScaling.ScheduledAction\",\n  ScheduledActionProps,",
+        "3": "  {\n\n\n\n    scheduledActionName: ScheduledActionName;\n\n\n\n    scheduledActionARN: string;\n\n\n\n    autoScalingGroupName: string;\n\n\n\n    recurrence?: string;\n\n\n\n    startTime?: string;\n\n\n\n    endTime?: string;\n\n\n\n    timeZone?: string;",
+        "4": "\n\n\n    minSize?: number;\n\n\n\n    maxSize?: number;\n\n\n\n    desiredCapacity?: number;\n  },\n  never,\n  Providers\n> {}",
+        "5": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ScheduledAction = Resource<ScheduledAction>(\n  \"AWS.AutoScaling.ScheduledAction\",\n);\n\n\n\nconst toAutoScalingGroupName = (\n  input: ScheduledActionProps[\"autoScalingGroup\"] | undefined,\n): string | undefined =>\n  typeof input === \"string\"\n    ? input\n    : typeof (input as { autoScalingGroupName?: unknown } | undefined)\n          ?.autoScalingGroupName === \"string\"\n      ? (input as unknown as { autoScalingGroupName: string })\n          .autoScalingGroupName\n      : undefined;\n\nexport const ScheduledActionProvider = () =>\n  Provider.effect(\n    ScheduledAction,\n    Effect.gen(function* () {\n      const toName = (\n        id: string,\n        props: { scheduledActionName?: string } = {},\n      ) =>\n        props.scheduledActionName\n          ? Effect.succeed(props.scheduledActionName)\n          : createPhysicalName({ id, maxLength: 255, lowercase: true });",
+        "6": "\n      const describeAction = ({\n        autoScalingGroupName,\n        scheduledActionName,\n      }: {\n        autoScalingGroupName: string | undefined;\n        scheduledActionName: string;\n      }) =>\n        autoscaling\n          .describeScheduledActions({\n            AutoScalingGroupName: autoScalingGroupName,\n            ScheduledActionNames: [scheduledActionName],\n          } as any)\n          .pipe(\n            Effect.map((result) => result.ScheduledUpdateGroupActions?.[0]),\n\n\n\n\n            Effect.catchTag(\"AutoScalingGroupNotFound\", () =>\n              Effect.succeed(undefined),\n            ),\n          );",
+        "7": "\n      const toAttributes = (\n        action: autoscaling.ScheduledUpdateGroupAction,\n      ): ScheduledAction[\"Attributes\"] => ({\n        scheduledActionName: action.ScheduledActionName!,\n        scheduledActionARN: action.ScheduledActionARN!,\n        autoScalingGroupName: action.AutoScalingGroupName!,\n        recurrence: action.Recurrence,\n        startTime: action.StartTime\n          ? new Date(action.StartTime).toISOString()\n          : undefined,\n        endTime: action.EndTime\n          ? new Date(action.EndTime).toISOString()\n          : undefined,\n        timeZone: action.TimeZone,\n        minSize: action.MinSize,\n        maxSize: action.MaxSize,\n        desiredCapacity: action.DesiredCapacity,\n      });\n\n      return {\n        stables: [\n          \"scheduledActionName\",\n          \"scheduledActionARN\",\n          \"autoScalingGroupName\",\n        ],",
+        "8": "\n\n\n        list: () =>\n          autoscaling.describeScheduledActions.pages({} as any).pipe(\n            Stream.runCollect,\n            Effect.map((chunk) =>\n              Array.from(chunk).flatMap((page) =>\n                (page.ScheduledUpdateGroupActions ?? []).map(toAttributes),\n              ),\n            ),\n          ),",
+        "9": "        diff: Effect.fn(function* ({ id, olds, news: _news }) {\n          if (!isResolved(_news)) return undefined;\n          const news = _news as typeof olds;\n          const oldName = yield* toName(id, olds ?? {});\n          const newName = yield* toName(id, news ?? {});\n          const oldGroup = toAutoScalingGroupName(olds.autoScalingGroup);\n          const newGroup = toAutoScalingGroupName(news.autoScalingGroup);\n          if (\n            oldName !== newName ||\n            (oldGroup !== undefined &&\n              newGroup !== undefined &&\n              oldGroup !== newGroup)\n          ) {\n            return { action: \"replace\" } as const;\n          }\n\n          if (!deepEqual(olds, news)) {\n            return {\n              action: \"update\",\n              stables: [\n                \"scheduledActionName\",\n                \"scheduledActionARN\",\n                \"autoScalingGroupName\",\n              ],\n            } as const;\n          }\n        }),",
+        "10": "        read: Effect.fn(function* ({ id, olds, output }) {\n          const autoScalingGroupName =\n            output?.autoScalingGroupName ??\n            toAutoScalingGroupName(olds?.autoScalingGroup);\n          const scheduledActionName =\n            output?.scheduledActionName ?? (yield* toName(id, olds ?? {}));\n          const action = yield* describeAction({\n            autoScalingGroupName,\n            scheduledActionName,\n          });\n          return action ? toAttributes(action) : undefined;\n        }),\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const autoScalingGroupName =\n            output?.autoScalingGroupName ??\n            toAutoScalingGroupName(news.autoScalingGroup);\n          if (!autoScalingGroupName) {\n            return yield* Effect.die(\n              new Error(\n                \"ScheduledAction requires a resolvable autoScalingGroup name\",\n              ),\n            );\n          }\n          const scheduledActionName =\n            output?.scheduledActionName ?? (yield* toName(id, news));",
+        "11": "\n\n\n\n          yield* autoscaling.putScheduledUpdateGroupAction({\n            AutoScalingGroupName: autoScalingGroupName,\n            ScheduledActionName: scheduledActionName,\n            Recurrence: news.recurrence,\n            StartTime: news.startTime ? new Date(news.startTime) : undefined,\n            EndTime: news.endTime ? new Date(news.endTime) : undefined,\n            TimeZone: news.timeZone,\n            MinSize: news.minSize,\n            MaxSize: news.maxSize,\n            DesiredCapacity: news.desiredCapacity,\n          } as any);\n\n          const action = yield* describeAction({\n            autoScalingGroupName,\n            scheduledActionName,\n          }).pipe(\n            Effect.flatMap((action) =>\n              action\n                ? Effect.succeed(action)\n                : Effect.fail(\n                    new Error(\n                      `Scheduled action '${scheduledActionName}' was not readable after reconcile`,\n                    ),\n                  ),\n            ),\n          );\n          yield* session.note(scheduledActionName);\n          return toAttributes(action);\n        }),",
+        "12": "        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* autoscaling\n            .deleteScheduledAction({\n              AutoScalingGroupName: output.autoScalingGroupName,\n              ScheduledActionName: output.scheduledActionName,\n            } as any)\n            .pipe(\n              Effect.retry({\n                while: (error) => error._tag === \"ResourceContentionFault\",\n                schedule: Schedule.max([\n                  Schedule.recurs(5),\n                  Schedule.exponential(\"250 millis\"),\n                ]),\n              }),\n            );\n        }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

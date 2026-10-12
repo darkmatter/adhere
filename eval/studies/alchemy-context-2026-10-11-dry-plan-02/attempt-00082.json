@@ -1,0 +1,82 @@
+{
+  "arm": "symbols+references",
+  "file": "packages/alchemy/src/Cloudflare/SecretsStore/LocalSecretsStoreGateway.ts",
+  "kind": "judge",
+  "ordinal": 82,
+  "artifact": "attempt-00082.json",
+  "started": "2026-10-11T03:20:36.336Z",
+  "estimatedTokens": 3770,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.10062999999900057,
+  "referencesPresent": true,
+  "bodyDigest": "4b2e7ec45db1556dec3d78656c6c199999e6e25ab52ab489a67f280137c21810",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "admin": "```typescript\n(props: { binding: string; storeId: string; }) => import(\"@alchemy.run/cloudflare-runtime/core\").BindingHook<SecretsStore.SecretsStore>\n```\n\nBind a local Secrets Store *store* as a raw KV namespace\n(`env.<binding>.put(secretName, value)` / `.",
+        "binding": "```typescript\nstring\n```",
+        "bindings": "```typescript\nimport(\"@alchemy.run/cloudflare-runtime/core\").BindingHook<SecretsStore.SecretsStore>[]\n```",
+        "catch": "```typescript\n(cause: unknown) => LocalSecretsStoreError\n```",
+        "cause": "```typescript\nunknown\n```",
+        "Data": "```typescript\ntypeof Data\n```",
+        "delete": "```typescript\n(key: string) => Promise<void>\n```",
+        "deleteLocalSecret": "```typescript\n(storeId: string, secretName: string) => Effect.Effect<void, LocalSecretsStoreError | import(\"@alchemy.run/cloudflare-runtime/core\").RuntimeError, import(\"@alchemy.run/cloudflare-runtime/core\").Runtime | SecretsStore.SecretsStore>\n```\n\nRemove",
+        "Effect": "The `Effect` interface defines a value that lazily describes a workflow or\njob. The workflow requires some context `R`, and may fail with an error of\ntype `E`, or succeed with a value of type `A`.\n\n**When to use**\n\nUse when you need to represent a lazy, co",
+        "env": "```typescript\nRecord<string, unknown>\n```\n\nEnvironment object containing the instance's bindings.",
+        "gatewayName": "```typescript\n(prefix: string, id: string) => string\n```\n\nSanitize an id into a workerd instance-name-safe suffix.",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "LocalSecretsStoreError": "```typescript\ntypeof LocalSecretsStoreError\n```",
+        "message": "```typescript\nstring\n```",
+        "name": "```typescript\nstring\n```",
+        "open": "```typescript\n<B extends import(\"@alchemy.run/cloudflare-runtime/core\").BindingHooks, Env = Record<string, unknown>>(options: import(\"@alchemy.run/cloudflare-runtime/core/platform-proxy\").PlatformProxyOptions<B>) => Effect.Effect<import(\"@alchemy.run/cloud",
+        "proxy": "```typescript\nimport(\"@alchemy.run/cloudflare-runtime/core/platform-proxy\").PlatformProxyInstance<Record<string, unknown>>\n```",
+        "put": "```typescript\n(key: string, value: string | ArrayBuffer | ArrayBufferView | runtime.ReadableStream, options?: runtime.KVNamespacePutOptions) => Promise<void>\n```",
+        "scoped": "```typescript\n<A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E, Exclude<R, import(\"effect/Scope\").Scope>>\n```\n\nRuns an effect with a scope that closes when the effect completes.\n\n**When to use**\n\nUse to acquire scoped resources for the duratio",
+        "secretName": "```typescript\nstring\n```",
+        "SecretsStore": "```typescript\ntypeof SecretsStore\n```",
+        "seedLocalSecret": "```typescript\n(storeId: string, secretName: string, value: string) => Effect.Effect<void, LocalSecretsStoreError | import(\"@alchemy.run/cloudflare-runtime/core\").RuntimeError, import(\"@alchemy.run/cloudflare-runtime/core\").Runtime | SecretsStore.SecretsSto",
+        "store": "```typescript\nruntime.KVNamespace<string>\n```",
+        "storeId": "```typescript\nstring\n```",
+        "TaggedError": "```typescript\n<Tag extends string>(tag: Tag) => new <A extends Record<string, any> = {}>(args: import(\"effect/Types\").VoidIfEmpty<{ readonly [P in keyof A as P extends \"_tag\" ? never : P]: A[P]; }>) => import(\"effect/Cause\").YieldableError & { readonly _ta",
+        "try": "```typescript\n() => Promise<void>\n```",
+        "tryPromise": "```typescript\n{ <A>(options: (signal: AbortSignal) => PromiseLike<A>): Effect.Effect<A, import(\"effect/Cause\").UnknownError>; <A, E>(options: { readonly try: (signal: AbortSignal) => PromiseLike<A>; readonly catch: (error: unknown) => E; }): Effect.Effect<",
+        "use": "```typescript\n(store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>\n```",
+        "value": "```typescript\nstring\n```",
+        "withLocalSecretsStore": "```typescript\n<A, E, R>(storeId: string, use: (store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>) => Effect.Effect<A, E | import(\"@alchemy.run/cloudflare-runtime/core\").RuntimeError, import(\"@alchemy.run/cloudflare-runtime/core\").Runtime | Secr"
+      },
+      "references": {
+        "__comment": "Declarations of symbols used in `code`. Each key is `symbol:pathname`: the symbol name as used in `code` followed by its repository-relative declaration path. Each value is a complete declaration excerpt.",
+        "gatewayName:packages/alchemy/src/Cloudflare/LocalGateway.ts": "export const gatewayName = (prefix: string, id: string) =>\n  `${prefix}-${id.replace(/[^a-zA-Z0-9_-]/g, \"-\")}`;"
+      },
+      "code": {
+        "1": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nimport type * as runtime from \"@cloudflare/workers-types\";\nimport { SecretsStore } from \"@alchemy.run/cloudflare-runtime/core/bindings\";\nimport { open } from \"@alchemy.run/cloudflare-runtime/core/platform-proxy\";\nimport * as Data from \"effect/Data\";\nimport * as Effect from \"effect/Effect\";\nimport { gatewayName } from \"../LocalGateway.ts\";\n\nexport class LocalSecretsStoreError extends Data.TaggedError(\n  \"LocalSecretsStoreError\",\n)<{\n  message: string;\n  cause?: unknown;\n}> {}\n\n\n\n\n\n\n\nexport const withLocalSecretsStore = <A, E, R>(",
+        "2": "  storeId: string,\n  use: (store: runtime.KVNamespace<string>) => Effect.Effect<A, E, R>,\n) =>\n  Effect.scoped(\n    Effect.gen(function* () {\n      const proxy = yield* open({\n        name: gatewayName(\"alchemy-secrets-store-gateway\", storeId),\n        bindings: [SecretsStore.admin({ binding: \"STORE\", storeId })],\n      });\n      const store = (proxy.env as Record<string, unknown>)\n        .STORE as runtime.KVNamespace<string>;\n      return yield* use(store);\n    }),\n  );",
+        "3": "\n\nexport const seedLocalSecret = (\n  storeId: string,\n  secretName: string,\n  value: string,\n) =>\n  withLocalSecretsStore(storeId, (store) =>\n    Effect.tryPromise({\n      try: () => store.put(secretName, value),\n      catch: (cause) =>\n        new LocalSecretsStoreError({\n          message: `Failed to seed secret \"${secretName}\" into the local Secrets Store`,\n          cause,\n        }),\n    }),\n  );\n\n\nexport const deleteLocalSecret = (storeId: string, secretName: string) =>\n  withLocalSecretsStore(storeId, (store) =>\n    Effect.tryPromise({\n      try: () => store.delete(secretName),\n      catch: (cause) =>\n        new LocalSecretsStoreError({\n          message: `Failed to delete secret \"${secretName}\" from the local Secrets Store`,\n          cause,\n        }),\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

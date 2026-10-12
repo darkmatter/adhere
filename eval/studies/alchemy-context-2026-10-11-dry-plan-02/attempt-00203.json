@@ -1,0 +1,699 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/Glue/Job.ts",
+  "kind": "locate",
+  "ordinal": 203,
+  "artifact": "attempt-00203.json",
+  "started": "2026-10-11T03:20:42.415Z",
+  "estimatedTokens": 14146,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.16524099999878672,
+  "referencesPresent": false,
+  "bodyDigest": "a2150fec45ed00979f3de8a8a0fefde4ef4a9383efb600cb7582022f83e33ba3",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "21",
+    "end:providers/idempotent-delete:2": "21",
+    "start:providers/idempotent-delete:3": "53",
+    "end:providers/idempotent-delete:3": "53",
+    "start:providers/idempotent-delete:4": "84",
+    "end:providers/idempotent-delete:4": "84",
+    "start:providers/idempotent-delete:5": "111",
+    "end:providers/idempotent-delete:5": "111",
+    "start:providers/idempotent-delete:6": "176",
+    "end:providers/idempotent-delete:6": "176",
+    "start:providers/idempotent-delete:7": "207",
+    "end:providers/idempotent-delete:7": "207",
+    "start:providers/idempotent-delete:8": "232",
+    "end:providers/idempotent-delete:8": "232",
+    "start:providers/idempotent-delete:9": "261",
+    "end:providers/idempotent-delete:9": "261",
+    "start:providers/idempotent-delete:10": "280",
+    "end:providers/idempotent-delete:10": "280",
+    "start:providers/idempotent-delete:11": "307",
+    "end:providers/idempotent-delete:11": "307",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as glue from \"@distilled.cloud/aws/glue\";\nimport type * as Duration from \"effect/Duration\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport { toWireMinutes } from \"../../Util/Duration.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport {\n  fetchObservedTags,\n  jobArn,\n  retryWhileRoleNotAssumable,\n  syncTags,\n} from \"./internal.ts\";",
+        "2": "\nexport interface JobCommand {\n\n\n\n\n  name: \"glueetl\" | \"pythonshell\" | \"gluestreaming\" | (string & {});\n\n  scriptLocation?: string;\n\n  pythonVersion?: string;\n\n  runtime?: string;\n}\n\nexport interface JobProps {\n\n\n\n\n\n  jobName?: string;\n\n\n\n  role: string;\n\n\n\n  command: JobCommand;",
+        "3": "\n\n\n  description?: string;\n\n\n\n\n  defaultArguments?: Record<string, string>;\n\n\n\n  nonOverridableArguments?: Record<string, string>;\n\n\n\n  connections?: string[];\n\n\n\n  maxRetries?: number;\n\n\n\n\n  timeout?: Duration.Input;\n\n\n\n\n  maxCapacity?: number;",
+        "4": "\n\n\n  glueVersion?: string;\n\n\n\n  numberOfWorkers?: number;\n\n\n\n\n  workerType?: string;\n\n\n\n  executionClass?: \"STANDARD\" | \"FLEX\";\n\n\n\n  executionProperty?: {\n\n    maxConcurrentRuns?: number;\n  };\n\n\n\n  tags?: Record<string, string>;\n}",
+        "5": "\nexport interface Job extends Resource<\n  \"AWS.Glue.Job\",\n  JobProps,\n  {\n\n    jobName: string;\n\n    jobArn: string;\n\n    role: string;\n  },\n  {},\n  Providers\n> {}",
+        "6": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Job = Resource<Job>(\"AWS.Glue.Job\");\n\nexport const JobProvider = () =>\n  Provider.effect(\n    Job,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: { jobName?: string | undefined },\n      ) {\n        return (\n          props.jobName ?? (yield* createPhysicalName({ id, maxLength: 255 }))\n        );\n      });\n\n      const observe = Effect.fn(function* (name: string) {\n        return yield* glue.getJob({ JobName: name }).pipe(\n          Effect.map((r) => r.Job),\n          Effect.catchTag(\"EntityNotFoundException\", () =>\n            Effect.succeed(undefined),\n          ),\n        );\n      });\n\n      const buildCommand = (command: JobCommand) => ({\n        Name: command.name,\n        ScriptLocation: command.scriptLocation,\n        PythonVersion: command.pythonVersion,\n        Runtime: command.runtime,\n      });",
+        "7": "\n      const buildDefinition = (props: JobProps) => ({\n        Role: props.role,\n        Command: buildCommand(props.command),\n        Description: props.description,\n        DefaultArguments: props.defaultArguments,\n        NonOverridableArguments: props.nonOverridableArguments,\n        Connections:\n          props.connections !== undefined\n            ? { Connections: props.connections }\n            : undefined,\n        MaxRetries: props.maxRetries,\n        Timeout: toWireMinutes(props.timeout),\n        MaxCapacity: props.maxCapacity,\n        GlueVersion: props.glueVersion,\n        NumberOfWorkers: props.numberOfWorkers,\n        WorkerType: props.workerType,\n        ExecutionClass: props.executionClass,\n        ExecutionProperty: props.executionProperty\n          ? { MaxConcurrentRuns: props.executionProperty.maxConcurrentRuns }\n          : undefined,\n      });\n\n      return Job.Provider.of({\n        stables: [\"jobName\", \"jobArn\"],",
+        "8": "\n        list: () =>\n          Effect.gen(function* () {\n            const { accountId, region } = yield* AWSEnvironment.current;\n            const pages = yield* glue.getJobs.pages({}).pipe(Stream.runCollect);\n            return Array.from(pages)\n              .flatMap((page) => page.Jobs ?? [])\n              .filter((j) => j.Name !== undefined)\n              .map((j) => ({\n                jobName: j.Name!,\n                jobArn: jobArn(region, accountId, j.Name!),\n                role: j.Role ?? \"\",\n              }));\n          }),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name = output?.jobName ?? (yield* createName(id, olds ?? {}));\n          const job = yield* observe(name);\n          if (job?.Name === undefined) return undefined;\n          const arn = jobArn(region, accountId, job.Name);\n          const attrs = {\n            jobName: job.Name,\n            jobArn: arn,\n            role: job.Role ?? \"\",\n          };\n          const tags = yield* fetchObservedTags(arn);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),",
+        "9": "\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) return { action: \"replace\" } as const;\n\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name = output?.jobName ?? (yield* createName(id, news));\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...news.tags, ...internalTags };\n          const arn = jobArn(region, accountId, name);\n\n\n          let job = yield* observe(name);",
+        "10": "\n\n          if (job === undefined) {\n            yield* retryWhileRoleNotAssumable(\n              glue.createJob({\n                Name: name,\n                ...buildDefinition(news),\n                Tags: desiredTags,\n              }),\n            ).pipe(\n              Effect.catchTag(\"AlreadyExistsException\", () => Effect.void),\n            );\n          } else {\n\n            yield* retryWhileRoleNotAssumable(\n              glue.updateJob({\n                JobName: name,\n                JobUpdate: buildDefinition(news),\n              }),\n            );\n          }\n\n\n          const observedTags = yield* fetchObservedTags(arn);\n          yield* syncTags(arn, observedTags, desiredTags);\n\n          job = yield* observe(name);\n\n          yield* session.note(name);",
+        "11": "          return {\n            jobName: name,\n            jobArn: arn,\n            role: job?.Role ?? news.role,\n          };\n        }),\n\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* glue.deleteJob({ JobName: output.jobName });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null,
+          "11": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as glue from \"@distilled.cloud/aws/glue\";",
+          "2": "import type * as Duration from \"effect/Duration\";",
+          "3": "import * as Effect from \"effect/Effect\";",
+          "4": "import * as Stream from \"effect/Stream\";",
+          "5": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "6": "import { isResolved } from \"../../Diff.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";",
+          "11": "import { toWireMinutes } from \"../../Util/Duration.ts\";",
+          "12": "import { AWSEnvironment } from \"../Environment.ts\";",
+          "13": "import type { Providers } from \"../Providers.ts\";",
+          "14": "import {",
+          "15": "fetchObservedTags,",
+          "16": "jobArn,",
+          "17": "retryWhileRoleNotAssumable,",
+          "18": "syncTags,",
+          "19": "} from \"./internal.ts\";"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as glue from \"@distilled.cloud/aws/glue\";",
+          "2": "import type * as Duration from \"effect/Duration\";",
+          "3": "import * as Effect from \"effect/Effect\";",
+          "4": "import * as Stream from \"effect/Stream\";",
+          "5": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "6": "import { isResolved } from \"../../Diff.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";",
+          "11": "import { toWireMinutes } from \"../../Util/Duration.ts\";",
+          "12": "import { AWSEnvironment } from \"../Environment.ts\";",
+          "13": "import type { Providers } from \"../Providers.ts\";",
+          "14": "import {",
+          "15": "fetchObservedTags,",
+          "16": "jobArn,",
+          "17": "retryWhileRoleNotAssumable,",
+          "18": "syncTags,",
+          "19": "} from \"./internal.ts\";"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "21": "export interface JobCommand {",
+          "26": "name: \"glueetl\" | \"pythonshell\" | \"gluestreaming\" | (string & {});",
+          "28": "scriptLocation?: string;",
+          "30": "pythonVersion?: string;",
+          "32": "runtime?: string;",
+          "33": "}",
+          "35": "export interface JobProps {",
+          "41": "jobName?: string;",
+          "45": "role: string;",
+          "49": "command: JobCommand;"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "21": "export interface JobCommand {",
+          "26": "name: \"glueetl\" | \"pythonshell\" | \"gluestreaming\" | (string & {});",
+          "28": "scriptLocation?: string;",
+          "30": "pythonVersion?: string;",
+          "32": "runtime?: string;",
+          "33": "}",
+          "35": "export interface JobProps {",
+          "41": "jobName?: string;",
+          "45": "role: string;",
+          "49": "command: JobCommand;"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "53": "description?: string;",
+          "58": "defaultArguments?: Record<string, string>;",
+          "62": "nonOverridableArguments?: Record<string, string>;",
+          "66": "connections?: string[];",
+          "70": "maxRetries?: number;",
+          "75": "timeout?: Duration.Input;",
+          "80": "maxCapacity?: number;"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "53": "description?: string;",
+          "58": "defaultArguments?: Record<string, string>;",
+          "62": "nonOverridableArguments?: Record<string, string>;",
+          "66": "connections?: string[];",
+          "70": "maxRetries?: number;",
+          "75": "timeout?: Duration.Input;",
+          "80": "maxCapacity?: number;"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "84": "glueVersion?: string;",
+          "88": "numberOfWorkers?: number;",
+          "93": "workerType?: string;",
+          "97": "executionClass?: \"STANDARD\" | \"FLEX\";",
+          "101": "executionProperty?: {",
+          "103": "maxConcurrentRuns?: number;",
+          "104": "};",
+          "108": "tags?: Record<string, string>;",
+          "109": "}"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "84": "glueVersion?: string;",
+          "88": "numberOfWorkers?: number;",
+          "93": "workerType?: string;",
+          "97": "executionClass?: \"STANDARD\" | \"FLEX\";",
+          "101": "executionProperty?: {",
+          "103": "maxConcurrentRuns?: number;",
+          "104": "};",
+          "108": "tags?: Record<string, string>;",
+          "109": "}"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "111": "export interface Job extends Resource<",
+          "112": "\"AWS.Glue.Job\",",
+          "113": "JobProps,",
+          "114": "{",
+          "116": "jobName: string;",
+          "118": "jobArn: string;",
+          "120": "role: string;",
+          "121": "},",
+          "122": "{},",
+          "123": "Providers",
+          "124": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "111": "export interface Job extends Resource<",
+          "112": "\"AWS.Glue.Job\",",
+          "113": "JobProps,",
+          "114": "{",
+          "116": "jobName: string;",
+          "118": "jobArn: string;",
+          "120": "role: string;",
+          "121": "},",
+          "122": "{},",
+          "123": "Providers",
+          "124": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "176": "export const Job = Resource<Job>(\"AWS.Glue.Job\");",
+          "178": "export const JobProvider = () =>",
+          "179": "Provider.effect(",
+          "180": "Job,",
+          "181": "Effect.gen(function* () {",
+          "182": "const createName = Effect.fn(function* (",
+          "183": "id: string,",
+          "184": "props: { jobName?: string | undefined },",
+          "185": ") {",
+          "186": "return (",
+          "187": "props.jobName ?? (yield* createPhysicalName({ id, maxLength: 255 }))",
+          "188": ");",
+          "189": "});",
+          "191": "const observe = Effect.fn(function* (name: string) {",
+          "192": "return yield* glue.getJob({ JobName: name }).pipe(",
+          "193": "Effect.map((r) => r.Job),",
+          "194": "Effect.catchTag(\"EntityNotFoundException\", () =>",
+          "195": "Effect.succeed(undefined),",
+          "196": "),",
+          "197": ");",
+          "198": "});",
+          "200": "const buildCommand = (command: JobCommand) => ({",
+          "201": "Name: command.name,",
+          "202": "ScriptLocation: command.scriptLocation,",
+          "203": "PythonVersion: command.pythonVersion,",
+          "204": "Runtime: command.runtime,",
+          "205": "});"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "176": "export const Job = Resource<Job>(\"AWS.Glue.Job\");",
+          "178": "export const JobProvider = () =>",
+          "179": "Provider.effect(",
+          "180": "Job,",
+          "181": "Effect.gen(function* () {",
+          "182": "const createName = Effect.fn(function* (",
+          "183": "id: string,",
+          "184": "props: { jobName?: string | undefined },",
+          "185": ") {",
+          "186": "return (",
+          "187": "props.jobName ?? (yield* createPhysicalName({ id, maxLength: 255 }))",
+          "188": ");",
+          "189": "});",
+          "191": "const observe = Effect.fn(function* (name: string) {",
+          "192": "return yield* glue.getJob({ JobName: name }).pipe(",
+          "193": "Effect.map((r) => r.Job),",
+          "194": "Effect.catchTag(\"EntityNotFoundException\", () =>",
+          "195": "Effect.succeed(undefined),",
+          "196": "),",
+          "197": ");",
+          "198": "});",
+          "200": "const buildCommand = (command: JobCommand) => ({",
+          "201": "Name: command.name,",
+          "202": "ScriptLocation: command.scriptLocation,",
+          "203": "PythonVersion: command.pythonVersion,",
+          "204": "Runtime: command.runtime,",
+          "205": "});"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "207": "const buildDefinition = (props: JobProps) => ({",
+          "208": "Role: props.role,",
+          "209": "Command: buildCommand(props.command),",
+          "210": "Description: props.description,",
+          "211": "DefaultArguments: props.defaultArguments,",
+          "212": "NonOverridableArguments: props.nonOverridableArguments,",
+          "213": "Connections:",
+          "214": "props.connections !== undefined",
+          "215": "? { Connections: props.connections }",
+          "216": ": undefined,",
+          "217": "MaxRetries: props.maxRetries,",
+          "218": "Timeout: toWireMinutes(props.timeout),",
+          "219": "MaxCapacity: props.maxCapacity,",
+          "220": "GlueVersion: props.glueVersion,",
+          "221": "NumberOfWorkers: props.numberOfWorkers,",
+          "222": "WorkerType: props.workerType,",
+          "223": "ExecutionClass: props.executionClass,",
+          "224": "ExecutionProperty: props.executionProperty",
+          "225": "? { MaxConcurrentRuns: props.executionProperty.maxConcurrentRuns }",
+          "226": ": undefined,",
+          "227": "});",
+          "229": "return Job.Provider.of({",
+          "230": "stables: [\"jobName\", \"jobArn\"],"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "207": "const buildDefinition = (props: JobProps) => ({",
+          "208": "Role: props.role,",
+          "209": "Command: buildCommand(props.command),",
+          "210": "Description: props.description,",
+          "211": "DefaultArguments: props.defaultArguments,",
+          "212": "NonOverridableArguments: props.nonOverridableArguments,",
+          "213": "Connections:",
+          "214": "props.connections !== undefined",
+          "215": "? { Connections: props.connections }",
+          "216": ": undefined,",
+          "217": "MaxRetries: props.maxRetries,",
+          "218": "Timeout: toWireMinutes(props.timeout),",
+          "219": "MaxCapacity: props.maxCapacity,",
+          "220": "GlueVersion: props.glueVersion,",
+          "221": "NumberOfWorkers: props.numberOfWorkers,",
+          "222": "WorkerType: props.workerType,",
+          "223": "ExecutionClass: props.executionClass,",
+          "224": "ExecutionProperty: props.executionProperty",
+          "225": "? { MaxConcurrentRuns: props.executionProperty.maxConcurrentRuns }",
+          "226": ": undefined,",
+          "227": "});",
+          "229": "return Job.Provider.of({",
+          "230": "stables: [\"jobName\", \"jobArn\"],"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "232": "list: () =>",
+          "233": "Effect.gen(function* () {",
+          "234": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "235": "const pages = yield* glue.getJobs.pages({}).pipe(Stream.runCollect);",
+          "236": "return Array.from(pages)",
+          "237": ".flatMap((page) => page.Jobs ?? [])",
+          "238": ".filter((j) => j.Name !== undefined)",
+          "239": ".map((j) => ({",
+          "240": "jobName: j.Name!,",
+          "241": "jobArn: jobArn(region, accountId, j.Name!),",
+          "242": "role: j.Role ?? \"\",",
+          "243": "}));",
+          "244": "}),",
+          "246": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "247": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "248": "const name = output?.jobName ?? (yield* createName(id, olds ?? {}));",
+          "249": "const job = yield* observe(name);",
+          "250": "if (job?.Name === undefined) return undefined;",
+          "251": "const arn = jobArn(region, accountId, job.Name);",
+          "252": "const attrs = {",
+          "253": "jobName: job.Name,",
+          "254": "jobArn: arn,",
+          "255": "role: job.Role ?? \"\",",
+          "256": "};",
+          "257": "const tags = yield* fetchObservedTags(arn);",
+          "258": "return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);",
+          "259": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "232": "list: () =>",
+          "233": "Effect.gen(function* () {",
+          "234": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "235": "const pages = yield* glue.getJobs.pages({}).pipe(Stream.runCollect);",
+          "236": "return Array.from(pages)",
+          "237": ".flatMap((page) => page.Jobs ?? [])",
+          "238": ".filter((j) => j.Name !== undefined)",
+          "239": ".map((j) => ({",
+          "240": "jobName: j.Name!,",
+          "241": "jobArn: jobArn(region, accountId, j.Name!),",
+          "242": "role: j.Role ?? \"\",",
+          "243": "}));",
+          "244": "}),",
+          "246": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "247": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "248": "const name = output?.jobName ?? (yield* createName(id, olds ?? {}));",
+          "249": "const job = yield* observe(name);",
+          "250": "if (job?.Name === undefined) return undefined;",
+          "251": "const arn = jobArn(region, accountId, job.Name);",
+          "252": "const attrs = {",
+          "253": "jobName: job.Name,",
+          "254": "jobArn: arn,",
+          "255": "role: job.Role ?? \"\",",
+          "256": "};",
+          "257": "const tags = yield* fetchObservedTags(arn);",
+          "258": "return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);",
+          "259": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "261": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "262": "if (!isResolved(news)) return undefined;",
+          "263": "const oldName = yield* createName(id, olds);",
+          "264": "const newName = yield* createName(id, news);",
+          "265": "if (oldName !== newName) return { action: \"replace\" } as const;",
+          "267": "}),",
+          "269": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "270": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "271": "const name = output?.jobName ?? (yield* createName(id, news));",
+          "272": "const internalTags = yield* createInternalTags(id);",
+          "273": "const desiredTags = { ...news.tags, ...internalTags };",
+          "274": "const arn = jobArn(region, accountId, name);",
+          "277": "let job = yield* observe(name);"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "261": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "262": "if (!isResolved(news)) return undefined;",
+          "263": "const oldName = yield* createName(id, olds);",
+          "264": "const newName = yield* createName(id, news);",
+          "265": "if (oldName !== newName) return { action: \"replace\" } as const;",
+          "267": "}),",
+          "269": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "270": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "271": "const name = output?.jobName ?? (yield* createName(id, news));",
+          "272": "const internalTags = yield* createInternalTags(id);",
+          "273": "const desiredTags = { ...news.tags, ...internalTags };",
+          "274": "const arn = jobArn(region, accountId, name);",
+          "277": "let job = yield* observe(name);"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "280": "if (job === undefined) {",
+          "281": "yield* retryWhileRoleNotAssumable(",
+          "282": "glue.createJob({",
+          "283": "Name: name,",
+          "284": "...buildDefinition(news),",
+          "285": "Tags: desiredTags,",
+          "286": "}),",
+          "287": ").pipe(",
+          "288": "Effect.catchTag(\"AlreadyExistsException\", () => Effect.void),",
+          "289": ");",
+          "290": "} else {",
+          "292": "yield* retryWhileRoleNotAssumable(",
+          "293": "glue.updateJob({",
+          "294": "JobName: name,",
+          "295": "JobUpdate: buildDefinition(news),",
+          "296": "}),",
+          "297": ");",
+          "298": "}",
+          "301": "const observedTags = yield* fetchObservedTags(arn);",
+          "302": "yield* syncTags(arn, observedTags, desiredTags);",
+          "304": "job = yield* observe(name);",
+          "306": "yield* session.note(name);"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "280": "if (job === undefined) {",
+          "281": "yield* retryWhileRoleNotAssumable(",
+          "282": "glue.createJob({",
+          "283": "Name: name,",
+          "284": "...buildDefinition(news),",
+          "285": "Tags: desiredTags,",
+          "286": "}),",
+          "287": ").pipe(",
+          "288": "Effect.catchTag(\"AlreadyExistsException\", () => Effect.void),",
+          "289": ");",
+          "290": "} else {",
+          "292": "yield* retryWhileRoleNotAssumable(",
+          "293": "glue.updateJob({",
+          "294": "JobName: name,",
+          "295": "JobUpdate: buildDefinition(news),",
+          "296": "}),",
+          "297": ");",
+          "298": "}",
+          "301": "const observedTags = yield* fetchObservedTags(arn);",
+          "302": "yield* syncTags(arn, observedTags, desiredTags);",
+          "304": "job = yield* observe(name);",
+          "306": "yield* session.note(name);"
+        }
+      },
+      "start:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "307": "return {",
+          "308": "jobName: name,",
+          "309": "jobArn: arn,",
+          "310": "role: job?.Role ?? news.role,",
+          "311": "};",
+          "312": "}),",
+          "314": "delete: Effect.fn(function* ({ output }) {",
+          "317": "yield* glue.deleteJob({ JobName: output.jobName });",
+          "318": "}),",
+          "319": "});",
+          "320": "}),",
+          "321": ");"
+        }
+      },
+      "end:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "307": "return {",
+          "308": "jobName: name,",
+          "309": "jobArn: arn,",
+          "310": "role: job?.Role ?? news.role,",
+          "311": "};",
+          "312": "}),",
+          "314": "delete: Effect.fn(function* ({ output }) {",
+          "317": "yield* glue.deleteJob({ JobName: output.jobName });",
+          "318": "}),",
+          "319": "});",
+          "320": "}),",
+          "321": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

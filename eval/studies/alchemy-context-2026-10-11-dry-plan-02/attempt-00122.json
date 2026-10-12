@@ -1,0 +1,53 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/AutoScaling/ScalingPolicy.ts",
+  "kind": "judge",
+  "ordinal": 122,
+  "artifact": "attempt-00122.json",
+  "started": "2026-10-11T03:20:39.527Z",
+  "estimatedTokens": 3872,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.026049000000057276,
+  "referencesPresent": false,
+  "bodyDigest": "db39992dc8ab8e017a33fb553bb0ba1bd015d4b5b20d3752465612768e85f3ec",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as autoscaling from \"@distilled.cloud/aws/auto-scaling\";\nimport type * as Duration from \"effect/Duration\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { deepEqual, isResolved } from \"../../Diff.ts\";\nimport type { Input } from \"../../Input.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { toSeconds } from \"../../Util/Duration.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport type { AutoScalingGroup as AutoScalingGroupResource } from \"./AutoScalingGroup.ts\";\n\nexport type ScalingPolicyName = string;\n\nexport interface ScalingPolicyProps {\n\n\n\n  policyName?: string;\n\n\n\n  autoScalingGroup: Input<string> | AutoScalingGroupResource;\n\n\n\n\n  policyType?: \"TargetTrackingScaling\";",
+        "2": "\n\n\n  predefinedMetricType:\n    | \"ASGAverageCPUUtilization\"\n    | \"ASGAverageNetworkIn\"\n    | \"ASGAverageNetworkOut\"\n    | \"ALBRequestCountPerTarget\";\n\n\n\n  targetValue: number;\n\n\n\n  disableScaleIn?: boolean;\n\n\n\n\n  estimatedInstanceWarmup?: Duration.Input;\n}\n\nexport interface ScalingPolicy extends Resource<\n  \"AWS.AutoScaling.ScalingPolicy\",\n  ScalingPolicyProps,",
+        "3": "  {\n\n\n\n    policyArn: string;\n\n\n\n    policyName: ScalingPolicyName;\n\n\n\n    autoScalingGroupName: string;\n\n\n\n    policyType: string;\n\n\n\n    targetValue: number;\n\n\n\n    predefinedMetricType: string;\n\n\n\n    alarms: string[];\n  },",
+        "4": "  never,\n  Providers\n> {}",
+        "5": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ScalingPolicy = Resource<ScalingPolicy>(\n  \"AWS.AutoScaling.ScalingPolicy\",\n);\n\nexport const ScalingPolicyProvider = () =>\n  Provider.effect(\n    ScalingPolicy,\n    Effect.gen(function* () {\n      const toName = (id: string, props: { policyName?: string } = {}) =>\n        props.policyName\n          ? Effect.succeed(props.policyName)\n          : createPhysicalName({ id, maxLength: 255, lowercase: true });",
+        "6": "\n\n\n\n\n\n\n\n\n      const toAutoScalingGroupName = (\n        input: ScalingPolicyProps[\"autoScalingGroup\"] | undefined,\n      ): string | undefined =>\n        typeof input === \"string\"\n          ? input\n          : typeof (input as { autoScalingGroupName?: unknown } | undefined)\n                ?.autoScalingGroupName === \"string\"\n            ? (input as unknown as { autoScalingGroupName: string })\n                .autoScalingGroupName\n            : undefined;\n\n\n\n\n      const describePolicy = ({\n        autoScalingGroupName,\n        policyName,\n      }: {\n        autoScalingGroupName: string | undefined;\n        policyName: string;\n      }) =>\n        autoscaling\n          .describePolicies({\n            AutoScalingGroupName: autoScalingGroupName,\n            PolicyNames: [policyName],\n          })\n          .pipe(Effect.map((result) => result.ScalingPolicies?.[0]));",
+        "7": "\n      const toAttributes = (\n        policy: autoscaling.ScalingPolicy,\n      ): ScalingPolicy[\"Attributes\"] => ({\n        policyArn: policy.PolicyARN!,\n        policyName: policy.PolicyName!,\n        autoScalingGroupName: policy.AutoScalingGroupName!,\n        policyType: policy.PolicyType!,\n        targetValue:\n          policy.TargetTrackingConfiguration?.TargetValue ??\n          policy.StepAdjustments?.[0]?.MetricIntervalLowerBound ??\n          0,\n        predefinedMetricType:\n          policy.TargetTrackingConfiguration?.PredefinedMetricSpecification\n            ?.PredefinedMetricType ?? \"\",\n        alarms: (policy.Alarms ?? [])\n          .map((alarm) => alarm.AlarmName)\n          .filter((alarm): alarm is string => Boolean(alarm)),\n      });\n\n      return {\n        stables: [\"policyArn\", \"policyName\", \"autoScalingGroupName\"],",
+        "8": "\n\n\n        list: () =>\n          autoscaling.describePolicies.pages({}).pipe(\n            Stream.runCollect,\n            Effect.map((chunk) =>\n              Array.from(chunk).flatMap((page) =>\n                (page.ScalingPolicies ?? []).map(toAttributes),\n              ),\n            ),\n          ),",
+        "9": "        diff: Effect.fn(function* ({ id, olds, news: _news }) {\n          if (!isResolved(_news)) return undefined;\n          const news = _news as typeof olds;\n          const oldName = yield* toName(id, olds ?? {});\n          const newName = yield* toName(id, news ?? {});\n\n\n\n\n          const oldGroupName = toAutoScalingGroupName(olds.autoScalingGroup);\n          const newGroupName = toAutoScalingGroupName(news.autoScalingGroup);\n          if (\n            oldName !== newName ||\n            (oldGroupName !== undefined &&\n              newGroupName !== undefined &&\n              oldGroupName !== newGroupName)\n          ) {\n            return { action: \"replace\" } as const;\n          }\n\n          if (!deepEqual(olds, news)) {\n            return {\n              action: \"update\",\n              stables: [\"policyArn\", \"policyName\", \"autoScalingGroupName\"],\n            } as const;\n          }\n        }),",
+        "10": "        read: Effect.fn(function* ({ id, olds, output }) {\n          const autoScalingGroupName =\n            output?.autoScalingGroupName ??\n            toAutoScalingGroupName(olds?.autoScalingGroup);\n          const policyName =\n            output?.policyName ?? (yield* toName(id, olds ?? {}));\n          const policy = yield* describePolicy({\n            autoScalingGroupName,\n            policyName,\n          });\n          return policy ? toAttributes(policy) : undefined;\n        }),\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const autoScalingGroupName =\n            output?.autoScalingGroupName ??\n            toAutoScalingGroupName(news.autoScalingGroup);\n          const policyName = output?.policyName ?? (yield* toName(id, news));",
+        "11": "\n\n\n\n\n\n          yield* autoscaling.putScalingPolicy({\n            AutoScalingGroupName: autoScalingGroupName,\n            PolicyName: policyName,\n            PolicyType: news.policyType ?? \"TargetTrackingScaling\",\n            TargetTrackingConfiguration: {\n              PredefinedMetricSpecification: {\n                PredefinedMetricType: news.predefinedMetricType,\n              },\n              TargetValue: news.targetValue,\n              DisableScaleIn: news.disableScaleIn,\n            },\n            EstimatedInstanceWarmup: toSeconds(news.estimatedInstanceWarmup),\n          } as any);",
+        "12": "\n\n\n\n          const policy = yield* describePolicy({\n            autoScalingGroupName,\n            policyName,\n          }).pipe(\n            Effect.flatMap((policy) =>\n              policy\n                ? Effect.succeed(policy)\n                : Effect.fail(\n                    new Error(\n                      `Scaling policy '${policyName}' was not readable after reconcile`,\n                    ),\n                  ),\n            ),\n          );\n          yield* session.note(policyName);\n          return toAttributes(policy);\n        }),\n        delete: Effect.fn(function* ({ output }) {\n          yield* autoscaling.deletePolicy({\n            AutoScalingGroupName: output.autoScalingGroupName,\n            PolicyName: output.policyName,\n          } as any);\n        }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

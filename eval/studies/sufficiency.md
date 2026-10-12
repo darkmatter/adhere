@@ -11,7 +11,7 @@ the numbered file as lint sent it then. Each finding's rule gets three
 questions: adhere's judge question, and the sufficiency question in two
 wordings, `judgment` holding the judge question:
 
-- **bare**: `` Does `code` contain sufficient information to make `judgment`? ``
+- **bare**: ``Does `code` contain sufficient information to make `judgment`?``
 - **criteria**: the same, with criteria:
   - true: `` Everything `judgment` turns on is in `code` ``
   - false: `` `judgment` turns on something `code` does not show, such as what another file, a library, a service, or the program's configuration does ``
@@ -23,7 +23,7 @@ bun eval/studies/sufficiency.ts results.json
 A second run added a third wording that states the condition itself, with
 the rule's fields and no `judgment`:
 
-- **direct**: `` Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do? ``, with criteria:
+- **direct**: ``Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?``, with criteria:
   - true: `` `code` shows everything needed to tell whether it breaks `rule` ``
   - false: ``Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration``
 

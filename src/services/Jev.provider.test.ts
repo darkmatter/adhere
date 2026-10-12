@@ -1,4 +1,4 @@
-import { decodeConfig, resolveConfig, type Rule, type Rules } from "#config.ts";
+import { decodeConfig, resolveConfig, type JevState, type Rule, type Rules } from "#config.ts";
 import {
   type AskOptions,
   ContextOverflow,
@@ -12,8 +12,9 @@ import {
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { Credentials } from "#services/Credentials.ts";
 import { JevLive } from "#services/Jev.http.ts";
-import { Jev } from "#services/Jev.ts";
-import { Effect, Layer, Redacted } from "effect";
+import { describeState, Jev, judgeBody, locateBody, requestsOf } from "#services/Jev.ts";
+import { questionsOf, requestOf, type SystemOneRequest } from "#providers/systemOne.ts";
+import { Effect, Layer, Logger, Redacted, References } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { describe, expect, it } from "vite-plus/test";
 
@@ -24,6 +25,12 @@ const named: Rule = {
 };
 const lines = ["const port = 3000;"];
 const file = { path: "/repo/src/server.ts", contents: lines.join("\n") };
+
+// Restore JSON escapes only inside string tokens, leaving layout and source backslashes intact.
+const jsonFromDiagnostic = (text: string): string =>
+  text.replace(/"(?:\\[\s\S]|[^"\\])*"/g, (token) =>
+    token.replace(/\n/g, "\\n").replace(/\t/g, "\\t"),
+  );
 
 /**
  * Jev under a config whose provider answers: any request Jev's own provider
@@ -38,10 +45,13 @@ const judged = (
     ask,
     ...(savedKey === undefined ? {} : { savedKey }),
   },
+  kind: "judge" | "locate" = "judge",
 ) =>
   Effect.gen(function* () {
     const jev = yield* Jev;
-    return yield* jev.judge(lines, rules, [], file);
+    return kind === "judge"
+      ? yield* jev.judge(lines, rules, [], file)
+      : yield* jev.locate(lines, rules, file);
   }).pipe(
     Effect.provide(
       JevLive.pipe(
@@ -116,6 +126,272 @@ describe("a config's provider", () => {
     );
     expect(blocked).toMatchObject({ _tag: "JevBlocked", ray: "ref-7" });
   });
+
+  it.each([
+    ["All", "judge"],
+    ["Trace", "judge"],
+    ["Debug", "judge"],
+    ["All", "locate"],
+    ["Trace", "locate"],
+    ["Debug", "locate"],
+  ] as const)(
+    "logs split requests after appendState with line criteria only at All (minimum: %s, kind: %s)",
+    async (minimum, kind) => {
+      const context = `export function caller() {\n\tconst escaped = "\\n\\t";\n\treturn "${"hook-context".repeat(40_000)}";\n}`;
+      const added = { references: { "port:caller.ts": context } };
+      const hooked: Rule = {
+        ...plain,
+        appliesTo: ["a server"],
+        appendState: async () => added,
+      };
+      const body = (
+        kind === "judge"
+          ? judgeBody("clef-flash", lines, { plain: hooked })
+          : locateBody("clef-flash", lines, { plain: hooked })
+      ) as SystemOneRequest & { readonly state: JevState };
+      const requests = requestsOf({ ...body, state: describeState({ ...body.state, ...added }) });
+      expect(requests.length).toBeGreaterThan(1);
+      const request = requests[0]!;
+      const asked: Array<{
+        state: State;
+        questions: ReadonlyArray<Question>;
+        apiKey: string | undefined;
+      }> = [];
+      let originalBody = "";
+      const originalAdded = JSON.stringify(added);
+      const logs: Array<Logger.Options<unknown>> = [];
+      const overflowed = await Effect.runPromise(
+        Effect.flip(
+          judged(
+            async (state, questions, { apiKey }) => {
+              asked.push({ state, questions, apiKey });
+              originalBody = JSON.stringify(requestOf("clef-flash", state, questions));
+              throw new ContextOverflow("too long");
+            },
+            "openai",
+            { plain: hooked },
+            undefined,
+            kind,
+          ),
+        ).pipe(
+          Effect.provide(Logger.layer([Logger.make((entry) => logs.push(entry))])),
+          Effect.provideService(References.MinimumLogLevel, minimum),
+        ),
+      );
+      expect(overflowed._tag).toBe("JevOverflow");
+      expect(asked).toEqual([
+        { state: request.state, questions: questionsOf(request.questions), apiKey: "sk-saved" },
+      ]);
+      const messages = logs.flatMap(({ message }) =>
+        Array.isArray(message) ? message : [message],
+      );
+      const oversized = messages.filter((message) =>
+        String(message).includes("too long request payload"),
+      );
+      if (minimum !== "Debug") {
+        const label = `${kind}: too long request payload (provider overflow)\n`;
+        expect(oversized).toHaveLength(1);
+        expect(String(oversized[0]).startsWith(label)).toBe(true);
+        const json = jsonFromDiagnostic(String(oversized[0]).slice(label.length));
+        const logged = JSON.parse(json) as typeof request;
+        const id = kind === "judge" ? "plain" : "start:plain:1";
+        expect(Object.keys(request.questions)).toEqual([id]);
+        const question = request.questions[id]!;
+        expect(question.instructions).toMatchObject({ rule: plain.description, must: plain.must });
+        if (minimum === "Trace" && question.type === "choice") {
+          const { criteria, ...withoutCriteria } = question;
+          expect(criteria).toEqual({ "1": lines[0] });
+          expect(logged.questions[id]).not.toHaveProperty("criteria");
+          expect(logged).toEqual({ ...request, questions: { [id]: withoutCriteria } });
+          expect(json).toBe(JSON.stringify(logged, null, 2));
+        } else {
+          expect(json).toBe(JSON.stringify(request, null, 2));
+          expect(logged).toEqual(request);
+          expect(logged.questions[id]?.criteria).toBeDefined();
+        }
+        expect(logged.state).toMatchObject(added);
+        if (minimum === "Trace") expect(Object.keys(logged.state)[0]).toBe("code");
+        expect(logged.model).toBe("clef-flash");
+        expect(
+          logs.find(({ message }) => Array.isArray(message) && message.includes(oversized[0]))
+            ?.logLevel,
+        ).toBe("Trace");
+      } else {
+        expect(oversized).toEqual([]);
+        const label = `${kind}: first ${kind === "locate" ? "match-to-lines " : ""}request payload\n`;
+        const previews = messages.filter((message) => String(message).startsWith(label));
+        expect(previews).toHaveLength(1);
+        const logged = JSON.parse(
+          jsonFromDiagnostic(String(previews[0]).slice(label.length)),
+        ) as SystemOneRequest;
+        expect(logged.state).toEqual(request.state);
+        expect(Object.keys(logged.state)[0]).toBe("code");
+        expect(logged.model).toBe(request.model);
+        const id = kind === "judge" ? "plain" : "start:plain:1";
+        if (kind === "locate") {
+          const { criteria, ...question } = request.questions[id]!;
+          expect(criteria).toBeDefined();
+          expect(logged.questions).toEqual({ [id]: question });
+        } else {
+          expect(logged.questions).toEqual(request.questions);
+        }
+      }
+      for (const message of messages.filter((message) =>
+        String(message).includes("request payload"),
+      )) {
+        expect(String(message)).toContain("\n\tconst escaped = ");
+        expect(String(message)).toContain(String.raw`\\n\\t`);
+        expect(String(message)).not.toContain(String.raw`\n\tconst escaped`);
+      }
+      expect(originalBody).toContain(String.raw`\n\tconst escaped`);
+      expect(JSON.stringify(added)).toBe(originalAdded);
+      const sent = asked[0]!;
+      expect(JSON.stringify(requestOf("clef-flash", sent.state, sent.questions))).toBe(
+        originalBody,
+      );
+      expect(JSON.parse(originalBody)).toEqual(request);
+      expect(JSON.stringify(messages)).not.toContain("sk-saved");
+      expect(request).not.toHaveProperty("apiKey");
+      expect(request).not.toHaveProperty("signal");
+      expect(messages).toContain("attempt failed: too long");
+    },
+  );
+
+  it.each(["All", "Trace", "Debug", "Info"] as const)(
+    "previews only the first judge and match-to-lines request per shared JevLive (minimum: %s)",
+    async (minimum) => {
+      const context = `export function caller() {\n\tconst escaped = "\\n\\t";\n\treturn "${"preview-context".repeat(40_000)}";\n}`;
+      const added = { references: { "port:caller.ts": context } };
+      const readState = { workspacePackages: { server: "src" } };
+      const hookedRules = {
+        plain: { ...plain, appliesTo: ["a server"], appendState: async () => added },
+        named: { ...named, appliesTo: ["a server"], appendState: async () => added },
+      };
+      const files = [file, { path: "/repo/src/other.ts", contents: "  const port = 8080;" }, file];
+      const expected = files.flatMap((current) => {
+        const code = current.contents.split("\n");
+        return ["judge", "locate"].flatMap((kind) =>
+          Object.entries(hookedRules).flatMap(([id, rule]) => {
+            const body = (
+              kind === "judge"
+                ? judgeBody("clef-flash", code, { [id]: rule }, [], readState)
+                : locateBody("clef-flash", code, { [id]: rule }, readState)
+            ) as SystemOneRequest & { readonly state: JevState };
+            const split = requestsOf({
+              ...body,
+              state: describeState({ ...body.state, ...added }),
+            });
+            expect(split.length).toBeGreaterThan(1);
+            return split;
+          }),
+        );
+      });
+      const firstJudge = expected[0]!;
+      const firstLocate = expected.find((body) =>
+        Object.keys(body.questions)[0]?.startsWith("start:"),
+      )!;
+      const asked: Array<SystemOneRequest> = [];
+      const snapshots: string[] = [];
+      const keys: Array<string | undefined> = [];
+      const logs: Array<Logger.Options<unknown>> = [];
+      const provider: Provider = {
+        model: "clef-flash",
+        savedKey: "openai",
+        ask: async (state, questions, { apiKey }) => {
+          const body = requestOf("clef-flash", state, questions);
+          asked.push(body);
+          snapshots.push(JSON.stringify(body));
+          keys.push(apiKey);
+          if (asked.length === 1) throw new RequestFailed("retry first request", 503);
+          return { answers: {} };
+        },
+      };
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const jev = yield* Jev;
+          for (const current of files) {
+            const code = current.contents.split("\n");
+            const judged = yield* jev.judge(code, hookedRules, [], current, readState);
+            expect(judged.probabilities).toEqual({});
+            expect(yield* jev.locate(code, hookedRules, current, readState)).toEqual({});
+          }
+        }).pipe(
+          Effect.provide(
+            JevLive.pipe(
+              Layer.provide([
+                Layer.succeed(FetchHttpClient.Fetch, (() => {
+                  throw new Error("preview tests send no HTTP requests");
+                }) as unknown as typeof globalThis.fetch),
+                Layer.succeed(AdhereConfig, resolveConfig({ presets: [], rules: {}, provider })),
+                Layer.succeed(Credentials, {
+                  key: () => Effect.succeed(Redacted.make("sk-saved")),
+                  file: Effect.die("unused"),
+                  save: () => Effect.die("unused"),
+                  remove: () => Effect.die("unused"),
+                }),
+              ]),
+            ),
+          ),
+          Effect.provide(Logger.layer([Logger.make((entry) => logs.push(entry))])),
+          Effect.provideService(References.MinimumLogLevel, minimum),
+        ),
+      );
+      expect(asked).toEqual([firstJudge, ...expected]);
+      expect(asked.map((body) => JSON.stringify(body))).toEqual(snapshots);
+      expect(snapshots[0]).toContain(String.raw`\n\tconst escaped`);
+      expect(snapshots.map((json) => JSON.parse(json))).toEqual(asked);
+      expect(keys).toEqual(asked.map(() => "sk-saved"));
+      const messages = logs.flatMap(({ message }) =>
+        Array.isArray(message) ? message : [message],
+      );
+      const previews = messages.filter((message) => String(message).includes("request payload"));
+      if (minimum === "Info") {
+        expect(previews).toEqual([]);
+        expect(JSON.stringify(messages)).not.toContain("preview-context");
+      } else {
+        const labels = [
+          "judge: first request payload\n",
+          "locate: first match-to-lines request payload\n",
+        ];
+        expect(previews).toHaveLength(2);
+        for (const [index, body] of [firstJudge, firstLocate].entries()) {
+          const label = labels[index]!;
+          expect(String(previews[index]).startsWith(label)).toBe(true);
+          const text = String(previews[index]).slice(label.length);
+          expect(text).toContain("\n\tconst escaped = ");
+          expect(text).toContain(String.raw`\\n\\t`);
+          expect(text).not.toContain(String.raw`\n\tconst escaped`);
+          const json = jsonFromDiagnostic(text);
+          const logged = JSON.parse(json) as SystemOneRequest;
+          expect(logged.model).toBe(body.model);
+          expect(logged.state).toEqual(body.state);
+          expect(logged.state).toMatchObject({ ...readState, ...added });
+          if (minimum === "All") {
+            expect(json).toBe(JSON.stringify(body, null, 2));
+            expect(logged).toEqual(body);
+          } else {
+            expect(Object.keys(logged.state)[0]).toBe("code");
+            if (index === 0) {
+              expect(logged.questions).toEqual(body.questions);
+              expect(logged.questions.plain?.criteria).toBeDefined();
+            } else {
+              const { criteria, ...question } = body.questions["start:plain:1"]!;
+              expect(criteria).toEqual({ "1": lines[0] });
+              expect(logged.questions).toEqual({ "start:plain:1": question });
+            }
+          }
+          expect(
+            logs.find(({ message }) => Array.isArray(message) && message.includes(previews[index]))
+              ?.logLevel,
+          ).toBe("Debug");
+        }
+      }
+      expect(JSON.stringify(messages)).not.toContain("sk-saved");
+      expect(messages.some((message) => String(message).includes("too long request payload"))).toBe(
+        false,
+      );
+    },
+  );
 
   it("is asked as a method, so a class can implement it", async () => {
     class Fixed implements Provider {

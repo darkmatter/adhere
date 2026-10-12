@@ -1,0 +1,475 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/AWS/ApplicationSignals/GroupingConfiguration.ts",
+  "kind": "locate",
+  "ordinal": 113,
+  "artifact": "attempt-00113.json",
+  "started": "2026-10-11T03:20:39.240Z",
+  "estimatedTokens": 11664,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.16731400000026042,
+  "referencesPresent": false,
+  "bodyDigest": "93e7df32283246f4b56ba067d2dee784a4c95e6288dd559581bd013a46511935",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "19",
+    "end:providers/idempotent-delete:2": "19",
+    "start:providers/idempotent-delete:3": "84",
+    "end:providers/idempotent-delete:3": "84",
+    "start:providers/idempotent-delete:4": "111",
+    "end:providers/idempotent-delete:4": "111",
+    "start:providers/idempotent-delete:5": "134",
+    "end:providers/idempotent-delete:5": "134",
+    "start:providers/idempotent-delete:6": "154",
+    "end:providers/idempotent-delete:6": "154",
+    "start:providers/idempotent-delete:7": "184",
+    "end:providers/idempotent-delete:7": "184",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "appsignals": "```typescript\ntypeof appsignals\n```",
+        "d": "```typescript\nappsignals.GroupingAttributeDefinition\n```",
+        "DefaultGroupingValue": "```typescript\nstring | undefined\n```",
+        "definition": "```typescript\nappsignals.GroupingAttributeDefinition\n```",
+        "delete": "```typescript\n() => Effect.Effect<void, appsignals.DeleteGroupingConfigurationError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "deleteGroupingConfiguration": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<appsignals.DeleteGroupingConfigurationRequest, appsignals.DeleteGroupingConfigurationOutput, appsignals.DeleteGroupingConfigurationError, import(\"@distilled.cloud/aws/Credentials\").Credentia",
+        "desired": "```typescript\nappsignals.GroupingAttributeDefinition[]\n```",
+        "effect": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike, Req = never, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../../Resource.",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "fresh": "```typescript\n{ groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | undefined; }\n```",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "groupingAttributeDefinitions": "```typescript\nappsignals.GroupingAttributeDefinition[]\n```\n\nThe grouping attribute definitions as returned by the service.\n\n---\n\n```typescript\nappsignals.GroupingAttributeDefinition[]\n```\n\n---\n\n```typescript\nappsignals.GroupingAttributeDefinition[]\n```\n\nTh",
+        "GroupingAttributeDefinitions": "```typescript\nappsignals.GroupingAttributeDefinition[]\n```",
+        "GroupingConfiguration": "```typescript\nimport(\"../../Resource.ts\").ResourceClass<GroupingConfiguration>\n```\n\nThe CloudWatch Application Signals grouping configuration for this\naccount — an account-level singleton that defines custom grouping\nattributes (sourced from telemetry attr",
+        "GroupingConfigurationProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<GroupingConfiguration>, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "GroupingName": "```typescript\nstring\n```",
+        "GroupingSourceKeys": "```typescript\nstring[]\n```\n\n---\n\n```typescript\nstring[] | undefined\n```",
+        "i": "```typescript\nnumber\n```",
+        "id": "```typescript\nstring\n```",
+        "list": "```typescript\n() => Effect.Effect<never[], never, never>\n```",
+        "listGroupingAttributeDefinitions": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<appsignals.ListGroupingAttributeDefinitionsInput, appsignals.ListGroupingAttributeDefinitionsOutput, appsignals.ListGroupingAttributeDefinitionsError, import(\"@distilled.cloud/aws/Credential",
+        "map": "```typescript\n{ <A, B>(f: (a: A) => B): <E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<B, E, R>; <A, E, R, B>(self: Effect.Effect<A, E, R>, f: (a: A) => B): Effect.Effect<B, E, R>; }\n```\n\nTransforms the value inside an effect by applying a function ",
+        "news": "```typescript\nGroupingConfigurationProps\n```",
+        "normalizeDefinition": "```typescript\n(definition: appsignals.GroupingAttributeDefinition) => { GroupingName: string; GroupingSourceKeys: string[]; DefaultGroupingValue: string | undefined; }\n```\n\nNormalize a definition for comparison (drop undefined members).",
+        "note": "```typescript\n(note: string, options?: { readonly kind?: import(\"../../Report.ts\").NoteKind; }) => Effect.Effect<void>\n```",
+        "observe": "```typescript\nEffect.Effect<{ groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | undefined; } | undefined, appsignals.ListGroupingAttributeDefinitionsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | i",
+        "observed": "```typescript\nappsignals.GroupingAttributeDefinition[]\n```\n\n---\n\n```typescript\n{ groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | undefined; } | undefined\n```\n\n```typescript\n{ groupingAttributeDefinitions: appsign",
+        "olds": "```typescript\nGroupingConfigurationProps\n```",
+        "output": "```typescript\n{ groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | undefined; } | undefined\n```",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "Provider": "```typescript\ntypeof Provider\n```",
+        "putGroupingConfiguration": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<appsignals.PutGroupingConfigurationInput, appsignals.PutGroupingConfigurationOutput, appsignals.PutGroupingConfigurationError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: GroupingConfigurationProps; output: { groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | undefined; } | undefined; }) => Effect.Effect<{ gr",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: GroupingConfigurationProps; olds: GroupingConfigurationProps | undefined; output: { groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | unde",
+        "Resource": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../../Resource.ts\").ResourceOptions) => import(\"../../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nTh",
+        "response": "```typescript\nappsignals.ListGroupingAttributeDefinitionsOutput\n```\n\n---\n\n```typescript\nappsignals.PutGroupingConfigurationOutput\n```",
+        "sameDefinitions": "```typescript\n(desired: appsignals.GroupingAttributeDefinition[], observed: appsignals.GroupingAttributeDefinition[]) => boolean\n```",
+        "session": "```typescript\nimport(\"../../Report.ts\").ScopedPlanStatusSession\n```",
+        "stables": "```typescript\nnever[]\n```",
+        "succeed": "```typescript\n<A>(value: A) => Effect.Effect<A>\n```\n\nCreates an `Effect` that always succeeds with a given value.\n\n**When to use**\n\nUse when an effect should complete successfully with a specific value without any errors\nor external dependencies.\n\n**Exampl",
+        "Unowned": "```typescript\n{ <T extends object>(attrs: T): T; is: (value: unknown) => boolean; }\n```\n\nBrand a `read` return value as belonging to a different owner.\n\nUse this in a provider's `read` implementation when the resource exists in\nthe cloud but a positive own",
+        "updatedAt": "```typescript\nstring | undefined\n```\n\nWhen the grouping configuration was last updated (ISO timestamp).\n\n---\n\n```typescript\nstring | undefined\n```\n\n---\n\n```typescript\nstring\n```",
+        "UpdatedAt": "```typescript\nDate | undefined\n```\n\n---\n\n```typescript\nDate\n```"
+      },
+      "code": {
+        "1": "import * as appsignals from \"@distilled.cloud/aws/application-signals\";\nimport * as Effect from \"effect/Effect\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface GroupingConfigurationProps {\n\n\n\n\n\n\n\n  groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[];\n}",
+        "2": "\nexport interface GroupingConfiguration extends Resource<\n  \"AWS.ApplicationSignals.GroupingConfiguration\",\n  GroupingConfigurationProps,\n  {\n\n\n\n    groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[];\n\n\n\n    updatedAt: string | undefined;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const GroupingConfiguration = Resource<GroupingConfiguration>(\n  \"AWS.ApplicationSignals.GroupingConfiguration\",\n);\n\n\nconst normalizeDefinition = (\n  definition: appsignals.GroupingAttributeDefinition,\n) => ({\n  GroupingName: definition.GroupingName,\n  GroupingSourceKeys: definition.GroupingSourceKeys ?? [],\n  DefaultGroupingValue: definition.DefaultGroupingValue,\n});\n\nconst sameDefinitions = (\n  desired: appsignals.GroupingAttributeDefinition[],\n  observed: appsignals.GroupingAttributeDefinition[],\n): boolean =>\n  desired.length === observed.length &&\n  desired.every(\n    (d, i) =>\n      JSON.stringify(normalizeDefinition(d)) ===\n      JSON.stringify(normalizeDefinition(observed[i])),\n  );\n\nexport const GroupingConfigurationProvider = () =>\n  Provider.effect(\n    GroupingConfiguration,",
+        "4": "    Effect.gen(function* () {\n\n\n\n\n\n      const observe = appsignals.listGroupingAttributeDefinitions({}).pipe(\n        Effect.map((response) =>\n          response.UpdatedAt === undefined &&\n          response.GroupingAttributeDefinitions.length === 0\n            ? undefined\n            : {\n                groupingAttributeDefinitions: [\n                  ...response.GroupingAttributeDefinitions,\n                ],\n                updatedAt: response.UpdatedAt?.toISOString(),\n              },\n        ),\n      );\n\n      return {\n        stables: [],",
+        "5": "\n        read: Effect.fn(function* ({ olds, output }) {\n          const observed = yield* observe;\n          if (observed === undefined) return undefined;\n\n\n\n          return output !== undefined || olds !== undefined\n            ? observed\n            : Unowned(observed);\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, session }) {\n          const desired = news.groupingAttributeDefinitions;\n\n\n          const observed = yield* observe;",
+        "6": "\n\n\n\n          const fresh =\n            observed !== undefined &&\n            sameDefinitions(desired, observed.groupingAttributeDefinitions)\n              ? observed\n              : yield* appsignals\n                  .putGroupingConfiguration({\n                    GroupingAttributeDefinitions: desired,\n                  })\n                  .pipe(\n                    Effect.map((response) => ({\n                      groupingAttributeDefinitions: [\n                        ...response.GroupingConfiguration\n                          .GroupingAttributeDefinitions,\n                      ],\n                      updatedAt:\n                        response.GroupingConfiguration.UpdatedAt?.toISOString(),\n                    })),\n                  );\n\n          yield* session.note(id);\n          return fresh;\n        }),\n\n        delete: Effect.fn(function* () {\n\n\n          yield* appsignals.deleteGroupingConfiguration({});\n        }),",
+        "7": "\n\n        list: () => Effect.succeed([]),\n      };\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as appsignals from \"@distilled.cloud/aws/application-signals\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "4": "import * as Provider from \"../../Provider.ts\";",
+          "5": "import { Resource } from \"../../Resource.ts\";",
+          "6": "import type { Providers } from \"../Providers.ts\";",
+          "8": "export interface GroupingConfigurationProps {",
+          "16": "groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[];",
+          "17": "}"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as appsignals from \"@distilled.cloud/aws/application-signals\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "4": "import * as Provider from \"../../Provider.ts\";",
+          "5": "import { Resource } from \"../../Resource.ts\";",
+          "6": "import type { Providers } from \"../Providers.ts\";",
+          "8": "export interface GroupingConfigurationProps {",
+          "16": "groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[];",
+          "17": "}"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "19": "export interface GroupingConfiguration extends Resource<",
+          "20": "\"AWS.ApplicationSignals.GroupingConfiguration\",",
+          "21": "GroupingConfigurationProps,",
+          "22": "{",
+          "26": "groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[];",
+          "30": "updatedAt: string | undefined;",
+          "31": "},",
+          "32": "never,",
+          "33": "Providers",
+          "34": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "19": "export interface GroupingConfiguration extends Resource<",
+          "20": "\"AWS.ApplicationSignals.GroupingConfiguration\",",
+          "21": "GroupingConfigurationProps,",
+          "22": "{",
+          "26": "groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[];",
+          "30": "updatedAt: string | undefined;",
+          "31": "},",
+          "32": "never,",
+          "33": "Providers",
+          "34": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "84": "export const GroupingConfiguration = Resource<GroupingConfiguration>(",
+          "85": "\"AWS.ApplicationSignals.GroupingConfiguration\",",
+          "86": ");",
+          "89": "const normalizeDefinition = (",
+          "90": "definition: appsignals.GroupingAttributeDefinition,",
+          "91": ") => ({",
+          "92": "GroupingName: definition.GroupingName,",
+          "93": "GroupingSourceKeys: definition.GroupingSourceKeys ?? [],",
+          "94": "DefaultGroupingValue: definition.DefaultGroupingValue,",
+          "95": "});",
+          "97": "const sameDefinitions = (",
+          "98": "desired: appsignals.GroupingAttributeDefinition[],",
+          "99": "observed: appsignals.GroupingAttributeDefinition[],",
+          "100": "): boolean =>",
+          "101": "desired.length === observed.length &&",
+          "102": "desired.every(",
+          "103": "(d, i) =>",
+          "104": "JSON.stringify(normalizeDefinition(d)) ===",
+          "105": "JSON.stringify(normalizeDefinition(observed[i])),",
+          "106": ");",
+          "108": "export const GroupingConfigurationProvider = () =>",
+          "109": "Provider.effect(",
+          "110": "GroupingConfiguration,"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "84": "export const GroupingConfiguration = Resource<GroupingConfiguration>(",
+          "85": "\"AWS.ApplicationSignals.GroupingConfiguration\",",
+          "86": ");",
+          "89": "const normalizeDefinition = (",
+          "90": "definition: appsignals.GroupingAttributeDefinition,",
+          "91": ") => ({",
+          "92": "GroupingName: definition.GroupingName,",
+          "93": "GroupingSourceKeys: definition.GroupingSourceKeys ?? [],",
+          "94": "DefaultGroupingValue: definition.DefaultGroupingValue,",
+          "95": "});",
+          "97": "const sameDefinitions = (",
+          "98": "desired: appsignals.GroupingAttributeDefinition[],",
+          "99": "observed: appsignals.GroupingAttributeDefinition[],",
+          "100": "): boolean =>",
+          "101": "desired.length === observed.length &&",
+          "102": "desired.every(",
+          "103": "(d, i) =>",
+          "104": "JSON.stringify(normalizeDefinition(d)) ===",
+          "105": "JSON.stringify(normalizeDefinition(observed[i])),",
+          "106": ");",
+          "108": "export const GroupingConfigurationProvider = () =>",
+          "109": "Provider.effect(",
+          "110": "GroupingConfiguration,"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "111": "Effect.gen(function* () {",
+          "117": "const observe = appsignals.listGroupingAttributeDefinitions({}).pipe(",
+          "118": "Effect.map((response) =>",
+          "119": "response.UpdatedAt === undefined &&",
+          "120": "response.GroupingAttributeDefinitions.length === 0",
+          "121": "? undefined",
+          "122": ": {",
+          "123": "groupingAttributeDefinitions: [",
+          "124": "...response.GroupingAttributeDefinitions,",
+          "125": "],",
+          "126": "updatedAt: response.UpdatedAt?.toISOString(),",
+          "127": "},",
+          "128": "),",
+          "129": ");",
+          "131": "return {",
+          "132": "stables: [],"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "111": "Effect.gen(function* () {",
+          "117": "const observe = appsignals.listGroupingAttributeDefinitions({}).pipe(",
+          "118": "Effect.map((response) =>",
+          "119": "response.UpdatedAt === undefined &&",
+          "120": "response.GroupingAttributeDefinitions.length === 0",
+          "121": "? undefined",
+          "122": ": {",
+          "123": "groupingAttributeDefinitions: [",
+          "124": "...response.GroupingAttributeDefinitions,",
+          "125": "],",
+          "126": "updatedAt: response.UpdatedAt?.toISOString(),",
+          "127": "},",
+          "128": "),",
+          "129": ");",
+          "131": "return {",
+          "132": "stables: [],"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "134": "read: Effect.fn(function* ({ olds, output }) {",
+          "135": "const observed = yield* observe;",
+          "136": "if (observed === undefined) return undefined;",
+          "140": "return output !== undefined || olds !== undefined",
+          "141": "? observed",
+          "142": ": Unowned(observed);",
+          "143": "}),",
+          "145": "reconcile: Effect.fn(function* ({ id, news, session }) {",
+          "146": "const desired = news.groupingAttributeDefinitions;",
+          "149": "const observed = yield* observe;"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "134": "read: Effect.fn(function* ({ olds, output }) {",
+          "135": "const observed = yield* observe;",
+          "136": "if (observed === undefined) return undefined;",
+          "140": "return output !== undefined || olds !== undefined",
+          "141": "? observed",
+          "142": ": Unowned(observed);",
+          "143": "}),",
+          "145": "reconcile: Effect.fn(function* ({ id, news, session }) {",
+          "146": "const desired = news.groupingAttributeDefinitions;",
+          "149": "const observed = yield* observe;"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "154": "const fresh =",
+          "155": "observed !== undefined &&",
+          "156": "sameDefinitions(desired, observed.groupingAttributeDefinitions)",
+          "157": "? observed",
+          "158": ": yield* appsignals",
+          "159": ".putGroupingConfiguration({",
+          "160": "GroupingAttributeDefinitions: desired,",
+          "161": "})",
+          "162": ".pipe(",
+          "163": "Effect.map((response) => ({",
+          "164": "groupingAttributeDefinitions: [",
+          "165": "...response.GroupingConfiguration",
+          "166": ".GroupingAttributeDefinitions,",
+          "167": "],",
+          "168": "updatedAt:",
+          "169": "response.GroupingConfiguration.UpdatedAt?.toISOString(),",
+          "170": "})),",
+          "171": ");",
+          "173": "yield* session.note(id);",
+          "174": "return fresh;",
+          "175": "}),",
+          "177": "delete: Effect.fn(function* () {",
+          "180": "yield* appsignals.deleteGroupingConfiguration({});",
+          "181": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "154": "const fresh =",
+          "155": "observed !== undefined &&",
+          "156": "sameDefinitions(desired, observed.groupingAttributeDefinitions)",
+          "157": "? observed",
+          "158": ": yield* appsignals",
+          "159": ".putGroupingConfiguration({",
+          "160": "GroupingAttributeDefinitions: desired,",
+          "161": "})",
+          "162": ".pipe(",
+          "163": "Effect.map((response) => ({",
+          "164": "groupingAttributeDefinitions: [",
+          "165": "...response.GroupingConfiguration",
+          "166": ".GroupingAttributeDefinitions,",
+          "167": "],",
+          "168": "updatedAt:",
+          "169": "response.GroupingConfiguration.UpdatedAt?.toISOString(),",
+          "170": "})),",
+          "171": ");",
+          "173": "yield* session.note(id);",
+          "174": "return fresh;",
+          "175": "}),",
+          "177": "delete: Effect.fn(function* () {",
+          "180": "yield* appsignals.deleteGroupingConfiguration({});",
+          "181": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "184": "list: () => Effect.succeed([]),",
+          "185": "};",
+          "186": "}),",
+          "187": ");"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "184": "list: () => Effect.succeed([]),",
+          "185": "};",
+          "186": "}),",
+          "187": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

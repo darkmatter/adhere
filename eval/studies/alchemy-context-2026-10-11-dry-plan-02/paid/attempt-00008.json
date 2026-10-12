@@ -1,0 +1,100 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/AWS/ApplicationSignals/GroupingConfiguration.ts",
+  "kind": "judge",
+  "ordinal": 8,
+  "artifact": "attempt-00008.json",
+  "started": "2026-10-11T03:27:18.108Z",
+  "estimatedTokens": 5376,
+  "reservedTokens": 64000,
+  "chargedTokens": 3931,
+  "outcome": "answered",
+  "milliseconds": 87.35145799999987,
+  "referencesPresent": false,
+  "bodyDigest": "dd0011a844a25f8abe5cb67d979c31780b76367e8706b69f448c78d4231e7707",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.89}},\"usage\":{\"input_tokens\":3931,\"output_tokens\":25}}",
+  "inputTokens": 3931,
+  "answers": {
+    "providers/idempotent-delete": 0.89
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "appsignals": "```typescript\ntypeof appsignals\n```",
+        "d": "```typescript\nappsignals.GroupingAttributeDefinition\n```",
+        "DefaultGroupingValue": "```typescript\nstring | undefined\n```",
+        "definition": "```typescript\nappsignals.GroupingAttributeDefinition\n```",
+        "delete": "```typescript\n() => Effect.Effect<void, appsignals.DeleteGroupingConfigurationError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "deleteGroupingConfiguration": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<appsignals.DeleteGroupingConfigurationRequest, appsignals.DeleteGroupingConfigurationOutput, appsignals.DeleteGroupingConfigurationError, import(\"@distilled.cloud/aws/Credentials\").Credentia",
+        "desired": "```typescript\nappsignals.GroupingAttributeDefinition[]\n```",
+        "effect": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike, Req = never, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../../Resource.",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "fresh": "```typescript\n{ groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | undefined; }\n```",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "groupingAttributeDefinitions": "```typescript\nappsignals.GroupingAttributeDefinition[]\n```\n\nThe grouping attribute definitions as returned by the service.\n\n---\n\n```typescript\nappsignals.GroupingAttributeDefinition[]\n```\n\n---\n\n```typescript\nappsignals.GroupingAttributeDefinition[]\n```\n\nTh",
+        "GroupingAttributeDefinitions": "```typescript\nappsignals.GroupingAttributeDefinition[]\n```",
+        "GroupingConfiguration": "```typescript\nimport(\"../../Resource.ts\").ResourceClass<GroupingConfiguration>\n```\n\nThe CloudWatch Application Signals grouping configuration for this\naccount — an account-level singleton that defines custom grouping\nattributes (sourced from telemetry attr",
+        "GroupingConfigurationProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<GroupingConfiguration>, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "GroupingName": "```typescript\nstring\n```",
+        "GroupingSourceKeys": "```typescript\nstring[]\n```\n\n---\n\n```typescript\nstring[] | undefined\n```",
+        "i": "```typescript\nnumber\n```",
+        "id": "```typescript\nstring\n```",
+        "list": "```typescript\n() => Effect.Effect<never[], never, never>\n```",
+        "listGroupingAttributeDefinitions": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<appsignals.ListGroupingAttributeDefinitionsInput, appsignals.ListGroupingAttributeDefinitionsOutput, appsignals.ListGroupingAttributeDefinitionsError, import(\"@distilled.cloud/aws/Credential",
+        "map": "```typescript\n{ <A, B>(f: (a: A) => B): <E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<B, E, R>; <A, E, R, B>(self: Effect.Effect<A, E, R>, f: (a: A) => B): Effect.Effect<B, E, R>; }\n```\n\nTransforms the value inside an effect by applying a function ",
+        "news": "```typescript\nGroupingConfigurationProps\n```",
+        "normalizeDefinition": "```typescript\n(definition: appsignals.GroupingAttributeDefinition) => { GroupingName: string; GroupingSourceKeys: string[]; DefaultGroupingValue: string | undefined; }\n```\n\nNormalize a definition for comparison (drop undefined members).",
+        "note": "```typescript\n(note: string, options?: { readonly kind?: import(\"../../Report.ts\").NoteKind; }) => Effect.Effect<void>\n```",
+        "observe": "```typescript\nEffect.Effect<{ groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | undefined; } | undefined, appsignals.ListGroupingAttributeDefinitionsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | i",
+        "observed": "```typescript\nappsignals.GroupingAttributeDefinition[]\n```\n\n---\n\n```typescript\n{ groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | undefined; } | undefined\n```\n\n```typescript\n{ groupingAttributeDefinitions: appsign",
+        "olds": "```typescript\nGroupingConfigurationProps\n```",
+        "output": "```typescript\n{ groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | undefined; } | undefined\n```",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "Provider": "```typescript\ntypeof Provider\n```",
+        "putGroupingConfiguration": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<appsignals.PutGroupingConfigurationInput, appsignals.PutGroupingConfigurationOutput, appsignals.PutGroupingConfigurationError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: GroupingConfigurationProps; output: { groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | undefined; } | undefined; }) => Effect.Effect<{ gr",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: GroupingConfigurationProps; olds: GroupingConfigurationProps | undefined; output: { groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[]; updatedAt: string | unde",
+        "Resource": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../../Resource.ts\").ResourceOptions) => import(\"../../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nTh",
+        "response": "```typescript\nappsignals.ListGroupingAttributeDefinitionsOutput\n```\n\n---\n\n```typescript\nappsignals.PutGroupingConfigurationOutput\n```",
+        "sameDefinitions": "```typescript\n(desired: appsignals.GroupingAttributeDefinition[], observed: appsignals.GroupingAttributeDefinition[]) => boolean\n```",
+        "session": "```typescript\nimport(\"../../Report.ts\").ScopedPlanStatusSession\n```",
+        "stables": "```typescript\nnever[]\n```",
+        "succeed": "```typescript\n<A>(value: A) => Effect.Effect<A>\n```\n\nCreates an `Effect` that always succeeds with a given value.\n\n**When to use**\n\nUse when an effect should complete successfully with a specific value without any errors\nor external dependencies.\n\n**Exampl",
+        "Unowned": "```typescript\n{ <T extends object>(attrs: T): T; is: (value: unknown) => boolean; }\n```\n\nBrand a `read` return value as belonging to a different owner.\n\nUse this in a provider's `read` implementation when the resource exists in\nthe cloud but a positive own",
+        "updatedAt": "```typescript\nstring | undefined\n```\n\nWhen the grouping configuration was last updated (ISO timestamp).\n\n---\n\n```typescript\nstring | undefined\n```\n\n---\n\n```typescript\nstring\n```",
+        "UpdatedAt": "```typescript\nDate | undefined\n```\n\n---\n\n```typescript\nDate\n```"
+      },
+      "code": {
+        "1": "import * as appsignals from \"@distilled.cloud/aws/application-signals\";\nimport * as Effect from \"effect/Effect\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface GroupingConfigurationProps {\n\n\n\n\n\n\n\n  groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[];\n}",
+        "2": "\nexport interface GroupingConfiguration extends Resource<\n  \"AWS.ApplicationSignals.GroupingConfiguration\",\n  GroupingConfigurationProps,\n  {\n\n\n\n    groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[];\n\n\n\n    updatedAt: string | undefined;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const GroupingConfiguration = Resource<GroupingConfiguration>(\n  \"AWS.ApplicationSignals.GroupingConfiguration\",\n);\n\n\nconst normalizeDefinition = (\n  definition: appsignals.GroupingAttributeDefinition,\n) => ({\n  GroupingName: definition.GroupingName,\n  GroupingSourceKeys: definition.GroupingSourceKeys ?? [],\n  DefaultGroupingValue: definition.DefaultGroupingValue,\n});\n\nconst sameDefinitions = (\n  desired: appsignals.GroupingAttributeDefinition[],\n  observed: appsignals.GroupingAttributeDefinition[],\n): boolean =>\n  desired.length === observed.length &&\n  desired.every(\n    (d, i) =>\n      JSON.stringify(normalizeDefinition(d)) ===\n      JSON.stringify(normalizeDefinition(observed[i])),\n  );\n\nexport const GroupingConfigurationProvider = () =>\n  Provider.effect(\n    GroupingConfiguration,",
+        "4": "    Effect.gen(function* () {\n\n\n\n\n\n      const observe = appsignals.listGroupingAttributeDefinitions({}).pipe(\n        Effect.map((response) =>\n          response.UpdatedAt === undefined &&\n          response.GroupingAttributeDefinitions.length === 0\n            ? undefined\n            : {\n                groupingAttributeDefinitions: [\n                  ...response.GroupingAttributeDefinitions,\n                ],\n                updatedAt: response.UpdatedAt?.toISOString(),\n              },\n        ),\n      );\n\n      return {\n        stables: [],",
+        "5": "\n        read: Effect.fn(function* ({ olds, output }) {\n          const observed = yield* observe;\n          if (observed === undefined) return undefined;\n\n\n\n          return output !== undefined || olds !== undefined\n            ? observed\n            : Unowned(observed);\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, session }) {\n          const desired = news.groupingAttributeDefinitions;\n\n\n          const observed = yield* observe;",
+        "6": "\n\n\n\n          const fresh =\n            observed !== undefined &&\n            sameDefinitions(desired, observed.groupingAttributeDefinitions)\n              ? observed\n              : yield* appsignals\n                  .putGroupingConfiguration({\n                    GroupingAttributeDefinitions: desired,\n                  })\n                  .pipe(\n                    Effect.map((response) => ({\n                      groupingAttributeDefinitions: [\n                        ...response.GroupingConfiguration\n                          .GroupingAttributeDefinitions,\n                      ],\n                      updatedAt:\n                        response.GroupingConfiguration.UpdatedAt?.toISOString(),\n                    })),\n                  );\n\n          yield* session.note(id);\n          return fresh;\n        }),\n\n        delete: Effect.fn(function* () {\n\n\n          yield* appsignals.deleteGroupingConfiguration({});\n        }),",
+        "7": "\n\n        list: () => Effect.succeed([]),\n      };\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}
