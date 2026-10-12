@@ -48,12 +48,12 @@
     "typescript": "7.1.0-dev.20261009.1",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
     "vite-plus": "1.1.0",
-    "vitest": "5.0.3"
+    "vitest": "5.0.4"
   },
   "overrides": {
     "@effect/platform-node-shared": "4.0.0-rc.118",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
-    "vitest": "5.0.3"
+    "vitest": "5.0.4"
   },
   "devEngines": {
     "packageManager": {
