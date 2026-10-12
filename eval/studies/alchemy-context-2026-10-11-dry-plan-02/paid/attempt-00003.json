@@ -1,0 +1,47 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/ApiGateway/DeleteUsagePlanKeyHttp.ts",
+  "kind": "judge",
+  "ordinal": 3,
+  "artifact": "attempt-00003.json",
+  "started": "2026-10-11T03:27:17.576Z",
+  "estimatedTokens": 1822,
+  "reservedTokens": 64000,
+  "chargedTokens": 909,
+  "outcome": "answered",
+  "milliseconds": 86.451505,
+  "referencesPresent": false,
+  "bodyDigest": "3f1b6677f35f3e07d16b3fc5657db3be75bd280d223056390b85d8d61f03b82b",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.32}},\"usage\":{\"input_tokens\":909,\"output_tokens\":25}}",
+  "inputTokens": 909,
+  "answers": {
+    "providers/idempotent-delete": 0.32
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as ag from \"@distilled.cloud/aws/api-gateway\";\nimport * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport * as Output from \"../../Output.ts\";\nimport { registerApiGatewayBinding } from \"./BindingHttp.ts\";\nimport {\n  DeleteUsagePlanKey,\n  type DeleteUsagePlanKeyRequest,\n} from \"./DeleteUsagePlanKey.ts\";\nimport type { UsagePlan } from \"./UsagePlan.ts\";",
+        "2": "\n\n\n\n\n\nexport const DeleteUsagePlanKeyHttp = Layer.effect(\n  DeleteUsagePlanKey,\n  Effect.gen(function* () {\n    const deleteUsagePlanKey = yield* ag.deleteUsagePlanKey;\n    return Effect.fn(function* <P extends UsagePlan>(usagePlan: P) {\n      const UsagePlanId = yield* usagePlan.id;\n      yield* registerApiGatewayBinding({\n        cap: \"AWS.ApiGateway.DeleteUsagePlanKey\",\n        target: usagePlan,\n        verb: \"DELETE\",\n        paths: (region) => [\n          Output.interpolate`arn:aws:apigateway:${region}::/usageplans/${usagePlan.id}/keys/*`,\n        ],\n      });\n      return Effect.fn(\n        `AWS.ApiGateway.DeleteUsagePlanKey(${usagePlan.LogicalId})`,\n      )(function* (request: DeleteUsagePlanKeyRequest) {\n        return yield* deleteUsagePlanKey({\n          ...request,\n          usagePlanId: yield* UsagePlanId,\n        });\n      });\n    });\n  }),\n);\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

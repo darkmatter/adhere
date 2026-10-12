@@ -6,25 +6,32 @@ import {
   type ReadState,
   type Rule,
   type RuleId,
+  type Rules,
 } from "#config.ts";
 import { type Excerpt, type Range } from "#excerpt.ts";
 import { type ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, answersOf, type Judgment, sha256, type Tally } from "#services/AuditCache.ts";
 import {
+  describeState,
   fits,
   Jev,
+  type JevBlocked,
+  type JevOverflow,
   JevUnavailable,
   type Judged,
   judgeQuestion,
+  judgeBody,
   judgeLoad,
   judgeRequests,
   linterQuestion,
   type Located,
+  locateBody,
   locateRequests,
   matcherQuestions,
   questionRoom,
   tokensOf,
+  logRequestPayload,
 } from "#services/Jev.ts";
 import { type SourceReadRequest, SourceReads } from "#services/SourceReads.ts";
 import { type SourceFile, SourceWalker } from "#services/SourceWalker.ts";
@@ -187,6 +194,7 @@ export interface FilePlan {
 
 /** A run worked out from the files, the rules, and the cache, before any request. */
 export interface AuditPlan {
+  readonly model: string;
   readonly files: ReadonlyArray<FilePlan>;
   /** The normalization used for content keys, also used when reloading a selected file. */
   readonly includeComments?: boolean;
@@ -379,9 +387,11 @@ export const planAudit = (
       ? (config.workspacePackages ?? {})
       : undefined;
     const nativeReads: SourceReadRequest = {
-      symbols: config.reads.includes("symbols"),
-      references: config.reads.includes("references"),
+      symbols: config.typeAware,
+      references: config.typeAware,
       includeComments: config.includeComments === true,
+      maxSymbolLength: config.maxSymbolLength,
+      maxSymbolDocumentationLength: config.maxSymbolDocumentationLength,
     };
     const walker = yield* SourceWalker;
     const files = yield* walker.files;
@@ -504,6 +514,13 @@ export const planAudit = (
               } else if (left <= 0) {
                 limited.push({ ...plan, pending: {}, deferred: true });
               } else if (!fits(lines, rulesOf(checking), plan.readState)) {
+                yield* logRequestPayload(
+                  `${plan.file.path}: too long preflight payload (planning)`,
+                  () => ({
+                    judge: judgeBody(config.model, lines, rulesOf(checking), [], plan.readState),
+                    locate: locateBody(config.model, lines, rulesOf(checking), plan.readState),
+                  }),
+                );
                 limited.push({ ...plan, skipped: true, pending: {} });
               } else {
                 left -= 1;
@@ -618,6 +635,7 @@ export const planAudit = (
       judged.reduce((sum, plan) => sum + count(plan), 0);
     const cachedLocateRequests = loads.reduce((sum, load) => sum + load.locating, 0);
     return {
+      model: config.model,
       files: planned,
       ...(config.includeComments === true ? { includeComments: true } : {}),
       ...(options.limit === 0 ? { planOnly: true } : {}),
@@ -725,8 +743,58 @@ export const executeAudit = (
             ),
           };
         }
-        // Budget every request this file can send, never truncating native source to make it fit.
-        if (!fits(file.lines, rulesOf(checking), readState)) {
+      }
+      let referencesOmitted = false;
+      const hasHooks = Object.values(checking).some(({ rule }) => rule.appendState !== undefined);
+      let referencesForHooks: unknown;
+      const omitReferences = (reason: string) =>
+        Effect.gen(function* () {
+          referencesForHooks = hasHooks ? readState.references : undefined;
+          readState = Record.filter(readState, (_, name) => name !== "references");
+          referencesOmitted = true;
+          yield* Effect.logDebug(`${file.path}: ${reason}; attempting without references`);
+        });
+      const rulesFor = (entries: FilePlan["prepared"]): Rules => {
+        const rules = rulesOf(entries);
+        if (!referencesOmitted) return rules;
+        return Record.map(rules, (rule) => {
+          const appendState = rule.appendState;
+          return appendState === undefined
+            ? rule
+            : {
+                ...rule,
+                appendState: async (state, file, bun) => {
+                  const input =
+                    referencesForHooks === undefined
+                      ? state
+                      : describeState({ ...state, references: referencesForHooks });
+                  return Record.filter(
+                    await appendState(input, file, bun),
+                    (_, name) => name !== "references",
+                  );
+                },
+              };
+        });
+      };
+      const retryWithoutReferences = <A>(
+        work: () => Effect.Effect<A, JevUnavailable | JevOverflow | JevBlocked>,
+      ) =>
+        Effect.suspend(work).pipe(
+          Effect.catchTag("JevOverflow", (problem) =>
+            referencesOmitted || (!("references" in readState) && !hasHooks)
+              ? Effect.fail(problem)
+              : omitReferences("provider context limit").pipe(Effect.andThen(Effect.suspend(work))),
+          ),
+        );
+      if (!isEmpty(checking) && !fits(file.lines, rulesOf(checking), readState)) {
+        yield* logRequestPayload(`${file.path}: too long preflight payload (full context)`, () => ({
+          judge: judgeBody(plan.model, file.lines, rulesOf(checking), [], readState),
+          locate: locateBody(plan.model, file.lines, rulesOf(checking), readState),
+        }));
+        if ("references" in readState) {
+          // Let the provider decide whether the reduced payload fits; do not veto the fallback.
+          yield* omitReferences("full context too long for Jev (preflight limit)");
+        } else {
           yield* Effect.logDebug(`${file.path}: full context too long for Jev, skipped`);
           return fileResult("skipped", findingsOf(filePlan, kept, original));
         }
@@ -737,13 +805,13 @@ export const executeAudit = (
         return k !== undefined && tokensOf(linterQuestion(k.rule)) <= room;
       });
       const sampleIds = Object.keys(sentSamples);
-      if (!isEmpty(pending))
-        sent(judgeRequests(file.lines, rulesOf(pending), sampleIds, readState));
       const { probabilities, linter, matchers }: Judged = isEmpty(pending)
         ? { probabilities: {}, linter: {} }
-        : yield* jev
-            .judge(file.lines, rulesOf(pending), sampleIds, asWritten, readState)
-            .pipe(inFile(file));
+        : yield* retryWithoutReferences(() => {
+            const rules = rulesFor(pending);
+            sent(judgeRequests(file.lines, rules, sampleIds, readState));
+            return jev.judge(file.lines, rules, sampleIds, asWritten, readState).pipe(inFile(file));
+          });
       if (!isEmpty(linter)) yield* record(file.path, sentSamples, linter);
       const judged: Record<RuleId, Judgment> = { ...kept };
       for (const [id, probability] of Object.entries(probabilities)) {
@@ -763,7 +831,6 @@ export const executeAudit = (
       }
 
       const flagged = unlocated(prepared, judged);
-      if (!isEmpty(flagged)) sent(locateRequests(file.lines, rulesOf(flagged), readState));
       // A blocked locate question still leaves the judgments worth caching: a rerun
       // asks only for the sections again, not for every rule.
       const {
@@ -774,7 +841,11 @@ export const executeAudit = (
         readonly blocked: Blocked | undefined;
       } = isEmpty(flagged)
         ? { places: {}, blocked: undefined }
-        : yield* jev.locate(file.lines, rulesOf(flagged), asWritten, readState).pipe(
+        : yield* retryWithoutReferences(() => {
+            const rules = rulesFor(flagged);
+            sent(locateRequests(file.lines, rules, readState));
+            return jev.locate(file.lines, rules, asWritten, readState);
+          }).pipe(
             Effect.map((places) => ({ places, blocked: undefined })),
             Effect.catchTag("JevBlocked", ({ ray }) =>
               Effect.succeed({ places: {}, blocked: { file: file.path, ray } }),

@@ -1,0 +1,49 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Server/SQSQueueEventSource.ts",
+  "kind": "judge",
+  "ordinal": 263,
+  "artifact": "attempt-00263.json",
+  "started": "2026-10-11T03:28:00.533Z",
+  "estimatedTokens": 2352,
+  "reservedTokens": 64000,
+  "chargedTokens": 1270,
+  "outcome": "answered",
+  "milliseconds": 90.37712099999771,
+  "referencesPresent": false,
+  "bodyDigest": "f1477c85e2394e600287c4f85cbab4ce976684f8b1652c3ee34fc63b5225aff5",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.08}},\"usage\":{\"input_tokens\":1270,\"output_tokens\":25}}",
+  "inputTokens": 1270,
+  "answers": {
+    "providers/idempotent-delete": 0.08
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport * as Stream from \"effect/Stream\";\n\nimport * as SQS from \"../AWS/SQS/index.ts\";\nimport { toWireSeconds } from \"../Util/Duration.ts\";\nimport { ServerHost } from \"./Process.ts\";\n\nexport const SQSQueueEventSource = Layer.effect(\n  SQS.QueueEventSource,\n  Effect.gen(function* () {\n    const { run } = yield* ServerHost;\n\n    const ReceiveMessage = yield* SQS.ReceiveMessage;\n    const DeleteMessageBatch = yield* SQS.DeleteMessageBatch;\n\n    return Effect.fn(function* <StreamReq = never, Req = never>(\n      queue: SQS.Queue,\n      props: SQS.MessagesProps,\n      process: (\n        stream: Stream.Stream<SQS.SQSRecord, never, StreamReq>,\n      ) => Effect.Effect<void, never, Req | StreamReq>,\n    ) {\n      const QueueArn = yield* queue.queueArn;\n\n      const receiveMessage = yield* ReceiveMessage(queue);\n      const deleteMessageBatch = yield* DeleteMessageBatch(queue);",
+        "2": "\n      yield* run(\n        Effect.forever(\n          Effect.gen(function* () {\n            const queueArn = yield* QueueArn;\n            const region = queueArn.split(\":\")[3]!;\n            const result = yield* receiveMessage({\n              MaxNumberOfMessages:\n                props.maxNumberOfMessages ?? props.batchSize ?? 10,\n              WaitTimeSeconds:\n                toWireSeconds(props.waitTime) ??\n                toWireSeconds(props.maximumBatchingWindow),\n            });\n\n            const messages = result.Messages ?? [];\n            if (messages.length === 0) return;",
+        "3": "\n            yield* process(\n              Stream.fromArray(\n                messages.map((msg) => ({\n                  messageId: msg.MessageId!,\n                  receiptHandle: msg.ReceiptHandle!,\n                  body: msg.Body!,\n                  attributes: {\n                    ApproximateReceiveCount:\n                      msg.Attributes?.ApproximateReceiveCount!,\n                    SentTimestamp: msg.Attributes?.SentTimestamp!,\n                    SenderId: msg.Attributes?.SenderId!,\n                    ApproximateFirstReceiveTimestamp:\n                      msg.Attributes?.ApproximateFirstReceiveTimestamp!,\n                  },\n                  messageAttributes: {},\n                  md5OfBody: msg.MD5OfBody!,\n                  eventSource: \"aws:sqs\",\n                  eventSourceARN: queueArn,\n                  awsRegion: region,\n                })),\n              ),\n            ).pipe(Effect.orDie);",
+        "4": "\n\n            yield* deleteMessageBatch({\n              Entries: messages.map((msg, i) => ({\n                Id: msg.MessageId ?? String(i),\n                ReceiptHandle: msg.ReceiptHandle!,\n              })),\n            });\n          }),\n        ).pipe(Effect.orDie),\n      );\n    }) as SQS.QueueEventSourceService;\n  }),\n);\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,422 @@
+{
+  "arm": "symbols+references",
+  "file": "packages/alchemy/src/Cloudflare/Stream/StreamBinding.ts",
+  "kind": "locate",
+  "ordinal": 87,
+  "artifact": "attempt-00087.json",
+  "started": "2026-10-11T03:20:36.623Z",
+  "estimatedTokens": 13518,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.14032399999996414,
+  "referencesPresent": true,
+  "bodyDigest": "b82fe64ca7b2528f9802b339a6d63a15e06577c2c3dbe8e16160a3b8742f576e",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "30",
+    "end:providers/idempotent-delete:2": "30",
+    "start:providers/idempotent-delete:3": "40",
+    "end:providers/idempotent-delete:3": "40",
+    "start:providers/idempotent-delete:4": "69",
+    "end:providers/idempotent-delete:4": "69",
+    "start:providers/idempotent-delete:5": "98",
+    "end:providers/idempotent-delete:5": "98",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "binding": "```typescript\ncf.StreamBinding\n```",
+        "Binding": "A Cloudflare **Worker-only binding** — the plain data value produced by\ncalling a Service (e.g. `Cloudflare.Images.Images(name)`).\n\nThese bindings (`Browser`, `Images`, `VersionMetadata`, `RateLimit`,\n`Artifacts.Namespace`, …) have **no backing cloud resou",
+        "call": "```typescript\n<T>(fn: (binding: cf.StreamBinding) => Promise<T>) => Effect.Effect<T, StreamError, RuntimeContext>\n```",
+        "captions": "```typescript\n{ upload: (language: string, input: ReadableStream<any>) => Effect.Effect<cf.StreamCaption, StreamError, RuntimeContext>; generate: (language: string) => Effect.Effect<cf.StreamCaption, StreamError, RuntimeContext>; list: (language: string | ",
+        "catch": "```typescript\n(error: any) => StreamError\n```",
+        "cause": "```typescript\nany\n```",
+        "code": "```typescript\nany\n```",
+        "createDirectUpload": "```typescript\n(params: cf.StreamDirectUploadCreateParams) => Effect.Effect<cf.StreamDirectUpload, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n(params: cf.StreamDirectUploadCreateParams) => Promise<cf.StreamDirectUpload>\n```\n\nCreates a direct uploa",
+        "delete": "```typescript\n() => Effect.Effect<void, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n() => Promise<void>\n```\n\nDeletes a video and its copies from Cloudflare Stream.\n\n**@returns** A promise that resolves when deletion completes.\n\n**@throws** {NotFou",
+        "details": "```typescript\n() => Effect.Effect<cf.StreamVideo, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n() => Promise<cf.StreamVideo>\n```\n\nGet a full videos details\n\n**@returns** The full video details.\n\n**@throws** {NotFoundError} if the video is not found",
+        "downloads": "```typescript\n{ generate: (downloadType: cf.StreamDownloadType | undefined) => Effect.Effect<cf.StreamDownloadGetResponse, StreamError, RuntimeContext>; get: () => Effect.Effect<cf.StreamDownloadGetResponse, StreamError, RuntimeContext>; delete: (downloadT",
+        "downloadType": "```typescript\ncf.StreamDownloadType | undefined\n```",
+        "Effect": "The `Effect` interface defines a value that lazily describes a workflow or\njob. The workflow requires some context `R`, and may fail with an error of\ntype `E`, or succeed with a value of type `A`.\n\n**When to use**\n\nUse when you need to represent a lazy, co",
+        "error": "```typescript\nany\n```",
+        "flatMap": "```typescript\n{ <A, B, E1, R1>(f: (a: A) => Effect.Effect<B, E1, R1>): <E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<B, E1 | E, R1 | R>; <A, E, R, B, E1, R1>(self: Effect.Effect<A, E, R>, f: (a: A) => Effect.Effect<B, E1, R1>): Effect.Effect<B, E |",
+        "fn": "```typescript\n(binding: cf.StreamBinding) => Promise<T>\n```\n\n---\n\n```typescript\n() => Promise<T>\n```",
+        "generate": "```typescript\n(downloadType: cf.StreamDownloadType | undefined) => Effect.Effect<cf.StreamDownloadGetResponse, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n(downloadType?: cf.StreamDownloadType) => Promise<cf.StreamDownloadGetResponse>\n```\n\nGenerat",
+        "generateToken": "```typescript\n() => Effect.Effect<string, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n() => Promise<string>\n```\n\nCreates a signed URL token for a video.\n\n**@returns** The signed token that was created.\n\n**@throws** {InternalError} if the signing k",
+        "get": "```typescript\n() => Effect.Effect<cf.StreamDownloadGetResponse, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n() => Promise<cf.StreamDownloadGetResponse>\n```\n\nLists the downloads created for a video.\n\n**@returns** The current downloads for the video",
+        "id": "```typescript\nstring\n```",
+        "input": "```typescript\nReadableStream<any>\n```\n\n---\n\n```typescript\nstring | ReadableStream<any>\n```",
+        "language": "```typescript\nstring\n```\n\n---\n\n```typescript\nstring | undefined\n```",
+        "list": "```typescript\n(language: string | undefined) => Effect.Effect<cf.StreamCaption[], StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n(language?: string) => Promise<cf.StreamCaption[]>\n```\n\nLists the captions or subtitles.\nUse the language parameter to fi",
+        "makeBindingLayer": "```typescript\n<Self, Runtime, Client>(tag: Self, makeClient: (raw: Effect.Effect<Runtime, never, RuntimeContext>, binding: Binding.Binding<string, Client, Self>) => Client) => import(\"effect/Layer\").Layer<Self, never, import(\"../index.ts\").WorkerEnvironmen",
+        "message": "```typescript\nany\n```",
+        "params": "```typescript\ncf.StreamUpdateVideoParams\n```\n\n---\n\n```typescript\ncf.StreamUrlUploadParams | undefined\n```\n\n---\n\n```typescript\ncf.StreamDirectUploadCreateParams\n```\n\n---\n\n```typescript\ncf.StreamVideosListParams | undefined\n```\n\n---\n\n```typescript\ncf.StreamW",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "raw": "```typescript\nEffect.Effect<cf.StreamBinding, never, RuntimeContext>\n```",
+        "ReadableStream": "The **`ReadableStream`** interface of the Streams API represents a readable stream of byte data. The Fetch API offers a concrete instance of a ReadableStream through the body property of a Response object.\n\n[MDN Reference](https://developer.mozilla.org/doc",
+        "RuntimeContext": "Context of the runtime environment.\n\nE.g. the context of a running Worker, Task, Process, Function",
+        "statusCode": "```typescript\nany\n```",
+        "Stream": "```typescript\nStream\n```\n\nA Cloudflare Stream binding for managing videos, captions, downloads and\nwatermarks from Workers — a Worker-only binding with no backing cloud\nresource.\n\n`Stream` is a single value that is at once the `Binding.Service` tag, the\nca",
+        "StreamBinding": "```typescript\nStreamBinding\n```\n\n```typescript\nimport(\"effect/Layer\").Layer<Stream, never, import(\"../index.ts\").WorkerEnvironment>\n```\n\nThe binding value produced by calling Stream (declared on `env` or `yield*`-ed).\nThe layer that provides the Effect-nat",
+        "StreamClient": "Effect-native client for a Cloudflare Stream binding. Mirrors the runtime\ncf.StreamBinding handle: each operation returns an Effect tagged with\nStreamError; `video(id)` returns a pure per-video handle.",
+        "StreamError": "```typescript\ntypeof StreamError\n```\n\nError produced by a StreamClient operation. Mirrors the runtime's\n`StreamBindingError` shape (`code` is the Cloudflare Stream error code,\n`statusCode` the HTTP status it maps to) when the failure crosses the\nbinding bo",
+        "StreamVideoClient": "Effect-native handle for operations scoped to a single Stream video.",
+        "try": "```typescript\n() => Promise<T>\n```",
+        "tryPromise": "```typescript\n<T>(fn: () => Promise<T>) => Effect.Effect<T, StreamError>\n```\n\n---\n\n```typescript\n{ <A>(options: (signal: AbortSignal) => PromiseLike<A>): Effect.Effect<A, import(\"effect/Cause\").UnknownError>; <A, E>(options: { readonly try: (signal: AbortS",
+        "update": "```typescript\n(params: cf.StreamUpdateVideoParams) => Effect.Effect<cf.StreamVideo, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n(params: cf.StreamUpdateVideoParams) => Promise<cf.StreamVideo>\n```\n\nUpdate details for a single video.\n\n**@param** par",
+        "upload": "```typescript\n(language: string, input: ReadableStream<any>) => Effect.Effect<cf.StreamCaption, StreamError, RuntimeContext>\n```\n\n---\n\n```typescript\n(language: string, input: cf.ReadableStream) => Promise<cf.StreamCaption>\n```\n\nUploads the caption or subti",
+        "url": "```typescript\nstring\n```",
+        "video": "```typescript\n(id: string) => StreamVideoClient\n```\n\n---\n\n```typescript\n(id: string) => cf.StreamVideoHandle\n```\n\nReturns a handle scoped to a single video for per-video operations.\n\n**@param** id The unique identifier for the video.\n\n**@returns** A handle",
+        "videos": "```typescript\n{ list: (params: cf.StreamVideosListParams | undefined) => Effect.Effect<cf.StreamVideo[], StreamError, RuntimeContext>; }\n```\n\n---\n\n```typescript\ncf.StreamVideos\n```",
+        "watermarkId": "```typescript\nstring\n```",
+        "watermarks": "```typescript\n{ generate: (input: string | ReadableStream<any>, params: cf.StreamWatermarkCreateParams) => Effect.Effect<cf.StreamWatermark, StreamError, RuntimeContext>; list: () => Effect.Effect<cf.StreamWatermark[], StreamError, RuntimeContext>; get: (w"
+      },
+      "references": {
+        "__comment": "Declarations of symbols used in `code`. Each key is `symbol:pathname`: the symbol name as used in `code` followed by its repository-relative declaration path. Each value is a complete declaration excerpt.",
+        "Binding:packages/alchemy/src/Cloudflare/Workers/Binding.ts": "import * as Effect from \"effect/Effect\";\nimport * as Option from \"effect/Option\";\nimport { SingleShotGen } from \"effect/Utils\";\nimport * as CoreBinding from \"../../Binding.ts\";\nimport { ProviderModePolicy } from \"../../ProviderMode.ts\";\nimport { taggedFunction } from \"../../Util/effect.ts\";\nimport type { WorkerBinding } from \"./WorkerBinding.ts\";\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport interface Binding<\n  Kind extends string = string,\n  Client = unknown,\n  Service = unknown,\n> {\n  readonly kind: Kind;\n\n  readonly name: string;\n\n\n\n\n\n\n\n  readonly devRemote?: boolean;\n\n  asEffect(): Effect.Effect<Client, never, Service>;\n  [Symbol.iterator](): Generator<Effect.Effect<Client, never, Service>, Client>;\n\n  toWorkerBinding(): WorkerBinding;\n\n\n\n\n\n\n\n\n\n\n\n\n\n  pipe(): BindingEffect<this>;\n  pipe<A>(ab: (self: BindingEffect<this>) => A): A;\n  pipe<A, B>(ab: (self: BindingEffect<this>) => A, bc: (a: A) => B): B;\n  pipe<A, B, C>(\n    ab: (self: BindingEffect<this>) => A,\n    bc: (a: A) => B,\n    cd: (b: B) => C,\n  ): C;\n}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport interface BindingEffect<\n  B extends Binding<any, any, any>,\n> extends Effect.Effect<\n  B extends Binding<any, infer Client, any> ? Client : never,\n  never,\n  B extends Binding<any, any, infer Service> ? Service : never\n> {\n  readonly \"~alchemy/Kind\": \"Cloudflare.Workers.BindingEffect\";\n  readonly \"~alchemy/Binding\": B;\n}\n\n\nexport type AnyBindingEffect = BindingEffect<Binding<any, any, any>>;\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport interface Service<\n  Self,\n  Id extends string,\n  Client,\n> extends CoreBinding.Service<\n  Self,\n  Id,\n  (binding: Binding<Id, Client, Self>) => Effect.Effect<Client>\n> {}\n\ntype AnyService = { readonly key: string } & ((...args: any[]) => any);\n\n\n\n\n\n\n\n\n\nexport const Service = <\n  Self extends AnyService,\n  Payload extends object = Record<never, never>,\n>(config: {\n\n  readonly id: Self[\"key\"] & string;\n\n  readonly defaultName: string;\n\n\n\n\n  readonly parse?: (...args: any[]) => { name?: string } & Payload;\n\n  readonly toWorkerBinding: (\n    binding: { readonly name: string } & Payload,\n  ) => WorkerBinding;\n}): Self => {\n  const tag = CoreBinding.Service<Self & { kind: \"Service\"; key: string }>(\n    config.id as never,\n  );\n  const bind = tag as unknown as (binding: unknown) => Effect.Effect<unknown>;\n\n  const make = (data: Record<PropertyKey, unknown>) => {\n    const self: Record<PropertyKey, unknown> = { ...data };\n    self.toWorkerBinding = () =>\n      config.toWorkerBinding(self as never as { name: string } & Payload);\n    self.asEffect = () => bind(self);\n    self[Symbol.iterator] = () => new SingleShotGen(bind(self));\n\n\n\n\n\n    const lifted = Effect.gen(function* () {\n      const policy = yield* ProviderModePolicy;\n      const decorated =\n        policy === undefined || policy === !!data.devRemote\n          ? self\n          : make({ ...data, devRemote: policy || undefined });\n      const impl = yield* Effect.serviceOption(tag as never);\n      return Option.isSome(impl)\n        ? yield* (impl.value as (b: unknown) => Effect.Effect<unknown>)(\n            decorated,\n          )\n        : decorated;\n    });\n    self.pipe = (...fns: Array<(value: unknown) => unknown>) =>\n      fns.reduce((acc, fn) => fn(acc), lifted as unknown);\n    return self;\n  };\n\n  const construct = (...args: unknown[]) => {\n    const { name, ...payload } =\n      config.parse?.(...args) ??\n      ({ name: args[0] as string | undefined } as {\n        name?: string;\n      } & Payload);\n    return make({\n      kind: config.id,\n      name: name ?? config.defaultName,\n      ...payload,\n    });\n  };\n\n  return taggedFunction(tag as never, construct as never) as unknown as Self;\n};\n\n\nexport const isBinding = (value: unknown): value is Binding =>\n  typeof value === \"object\" &&\n  value !== null &&\n  \"kind\" in value &&\n  typeof (value as { toWorkerBinding?: unknown }).toWorkerBinding ===\n    \"function\" &&\n  typeof (value as { [Symbol.iterator]?: unknown })[Symbol.iterator] ===\n    \"function\";",
+        "makeBindingLayer:packages/alchemy/src/Cloudflare/Workers/BindingLayer.ts": "export const makeBindingLayer = <Self, Runtime, Client>(\n  tag: Self,\n  makeClient: (\n    raw: Effect.Effect<Runtime, never, RuntimeContext>,\n    binding: Binding<string, Client, Self>,\n  ) => Client,\n): Layer.Layer<Self, never, WorkerEnvironment> =>\n  Layer.effect(\n    tag as never,\n    Effect.gen(function* () {\n      const env = yield* WorkerEnvironment;\n      return Effect.fn(function* (binding: Binding<string, Client>) {\n\n        if (!globalThis.__ALCHEMY_RUNTIME__) {\n          const host = yield* CoreBinding.Host;\n          if (isWorker(host)) {\n            yield* host.bind(binding.name, {\n              bindings: [binding.toWorkerBinding()],\n\n\n              ...(binding.devRemote\n                ? { devRemote: { [binding.name]: true } }\n                : {}),\n            });\n          }\n        }\n\n        const raw = Effect.sync(\n          () => (env as Record<string, Runtime>)[binding.name]!,\n        ) as Effect.Effect<Runtime, never, RuntimeContext>;\n        return makeClient(raw, binding as Binding<string, Client, Self>);\n      });\n    }),\n  ) as Layer.Layer<Self, never, WorkerEnvironment>;",
+        "RuntimeContext:packages/alchemy/src/RuntimeContext.ts": "export class RuntimeContext extends Context.Service<\n  RuntimeContext,\n  BaseRuntimeContext\n>()(\"RuntimeContext\") {\n  static phantom = Layer.empty as Layer.Layer<RuntimeContext>;\n}",
+        "Stream:packages/alchemy/src/Cloudflare/Stream/Stream.ts": "export interface Stream extends Binding.Service<Stream, TypeId, StreamClient> {\n\n\n\n\n  (name?: string): StreamBinding;\n}\n…\nexport const Stream = Binding.Service<Stream>({\n  id: TypeId,\n  defaultName: \"STREAM\",\n  toWorkerBinding: (binding) => ({\n    type: \"stream\",\n    name: binding.name,\n  }),\n});",
+        "StreamClient:packages/alchemy/src/Cloudflare/Stream/Stream.ts": "export interface StreamClient {\n\n  raw: Effect.Effect<cf.StreamBinding, never, RuntimeContext>;\n\n  upload(\n    url: string,\n    params?: cf.StreamUrlUploadParams,\n  ): StreamEffect<cf.StreamVideo>;\n\n\n\n\n  createDirectUpload(\n    params: cf.StreamDirectUploadCreateParams,\n  ): StreamEffect<cf.StreamDirectUpload>;\n\n  video(id: string): StreamVideoClient;\n\n  videos: {\n\n    list(params?: cf.StreamVideosListParams): StreamEffect<cf.StreamVideo[]>;\n  };\n\n  watermarks: {\n\n    generate(\n      input: ReadableStream | string,\n      params: cf.StreamWatermarkCreateParams,\n    ): StreamEffect<cf.StreamWatermark>;\n\n    list(): StreamEffect<cf.StreamWatermark[]>;\n\n    get(watermarkId: string): StreamEffect<cf.StreamWatermark>;\n\n    delete(watermarkId: string): StreamEffect<void>;\n  };\n}",
+        "StreamError:packages/alchemy/src/Cloudflare/Stream/Stream.ts": "export class StreamError extends Data.TaggedError(\"StreamError\")<{\n  message: string;\n  code?: number;\n  statusCode?: number;\n  cause: unknown;\n}> {}",
+        "StreamVideoClient:packages/alchemy/src/Cloudflare/Stream/Stream.ts": "export interface StreamVideoClient {\n\n  readonly id: string;\n\n  details(): StreamEffect<cf.StreamVideo>;\n\n  update(params: cf.StreamUpdateVideoParams): StreamEffect<cf.StreamVideo>;\n\n  delete(): StreamEffect<void>;\n\n  generateToken(): StreamEffect<string>;\n\n  downloads: {\n\n    generate(\n      downloadType?: cf.StreamDownloadType,\n    ): StreamEffect<cf.StreamDownloadGetResponse>;\n\n    get(): StreamEffect<cf.StreamDownloadGetResponse>;\n\n    delete(downloadType?: cf.StreamDownloadType): StreamEffect<void>;\n  };\n\n  captions: {\n\n    upload(\n      language: string,\n      input: ReadableStream,\n    ): StreamEffect<cf.StreamCaption>;\n\n    generate(language: string): StreamEffect<cf.StreamCaption>;\n\n    list(language?: string): StreamEffect<cf.StreamCaption[]>;\n\n    delete(language: string): StreamEffect<void>;\n  };\n}"
+      },
+      "code": {
+        "1": "import type * as cf from \"@cloudflare/workers-types\";\nimport * as Effect from \"effect/Effect\";\nimport type { RuntimeContext } from \"../../RuntimeContext.ts\";\nimport type * as Binding from \"../Workers/Binding.ts\";\nimport { makeBindingLayer } from \"../Workers/BindingLayer.ts\";\nimport {\n  Stream,\n  StreamError,\n  type StreamClient,\n  type StreamVideoClient,\n} from \"./Stream.ts\";\n\n\nexport type StreamBinding = Binding.Binding<\n  Stream[\"key\"],\n  StreamClient,\n  Stream\n>;",
+        "2": "\n\n\n\n\n\n\n\n\n\n\nexport const StreamBinding = makeBindingLayer<\n  Stream,\n  cf.StreamBinding,\n  StreamClient\n>(Stream, (raw): StreamClient => {\n  const call = <T>(\n    fn: (binding: cf.StreamBinding) => Promise<T>,\n  ): Effect.Effect<T, StreamError, RuntimeContext> =>\n    raw.pipe(Effect.flatMap((binding) => tryPromise(() => fn(binding))));",
+        "3": "\n  const video = (id: string): StreamVideoClient => ({\n    id,\n    details: () => call((binding) => binding.video(id).details()),\n    update: (params) => call((binding) => binding.video(id).update(params)),\n    delete: () => call((binding) => binding.video(id).delete()),\n    generateToken: () => call((binding) => binding.video(id).generateToken()),\n    downloads: {\n      generate: (downloadType) =>\n        call((binding) => binding.video(id).downloads.generate(downloadType)),\n      get: () => call((binding) => binding.video(id).downloads.get()),\n      delete: (downloadType) =>\n        call((binding) => binding.video(id).downloads.delete(downloadType)),\n    },\n    captions: {\n      upload: (language, input) =>\n        call((binding) =>\n          binding\n            .video(id)\n            .captions.upload(language, input as unknown as cf.ReadableStream),\n        ),\n      generate: (language) =>\n        call((binding) => binding.video(id).captions.generate(language)),\n      list: (language) =>\n        call((binding) => binding.video(id).captions.list(language)),\n      delete: (language) =>\n        call((binding) => binding.video(id).captions.delete(language)),\n    },\n  });",
+        "4": "\n  return {\n    raw,\n    upload: (url, params) => call((binding) => binding.upload(url, params)),\n    createDirectUpload: (params) =>\n      call((binding) => binding.createDirectUpload(params)),\n    video,\n    videos: {\n      list: (params) => call((binding) => binding.videos.list(params)),\n    },\n    watermarks: {\n      generate: (input, params) =>\n        call((binding) =>\n\n\n          binding.watermarks.generate(\n            input as unknown as cf.ReadableStream,\n            params,\n          ),\n        ),\n      list: () => call((binding) => binding.watermarks.list()),\n      get: (watermarkId) =>\n        call((binding) => binding.watermarks.get(watermarkId)),\n      delete: (watermarkId) =>\n        call((binding) => binding.watermarks.delete(watermarkId)),\n    },\n  } satisfies StreamClient;\n});\n\nconst tryPromise = <T>(fn: () => Promise<T>): Effect.Effect<T, StreamError> =>",
+        "5": "  Effect.tryPromise({\n    try: fn,\n    catch: (error: any) =>\n      new StreamError({\n        message: error?.message ?? \"Unknown Cloudflare Stream error\",\n        code: typeof error?.code === \"number\" ? error.code : undefined,\n        statusCode:\n          typeof error?.statusCode === \"number\" ? error.statusCode : undefined,\n        cause: error,\n      }),\n  });\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import type * as cf from \"@cloudflare/workers-types\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import type { RuntimeContext } from \"../../RuntimeContext.ts\";",
+          "4": "import type * as Binding from \"../Workers/Binding.ts\";",
+          "5": "import { makeBindingLayer } from \"../Workers/BindingLayer.ts\";",
+          "6": "import {",
+          "7": "Stream,",
+          "8": "StreamError,",
+          "9": "type StreamClient,",
+          "10": "type StreamVideoClient,",
+          "11": "} from \"./Stream.ts\";",
+          "14": "export type StreamBinding = Binding.Binding<",
+          "15": "Stream[\"key\"],",
+          "16": "StreamClient,",
+          "17": "Stream",
+          "18": ">;"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import type * as cf from \"@cloudflare/workers-types\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import type { RuntimeContext } from \"../../RuntimeContext.ts\";",
+          "4": "import type * as Binding from \"../Workers/Binding.ts\";",
+          "5": "import { makeBindingLayer } from \"../Workers/BindingLayer.ts\";",
+          "6": "import {",
+          "7": "Stream,",
+          "8": "StreamError,",
+          "9": "type StreamClient,",
+          "10": "type StreamVideoClient,",
+          "11": "} from \"./Stream.ts\";",
+          "14": "export type StreamBinding = Binding.Binding<",
+          "15": "Stream[\"key\"],",
+          "16": "StreamClient,",
+          "17": "Stream",
+          "18": ">;"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "30": "export const StreamBinding = makeBindingLayer<",
+          "31": "Stream,",
+          "32": "cf.StreamBinding,",
+          "33": "StreamClient",
+          "34": ">(Stream, (raw): StreamClient => {",
+          "35": "const call = <T>(",
+          "36": "fn: (binding: cf.StreamBinding) => Promise<T>,",
+          "37": "): Effect.Effect<T, StreamError, RuntimeContext> =>",
+          "38": "raw.pipe(Effect.flatMap((binding) => tryPromise(() => fn(binding))));"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "30": "export const StreamBinding = makeBindingLayer<",
+          "31": "Stream,",
+          "32": "cf.StreamBinding,",
+          "33": "StreamClient",
+          "34": ">(Stream, (raw): StreamClient => {",
+          "35": "const call = <T>(",
+          "36": "fn: (binding: cf.StreamBinding) => Promise<T>,",
+          "37": "): Effect.Effect<T, StreamError, RuntimeContext> =>",
+          "38": "raw.pipe(Effect.flatMap((binding) => tryPromise(() => fn(binding))));"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "40": "const video = (id: string): StreamVideoClient => ({",
+          "41": "id,",
+          "42": "details: () => call((binding) => binding.video(id).details()),",
+          "43": "update: (params) => call((binding) => binding.video(id).update(params)),",
+          "44": "delete: () => call((binding) => binding.video(id).delete()),",
+          "45": "generateToken: () => call((binding) => binding.video(id).generateToken()),",
+          "46": "downloads: {",
+          "47": "generate: (downloadType) =>",
+          "48": "call((binding) => binding.video(id).downloads.generate(downloadType)),",
+          "49": "get: () => call((binding) => binding.video(id).downloads.get()),",
+          "50": "delete: (downloadType) =>",
+          "51": "call((binding) => binding.video(id).downloads.delete(downloadType)),",
+          "52": "},",
+          "53": "captions: {",
+          "54": "upload: (language, input) =>",
+          "55": "call((binding) =>",
+          "56": "binding",
+          "57": ".video(id)",
+          "58": ".captions.upload(language, input as unknown as cf.ReadableStream),",
+          "59": "),",
+          "60": "generate: (language) =>",
+          "61": "call((binding) => binding.video(id).captions.generate(language)),",
+          "62": "list: (language) =>",
+          "63": "call((binding) => binding.video(id).captions.list(language)),",
+          "64": "delete: (language) =>",
+          "65": "call((binding) => binding.video(id).captions.delete(language)),",
+          "66": "},",
+          "67": "});"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "40": "const video = (id: string): StreamVideoClient => ({",
+          "41": "id,",
+          "42": "details: () => call((binding) => binding.video(id).details()),",
+          "43": "update: (params) => call((binding) => binding.video(id).update(params)),",
+          "44": "delete: () => call((binding) => binding.video(id).delete()),",
+          "45": "generateToken: () => call((binding) => binding.video(id).generateToken()),",
+          "46": "downloads: {",
+          "47": "generate: (downloadType) =>",
+          "48": "call((binding) => binding.video(id).downloads.generate(downloadType)),",
+          "49": "get: () => call((binding) => binding.video(id).downloads.get()),",
+          "50": "delete: (downloadType) =>",
+          "51": "call((binding) => binding.video(id).downloads.delete(downloadType)),",
+          "52": "},",
+          "53": "captions: {",
+          "54": "upload: (language, input) =>",
+          "55": "call((binding) =>",
+          "56": "binding",
+          "57": ".video(id)",
+          "58": ".captions.upload(language, input as unknown as cf.ReadableStream),",
+          "59": "),",
+          "60": "generate: (language) =>",
+          "61": "call((binding) => binding.video(id).captions.generate(language)),",
+          "62": "list: (language) =>",
+          "63": "call((binding) => binding.video(id).captions.list(language)),",
+          "64": "delete: (language) =>",
+          "65": "call((binding) => binding.video(id).captions.delete(language)),",
+          "66": "},",
+          "67": "});"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "69": "return {",
+          "70": "raw,",
+          "71": "upload: (url, params) => call((binding) => binding.upload(url, params)),",
+          "72": "createDirectUpload: (params) =>",
+          "73": "call((binding) => binding.createDirectUpload(params)),",
+          "74": "video,",
+          "75": "videos: {",
+          "76": "list: (params) => call((binding) => binding.videos.list(params)),",
+          "77": "},",
+          "78": "watermarks: {",
+          "79": "generate: (input, params) =>",
+          "80": "call((binding) =>",
+          "83": "binding.watermarks.generate(",
+          "84": "input as unknown as cf.ReadableStream,",
+          "85": "params,",
+          "86": "),",
+          "87": "),",
+          "88": "list: () => call((binding) => binding.watermarks.list()),",
+          "89": "get: (watermarkId) =>",
+          "90": "call((binding) => binding.watermarks.get(watermarkId)),",
+          "91": "delete: (watermarkId) =>",
+          "92": "call((binding) => binding.watermarks.delete(watermarkId)),",
+          "93": "},",
+          "94": "} satisfies StreamClient;",
+          "95": "});",
+          "97": "const tryPromise = <T>(fn: () => Promise<T>): Effect.Effect<T, StreamError> =>"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "69": "return {",
+          "70": "raw,",
+          "71": "upload: (url, params) => call((binding) => binding.upload(url, params)),",
+          "72": "createDirectUpload: (params) =>",
+          "73": "call((binding) => binding.createDirectUpload(params)),",
+          "74": "video,",
+          "75": "videos: {",
+          "76": "list: (params) => call((binding) => binding.videos.list(params)),",
+          "77": "},",
+          "78": "watermarks: {",
+          "79": "generate: (input, params) =>",
+          "80": "call((binding) =>",
+          "83": "binding.watermarks.generate(",
+          "84": "input as unknown as cf.ReadableStream,",
+          "85": "params,",
+          "86": "),",
+          "87": "),",
+          "88": "list: () => call((binding) => binding.watermarks.list()),",
+          "89": "get: (watermarkId) =>",
+          "90": "call((binding) => binding.watermarks.get(watermarkId)),",
+          "91": "delete: (watermarkId) =>",
+          "92": "call((binding) => binding.watermarks.delete(watermarkId)),",
+          "93": "},",
+          "94": "} satisfies StreamClient;",
+          "95": "});",
+          "97": "const tryPromise = <T>(fn: () => Promise<T>): Effect.Effect<T, StreamError> =>"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "98": "Effect.tryPromise({",
+          "99": "try: fn,",
+          "100": "catch: (error: any) =>",
+          "101": "new StreamError({",
+          "102": "message: error?.message ?? \"Unknown Cloudflare Stream error\",",
+          "103": "code: typeof error?.code === \"number\" ? error.code : undefined,",
+          "104": "statusCode:",
+          "105": "typeof error?.statusCode === \"number\" ? error.statusCode : undefined,",
+          "106": "cause: error,",
+          "107": "}),",
+          "108": "});"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "98": "Effect.tryPromise({",
+          "99": "try: fn,",
+          "100": "catch: (error: any) =>",
+          "101": "new StreamError({",
+          "102": "message: error?.message ?? \"Unknown Cloudflare Stream error\",",
+          "103": "code: typeof error?.code === \"number\" ? error.code : undefined,",
+          "104": "statusCode:",
+          "105": "typeof error?.statusCode === \"number\" ? error.statusCode : undefined,",
+          "106": "cause: error,",
+          "107": "}),",
+          "108": "});"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols` and `references`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` and `references` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` and `references` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

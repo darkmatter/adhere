@@ -1,0 +1,55 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CloudWatch/CompositeAlarm.ts",
+  "kind": "judge",
+  "ordinal": 48,
+  "artifact": "attempt-00048.json",
+  "started": "2026-10-11T03:27:24.673Z",
+  "estimatedTokens": 3603,
+  "reservedTokens": 64000,
+  "chargedTokens": 2159,
+  "outcome": "answered",
+  "milliseconds": 78.10039299999971,
+  "referencesPresent": false,
+  "bodyDigest": "f4c1b36713ebaa5b7ef82870b14d931e81b4893d0375255dcffca0fec2d09ba7",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.85}},\"usage\":{\"input_tokens\":2159,\"output_tokens\":25}}",
+  "inputTokens": 2159,
+  "answers": {
+    "providers/idempotent-delete": 0.85
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as cloudwatch from \"@distilled.cloud/aws/cloudwatch\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { hasAlchemyTags } from \"../../Tags.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport type { AlarmArn } from \"./Alarm.ts\";\nimport {\n  createName,\n  readResourceTags,\n  retryConcurrent,\n  updateResourceTags,\n} from \"./common.ts\";\n\nexport type CompositeAlarmName = string;",
+        "2": "\nexport interface CompositeAlarmProps extends Omit<\n  cloudwatch.PutCompositeAlarmInput,\n  \"AlarmName\" | \"Tags\"\n> {\n\n\n\n  name?: CompositeAlarmName;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "3": "\nexport interface CompositeAlarm extends Resource<\n  \"AWS.CloudWatch.CompositeAlarm\",\n  CompositeAlarmProps,\n  {\n\n    alarmName: CompositeAlarmName;\n\n    alarmArn: AlarmArn;\n\n    stateValue: cloudwatch.StateValue | undefined;\n\n    stateReason: string | undefined;\n\n    compositeAlarm: cloudwatch.CompositeAlarm;\n\n    tags: Record<string, string>;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const CompositeAlarm = Resource<CompositeAlarm>(\n  \"AWS.CloudWatch.CompositeAlarm\",\n);\n\nexport const CompositeAlarmProvider = () =>\n  Provider.effect(\n    CompositeAlarm,\n    Effect.gen(function* () {\n      const createAlarmName = (id: string, props: { name?: string } = {}) =>\n        createName(id, props.name, 255);\n\n      const alarmArn = (alarmName: string) =>\n        AWSEnvironment.current.pipe(\n          Effect.map(\n            (env) =>\n              `arn:aws:cloudwatch:${env.region}:${env.accountId}:alarm:${alarmName}` as AlarmArn,\n          ),\n        );",
+        "5": "\n      const readCompositeAlarm = Effect.fn(function* (alarmName: string) {\n        const described = yield* cloudwatch.describeAlarms({\n          AlarmNames: [alarmName],\n          AlarmTypes: [\"CompositeAlarm\"],\n        });\n        const compositeAlarm = described.CompositeAlarms?.find(\n          (candidate) => candidate.AlarmName === alarmName,\n        );\n\n        if (!compositeAlarm?.AlarmName || !compositeAlarm.AlarmArn) {\n          return undefined;\n        }\n\n        const tags = yield* readResourceTags(compositeAlarm.AlarmArn).pipe(\n          Effect.catchTag(\"ResourceNotFoundException\", () =>\n            Effect.succeed({}),\n          ),\n        );\n\n        return {\n          alarmName: compositeAlarm.AlarmName,\n          alarmArn: compositeAlarm.AlarmArn as AlarmArn,\n          stateValue: compositeAlarm.StateValue,\n          stateReason: compositeAlarm.StateReason,\n          compositeAlarm,\n          tags,\n        };\n      });",
+        "6": "\n      return {\n        stables: [\"alarmName\", \"alarmArn\"],\n        diff: Effect.fn(function* ({ id, olds = {}, news = {} }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createAlarmName(id, olds);\n          const newName = yield* createAlarmName(id, news);\n\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name =\n            output?.alarmName ?? (yield* createAlarmName(id, olds ?? {}));\n          const state = yield* readCompositeAlarm(name);\n          if (!state) return undefined;\n          return (yield* hasAlchemyTags(id, state.tags))\n            ? state\n            : Unowned(state);\n        }),\n        reconcile: Effect.fn(function* ({ id, news, olds, output, session }) {\n\n\n\n          const name = output?.alarmName ?? (yield* createAlarmName(id, news));\n          const existing = yield* readCompositeAlarm(name);",
+        "7": "\n\n\n\n          yield* retryConcurrent(\n            cloudwatch.putCompositeAlarm({\n              ...news,\n              AlarmName: name,\n            }),\n          );\n\n\n\n\n          const tags = yield* updateResourceTags({\n            id,\n            resourceArn: yield* alarmArn(name),\n            olds: olds?.tags ?? existing?.tags,\n            news: news.tags,\n          });\n\n          yield* session.note(yield* alarmArn(name));\n\n          const state = yield* readCompositeAlarm(name);\n          if (!state) {\n            return yield* Effect.fail(\n              new Error(`failed to read reconciled composite alarm '${name}'`),\n            );\n          }",
+        "8": "\n          return {\n            ...state,\n            tags,\n          };\n        }),\n        delete: Effect.fn(function* ({ output }) {\n          yield* retryConcurrent(\n            cloudwatch.deleteAlarms({\n              AlarmNames: [output.alarmName],\n            }),\n          );\n        }),",
+        "9": "        list: () =>\n          Effect.gen(function* () {\n\n\n\n            const alarms = yield* cloudwatch.describeAlarms\n              .pages({ AlarmTypes: [\"CompositeAlarm\"] })\n              .pipe(\n                Stream.runCollect,\n                Effect.map((chunk) =>\n                  Array.from(chunk).flatMap((page) =>\n                    (page.CompositeAlarms ?? []).filter(\n                      (\n                        candidate,\n                      ): candidate is cloudwatch.CompositeAlarm & {\n                        AlarmName: string;\n                        AlarmArn: string;\n                      } =>\n                        candidate.AlarmName != null &&\n                        candidate.AlarmArn != null,\n                    ),\n                  ),\n                ),\n              );",
+        "10": "\n            return yield* Effect.forEach(\n              alarms,\n              (compositeAlarm) =>\n                readResourceTags(compositeAlarm.AlarmArn).pipe(\n                  Effect.catchTag(\"ResourceNotFoundException\", () =>\n                    Effect.succeed({}),\n                  ),\n                  Effect.map((tags) => ({\n                    alarmName: compositeAlarm.AlarmName,\n                    alarmArn: compositeAlarm.AlarmArn as AlarmArn,\n                    stateValue: compositeAlarm.StateValue,\n                    stateReason: compositeAlarm.StateReason,\n                    compositeAlarm,\n                    tags,\n                  })),\n                ),\n              { concurrency: 10 },\n            );\n          }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

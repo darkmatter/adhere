@@ -1,4 +1,5 @@
 import { isNote, withoutComments } from "#comments.ts";
+import { DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH, DEFAULT_MAX_SYMBOL_LENGTH } from "#config.ts";
 import { suppressionsOf } from "#suppress.ts";
 import { Effect, Fiber, Layer, Path } from "effect";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -65,7 +66,13 @@ const sources = {
   "node_modules/private/package.json": JSON.stringify({ name: "private", types: "index.d.ts" }),
   "node_modules/private/index.d.ts": "export declare const secret: number;",
 };
-const both: SourceReadRequest = { symbols: true, references: true, includeComments: false };
+const both: SourceReadRequest = {
+  symbols: true,
+  references: true,
+  includeComments: false,
+  maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+  maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+};
 const roots: string[] = [];
 const within = async <A>(promise: Promise<A>, milliseconds: number): Promise<A> => {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -199,11 +206,11 @@ describe("native TypeScript compiler and declaration reads", () => {
         "export const first = {} as Box<string>;",
         "export const second = {} as Box<number>;",
         "export const mapped: Readonly<Box<string>> = first;",
-        "/** An unrelated reader. */",
-        "export const other = { get: () => true };",
       ].join("\n"),
+      "other.ts": "/** An unrelated reader. */\nexport const other = { get: () => true };",
       "use.ts": [
-        'import { first, second, mapped, other } from "./lib";',
+        'import { first, second, mapped } from "./lib";',
+        'import { other } from "./other";',
         "export const results = [first.get(), second.get(), mapped.get(), other.get()];",
       ].join("\n"),
       "types.d.ts": "",
@@ -218,8 +225,79 @@ describe("native TypeScript compiler and declaration reads", () => {
     expect(get.match(/\*\*@returns\*\*/g)).toHaveLength(1);
     expect(get).toContain("The stored value.");
     expect(get).toContain("**@example** box.get();");
-    expect(result.references!.get!["lib.ts"]).toContain("  get(): T;");
-    expect(result.references!.get!["lib.ts"]).toContain("get: () => true");
+    expect(result.references!["get:lib.ts"]).toContain("  get(): T;");
+    expect(result.references!["get:other.ts"]).toBe("export const other = { get: () => true };");
+  });
+
+  it("caps documentation independently when the whole-symbol limit allows long signatures", async () => {
+    const documentation = `Documentation: ${"x".repeat(600)}`;
+    const example = "y".repeat(600);
+    const parameters = Array.from({ length: 24 }, (_, index) => `argument${index}: number`).join(
+      ", ",
+    );
+    const { root, read } = await fixture({
+      "lib.ts": [
+        `/** ${documentation} */`,
+        `export function original(${parameters}) { return argument0; }`,
+        `/** A value.\n * @example ${example}\n */`,
+        "export const tagged = 42;",
+      ].join("\n"),
+      "use.ts":
+        'import { original, tagged } from "./lib";\nexport const result = [original, tagged];',
+      "types.d.ts": "",
+    });
+    const results = await run(
+      root,
+      Effect.forEach([256, 32, 0, 1024], (maxSymbolDocumentationLength) =>
+        read("use.ts", { ...both, maxSymbolDocumentationLength, maxSymbolLength: 4096 }),
+      ),
+    );
+    for (const [index, limit] of [256, 32, 0, 1024].entries()) {
+      const result = results[index];
+      const content = result?.symbols?.original ?? "";
+      expect(content).toMatch(/^```typescript\n[\s\S]+\n```/);
+      const [, signature = "", docs = ""] =
+        content.match(/^```typescript\n([\s\S]*?)\n```(?:\n\n([\s\S]*))?$/) ?? [];
+      expect(signature.length).toBeGreaterThan(256);
+      expect(signature).toContain("argument23: number");
+      expect(docs).toBe(documentation.slice(0, limit));
+      const tags = `A value.\n\n**@example** ${example}`.slice(0, limit);
+      expect(result?.symbols?.tagged).toBe(
+        `\`\`\`typescript\n42\n\`\`\`${tags ? `\n\n${tags}` : ""}`,
+      );
+      expect(result?.references).toEqual(results[0]?.references);
+      expect(result?.references?.["original:lib.ts"]).toContain(parameters);
+    }
+  });
+
+  it("caps each final symbol across bindings and documentation without shortening references", async () => {
+    const { root, read } = await fixture({
+      ...sources,
+      "lib.ts": library.replace("The original documented value.", "x".repeat(600)),
+    });
+    const { full, capped } = await run(
+      root,
+      Effect.gen(function* () {
+        const full = yield* read("use.ts", { ...both, maxSymbolLength: 4096 });
+        const capped = yield* Effect.forEach([256, 32, 0, 1024], (maxSymbolLength) =>
+          read("use.ts", { ...both, maxSymbolLength }),
+        );
+        return { full, capped };
+      }),
+    );
+    expect(full.symbols?.local?.length).toBeGreaterThan(256);
+    expect(full.symbols?.local).toContain("```typescript\nstring\n```");
+    for (const [index, limit] of [256, 32, 0, 1024].entries()) {
+      expect(capped[index]?.symbols).toEqual(
+        Object.fromEntries(
+          Object.entries(full.symbols ?? {}).map(([name, content]) => [
+            name,
+            content.slice(0, limit),
+          ]),
+        ),
+      );
+      expect(capped[index]?.references).toEqual(full.references);
+    }
   });
 
   it("reads const-asserted empty tuple properties and their normal usages without losing surrounding types or references", async () => {
@@ -241,8 +319,7 @@ describe("native TypeScript compiler and declaration reads", () => {
       '{ readonly action: "update"; readonly stables: readonly []; }',
     );
     expect(result.symbols!.action).toBe('```typescript\n"update"\n```');
-    expect(result.references!.original).toEqual({ "lib.ts": "export const original = 42;" });
-    expect(result.references).not.toHaveProperty("stables");
+    expect(result.references).toEqual({ "original:lib.ts": "export const original = 42;" });
   });
 
   it("keeps error types unavailable without hiding explicitly declared any types", async () => {
@@ -261,24 +338,252 @@ describe("native TypeScript compiler and declaration reads", () => {
     expect(result.symbols!.explicit).toBe("```typescript\nany\n```");
   });
 
+  it("omits standard built-ins without changing audited code or meaningful user signatures", async () => {
+    const declaration = [
+      "export function collect(values: Array<string>): Promise<Array<string>> {",
+      "  return Promise.resolve(values);",
+      "}",
+    ].join("\n");
+    const contents = [
+      'import { collect } from "./lib";',
+      'export const values: Array<string> = [" value "];',
+      "export const copied = Array.from(values).map(value => value.trim());",
+      "export const objectKeys = Object.keys({ copied });",
+      "export const pending: Promise<string[]> = collect(copied);",
+      'pending.then(value => console.log(value.join(","))).catch((error: unknown) => String(error));',
+      "export function inspect(flag: boolean, count: number): unknown {",
+      "  if (flag && count > 0) {",
+      "    try { return arguments[0] ?? undefined; } catch { return undefined; }",
+      "  }",
+      "  return undefined;",
+      "}",
+    ].join("\n");
+    const { root } = await fixture(
+      {
+        "lib.ts": "/** Collects typed values. */\n" + declaration,
+        "use.ts": contents,
+        "types.d.ts": "",
+      },
+      {
+        compilerOptions: {
+          strict: true,
+          target: "ES2022",
+          types: [],
+          module: "Preserve",
+          moduleResolution: "Bundler",
+        },
+        files: ["lib.ts", "use.ts", "types.d.ts"],
+      },
+    );
+    const file = { path: join(root, "use.ts"), contents };
+    const lines = normalized(contents);
+    const result = (await run(
+      root,
+      Effect.flatMap(SourceReads, (reads) => reads.read(file, lines, both)),
+    )) as SourceReadState;
+    for (const name of [
+      "Array",
+      "console",
+      "Object",
+      "Promise",
+      "String",
+      "from",
+      "map",
+      "trim",
+      "keys",
+      "then",
+      "log",
+      "join",
+      "catch",
+      "undefined",
+      "arguments",
+      "string",
+      "number",
+      "boolean",
+      "unknown",
+      "if",
+      "try",
+    ]) {
+      expect(result.symbols).not.toHaveProperty(name);
+      expect(Object.keys(result.references!).some((key) => key.startsWith(`${name}:`))).toBe(false);
+    }
+    expect(result.symbols!.collect).toContain("(values: Array<string>) => Promise<Array<string>>");
+    expect(result.symbols!.collect).toContain("Collects typed values.");
+    expect(result.symbols!.inspect).toContain("(flag: boolean, count: number) => unknown");
+    expect(result.references!["collect:lib.ts"]).toBe(declaration);
+    expect(file.contents).toBe(contents);
+    expect(lines).toEqual(normalized(contents));
+    expect(await readFile(file.path, "utf8")).toBe(contents);
+  });
+
+  it("omits aliased runtime built-ins while preserving third-party declarations and augmentations", async () => {
+    const files = {
+      "lib.ts": "",
+      "use.ts": [
+        'import { readFile as readText } from "node:fs";',
+        'import { hash as hashText } from "bun";',
+        'import { Database as SqliteDatabase } from "bun:sqlite";',
+        'import { readFile as vendorRead } from "third-party";',
+        'export const runtimeText = readText("fixture.txt");',
+        "export const runtimeHash = hashText(runtimeText);",
+        'export const database = new SqliteDatabase(":memory:");',
+        'export const vendorText = vendorRead("fixture.txt");',
+        "export const vendorValues = Array.from([vendorText]);",
+        "export const extended = vendorValues.vendorFeature();",
+      ].join("\n"),
+      "types.d.ts": [
+        '/// <reference path="./node_modules/@types/node/index.d.ts" />',
+        '/// <reference path="./node_modules/@types/bun/index.d.ts" />',
+        '/// <reference path="./node_modules/bun-types/index.d.ts" />',
+      ].join("\n"),
+      "node_modules/@types/node/index.d.ts":
+        'declare module "node:fs" { /** Reads a runtime file. */ export function readFile(path: string): string; }',
+      "node_modules/@types/bun/index.d.ts":
+        'declare module "bun" { /** Hashes a runtime value. */ export function hash(value: string): number; }',
+      "node_modules/bun-types/index.d.ts":
+        'declare module "bun:sqlite" { /** Opens a runtime database. */ export class Database { constructor(path: string); } }',
+      "node_modules/third-party/package.json": JSON.stringify({
+        name: "third-party",
+        types: "index.d.ts",
+      }),
+      "node_modules/third-party/index.d.ts": [
+        "/** Third-party file reader. */",
+        "export declare function readFile(path: string): string;",
+        "declare global {",
+        "  interface Array<T> {",
+        "    /** Third-party array extension. */",
+        "    vendorFeature(): string;",
+        "  }",
+        "}",
+      ].join("\n"),
+    };
+    const { root, read } = await fixture(files);
+    const result = await run(root, read("use.ts"));
+    for (const name of ["readText", "hashText", "SqliteDatabase"]) {
+      expect(result.symbols).not.toHaveProperty(name);
+      expect(Object.keys(result.references!).some((key) => key.startsWith(`${name}:`))).toBe(false);
+    }
+    expect(result.symbols!.vendorRead).toContain("(path: string) => string");
+    expect(result.symbols!.vendorRead).toContain("Third-party file reader.");
+    expect(result.symbols!.vendorFeature).toContain("Third-party array extension.");
+    expect(result.symbols!.Array).toEqual(expect.any(String));
+    expect(result.symbols!.database).toEqual(expect.any(String));
+    expect(result.references).toEqual({});
+  });
+
+  it("preserves project-owned built-in names, intrinsic-name properties and imported aliases", async () => {
+    const declarations = {
+      Array: "export const Array = (value: string) => value;",
+      Promise: "export const Promise = (value: number) => value;",
+      console: "export const console = { log(value: string) { return value; } };",
+      Object: "export const Object = { catch(value: string) { return value; } };",
+      tokens:
+        'export const tokens = { undefined: "project marker", arguments: "project arguments" };',
+    };
+    const files = {
+      "lib.ts": [
+        "/** Project array builder. */",
+        declarations.Array,
+        "/** Project promise maker. */",
+        declarations.Promise,
+        declarations.console,
+        declarations.Object,
+        declarations.tokens,
+      ].join("\n"),
+      "use.ts": [
+        'import { Array, Promise as createPromise, console, Object, tokens } from "./lib";',
+        'export const result = createPromise(Array("value").length);',
+        'console.log(Object.catch("value"));',
+        "export const markers = [tokens.undefined, tokens.arguments];",
+      ].join("\n"),
+      "types.d.ts": "",
+    };
+    const { root, read } = await fixture(files);
+    const result = await run(root, read("use.ts"));
+    for (const name of [
+      "Array",
+      "createPromise",
+      "console",
+      "Object",
+      "log",
+      "catch",
+      "tokens",
+      "undefined",
+      "arguments",
+    ]) {
+      expect(result.symbols![name]).toEqual(expect.any(String));
+      expect(result.references).toHaveProperty([`${name}:lib.ts`]);
+    }
+    expect(result.symbols!.Array).toContain("Project array builder.");
+    expect(result.symbols!.createPromise).toContain("Project promise maker.");
+    expect(result.references!["Array:lib.ts"]).toBe(declarations.Array);
+    expect(result.references!["createPromise:lib.ts"]).toBe(declarations.Promise);
+  });
+
+  it("keeps declaration references and filename casing under case-insensitive native paths", async () => {
+    const declaration = [
+      "export function twice(value: number): number {",
+      "\treturn value * 2;",
+      "}",
+    ].join("\n");
+    const files = {
+      "MixedCaseRoot/Library.ts": [
+        "export const outsideBefore = 0;",
+        "/** Double a number. */",
+        declaration,
+        "export const outsideAfter = 0;",
+      ].join("\n"),
+      "MixedCaseRoot/caller.ts":
+        'import { twice as scale } from "./Library";\nexport const result = scale(2);',
+      "MixedCaseRoot/tsconfig.json": JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          types: [],
+          module: "Preserve",
+          moduleResolution: "Bundler",
+        },
+        files: ["Library.ts", "caller.ts"],
+      }),
+    };
+    const { root: temporary, read } = await fixture(files, false);
+    const root = join(temporary, "MixedCaseRoot");
+    const api = new API({ cwd: root, useCaseSensitiveFileNames: false });
+    // The standalone SDK exposes the native host's case policy; adapt only the connection boundary.
+    vi.spyOn(NativeLsp, "open").mockResolvedValue({
+      api,
+      openDocument: () => Promise.resolve(),
+      closeDocument: () => Promise.resolve(),
+      snapshot: () => api.createSnapshot({ openFiles: [join(root, "caller.ts")] }),
+      sdk: <A>(_phase: string, work: () => Promise<A>) => work(),
+      close: () => api.close(),
+    } as unknown as NativeLsp);
+    try {
+      const result = await run(root, read("MixedCaseRoot/caller.ts"));
+      expect(api.getCanonicalFileName(root)).not.toBe(root);
+      expect(result.symbols!.scale).toContain("(value: number) => number");
+      expect(result.symbols!.scale).toContain("Double a number.");
+      expect(result.references).toEqual({ "scale:Library.ts": declaration });
+    } finally {
+      await api.close();
+    }
+  });
+
   it("returns complete declarations, separates distinct scopes and omits unused/self/external targets", async () => {
     const { root, read } = await fixture();
     const result = await run(root, read("use.ts"));
     const refs = result.references!;
-    expect(refs.local).toEqual({ "lib.ts": "export const original = 42;" });
-    expect(refs.local!["lib.ts"]).not.toContain("neighbor");
-    expect(refs.Shape!["lib.ts"]).toBe(
+    expect(refs["local:lib.ts"]).toBe("export const original = 42;");
+    expect(refs["local:lib.ts"]).not.toContain("neighbor");
+    expect(refs["Shape:lib.ts"]).toBe(
       "export interface Shape { first: number }\n…\nexport interface Shape { second: string }",
     );
-    expect(refs.pair!["lib.ts"]).toContain("\n…\n");
-    expect(refs.pair!["lib.ts"]).toContain("export function pair(value: number): number;");
-    expect(refs.pair!["lib.ts"]).toContain("export function pair(value: string): string;");
-    expect(refs).not.toHaveProperty("unused");
-    expect(refs).not.toHaveProperty("external");
-    expect(refs).not.toHaveProperty("dependency");
-    expect(Object.values(refs).flatMap(Object.keys)).not.toContain("use.ts");
+    expect(refs["pair:lib.ts"]).toContain("\n…\n");
+    expect(refs["pair:lib.ts"]).toContain("export function pair(value: number): number;");
+    expect(refs["pair:lib.ts"]).toContain("export function pair(value: string): string;");
+    expect(Object.keys(refs).sort()).toEqual(["Shape:lib.ts", "local:lib.ts", "pair:lib.ts"]);
+    expect(Object.values(refs).every((text) => typeof text === "string")).toBe(true);
     expect(JSON.stringify(refs)).not.toMatch(/ordinary comment|never send this directive/);
-    expect(refs.local!["lib.ts"]).not.toContain("@adhere");
+    expect(refs["local:lib.ts"]).not.toContain("@adhere");
     expect(JSON.stringify(refs)).not.toContain(library);
   });
 
@@ -377,13 +682,11 @@ describe("native TypeScript compiler and declaration reads", () => {
     const { root, read } = await fixture(files);
     const result = await run(root, read("use.ts", { ...both, symbols: false }));
     for (const [name, text] of Object.entries(declarations)) {
-      expect(result.references![name]).toEqual({ "lib.ts": text });
+      expect(result.references![`${name}:lib.ts`]).toBe(text);
     }
-    expect(result.references!.run).toEqual({ "lib.ts": method });
-    expect(result.references!.current).toEqual({ "lib.ts": accessors });
-    expect(result.references!.first).toEqual({
-      "lib.ts": `  first: 1,\n…\n${destructured}`,
-    });
+    expect(result.references!["run:lib.ts"]).toBe(method);
+    expect(result.references!["current:lib.ts"]).toBe(accessors);
+    expect(result.references!["first:lib.ts"]).toBe(`  first: 1,\n…\n${destructured}`);
     expect(JSON.stringify(result.references)).not.toMatch(/outsideBefore|outsideAfter/);
   });
 
@@ -402,13 +705,13 @@ describe("native TypeScript compiler and declaration reads", () => {
     expect(Object.keys(result.symbols)).toEqual(["symbols"]);
     expect(result.symbols.symbols!.local).toContain("The original documented value.");
     expect(Object.keys(result.references)).toEqual(["references"]);
-    expect(result.references.references!.local!["lib.ts"]).toBe(
+    expect(result.references.references!["local:lib.ts"]).toBe(
       normalized(library, true).slice(1, 6).join("\n"),
     );
-    expect(result.references.references!.local!["lib.ts"]).toContain(
+    expect(result.references.references!["local:lib.ts"]).toContain(
       "/** The original documented value. */",
     );
-    expect(result.references.references!.local!["lib.ts"]).not.toContain("adhere-ignore");
+    expect(result.references.references!["local:lib.ts"]).not.toContain("adhere-ignore");
   });
 
   it("serializes concurrent same-file and child-project reads while isolating aliases and inferred ownership", async () => {
@@ -469,12 +772,8 @@ describe("native TypeScript compiler and declaration reads", () => {
     );
     expect(result[0]!.symbols!.local).toContain("First project.");
     expect(result[1]!.symbols!.local).toContain("Second project.");
-    expect(result[0]!.references!.local).toEqual({
-      "packages/a/src/value.ts": "export const value = 1;",
-    });
-    expect(result[1]!.references!.local).toEqual({
-      "packages/b/alt/value.ts": "export const value = 2;",
-    });
+    expect(result[0]!.references!["local:packages/a/src/value.ts"]).toBe("export const value = 1;");
+    expect(result[1]!.references!["local:packages/b/alt/value.ts"]).toBe("export const value = 2;");
     expect(result[2]!.symbols!.outside).toContain("```typescript\n3\n```");
     expect(result[2]!.references).toEqual({});
     expect(result[3]).toEqual(result[0]);
@@ -494,7 +793,7 @@ describe("native TypeScript compiler and declaration reads", () => {
       prepare(["lib.ts", "use.ts"]).pipe(Effect.andThen(read("use.ts"))),
     );
     expect(result.symbols!.local).toContain("Inferred docs.");
-    expect(result.references!.local).toEqual({ "lib.ts": "export const value = 1;" });
+    expect(result.references!["local:lib.ts"]).toBe("export const value = 1;");
     expect(Object.keys(result).sort()).toEqual(["references", "symbols"]);
   });
 
@@ -522,10 +821,8 @@ describe("native TypeScript compiler and declaration reads", () => {
     const result = await run(join(root, "workspace"), read("workspace/use.ts"));
     expect(result.symbols!.original).toContain("Unicode documentation 😀.");
     expect(result.symbols!.outside).toContain("Outside documentation.");
-    expect(result.references!.original).toEqual({
-      "lib.ts": "export const original = 42;",
-    });
-    expect(result.references).not.toHaveProperty("outside");
+    expect(result.references!["original:lib.ts"]).toBe("export const original = 42;");
+    expect(Object.keys(result.references!).some((key) => key.startsWith("outside:"))).toBe(false);
   });
 
   it("pins each read to its supplied text despite disk changes and accepts new text in a later read", async () => {
@@ -751,7 +1048,7 @@ describe("native TypeScript compiler and declaration reads", () => {
           const state = yield* Effect.promise(() => within(Effect.runPromise(reading), 3000));
           expect(state.symbols!.local).toContain("```typescript\n42\n```");
           expect(state.symbols!.local).toContain("The original documented value.");
-          expect(state.references!.local).toEqual({ "lib.ts": "export const original = 42;" });
+          expect(state.references!["local:lib.ts"]).toBe("export const original = 42;");
           expect(closeDocument).toHaveBeenCalledTimes(2);
           expect(dispose).toHaveBeenCalledTimes(2);
           expect(close).not.toHaveBeenCalled();

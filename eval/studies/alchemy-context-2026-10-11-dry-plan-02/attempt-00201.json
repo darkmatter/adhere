@@ -1,0 +1,613 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/AWS/EntityResolution/SchemaMapping.ts",
+  "kind": "locate",
+  "ordinal": 201,
+  "artifact": "attempt-00201.json",
+  "started": "2026-10-11T03:20:42.344Z",
+  "estimatedTokens": 15672,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 2.0865559999983816,
+  "referencesPresent": false,
+  "bodyDigest": "a595bbb63558f95026e24d5264829818533fb13bb8d75b92e0215403bc0afb72",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "17",
+    "end:providers/idempotent-delete:2": "17",
+    "start:providers/idempotent-delete:3": "44",
+    "end:providers/idempotent-delete:3": "44",
+    "start:providers/idempotent-delete:4": "94",
+    "end:providers/idempotent-delete:4": "94",
+    "start:providers/idempotent-delete:5": "123",
+    "end:providers/idempotent-delete:5": "123",
+    "start:providers/idempotent-delete:6": "153",
+    "end:providers/idempotent-delete:6": "153",
+    "start:providers/idempotent-delete:7": "179",
+    "end:providers/idempotent-delete:7": "179",
+    "start:providers/idempotent-delete:8": "203",
+    "end:providers/idempotent-delete:8": "203",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "_tag": "```typescript\n\"AWS::CredentialProviderError\" | \"AWS::SigV4::CryptoError\" | \"AWS::SigV4::InvalidSigningHeaders\" | \"AWS::SigV4::InvalidSigningUrl\" | \"AccessDeniedException\" | \"Alchemy::AWS::ConflictingSSORegion\" | \"Alchemy::AWS::ConflictingSSOStartUrl\" | \"Al",
+        "action": "```typescript\n\"replace\"\n```",
+        "attrs": "```typescript\n{ schemaName: string; schemaArn: string; }\n```",
+        "catchTag": "```typescript\n{ <const K extends import(\"effect/Types\").Tags<E> | import(\"effect/Array\").NonEmptyReadonlyArray<import(\"effect/Types\").Tags<E>>, E, A1, E1, R1, A2 = import(\"effect/Types\").unassigned, E2 = never, R2 = never>(k: K, f: (e: import(\"effect/Types",
+        "chunk": "```typescript\n{ schemaName: string; schemaArn: string; }[]\n```",
+        "createInternalTags": "```typescript\n(id: string) => Effect.Effect<{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy::id\": string; }, never, import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```",
+        "createName": "```typescript\n(id: string, props: { schemaName?: string | undefined; }) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").InstanceId | import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```",
+        "createPhysicalName": "```typescript\n(args_0: { id: string; prefix?: string; instanceId?: string; suffixLength?: number; maxLength?: number; delimiter?: string; lowercase?: boolean; forbiddenPrefixes?: string[]; }) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").In",
+        "createSchemaMapping": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<entityresolution.CreateSchemaMappingInput, entityresolution.CreateSchemaMappingOutput, entityresolution.CreateSchemaMappingError, import(\"@distilled.cloud/aws/Credentials\").Credentials | imp",
+        "deepEqual": "```typescript\n(a: unknown, b: unknown, options?: import(\"../../Diff.ts\").DeepEqualOptions) => boolean\n```\n\nSort-keys deep equality for plain data (objects, arrays, primitives).\nUse in provider `diff` handlers instead of ad-hoc `JSON.stringify` comparisons.",
+        "delete": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: SchemaMappingProps; output: { schemaName: string; schemaArn: string; }; session: import(\"../../Report.ts\").ScopedPlanStatusSession; bindings: import(\"../../Resource.ts\").ResourceBi",
+        "deleteSchemaMapping": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<entityresolution.DeleteSchemaMappingInput, entityresolution.DeleteSchemaMappingOutput, entityresolution.DeleteSchemaMappingError, import(\"@distilled.cloud/aws/Credentials\").Credentials | imp",
+        "description": "```typescript\nstring | undefined\n```\n\n---\n\n```typescript\nstring | undefined\n```\n\nA description of the schema mapping.",
+        "desiredTags": "```typescript\n{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy::id\": string; }\n```",
+        "diff": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: SchemaMappingProps; news: import(\"../../Input.ts\").Input<SchemaMappingProps>; oldBindings: import(\"../../Resource.ts\").ResourceBinding<never>[]; newBindings: import(\"../../Input.ts",
+        "e": "```typescript\nentityresolution.DeleteSchemaMappingError\n```",
+        "effect": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike, Req = never, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../../Resource.",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "entityresolution": "```typescript\ntypeof entityresolution\n```",
+        "fixed": "```typescript\n(interval: import(\"effect/Duration\").Input) => Schedule.Schedule<number>\n```\n\nReturns a `Schedule` that recurs on the specified fixed `interval` and\noutputs the number of repetitions of the schedule so far.\n\n**When to use**\n\nUse when recurren",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "getByName": "```typescript\n(schemaName: string) => Effect.Effect<entityresolution.GetSchemaMappingOutput | undefined, entityresolution.AccessDeniedException | entityresolution.InternalServerException | entityresolution.ThrottlingException | entityresolution.ValidationE",
+        "getSchemaMapping": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<entityresolution.GetSchemaMappingInput, entityresolution.GetSchemaMappingOutput, entityresolution.GetSchemaMappingError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effe",
+        "hasAlchemyTags": "```typescript\n(id: string, tags: import(\"../../Tags.ts\").Tags | undefined) => Effect.Effect<boolean, never, import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```\n\nChecks if a resource has the expected alchemy tags for this app/stage/id.",
+        "id": "```typescript\nstring\n```",
+        "internalTags": "```typescript\n{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy::id\": string; }\n```",
+        "isResolved": "```typescript\n<T>(value: import(\"../../Input.ts\").Input<T>) => value is T\n```",
+        "items": "```typescript\n(input: entityresolution.ListSchemaMappingsInput) => Stream.Stream<entityresolution.SchemaMappingSummary, entityresolution.ListSchemaMappingsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClie",
+        "list": "```typescript\n() => Effect.Effect<{ schemaName: string; schemaArn: string; }[], entityresolution.ListSchemaMappingsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "listSchemaMappings": "```typescript\nimport(\"@distilled.cloud/core/api\").PaginatedOperationMethod<entityresolution.ListSchemaMappingsInput, entityresolution.ListSchemaMappingsOutput, entityresolution.ListSchemaMappingsError, import(\"@distilled.cloud/aws/Credentials\").Credentials",
+        "map": "```typescript\n{ <A, B>(f: (a: A, i: number) => B): <E, R>(self: Stream.Stream<A, E, R>) => Stream.Stream<B, E, R>; <A, E, R, B>(self: Stream.Stream<A, E, R>, f: (a: A, i: number) => B): Stream.Stream<B, E, R>; }\n```\n\nTransforms the elements of this stream ",
+        "mappedInputFields": "```typescript\nentityresolution.SchemaInputAttribute[]\n```\n\n---\n\n```typescript\nentityresolution.SchemaInputAttribute[]\n```\n\nThe columns of the input records table and how Entity Resolution should\ninterpret them: the attribute `type` (e.g. `UNIQUE_ID`, `EMAI",
+        "mapping": "```typescript\nentityresolution.GetSchemaMappingOutput | undefined\n```\n\n```typescript\nentityresolution.GetSchemaMappingOutput\n```",
+        "max": "```typescript\n<const Schedules extends import(\"effect/Array\").NonEmptyReadonlyArray<Schedule.Schedule<any, any, any, any>>>(schedules: Schedules) => Schedule.Schedule<import(\"effect/Duration\").Duration, import(\"effect/Types\").UnionToIntersection<Schedule.I",
+        "maxLength": "```typescript\nnumber\n```",
+        "name": "```typescript\nstring\n```",
+        "newName": "```typescript\nstring\n```",
+        "news": "```typescript\nimport(\"../../Input.ts\").Input<SchemaMappingProps>\n```\n\n```typescript\nSchemaMappingProps\n```\n\n---\n\n```typescript\nSchemaMappingProps\n```",
+        "note": "```typescript\n(note: string, options?: { readonly kind?: import(\"../../Report.ts\").NoteKind; }) => Effect.Effect<void>\n```",
+        "oldName": "```typescript\nstring\n```",
+        "olds": "```typescript\nSchemaMappingProps\n```",
+        "output": "```typescript\n{ schemaName: string; schemaArn: string; } | undefined\n```\n\n---\n\n```typescript\n{ schemaName: string; schemaArn: string; }\n```",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "props": "```typescript\n{ schemaName?: string | undefined; }\n```",
+        "Provider": "```typescript\ntypeof Provider\n```",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: SchemaMappingProps; output: { schemaName: string; schemaArn: string; } | undefined; }) => Effect.Effect<{ schemaName: string; schemaArn: string; } | undefined, entityresolution.Acc",
+        "readEntityResolutionTags": "```typescript\n(arn: string) => Effect.Effect<Record<string, string>, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```\n\nRead the observed tags of an Entity Resolution resource by ARN. ",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: SchemaMappingProps; olds: SchemaMappingProps | undefined; output: { schemaName: string; schemaArn: string; } | undefined; session: import(\"../../Report.ts\").ScopedPlanStatusSession",
+        "recurs": "```typescript\n(times: number) => Schedule.Schedule<number>\n```\n\nReturns a `Schedule` which can only be stepped the specified number of\n`times` before it terminates.\n\n**When to use**\n\nUse when you need a counter schedule with no additional delay.\n\n**Gotchas",
+        "Resource": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../../Resource.ts\").ResourceOptions) => import(\"../../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nTh",
+        "retry": "```typescript\n{ <E, O extends Effect.Retry.Options<E>>(options: O): <A, R>(self: Effect.Effect<A, E, R>) => Effect.Retry.Return<R, E, A, O>; <B, E, Error, Env>(policy: Schedule.Schedule<B, import(\"effect/Types\").NoInfer<E>, Error, Env>): <A, R>(self: Effec",
+        "runCollect": "```typescript\n<A, E, R>(self: Stream.Stream<A, E, R>) => Effect.Effect<Array<A>, E, R>\n```\n\nRuns the stream and collects all elements into an array.\n\n**Example** (Collecting stream values)\n\n```ts import.meta.vitest\nimport { Effect, Stream } from \"effect\"\n\n",
+        "schedule": "```typescript\nSchedule.Schedule<import(\"effect/Duration\").Duration, unknown, never, never>\n```",
+        "Schedule": "```typescript\ntypeof Schedule\n```",
+        "schemaArn": "```typescript\nstring\n```\n\nThe ARN of the schema mapping.\n\n---\n\n```typescript\nstring\n```",
+        "SchemaMapping": "```typescript\nimport(\"../../Resource.ts\").ResourceClass<SchemaMapping>\n```\n\nAn AWS Entity Resolution schema mapping — the schema of an input customer\nrecords table. It tells Entity Resolution the attribute type of each column\n(name, email, phone, unique id",
+        "SchemaMappingProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<SchemaMapping>, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient | import(\"../../Stack.ts\").Stack | import(\"../../Stage.t",
+        "schemaName": "```typescript\nstring | undefined\n```\n\nName of the schema mapping. Must be unique per account/region and match\n`[a-zA-Z_0-9-]*`. If omitted, a unique name is generated from the app,\nstage, and logical ID. Changing the name replaces the schema mapping.\n\n---\n",
+        "session": "```typescript\nimport(\"../../Report.ts\").ScopedPlanStatusSession\n```",
+        "stables": "```typescript\n(\"schemaArn\" | \"schemaName\")[]\n```",
+        "Stream": "```typescript\ntypeof Stream\n```",
+        "succeed": "```typescript\n<A>(value: A) => Effect.Effect<A>\n```\n\nCreates an `Effect` that always succeeds with a given value.\n\n**When to use**\n\nUse when an effect should complete successfully with a specific value without any errors\nor external dependencies.\n\n**Exampl",
+        "summary": "```typescript\nentityresolution.SchemaMappingSummary\n```",
+        "syncEntityResolutionTags": "```typescript\n(arn: string, desiredTags: Record<string, string>) => Effect.Effect<void, entityresolution.TagResourceError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```\n\nSync tags on an E",
+        "tags": "```typescript\nRecord<string, string>\n```\n\n---\n\n```typescript\nRecord<string, string> | undefined\n```\n\nTags to apply to the schema mapping. Merged with internal Alchemy tags.\n\n---\n\n```typescript\n{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy:",
+        "Unowned": "```typescript\n{ <T extends object>(attrs: T): T; is: (value: unknown) => boolean; }\n```\n\nBrand a `read` return value as belonging to a different owner.\n\nUse this in a provider's `read` implementation when the resource exists in\nthe cloud but a positive own",
+        "updateSchemaMapping": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<entityresolution.UpdateSchemaMappingInput, entityresolution.UpdateSchemaMappingOutput, entityresolution.UpdateSchemaMappingError, import(\"@distilled.cloud/aws/Credentials\").Credentials | imp",
+        "void": "```typescript\nEffect.Effect<void, never, never>\n```",
+        "while": "```typescript\n(e: entityresolution.DeleteSchemaMappingError) => e is entityresolution.ConflictException\n```"
+      },
+      "code": {
+        "1": "import * as entityresolution from \"@distilled.cloud/aws/entityresolution\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { deepEqual, isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport {\n  readEntityResolutionTags,\n  syncEntityResolutionTags,\n} from \"./internal.ts\";",
+        "2": "\nexport interface SchemaMappingProps {\n\n\n\n\n\n  schemaName?: string;\n\n\n\n  description?: string;\n\n\n\n\n\n\n\n\n\n  mappedInputFields: entityresolution.SchemaInputAttribute[];\n\n\n\n  tags?: Record<string, string>;\n}",
+        "3": "\nexport interface SchemaMapping extends Resource<\n  \"AWS.EntityResolution.SchemaMapping\",\n  SchemaMappingProps,\n  {\n\n\n\n    schemaName: string;\n\n\n\n    schemaArn: string;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const SchemaMapping = Resource<SchemaMapping>(\n  \"AWS.EntityResolution.SchemaMapping\",\n);\n\nexport const SchemaMappingProvider = () =>\n  Provider.effect(\n    SchemaMapping,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: { schemaName?: string | undefined },\n      ) {\n        return (\n          props.schemaName ??\n          (yield* createPhysicalName({ id, maxLength: 255 }))\n        );\n      });\n\n\n      const getByName = Effect.fn(function* (schemaName: string) {\n        return yield* entityresolution\n          .getSchemaMapping({ schemaName })\n          .pipe(\n            Effect.catchTag(\"ResourceNotFoundException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n      });",
+        "5": "\n      return {\n        stables: [\"schemaName\", \"schemaArn\"],\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name =\n            output?.schemaName ?? (yield* createName(id, olds ?? {}));\n          const mapping = yield* getByName(name);\n          if (mapping === undefined) return undefined;\n          const attrs = {\n            schemaName: mapping.schemaName,\n            schemaArn: mapping.schemaArn,\n          };\n\n\n          const tags = yield* readEntityResolutionTags(mapping.schemaArn);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),\n\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const name = output?.schemaName ?? (yield* createName(id, news));\n          const internalTags = yield* createInternalTags(id);",
+        "6": "          const desiredTags = { ...news.tags, ...internalTags };\n\n\n          let mapping = yield* getByName(name);\n\n\n\n\n\n          if (mapping === undefined) {\n            yield* entityresolution\n              .createSchemaMapping({\n                schemaName: name,\n                description: news.description,\n                mappedInputFields: news.mappedInputFields,\n                tags: desiredTags,\n              })\n              .pipe(Effect.catchTag(\"ConflictException\", () => Effect.void));\n            mapping = yield* entityresolution.getSchemaMapping({\n              schemaName: name,\n            });\n          }",
+        "7": "\n\n\n\n          if (\n            !deepEqual(mapping.mappedInputFields, news.mappedInputFields) ||\n            (mapping.description || undefined) !==\n              (news.description ?? undefined)\n          ) {\n\n\n            yield* entityresolution.updateSchemaMapping({\n              schemaName: name,\n              description: news.description,\n              mappedInputFields: news.mappedInputFields,\n            });\n          }\n\n\n          yield* syncEntityResolutionTags(mapping.schemaArn, desiredTags);\n\n          yield* session.note(mapping.schemaArn);\n          return {\n            schemaName: mapping.schemaName,\n            schemaArn: mapping.schemaArn,\n          };\n        }),",
+        "8": "\n        delete: Effect.fn(function* ({ output }) {\n\n\n\n\n          yield* entityresolution\n            .deleteSchemaMapping({ schemaName: output.schemaName })\n            .pipe(\n              Effect.retry({\n                while: (e) => e._tag === \"ConflictException\",\n                schedule: Schedule.max([\n                  Schedule.fixed(\"2 seconds\"),\n                  Schedule.recurs(10),\n                ]),\n              }),\n            );\n        }),\n\n        list: () =>\n          entityresolution.listSchemaMappings.items({}).pipe(\n            Stream.map((summary) => ({\n              schemaName: summary.schemaName,\n              schemaArn: summary.schemaArn,\n            })),\n            Stream.runCollect,\n            Effect.map((chunk) => Array.from(chunk)),\n          ),\n      };\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as entityresolution from \"@distilled.cloud/aws/entityresolution\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Schedule from \"effect/Schedule\";",
+          "4": "import * as Stream from \"effect/Stream\";",
+          "5": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "6": "import { deepEqual, isResolved } from \"../../Diff.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";",
+          "11": "import type { Providers } from \"../Providers.ts\";",
+          "12": "import {",
+          "13": "readEntityResolutionTags,",
+          "14": "syncEntityResolutionTags,",
+          "15": "} from \"./internal.ts\";"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as entityresolution from \"@distilled.cloud/aws/entityresolution\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Schedule from \"effect/Schedule\";",
+          "4": "import * as Stream from \"effect/Stream\";",
+          "5": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "6": "import { deepEqual, isResolved } from \"../../Diff.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";",
+          "11": "import type { Providers } from \"../Providers.ts\";",
+          "12": "import {",
+          "13": "readEntityResolutionTags,",
+          "14": "syncEntityResolutionTags,",
+          "15": "} from \"./internal.ts\";"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "17": "export interface SchemaMappingProps {",
+          "23": "schemaName?: string;",
+          "27": "description?: string;",
+          "37": "mappedInputFields: entityresolution.SchemaInputAttribute[];",
+          "41": "tags?: Record<string, string>;",
+          "42": "}"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "17": "export interface SchemaMappingProps {",
+          "23": "schemaName?: string;",
+          "27": "description?: string;",
+          "37": "mappedInputFields: entityresolution.SchemaInputAttribute[];",
+          "41": "tags?: Record<string, string>;",
+          "42": "}"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "44": "export interface SchemaMapping extends Resource<",
+          "45": "\"AWS.EntityResolution.SchemaMapping\",",
+          "46": "SchemaMappingProps,",
+          "47": "{",
+          "51": "schemaName: string;",
+          "55": "schemaArn: string;",
+          "56": "},",
+          "57": "never,",
+          "58": "Providers",
+          "59": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "44": "export interface SchemaMapping extends Resource<",
+          "45": "\"AWS.EntityResolution.SchemaMapping\",",
+          "46": "SchemaMappingProps,",
+          "47": "{",
+          "51": "schemaName: string;",
+          "55": "schemaArn: string;",
+          "56": "},",
+          "57": "never,",
+          "58": "Providers",
+          "59": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "94": "export const SchemaMapping = Resource<SchemaMapping>(",
+          "95": "\"AWS.EntityResolution.SchemaMapping\",",
+          "96": ");",
+          "98": "export const SchemaMappingProvider = () =>",
+          "99": "Provider.effect(",
+          "100": "SchemaMapping,",
+          "101": "Effect.gen(function* () {",
+          "102": "const createName = Effect.fn(function* (",
+          "103": "id: string,",
+          "104": "props: { schemaName?: string | undefined },",
+          "105": ") {",
+          "106": "return (",
+          "107": "props.schemaName ??",
+          "108": "(yield* createPhysicalName({ id, maxLength: 255 }))",
+          "109": ");",
+          "110": "});",
+          "113": "const getByName = Effect.fn(function* (schemaName: string) {",
+          "114": "return yield* entityresolution",
+          "115": ".getSchemaMapping({ schemaName })",
+          "116": ".pipe(",
+          "117": "Effect.catchTag(\"ResourceNotFoundException\", () =>",
+          "118": "Effect.succeed(undefined),",
+          "119": "),",
+          "120": ");",
+          "121": "});"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "94": "export const SchemaMapping = Resource<SchemaMapping>(",
+          "95": "\"AWS.EntityResolution.SchemaMapping\",",
+          "96": ");",
+          "98": "export const SchemaMappingProvider = () =>",
+          "99": "Provider.effect(",
+          "100": "SchemaMapping,",
+          "101": "Effect.gen(function* () {",
+          "102": "const createName = Effect.fn(function* (",
+          "103": "id: string,",
+          "104": "props: { schemaName?: string | undefined },",
+          "105": ") {",
+          "106": "return (",
+          "107": "props.schemaName ??",
+          "108": "(yield* createPhysicalName({ id, maxLength: 255 }))",
+          "109": ");",
+          "110": "});",
+          "113": "const getByName = Effect.fn(function* (schemaName: string) {",
+          "114": "return yield* entityresolution",
+          "115": ".getSchemaMapping({ schemaName })",
+          "116": ".pipe(",
+          "117": "Effect.catchTag(\"ResourceNotFoundException\", () =>",
+          "118": "Effect.succeed(undefined),",
+          "119": "),",
+          "120": ");",
+          "121": "});"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "123": "return {",
+          "124": "stables: [\"schemaName\", \"schemaArn\"],",
+          "126": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "127": "const name =",
+          "128": "output?.schemaName ?? (yield* createName(id, olds ?? {}));",
+          "129": "const mapping = yield* getByName(name);",
+          "130": "if (mapping === undefined) return undefined;",
+          "131": "const attrs = {",
+          "132": "schemaName: mapping.schemaName,",
+          "133": "schemaArn: mapping.schemaArn,",
+          "134": "};",
+          "137": "const tags = yield* readEntityResolutionTags(mapping.schemaArn);",
+          "138": "return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);",
+          "139": "}),",
+          "141": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "142": "if (!isResolved(news)) return undefined;",
+          "143": "const oldName = yield* createName(id, olds);",
+          "144": "const newName = yield* createName(id, news);",
+          "145": "if (oldName !== newName) {",
+          "146": "return { action: \"replace\" } as const;",
+          "147": "}",
+          "148": "}),",
+          "150": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "151": "const name = output?.schemaName ?? (yield* createName(id, news));",
+          "152": "const internalTags = yield* createInternalTags(id);"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "123": "return {",
+          "124": "stables: [\"schemaName\", \"schemaArn\"],",
+          "126": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "127": "const name =",
+          "128": "output?.schemaName ?? (yield* createName(id, olds ?? {}));",
+          "129": "const mapping = yield* getByName(name);",
+          "130": "if (mapping === undefined) return undefined;",
+          "131": "const attrs = {",
+          "132": "schemaName: mapping.schemaName,",
+          "133": "schemaArn: mapping.schemaArn,",
+          "134": "};",
+          "137": "const tags = yield* readEntityResolutionTags(mapping.schemaArn);",
+          "138": "return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);",
+          "139": "}),",
+          "141": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "142": "if (!isResolved(news)) return undefined;",
+          "143": "const oldName = yield* createName(id, olds);",
+          "144": "const newName = yield* createName(id, news);",
+          "145": "if (oldName !== newName) {",
+          "146": "return { action: \"replace\" } as const;",
+          "147": "}",
+          "148": "}),",
+          "150": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "151": "const name = output?.schemaName ?? (yield* createName(id, news));",
+          "152": "const internalTags = yield* createInternalTags(id);"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "153": "const desiredTags = { ...news.tags, ...internalTags };",
+          "156": "let mapping = yield* getByName(name);",
+          "162": "if (mapping === undefined) {",
+          "163": "yield* entityresolution",
+          "164": ".createSchemaMapping({",
+          "165": "schemaName: name,",
+          "166": "description: news.description,",
+          "167": "mappedInputFields: news.mappedInputFields,",
+          "168": "tags: desiredTags,",
+          "169": "})",
+          "170": ".pipe(Effect.catchTag(\"ConflictException\", () => Effect.void));",
+          "171": "mapping = yield* entityresolution.getSchemaMapping({",
+          "172": "schemaName: name,",
+          "173": "});",
+          "174": "}"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "153": "const desiredTags = { ...news.tags, ...internalTags };",
+          "156": "let mapping = yield* getByName(name);",
+          "162": "if (mapping === undefined) {",
+          "163": "yield* entityresolution",
+          "164": ".createSchemaMapping({",
+          "165": "schemaName: name,",
+          "166": "description: news.description,",
+          "167": "mappedInputFields: news.mappedInputFields,",
+          "168": "tags: desiredTags,",
+          "169": "})",
+          "170": ".pipe(Effect.catchTag(\"ConflictException\", () => Effect.void));",
+          "171": "mapping = yield* entityresolution.getSchemaMapping({",
+          "172": "schemaName: name,",
+          "173": "});",
+          "174": "}"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "179": "if (",
+          "180": "!deepEqual(mapping.mappedInputFields, news.mappedInputFields) ||",
+          "181": "(mapping.description || undefined) !==",
+          "182": "(news.description ?? undefined)",
+          "183": ") {",
+          "186": "yield* entityresolution.updateSchemaMapping({",
+          "187": "schemaName: name,",
+          "188": "description: news.description,",
+          "189": "mappedInputFields: news.mappedInputFields,",
+          "190": "});",
+          "191": "}",
+          "194": "yield* syncEntityResolutionTags(mapping.schemaArn, desiredTags);",
+          "196": "yield* session.note(mapping.schemaArn);",
+          "197": "return {",
+          "198": "schemaName: mapping.schemaName,",
+          "199": "schemaArn: mapping.schemaArn,",
+          "200": "};",
+          "201": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "179": "if (",
+          "180": "!deepEqual(mapping.mappedInputFields, news.mappedInputFields) ||",
+          "181": "(mapping.description || undefined) !==",
+          "182": "(news.description ?? undefined)",
+          "183": ") {",
+          "186": "yield* entityresolution.updateSchemaMapping({",
+          "187": "schemaName: name,",
+          "188": "description: news.description,",
+          "189": "mappedInputFields: news.mappedInputFields,",
+          "190": "});",
+          "191": "}",
+          "194": "yield* syncEntityResolutionTags(mapping.schemaArn, desiredTags);",
+          "196": "yield* session.note(mapping.schemaArn);",
+          "197": "return {",
+          "198": "schemaName: mapping.schemaName,",
+          "199": "schemaArn: mapping.schemaArn,",
+          "200": "};",
+          "201": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "203": "delete: Effect.fn(function* ({ output }) {",
+          "208": "yield* entityresolution",
+          "209": ".deleteSchemaMapping({ schemaName: output.schemaName })",
+          "210": ".pipe(",
+          "211": "Effect.retry({",
+          "212": "while: (e) => e._tag === \"ConflictException\",",
+          "213": "schedule: Schedule.max([",
+          "214": "Schedule.fixed(\"2 seconds\"),",
+          "215": "Schedule.recurs(10),",
+          "216": "]),",
+          "217": "}),",
+          "218": ");",
+          "219": "}),",
+          "221": "list: () =>",
+          "222": "entityresolution.listSchemaMappings.items({}).pipe(",
+          "223": "Stream.map((summary) => ({",
+          "224": "schemaName: summary.schemaName,",
+          "225": "schemaArn: summary.schemaArn,",
+          "226": "})),",
+          "227": "Stream.runCollect,",
+          "228": "Effect.map((chunk) => Array.from(chunk)),",
+          "229": "),",
+          "230": "};",
+          "231": "}),",
+          "232": ");"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "203": "delete: Effect.fn(function* ({ output }) {",
+          "208": "yield* entityresolution",
+          "209": ".deleteSchemaMapping({ schemaName: output.schemaName })",
+          "210": ".pipe(",
+          "211": "Effect.retry({",
+          "212": "while: (e) => e._tag === \"ConflictException\",",
+          "213": "schedule: Schedule.max([",
+          "214": "Schedule.fixed(\"2 seconds\"),",
+          "215": "Schedule.recurs(10),",
+          "216": "]),",
+          "217": "}),",
+          "218": ");",
+          "219": "}),",
+          "221": "list: () =>",
+          "222": "entityresolution.listSchemaMappings.items({}).pipe(",
+          "223": "Stream.map((summary) => ({",
+          "224": "schemaName: summary.schemaName,",
+          "225": "schemaArn: summary.schemaArn,",
+          "226": "})),",
+          "227": "Stream.runCollect,",
+          "228": "Effect.map((chunk) => Array.from(chunk)),",
+          "229": "),",
+          "230": "};",
+          "231": "}),",
+          "232": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

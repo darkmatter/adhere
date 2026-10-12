@@ -1,0 +1,54 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CodeBuild/ReportGroup.ts",
+  "kind": "judge",
+  "ordinal": 154,
+  "artifact": "attempt-00154.json",
+  "started": "2026-10-11T03:20:40.619Z",
+  "estimatedTokens": 4318,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.03356299999722978,
+  "referencesPresent": false,
+  "bodyDigest": "680a72e8b0ca77af24aebc38e18ef3b8aea60ae7256429bd769c96e14eda31c2",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as codebuild from \"@distilled.cloud/aws/codebuild\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";",
+        "2": "\n\n\n\nexport interface ReportGroupExportConfig {\n\n\n\n\n\n  exportConfigType?: \"NO_EXPORT\" | \"S3\";\n\n\n\n  s3Destination?: {\n\n    bucket?: string;\n\n    bucketOwner?: string;\n\n    path?: string;\n\n\n\n\n    packaging?: \"ZIP\" | \"NONE\";\n\n    encryptionKey?: string;\n\n    encryptionDisabled?: boolean;\n  };\n}",
+        "3": "\nexport interface ReportGroupProps {\n\n\n\n\n\n\n  reportGroupName?: string;\n\n\n\n\n  type: \"TEST\" | \"CODE_COVERAGE\";\n\n\n\n\n  exportConfig?: ReportGroupExportConfig;\n\n\n\n\n  deleteReports?: boolean;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "4": "\nexport interface ReportGroup extends Resource<\n  \"AWS.CodeBuild.ReportGroup\",\n  ReportGroupProps,\n  {\n\n    reportGroupName: string;\n\n    reportGroupArn: string;\n  }\n> {}",
+        "5": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const ReportGroup = Resource<ReportGroup>(\"AWS.CodeBuild.ReportGroup\");\n\n\nconst toTagRecord = (\n  tags: ReadonlyArray<{ key?: string; value?: string }> | undefined,\n): Record<string, string> =>\n  Object.fromEntries(\n    (tags ?? [])\n      .filter(\n        (tag): tag is { key: string; value: string } =>\n          typeof tag.key === \"string\" && typeof tag.value === \"string\",\n      )\n      .map((tag) => [tag.key, tag.value]),\n  );\n\nconst toWireTags = (tags: Record<string, string>): codebuild.Tag[] =>\n  Object.entries(tags).map(([key, value]) => ({ key, value }));\n\nconst toWireExportConfig = (\n  exportConfig: ReportGroupExportConfig | undefined,\n): codebuild.ReportExportConfig => ({\n  exportConfigType: exportConfig?.exportConfigType ?? \"NO_EXPORT\",\n  s3Destination: exportConfig?.s3Destination,\n});\n\n\nconst reportGroupArn = Effect.fn(function* (name: string) {\n  const { accountId, region } = yield* AWSEnvironment.current;\n  return `arn:aws:codebuild:${region}:${accountId}:report-group/${name}`;\n});",
+        "6": "\n\nconst sameExportConfig = (\n  observed: codebuild.ReportExportConfig | undefined,\n  desired: codebuild.ReportExportConfig,\n): boolean =>\n  (observed?.exportConfigType ?? \"NO_EXPORT\") === desired.exportConfigType &&\n  JSON.stringify(observed?.s3Destination ?? null) ===\n    JSON.stringify(desired.s3Destination ?? null);\n\nconst sameTags = (\n  observed: Record<string, string>,\n  desired: Record<string, string>,\n): boolean =>\n  Object.keys(observed).length === Object.keys(desired).length &&\n  Object.entries(desired).every(([k, v]) => observed[k] === v);\n\nexport const ReportGroupProvider = () =>\n  Provider.effect(\n    ReportGroup,\n    Effect.gen(function* () {\n      const toName = (id: string, props: Partial<ReportGroupProps>) =>\n        props.reportGroupName\n          ? Effect.succeed(props.reportGroupName)\n          : createPhysicalName({ id, maxLength: 128 });",
+        "7": "\n\n      const getReportGroup = Effect.fn(function* (arn: string) {\n        const response = yield* codebuild.batchGetReportGroups({\n          reportGroupArns: [arn],\n        });\n        const group = response.reportGroups?.[0];\n        return group?.status === \"DELETING\" ? undefined : group;\n      });\n\n      return {\n        stables: [\"reportGroupName\", \"reportGroupArn\"],\n\n        diff: Effect.fn(function* ({ id, olds, news }) {\n          if (!isResolved(news)) return undefined;\n          if (\n            (yield* toName(id, olds ?? {})) !==\n              (yield* toName(id, news ?? {})) ||\n            olds?.type !== news.type\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "8": "\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name =\n            output?.reportGroupName ?? (yield* toName(id, olds ?? {}));\n          const arn = output?.reportGroupArn ?? (yield* reportGroupArn(name));\n          const group = yield* getReportGroup(arn);\n          if (group === undefined || group.arn === undefined) {\n            return undefined;\n          }\n          const attrs = {\n            reportGroupName: group.name ?? name,\n            reportGroupArn: group.arn,\n          };\n          const tags = toTagRecord(group.tags);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const name = output?.reportGroupName ?? (yield* toName(id, news));\n          const arn = output?.reportGroupArn ?? (yield* reportGroupArn(name));\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...internalTags, ...news.tags };\n          const desiredExport = toWireExportConfig(news.exportConfig);\n\n\n          let observed = yield* getReportGroup(arn);",
+        "9": "\n\n\n\n\n\n\n          if (\n            observed !== undefined &&\n            (!sameExportConfig(observed.exportConfig, desiredExport) ||\n              !sameTags(toTagRecord(observed.tags), desiredTags))\n          ) {\n            observed = yield* codebuild\n              .updateReportGroup({\n                arn,\n                exportConfig: desiredExport,\n                tags: toWireTags(desiredTags),\n              })\n              .pipe(\n                Effect.map((res) => res.reportGroup),\n                Effect.catchTag(\"ResourceNotFoundException\", () =>\n                  Effect.succeed(undefined),\n                ),\n              );\n          }",
+        "10": "\n\n          if (observed === undefined) {\n            observed = yield* codebuild\n              .createReportGroup({\n                name,\n                type: news.type,\n                exportConfig: desiredExport,\n                tags: toWireTags(desiredTags),\n              })\n              .pipe(\n                Effect.map((res) => res.reportGroup),\n                Effect.catchTag(\"ResourceAlreadyExistsException\", () =>\n                  getReportGroup(arn),\n                ),\n              );\n          }\n\n          if (observed === undefined || observed.arn === undefined) {\n            return yield* Effect.fail(\n              new Error(\n                `CodeBuild report group '${name}' disappeared while reconciling`,\n              ),\n            );\n          }\n\n          yield* session.note(name);\n          return {\n            reportGroupName: observed.name ?? name,\n            reportGroupArn: observed.arn,\n          };\n        }),",
+        "11": "\n        delete: Effect.fn(function* ({ olds, output }) {\n\n\n\n          yield* codebuild.deleteReportGroup({\n            arn: output.reportGroupArn,\n            deleteReports: olds.deleteReports ?? true,\n          });\n        }),\n\n        list: () =>\n          codebuild.listReportGroups.pages({}).pipe(\n            Stream.runCollect,\n            Effect.map((chunk) =>\n              Array.from(chunk).flatMap((page) => page.reportGroups ?? []),\n            ),",
+        "12": "            Effect.flatMap((arns) =>\n              arns.length === 0\n                ? Effect.succeed(\n                    [] as { reportGroupName: string; reportGroupArn: string }[],\n                  )\n                : Effect.forEach(\n\n                    chunkArns(arns, 100),\n                    (batch) =>\n                      codebuild\n                        .batchGetReportGroups({ reportGroupArns: batch })\n                        .pipe(Effect.map((res) => res.reportGroups ?? [])),\n                    { concurrency: 2 },\n                  ).pipe(\n                    Effect.map((results) =>\n                      results.flat().flatMap((g) =>\n                        g.name !== undefined && g.arn !== undefined\n                          ? [\n                              {\n                                reportGroupName: g.name,\n                                reportGroupArn: g.arn,\n                              },\n                            ]\n                          : [],\n                      ),\n                    ),\n                  ),\n            ),\n          ),\n      };\n    }),\n  );",
+        "13": "\n\nconst chunkArns = (arns: string[], size: number): string[][] => {\n  const chunks: string[][] = [];\n  for (let i = 0; i < arns.length; i += size) {\n    chunks.push(arns.slice(i, i + size));\n  }\n  return chunks;\n};\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

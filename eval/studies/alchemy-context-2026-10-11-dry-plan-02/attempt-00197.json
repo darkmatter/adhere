@@ -1,0 +1,728 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/AWS/EntityResolution/MatchingWorkflow.ts",
+  "kind": "locate",
+  "ordinal": 197,
+  "artifact": "attempt-00197.json",
+  "started": "2026-10-11T03:20:42.197Z",
+  "estimatedTokens": 18839,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.1887749999987136,
+  "referencesPresent": false,
+  "bodyDigest": "8fe0a63b6fc7c66ff1e2099d21e1fbf7cccfbd45bb95ffee01d5f289d95ee2ed",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "34",
+    "end:providers/idempotent-delete:2": "34",
+    "start:providers/idempotent-delete:3": "61",
+    "end:providers/idempotent-delete:3": "61",
+    "start:providers/idempotent-delete:4": "132",
+    "end:providers/idempotent-delete:4": "132",
+    "start:providers/idempotent-delete:5": "161",
+    "end:providers/idempotent-delete:5": "161",
+    "start:providers/idempotent-delete:6": "191",
+    "end:providers/idempotent-delete:6": "191",
+    "start:providers/idempotent-delete:7": "202",
+    "end:providers/idempotent-delete:7": "202",
+    "start:providers/idempotent-delete:8": "226",
+    "end:providers/idempotent-delete:8": "226",
+    "start:providers/idempotent-delete:9": "242",
+    "end:providers/idempotent-delete:9": "242",
+    "start:providers/idempotent-delete:10": "267",
+    "end:providers/idempotent-delete:10": "267",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "_tag": "```typescript\n\"AWS::CredentialProviderError\" | \"AWS::SigV4::CryptoError\" | \"AWS::SigV4::InvalidSigningHeaders\" | \"AWS::SigV4::InvalidSigningUrl\" | \"AccessDeniedException\" | \"Alchemy::AWS::ConflictingSSORegion\" | \"Alchemy::AWS::ConflictingSSOStartUrl\" | \"Al",
+        "action": "```typescript\n\"replace\"\n```",
+        "attrs": "```typescript\n{ workflowName: string; workflowArn: string; }\n```",
+        "catchTag": "```typescript\n{ <const K extends import(\"effect/Types\").Tags<E> | import(\"effect/Array\").NonEmptyReadonlyArray<import(\"effect/Types\").Tags<E>>, E, A1, E1, R1, A2 = import(\"effect/Types\").unassigned, E2 = never, R2 = never>(k: K, f: (e: import(\"effect/Types",
+        "chunk": "```typescript\n{ workflowName: string; workflowArn: string; }[]\n```",
+        "createInternalTags": "```typescript\n(id: string) => Effect.Effect<{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy::id\": string; }, never, import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```",
+        "createMatchingWorkflow": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<entityresolution.CreateMatchingWorkflowInput, entityresolution.CreateMatchingWorkflowOutput, entityresolution.CreateMatchingWorkflowError, import(\"@distilled.cloud/aws/Credentials\").Credenti",
+        "createName": "```typescript\n(id: string, props: { workflowName?: string | undefined; }) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").InstanceId | import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```",
+        "createPhysicalName": "```typescript\n(args_0: { id: string; prefix?: string; instanceId?: string; suffixLength?: number; maxLength?: number; delimiter?: string; lowercase?: boolean; forbiddenPrefixes?: string[]; }) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").In",
+        "deepEqual": "```typescript\n(a: unknown, b: unknown, options?: import(\"../../Diff.ts\").DeepEqualOptions) => boolean\n```\n\nSort-keys deep equality for plain data (objects, arrays, primitives).\nUse in provider `diff` handlers instead of ad-hoc `JSON.stringify` comparisons.",
+        "delete": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: MatchingWorkflowProps; output: { workflowName: string; workflowArn: string; }; session: import(\"../../Report.ts\").ScopedPlanStatusSession; bindings: import(\"../../Resource.ts\").Res",
+        "deleteMatchingWorkflow": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<entityresolution.DeleteMatchingWorkflowInput, entityresolution.DeleteMatchingWorkflowOutput, entityresolution.DeleteMatchingWorkflowError, import(\"@distilled.cloud/aws/Credentials\").Credenti",
+        "description": "```typescript\nstring | undefined\n```\n\n---\n\n```typescript\nstring | undefined\n```\n\nA description of the workflow.",
+        "desired": "```typescript\n{ description: string | undefined; inputSourceConfig: entityresolution.InputSource[]; outputSourceConfig: entityresolution.OutputSource[]; resolutionTechniques: entityresolution.ResolutionTechniques; incrementalRunConfig: entityresolution.Inc",
+        "desiredTags": "```typescript\n{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy::id\": string; }\n```",
+        "diff": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: MatchingWorkflowProps; news: import(\"../../Input.ts\").Input<MatchingWorkflowProps>; oldBindings: import(\"../../Resource.ts\").ResourceBinding<never>[]; newBindings: import(\"../../In",
+        "e": "```typescript\nentityresolution.DeleteMatchingWorkflowError\n```",
+        "effect": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike, Req = never, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../../Resource.",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "entityresolution": "```typescript\ntypeof entityresolution\n```",
+        "fixed": "```typescript\n(interval: import(\"effect/Duration\").Input) => Schedule.Schedule<number>\n```\n\nReturns a `Schedule` that recurs on the specified fixed `interval` and\noutputs the number of repetitions of the schedule so far.\n\n**When to use**\n\nUse when recurren",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "getByName": "```typescript\n(workflowName: string) => Effect.Effect<entityresolution.GetMatchingWorkflowOutput | undefined, entityresolution.AccessDeniedException | entityresolution.InternalServerException | entityresolution.ThrottlingException | entityresolution.Valida",
+        "getMatchingWorkflow": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<entityresolution.GetMatchingWorkflowInput, entityresolution.GetMatchingWorkflowOutput, entityresolution.GetMatchingWorkflowError, import(\"@distilled.cloud/aws/Credentials\").Credentials | imp",
+        "hasAlchemyTags": "```typescript\n(id: string, tags: import(\"../../Tags.ts\").Tags | undefined) => Effect.Effect<boolean, never, import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```\n\nChecks if a resource has the expected alchemy tags for this app/stage/id.",
+        "id": "```typescript\nstring\n```",
+        "incrementalRunConfig": "```typescript\nentityresolution.IncrementalRunConfig | undefined\n```\n\n---\n\n```typescript\nentityresolution.IncrementalRunConfig | undefined\n```\n\nIncremental-run configuration. Only supported for `RULE_MATCHING`\nworkflows.",
+        "inputSourceConfig": "```typescript\nentityresolution.InputSource[]\n```\n\n---\n\n```typescript\nentityresolution.InputSource[]\n```\n\nThe input records to match: each entry names a Glue table\n(`inputSourceARN`) and the schema mapping (`schemaName`) that describes\nits columns.",
+        "internalTags": "```typescript\n{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy::id\": string; }\n```",
+        "isResolved": "```typescript\n<T>(value: import(\"../../Input.ts\").Input<T>) => value is T\n```",
+        "items": "```typescript\n(input: entityresolution.ListMatchingWorkflowsInput) => Stream.Stream<entityresolution.MatchingWorkflowSummary, entityresolution.ListMatchingWorkflowsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http",
+        "list": "```typescript\n() => Effect.Effect<{ workflowName: string; workflowArn: string; }[], entityresolution.ListMatchingWorkflowsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "listMatchingWorkflows": "```typescript\nimport(\"@distilled.cloud/core/api\").PaginatedOperationMethod<entityresolution.ListMatchingWorkflowsInput, entityresolution.ListMatchingWorkflowsOutput, entityresolution.ListMatchingWorkflowsError, import(\"@distilled.cloud/aws/Credentials\").Cr",
+        "map": "```typescript\n{ <A, B>(f: (a: A, i: number) => B): <E, R>(self: Stream.Stream<A, E, R>) => Stream.Stream<B, E, R>; <A, E, R, B>(self: Stream.Stream<A, E, R>, f: (a: A, i: number) => B): Stream.Stream<B, E, R>; }\n```\n\nTransforms the elements of this stream ",
+        "MatchingWorkflow": "```typescript\nimport(\"../../Resource.ts\").ResourceClass<MatchingWorkflow>\n```\n\nAn AWS Entity Resolution matching workflow — a data-processing job\ndefinition that matches and deduplicates records across Glue table input\nsources using rule-based or ML-powere",
+        "MatchingWorkflowProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<MatchingWorkflow>, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient | import(\"../../Stack.ts\").Stack | import(\"../../Stag",
+        "max": "```typescript\n<const Schedules extends import(\"effect/Array\").NonEmptyReadonlyArray<Schedule.Schedule<any, any, any, any>>>(schedules: Schedules) => Schedule.Schedule<import(\"effect/Duration\").Duration, import(\"effect/Types\").UnionToIntersection<Schedule.I",
+        "maxLength": "```typescript\nnumber\n```",
+        "name": "```typescript\nstring\n```",
+        "newName": "```typescript\nstring\n```",
+        "news": "```typescript\nimport(\"../../Input.ts\").Input<MatchingWorkflowProps>\n```\n\n```typescript\nMatchingWorkflowProps\n```\n\n---\n\n```typescript\nMatchingWorkflowProps\n```",
+        "note": "```typescript\n(note: string, options?: { readonly kind?: import(\"../../Report.ts\").NoteKind; }) => Effect.Effect<void>\n```",
+        "observed": "```typescript\n{ description: string | undefined; inputSourceConfig: entityresolution.InputSource[]; outputSourceConfig: entityresolution.OutputSource[]; resolutionTechniques: entityresolution.ResolutionTechniques; incrementalRunConfig: entityresolution.Inc",
+        "oldName": "```typescript\nstring\n```",
+        "olds": "```typescript\nMatchingWorkflowProps\n```",
+        "output": "```typescript\n{ workflowName: string; workflowArn: string; } | undefined\n```\n\n---\n\n```typescript\n{ workflowName: string; workflowArn: string; }\n```",
+        "outputSourceConfig": "```typescript\nentityresolution.OutputSource[]\n```\n\n---\n\n```typescript\nentityresolution.OutputSource[]\n```\n\nWhere matched output records are written: an S3 path (`outputS3Path`),\nthe columns to include (`output`), and an optional KMS key (`KMSArn`).",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "props": "```typescript\n{ workflowName?: string | undefined; }\n```",
+        "Provider": "```typescript\ntypeof Provider\n```",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: MatchingWorkflowProps; output: { workflowName: string; workflowArn: string; } | undefined; }) => Effect.Effect<{ workflowName: string; workflowArn: string; } | undefined, entityres",
+        "readEntityResolutionTags": "```typescript\n(arn: string) => Effect.Effect<Record<string, string>, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```\n\nRead the observed tags of an Entity Resolution resource by ARN. ",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: MatchingWorkflowProps; olds: MatchingWorkflowProps | undefined; output: { workflowName: string; workflowArn: string; } | undefined; session: import(\"../../Report.ts\").ScopedPlanSta",
+        "recurs": "```typescript\n(times: number) => Schedule.Schedule<number>\n```\n\nReturns a `Schedule` which can only be stepped the specified number of\n`times` before it terminates.\n\n**When to use**\n\nUse when you need a counter schedule with no additional delay.\n\n**Gotchas",
+        "resolutionTechniques": "```typescript\nentityresolution.ResolutionTechniques\n```\n\n---\n\n```typescript\nentityresolution.ResolutionTechniques\n```\n\nHow records are matched: `RULE_MATCHING` with `ruleBasedProperties`,\n`ML_MATCHING`, or a `PROVIDER` service.",
+        "Resource": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../../Resource.ts\").ResourceOptions) => import(\"../../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nTh",
+        "retry": "```typescript\n{ <E, O extends Effect.Retry.Options<E>>(options: O): <A, R>(self: Effect.Effect<A, E, R>) => Effect.Retry.Return<R, E, A, O>; <B, E, Error, Env>(policy: Schedule.Schedule<B, import(\"effect/Types\").NoInfer<E>, Error, Env>): <A, R>(self: Effec",
+        "retryRolePropagation": "```typescript\n<A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>\n```\n\nRetry the IAM-propagation race on workflow create/update: a freshly created\nrole is transiently rejected until IAM propagates. The race surfaces as\n`AccessDeniedException`",
+        "roleArn": "```typescript\nstring\n```\n\n---\n\n```typescript\nstring\n```\n\nThe ARN of the IAM role Entity Resolution assumes to read the input Glue\ntables and write the S3 output on your behalf.",
+        "runCollect": "```typescript\n<A, E, R>(self: Stream.Stream<A, E, R>) => Effect.Effect<Array<A>, E, R>\n```\n\nRuns the stream and collects all elements into an array.\n\n**Example** (Collecting stream values)\n\n```ts import.meta.vitest\nimport { Effect, Stream } from \"effect\"\n\n",
+        "schedule": "```typescript\nSchedule.Schedule<import(\"effect/Duration\").Duration, unknown, never, never>\n```",
+        "Schedule": "```typescript\ntypeof Schedule\n```",
+        "session": "```typescript\nimport(\"../../Report.ts\").ScopedPlanStatusSession\n```",
+        "stables": "```typescript\n(\"workflowArn\" | \"workflowName\")[]\n```",
+        "Stream": "```typescript\ntypeof Stream\n```",
+        "succeed": "```typescript\n<A>(value: A) => Effect.Effect<A>\n```\n\nCreates an `Effect` that always succeeds with a given value.\n\n**When to use**\n\nUse when an effect should complete successfully with a specific value without any errors\nor external dependencies.\n\n**Exampl",
+        "summary": "```typescript\nentityresolution.MatchingWorkflowSummary\n```",
+        "syncEntityResolutionTags": "```typescript\n(arn: string, desiredTags: Record<string, string>) => Effect.Effect<void, entityresolution.TagResourceError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```\n\nSync tags on an E",
+        "tags": "```typescript\nRecord<string, string>\n```\n\n---\n\n```typescript\nRecord<string, string> | undefined\n```\n\nTags to apply to the workflow. Merged with internal Alchemy tags.\n\n---\n\n```typescript\n{ \"alchemy::stack\": string; \"alchemy::stage\": string; \"alchemy::id\": ",
+        "Unowned": "```typescript\n{ <T extends object>(attrs: T): T; is: (value: unknown) => boolean; }\n```\n\nBrand a `read` return value as belonging to a different owner.\n\nUse this in a provider's `read` implementation when the resource exists in\nthe cloud but a positive own",
+        "updateMatchingWorkflow": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<entityresolution.UpdateMatchingWorkflowInput, entityresolution.UpdateMatchingWorkflowOutput, entityresolution.UpdateMatchingWorkflowError, import(\"@distilled.cloud/aws/Credentials\").Credenti",
+        "void": "```typescript\nEffect.Effect<void, never, never>\n```",
+        "while": "```typescript\n(e: entityresolution.DeleteMatchingWorkflowError) => e is entityresolution.ConflictException\n```",
+        "workflow": "```typescript\nentityresolution.GetMatchingWorkflowOutput | undefined\n```\n\n```typescript\nentityresolution.GetMatchingWorkflowOutput\n```",
+        "workflowArn": "```typescript\nstring\n```\n\nThe ARN of the matching workflow.\n\n---\n\n```typescript\nstring\n```",
+        "workflowName": "```typescript\nstring | undefined\n```\n\nName of the matching workflow. Must be unique per account/region and\nmatch `[a-zA-Z_0-9-]*`. If omitted, a unique name is generated from the\napp, stage, and logical ID. Changing the name replaces the workflow.\n\n---\n\n``"
+      },
+      "code": {
+        "1": "import * as entityresolution from \"@distilled.cloud/aws/entityresolution\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { deepEqual, isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport {\n  readEntityResolutionTags,\n  retryRolePropagation,\n  syncEntityResolutionTags,\n} from \"./internal.ts\";\n\nexport interface MatchingWorkflowProps {\n\n\n\n\n\n  workflowName?: string;\n\n\n\n  description?: string;",
+        "2": "\n\n\n\n\n  inputSourceConfig: entityresolution.InputSource[];\n\n\n\n\n  outputSourceConfig: entityresolution.OutputSource[];\n\n\n\n\n  resolutionTechniques: entityresolution.ResolutionTechniques;\n\n\n\n\n  incrementalRunConfig?: entityresolution.IncrementalRunConfig;\n\n\n\n\n  roleArn: string;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "3": "\nexport interface MatchingWorkflow extends Resource<\n  \"AWS.EntityResolution.MatchingWorkflow\",\n  MatchingWorkflowProps,\n  {\n\n\n\n    workflowName: string;\n\n\n\n    workflowArn: string;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const MatchingWorkflow = Resource<MatchingWorkflow>(\n  \"AWS.EntityResolution.MatchingWorkflow\",\n);\n\nexport const MatchingWorkflowProvider = () =>\n  Provider.effect(\n    MatchingWorkflow,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: { workflowName?: string | undefined },\n      ) {\n        return (\n          props.workflowName ??\n          (yield* createPhysicalName({ id, maxLength: 255 }))\n        );\n      });\n\n\n      const getByName = Effect.fn(function* (workflowName: string) {\n        return yield* entityresolution\n          .getMatchingWorkflow({ workflowName })\n          .pipe(\n            Effect.catchTag(\"ResourceNotFoundException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n      });",
+        "5": "\n      return {\n        stables: [\"workflowName\", \"workflowArn\"],\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name =\n            output?.workflowName ?? (yield* createName(id, olds ?? {}));\n          const workflow = yield* getByName(name);\n          if (workflow === undefined) return undefined;\n          const attrs = {\n            workflowName: workflow.workflowName,\n            workflowArn: workflow.workflowArn,\n          };\n\n\n          const tags = yield* readEntityResolutionTags(workflow.workflowArn);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),\n\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const name = output?.workflowName ?? (yield* createName(id, news));\n          const internalTags = yield* createInternalTags(id);",
+        "6": "          const desiredTags = { ...news.tags, ...internalTags };\n\n\n          let workflow = yield* getByName(name);",
+        "7": "\n\n\n\n\n\n\n          if (workflow === undefined) {\n            yield* entityresolution\n              .createMatchingWorkflow({\n                workflowName: name,\n                description: news.description,\n                inputSourceConfig: news.inputSourceConfig,\n                outputSourceConfig: news.outputSourceConfig,\n                resolutionTechniques: news.resolutionTechniques,\n                incrementalRunConfig: news.incrementalRunConfig,\n                roleArn: news.roleArn,\n                tags: desiredTags,\n              })\n              .pipe(\n                retryRolePropagation,\n                Effect.catchTag(\"ConflictException\", () => Effect.void),\n              );\n            workflow = yield* entityresolution.getMatchingWorkflow({\n              workflowName: name,\n            });\n          }",
+        "8": "\n\n\n\n          const desired = {\n            description: news.description ?? undefined,\n            inputSourceConfig: news.inputSourceConfig,\n            outputSourceConfig: news.outputSourceConfig,\n            resolutionTechniques: news.resolutionTechniques,\n            incrementalRunConfig: news.incrementalRunConfig ?? undefined,\n            roleArn: news.roleArn,\n          };\n          const observed = {\n            description: workflow.description ?? undefined,\n            inputSourceConfig: workflow.inputSourceConfig,\n            outputSourceConfig: workflow.outputSourceConfig,\n            resolutionTechniques: workflow.resolutionTechniques,\n            incrementalRunConfig: workflow.incrementalRunConfig ?? undefined,\n            roleArn: workflow.roleArn,\n          };",
+        "9": "          if (!deepEqual(observed, desired)) {\n\n\n            yield* entityresolution\n              .updateMatchingWorkflow({\n                workflowName: name,\n                description: news.description,\n                inputSourceConfig: news.inputSourceConfig,\n                outputSourceConfig: news.outputSourceConfig,\n                resolutionTechniques: news.resolutionTechniques,\n                incrementalRunConfig: news.incrementalRunConfig,\n                roleArn: news.roleArn,\n              })\n              .pipe(retryRolePropagation);\n          }\n\n          const workflowArn = workflow.workflowArn;\n\n\n          yield* syncEntityResolutionTags(workflowArn, desiredTags);\n\n          yield* session.note(workflowArn);\n          return { workflowName: name, workflowArn };\n        }),",
+        "10": "\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* entityresolution\n            .deleteMatchingWorkflow({ workflowName: output.workflowName })\n            .pipe(\n              Effect.retry({\n                while: (e) => e._tag === \"ConflictException\",\n                schedule: Schedule.max([\n                  Schedule.fixed(\"2 seconds\"),\n                  Schedule.recurs(10),\n                ]),\n              }),\n            );\n        }),\n\n        list: () =>\n          entityresolution.listMatchingWorkflows.items({}).pipe(\n            Stream.map((summary) => ({\n              workflowName: summary.workflowName,\n              workflowArn: summary.workflowArn,\n            })),\n            Stream.runCollect,\n            Effect.map((chunk) => Array.from(chunk)),\n          ),\n      };\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as entityresolution from \"@distilled.cloud/aws/entityresolution\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Schedule from \"effect/Schedule\";",
+          "4": "import * as Stream from \"effect/Stream\";",
+          "5": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "6": "import { deepEqual, isResolved } from \"../../Diff.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";",
+          "11": "import type { Providers } from \"../Providers.ts\";",
+          "12": "import {",
+          "13": "readEntityResolutionTags,",
+          "14": "retryRolePropagation,",
+          "15": "syncEntityResolutionTags,",
+          "16": "} from \"./internal.ts\";",
+          "18": "export interface MatchingWorkflowProps {",
+          "24": "workflowName?: string;",
+          "28": "description?: string;"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as entityresolution from \"@distilled.cloud/aws/entityresolution\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Schedule from \"effect/Schedule\";",
+          "4": "import * as Stream from \"effect/Stream\";",
+          "5": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "6": "import { deepEqual, isResolved } from \"../../Diff.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";",
+          "11": "import type { Providers } from \"../Providers.ts\";",
+          "12": "import {",
+          "13": "readEntityResolutionTags,",
+          "14": "retryRolePropagation,",
+          "15": "syncEntityResolutionTags,",
+          "16": "} from \"./internal.ts\";",
+          "18": "export interface MatchingWorkflowProps {",
+          "24": "workflowName?: string;",
+          "28": "description?: string;"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "34": "inputSourceConfig: entityresolution.InputSource[];",
+          "39": "outputSourceConfig: entityresolution.OutputSource[];",
+          "44": "resolutionTechniques: entityresolution.ResolutionTechniques;",
+          "49": "incrementalRunConfig?: entityresolution.IncrementalRunConfig;",
+          "54": "roleArn: string;",
+          "58": "tags?: Record<string, string>;",
+          "59": "}"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "34": "inputSourceConfig: entityresolution.InputSource[];",
+          "39": "outputSourceConfig: entityresolution.OutputSource[];",
+          "44": "resolutionTechniques: entityresolution.ResolutionTechniques;",
+          "49": "incrementalRunConfig?: entityresolution.IncrementalRunConfig;",
+          "54": "roleArn: string;",
+          "58": "tags?: Record<string, string>;",
+          "59": "}"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "61": "export interface MatchingWorkflow extends Resource<",
+          "62": "\"AWS.EntityResolution.MatchingWorkflow\",",
+          "63": "MatchingWorkflowProps,",
+          "64": "{",
+          "68": "workflowName: string;",
+          "72": "workflowArn: string;",
+          "73": "},",
+          "74": "never,",
+          "75": "Providers",
+          "76": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "61": "export interface MatchingWorkflow extends Resource<",
+          "62": "\"AWS.EntityResolution.MatchingWorkflow\",",
+          "63": "MatchingWorkflowProps,",
+          "64": "{",
+          "68": "workflowName: string;",
+          "72": "workflowArn: string;",
+          "73": "},",
+          "74": "never,",
+          "75": "Providers",
+          "76": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "132": "export const MatchingWorkflow = Resource<MatchingWorkflow>(",
+          "133": "\"AWS.EntityResolution.MatchingWorkflow\",",
+          "134": ");",
+          "136": "export const MatchingWorkflowProvider = () =>",
+          "137": "Provider.effect(",
+          "138": "MatchingWorkflow,",
+          "139": "Effect.gen(function* () {",
+          "140": "const createName = Effect.fn(function* (",
+          "141": "id: string,",
+          "142": "props: { workflowName?: string | undefined },",
+          "143": ") {",
+          "144": "return (",
+          "145": "props.workflowName ??",
+          "146": "(yield* createPhysicalName({ id, maxLength: 255 }))",
+          "147": ");",
+          "148": "});",
+          "151": "const getByName = Effect.fn(function* (workflowName: string) {",
+          "152": "return yield* entityresolution",
+          "153": ".getMatchingWorkflow({ workflowName })",
+          "154": ".pipe(",
+          "155": "Effect.catchTag(\"ResourceNotFoundException\", () =>",
+          "156": "Effect.succeed(undefined),",
+          "157": "),",
+          "158": ");",
+          "159": "});"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "132": "export const MatchingWorkflow = Resource<MatchingWorkflow>(",
+          "133": "\"AWS.EntityResolution.MatchingWorkflow\",",
+          "134": ");",
+          "136": "export const MatchingWorkflowProvider = () =>",
+          "137": "Provider.effect(",
+          "138": "MatchingWorkflow,",
+          "139": "Effect.gen(function* () {",
+          "140": "const createName = Effect.fn(function* (",
+          "141": "id: string,",
+          "142": "props: { workflowName?: string | undefined },",
+          "143": ") {",
+          "144": "return (",
+          "145": "props.workflowName ??",
+          "146": "(yield* createPhysicalName({ id, maxLength: 255 }))",
+          "147": ");",
+          "148": "});",
+          "151": "const getByName = Effect.fn(function* (workflowName: string) {",
+          "152": "return yield* entityresolution",
+          "153": ".getMatchingWorkflow({ workflowName })",
+          "154": ".pipe(",
+          "155": "Effect.catchTag(\"ResourceNotFoundException\", () =>",
+          "156": "Effect.succeed(undefined),",
+          "157": "),",
+          "158": ");",
+          "159": "});"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "161": "return {",
+          "162": "stables: [\"workflowName\", \"workflowArn\"],",
+          "164": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "165": "const name =",
+          "166": "output?.workflowName ?? (yield* createName(id, olds ?? {}));",
+          "167": "const workflow = yield* getByName(name);",
+          "168": "if (workflow === undefined) return undefined;",
+          "169": "const attrs = {",
+          "170": "workflowName: workflow.workflowName,",
+          "171": "workflowArn: workflow.workflowArn,",
+          "172": "};",
+          "175": "const tags = yield* readEntityResolutionTags(workflow.workflowArn);",
+          "176": "return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);",
+          "177": "}),",
+          "179": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "180": "if (!isResolved(news)) return undefined;",
+          "181": "const oldName = yield* createName(id, olds);",
+          "182": "const newName = yield* createName(id, news);",
+          "183": "if (oldName !== newName) {",
+          "184": "return { action: \"replace\" } as const;",
+          "185": "}",
+          "186": "}),",
+          "188": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "189": "const name = output?.workflowName ?? (yield* createName(id, news));",
+          "190": "const internalTags = yield* createInternalTags(id);"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "161": "return {",
+          "162": "stables: [\"workflowName\", \"workflowArn\"],",
+          "164": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "165": "const name =",
+          "166": "output?.workflowName ?? (yield* createName(id, olds ?? {}));",
+          "167": "const workflow = yield* getByName(name);",
+          "168": "if (workflow === undefined) return undefined;",
+          "169": "const attrs = {",
+          "170": "workflowName: workflow.workflowName,",
+          "171": "workflowArn: workflow.workflowArn,",
+          "172": "};",
+          "175": "const tags = yield* readEntityResolutionTags(workflow.workflowArn);",
+          "176": "return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);",
+          "177": "}),",
+          "179": "diff: Effect.fn(function* ({ id, news, olds }) {",
+          "180": "if (!isResolved(news)) return undefined;",
+          "181": "const oldName = yield* createName(id, olds);",
+          "182": "const newName = yield* createName(id, news);",
+          "183": "if (oldName !== newName) {",
+          "184": "return { action: \"replace\" } as const;",
+          "185": "}",
+          "186": "}),",
+          "188": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "189": "const name = output?.workflowName ?? (yield* createName(id, news));",
+          "190": "const internalTags = yield* createInternalTags(id);"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "191": "const desiredTags = { ...news.tags, ...internalTags };",
+          "194": "let workflow = yield* getByName(name);"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "191": "const desiredTags = { ...news.tags, ...internalTags };",
+          "194": "let workflow = yield* getByName(name);"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "202": "if (workflow === undefined) {",
+          "203": "yield* entityresolution",
+          "204": ".createMatchingWorkflow({",
+          "205": "workflowName: name,",
+          "206": "description: news.description,",
+          "207": "inputSourceConfig: news.inputSourceConfig,",
+          "208": "outputSourceConfig: news.outputSourceConfig,",
+          "209": "resolutionTechniques: news.resolutionTechniques,",
+          "210": "incrementalRunConfig: news.incrementalRunConfig,",
+          "211": "roleArn: news.roleArn,",
+          "212": "tags: desiredTags,",
+          "213": "})",
+          "214": ".pipe(",
+          "215": "retryRolePropagation,",
+          "216": "Effect.catchTag(\"ConflictException\", () => Effect.void),",
+          "217": ");",
+          "218": "workflow = yield* entityresolution.getMatchingWorkflow({",
+          "219": "workflowName: name,",
+          "220": "});",
+          "221": "}"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "202": "if (workflow === undefined) {",
+          "203": "yield* entityresolution",
+          "204": ".createMatchingWorkflow({",
+          "205": "workflowName: name,",
+          "206": "description: news.description,",
+          "207": "inputSourceConfig: news.inputSourceConfig,",
+          "208": "outputSourceConfig: news.outputSourceConfig,",
+          "209": "resolutionTechniques: news.resolutionTechniques,",
+          "210": "incrementalRunConfig: news.incrementalRunConfig,",
+          "211": "roleArn: news.roleArn,",
+          "212": "tags: desiredTags,",
+          "213": "})",
+          "214": ".pipe(",
+          "215": "retryRolePropagation,",
+          "216": "Effect.catchTag(\"ConflictException\", () => Effect.void),",
+          "217": ");",
+          "218": "workflow = yield* entityresolution.getMatchingWorkflow({",
+          "219": "workflowName: name,",
+          "220": "});",
+          "221": "}"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "226": "const desired = {",
+          "227": "description: news.description ?? undefined,",
+          "228": "inputSourceConfig: news.inputSourceConfig,",
+          "229": "outputSourceConfig: news.outputSourceConfig,",
+          "230": "resolutionTechniques: news.resolutionTechniques,",
+          "231": "incrementalRunConfig: news.incrementalRunConfig ?? undefined,",
+          "232": "roleArn: news.roleArn,",
+          "233": "};",
+          "234": "const observed = {",
+          "235": "description: workflow.description ?? undefined,",
+          "236": "inputSourceConfig: workflow.inputSourceConfig,",
+          "237": "outputSourceConfig: workflow.outputSourceConfig,",
+          "238": "resolutionTechniques: workflow.resolutionTechniques,",
+          "239": "incrementalRunConfig: workflow.incrementalRunConfig ?? undefined,",
+          "240": "roleArn: workflow.roleArn,",
+          "241": "};"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "226": "const desired = {",
+          "227": "description: news.description ?? undefined,",
+          "228": "inputSourceConfig: news.inputSourceConfig,",
+          "229": "outputSourceConfig: news.outputSourceConfig,",
+          "230": "resolutionTechniques: news.resolutionTechniques,",
+          "231": "incrementalRunConfig: news.incrementalRunConfig ?? undefined,",
+          "232": "roleArn: news.roleArn,",
+          "233": "};",
+          "234": "const observed = {",
+          "235": "description: workflow.description ?? undefined,",
+          "236": "inputSourceConfig: workflow.inputSourceConfig,",
+          "237": "outputSourceConfig: workflow.outputSourceConfig,",
+          "238": "resolutionTechniques: workflow.resolutionTechniques,",
+          "239": "incrementalRunConfig: workflow.incrementalRunConfig ?? undefined,",
+          "240": "roleArn: workflow.roleArn,",
+          "241": "};"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "242": "if (!deepEqual(observed, desired)) {",
+          "245": "yield* entityresolution",
+          "246": ".updateMatchingWorkflow({",
+          "247": "workflowName: name,",
+          "248": "description: news.description,",
+          "249": "inputSourceConfig: news.inputSourceConfig,",
+          "250": "outputSourceConfig: news.outputSourceConfig,",
+          "251": "resolutionTechniques: news.resolutionTechniques,",
+          "252": "incrementalRunConfig: news.incrementalRunConfig,",
+          "253": "roleArn: news.roleArn,",
+          "254": "})",
+          "255": ".pipe(retryRolePropagation);",
+          "256": "}",
+          "258": "const workflowArn = workflow.workflowArn;",
+          "261": "yield* syncEntityResolutionTags(workflowArn, desiredTags);",
+          "263": "yield* session.note(workflowArn);",
+          "264": "return { workflowName: name, workflowArn };",
+          "265": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "242": "if (!deepEqual(observed, desired)) {",
+          "245": "yield* entityresolution",
+          "246": ".updateMatchingWorkflow({",
+          "247": "workflowName: name,",
+          "248": "description: news.description,",
+          "249": "inputSourceConfig: news.inputSourceConfig,",
+          "250": "outputSourceConfig: news.outputSourceConfig,",
+          "251": "resolutionTechniques: news.resolutionTechniques,",
+          "252": "incrementalRunConfig: news.incrementalRunConfig,",
+          "253": "roleArn: news.roleArn,",
+          "254": "})",
+          "255": ".pipe(retryRolePropagation);",
+          "256": "}",
+          "258": "const workflowArn = workflow.workflowArn;",
+          "261": "yield* syncEntityResolutionTags(workflowArn, desiredTags);",
+          "263": "yield* session.note(workflowArn);",
+          "264": "return { workflowName: name, workflowArn };",
+          "265": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "267": "delete: Effect.fn(function* ({ output }) {",
+          "270": "yield* entityresolution",
+          "271": ".deleteMatchingWorkflow({ workflowName: output.workflowName })",
+          "272": ".pipe(",
+          "273": "Effect.retry({",
+          "274": "while: (e) => e._tag === \"ConflictException\",",
+          "275": "schedule: Schedule.max([",
+          "276": "Schedule.fixed(\"2 seconds\"),",
+          "277": "Schedule.recurs(10),",
+          "278": "]),",
+          "279": "}),",
+          "280": ");",
+          "281": "}),",
+          "283": "list: () =>",
+          "284": "entityresolution.listMatchingWorkflows.items({}).pipe(",
+          "285": "Stream.map((summary) => ({",
+          "286": "workflowName: summary.workflowName,",
+          "287": "workflowArn: summary.workflowArn,",
+          "288": "})),",
+          "289": "Stream.runCollect,",
+          "290": "Effect.map((chunk) => Array.from(chunk)),",
+          "291": "),",
+          "292": "};",
+          "293": "}),",
+          "294": ");"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "267": "delete: Effect.fn(function* ({ output }) {",
+          "270": "yield* entityresolution",
+          "271": ".deleteMatchingWorkflow({ workflowName: output.workflowName })",
+          "272": ".pipe(",
+          "273": "Effect.retry({",
+          "274": "while: (e) => e._tag === \"ConflictException\",",
+          "275": "schedule: Schedule.max([",
+          "276": "Schedule.fixed(\"2 seconds\"),",
+          "277": "Schedule.recurs(10),",
+          "278": "]),",
+          "279": "}),",
+          "280": ");",
+          "281": "}),",
+          "283": "list: () =>",
+          "284": "entityresolution.listMatchingWorkflows.items({}).pipe(",
+          "285": "Stream.map((summary) => ({",
+          "286": "workflowName: summary.workflowName,",
+          "287": "workflowArn: summary.workflowArn,",
+          "288": "})),",
+          "289": "Stream.runCollect,",
+          "290": "Effect.map((chunk) => Array.from(chunk)),",
+          "291": "),",
+          "292": "};",
+          "293": "}),",
+          "294": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

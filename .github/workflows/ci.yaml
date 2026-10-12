@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.3"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -25,20 +25,16 @@ jobs:
         run: bun scripts/verify-npm.ts
 
   verify-macos:
-    name: macOS native reads (${{ matrix.runner }})
-    runs-on: ${{ matrix.runner }}
+    name: macOS native reads
+    runs-on: macos-latest
     timeout-minutes: 15
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [macos-15, macos-15-intel]
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.3"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"

@@ -1,0 +1,53 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/EntityResolution/SchemaMapping.ts",
+  "kind": "judge",
+  "ordinal": 138,
+  "artifact": "attempt-00138.json",
+  "started": "2026-10-11T03:27:40.599Z",
+  "estimatedTokens": 3203,
+  "reservedTokens": 64000,
+  "chargedTokens": 1851,
+  "outcome": "answered",
+  "milliseconds": 79.0705080000007,
+  "referencesPresent": false,
+  "bodyDigest": "4e914c7fe57fec1e1f1f8c0911efff91b261c33a99e0b00d2ca44bc10eee2c99",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.83}},\"usage\":{\"input_tokens\":1851,\"output_tokens\":25}}",
+  "inputTokens": 1851,
+  "answers": {
+    "providers/idempotent-delete": 0.83
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as entityresolution from \"@distilled.cloud/aws/entityresolution\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { deepEqual, isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport {\n  readEntityResolutionTags,\n  syncEntityResolutionTags,\n} from \"./internal.ts\";",
+        "2": "\nexport interface SchemaMappingProps {\n\n\n\n\n\n  schemaName?: string;\n\n\n\n  description?: string;\n\n\n\n\n\n\n\n\n\n  mappedInputFields: entityresolution.SchemaInputAttribute[];\n\n\n\n  tags?: Record<string, string>;\n}",
+        "3": "\nexport interface SchemaMapping extends Resource<\n  \"AWS.EntityResolution.SchemaMapping\",\n  SchemaMappingProps,\n  {\n\n\n\n    schemaName: string;\n\n\n\n    schemaArn: string;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const SchemaMapping = Resource<SchemaMapping>(\n  \"AWS.EntityResolution.SchemaMapping\",\n);\n\nexport const SchemaMappingProvider = () =>\n  Provider.effect(\n    SchemaMapping,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (\n        id: string,\n        props: { schemaName?: string | undefined },\n      ) {\n        return (\n          props.schemaName ??\n          (yield* createPhysicalName({ id, maxLength: 255 }))\n        );\n      });\n\n\n      const getByName = Effect.fn(function* (schemaName: string) {\n        return yield* entityresolution\n          .getSchemaMapping({ schemaName })\n          .pipe(\n            Effect.catchTag(\"ResourceNotFoundException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n      });",
+        "5": "\n      return {\n        stables: [\"schemaName\", \"schemaArn\"],\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name =\n            output?.schemaName ?? (yield* createName(id, olds ?? {}));\n          const mapping = yield* getByName(name);\n          if (mapping === undefined) return undefined;\n          const attrs = {\n            schemaName: mapping.schemaName,\n            schemaArn: mapping.schemaArn,\n          };\n\n\n          const tags = yield* readEntityResolutionTags(mapping.schemaArn);\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),\n\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds);\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const name = output?.schemaName ?? (yield* createName(id, news));\n          const internalTags = yield* createInternalTags(id);",
+        "6": "          const desiredTags = { ...news.tags, ...internalTags };\n\n\n          let mapping = yield* getByName(name);\n\n\n\n\n\n          if (mapping === undefined) {\n            yield* entityresolution\n              .createSchemaMapping({\n                schemaName: name,\n                description: news.description,\n                mappedInputFields: news.mappedInputFields,\n                tags: desiredTags,\n              })\n              .pipe(Effect.catchTag(\"ConflictException\", () => Effect.void));\n            mapping = yield* entityresolution.getSchemaMapping({\n              schemaName: name,\n            });\n          }",
+        "7": "\n\n\n\n          if (\n            !deepEqual(mapping.mappedInputFields, news.mappedInputFields) ||\n            (mapping.description || undefined) !==\n              (news.description ?? undefined)\n          ) {\n\n\n            yield* entityresolution.updateSchemaMapping({\n              schemaName: name,\n              description: news.description,\n              mappedInputFields: news.mappedInputFields,\n            });\n          }\n\n\n          yield* syncEntityResolutionTags(mapping.schemaArn, desiredTags);\n\n          yield* session.note(mapping.schemaArn);\n          return {\n            schemaName: mapping.schemaName,\n            schemaArn: mapping.schemaArn,\n          };\n        }),",
+        "8": "\n        delete: Effect.fn(function* ({ output }) {\n\n\n\n\n          yield* entityresolution\n            .deleteSchemaMapping({ schemaName: output.schemaName })\n            .pipe(\n              Effect.retry({\n                while: (e) => e._tag === \"ConflictException\",\n                schedule: Schedule.max([\n                  Schedule.fixed(\"2 seconds\"),\n                  Schedule.recurs(10),\n                ]),\n              }),\n            );\n        }),\n\n        list: () =>\n          entityresolution.listSchemaMappings.items({}).pipe(\n            Stream.map((summary) => ({\n              schemaName: summary.schemaName,\n              schemaArn: summary.schemaArn,\n            })),\n            Stream.runCollect,\n            Effect.map((chunk) => Array.from(chunk)),\n          ),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

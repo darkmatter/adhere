@@ -1,0 +1,793 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/EC2/KeyPair.ts",
+  "kind": "locate",
+  "ordinal": 183,
+  "artifact": "attempt-00183.json",
+  "started": "2026-10-11T03:20:41.683Z",
+  "estimatedTokens": 15781,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.20420399999784422,
+  "referencesPresent": false,
+  "bodyDigest": "cd70272abc953fbbc00b76eed3258779b49b1891ec55d4ac63861fad568a62d4",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "25",
+    "end:providers/idempotent-delete:2": "25",
+    "start:providers/idempotent-delete:3": "56",
+    "end:providers/idempotent-delete:3": "56",
+    "start:providers/idempotent-delete:4": "108",
+    "end:providers/idempotent-delete:4": "108",
+    "start:providers/idempotent-delete:5": "141",
+    "end:providers/idempotent-delete:5": "141",
+    "start:providers/idempotent-delete:6": "155",
+    "end:providers/idempotent-delete:6": "155",
+    "start:providers/idempotent-delete:7": "185",
+    "end:providers/idempotent-delete:7": "185",
+    "start:providers/idempotent-delete:8": "215",
+    "end:providers/idempotent-delete:8": "215",
+    "start:providers/idempotent-delete:9": "239",
+    "end:providers/idempotent-delete:9": "239",
+    "start:providers/idempotent-delete:10": "281",
+    "end:providers/idempotent-delete:10": "281",
+    "start:providers/idempotent-delete:11": "304",
+    "end:providers/idempotent-delete:11": "304",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as ec2 from \"@distilled.cloud/aws/ec2\";\nimport * as Effect from \"effect/Effect\";\nimport * as Redacted from \"effect/Redacted\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport {\n  createInternalTags,\n  createTagsList,\n  diffTags,\n  hasTags,\n} from \"../../Tags.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport type KeyPairId<ID extends string = string> = `key-${ID}`;\n\n\nexport type KeyPairType = \"rsa\" | \"ed25519\";\n\n\nexport type KeyPairFormat = \"pem\" | \"ppk\";",
+        "2": "\nexport interface KeyPairProps {\n\n\n\n\n  keyName?: string;\n\n\n\n\n\n\n  keyType?: KeyPairType;\n\n\n\n\n\n  keyFormat?: KeyPairFormat;\n\n\n\n\n\n  publicKeyMaterial?: string;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "3": "\nexport interface KeyPair extends Resource<\n  \"AWS.EC2.KeyPair\",\n  KeyPairProps,\n  {\n\n    keyPairId: KeyPairId;\n\n    keyName: string;\n\n    keyFingerprint: string;\n\n    keyType: KeyPairType;\n\n\n\n\n\n\n    privateKey?: Redacted.Redacted<string>;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const KeyPair = Resource<KeyPair>(\"AWS.EC2.KeyPair\");\n\nconst toKeyName = (id: string, props: { keyName?: string } = {}) =>\n  props.keyName\n    ? Effect.succeed(props.keyName)\n    : createPhysicalName({ id, maxLength: 255 });\n\nconst asRedacted = (\n  material: string | Redacted.Redacted<string> | undefined,\n): Redacted.Redacted<string> | undefined =>\n  material === undefined\n    ? undefined\n    : Redacted.isRedacted(material)\n      ? material\n      : Redacted.make(material);\n\nexport const KeyPairProvider = () =>\n  Provider.effect(\n    KeyPair,\n    Effect.gen(function* () {\n      const describeByName = (keyName: string) =>\n        ec2.describeKeyPairs({ KeyNames: [keyName] }).pipe(\n          Effect.catchTag(\"InvalidKeyPair.NotFound\", () =>\n            Effect.succeed({ KeyPairs: [] }),\n          ),\n          Effect.map((r) => r.KeyPairs?.[0]),\n        );\n\n      return {\n        stables: [\"keyPairId\", \"keyName\", \"keyType\"],",
+        "5": "\n\n\n        diff: Effect.fn(function* ({ id, olds, news }) {\n          if (!isResolved(news)) return;\n          const oldName = yield* toKeyName(id, olds ?? {});\n          const newName = yield* toKeyName(id, news);\n          if (\n            oldName !== newName ||\n            (olds?.keyType ?? \"rsa\") !== (news.keyType ?? \"rsa\") ||\n            (olds?.keyFormat ?? \"pem\") !== (news.keyFormat ?? \"pem\") ||\n            olds?.publicKeyMaterial !== news.publicKeyMaterial\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "6": "\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const keyName = output?.keyName ?? (yield* toKeyName(id, olds ?? {}));\n          const info = yield* describeByName(keyName);\n          if (!info?.KeyPairId) return undefined;\n          const tags = yield* createInternalTags(id);\n          const observedTags: Record<string, string | undefined> =\n            Object.fromEntries(\n              (info.Tags ?? []).map((t) => [t.Key ?? \"\", t.Value]),\n            );\n          if (!hasTags(tags, observedTags)) {\n\n            return Unowned({\n              keyPairId: info.KeyPairId as KeyPairId,\n              keyName: info.KeyName ?? keyName,\n              keyFingerprint: info.KeyFingerprint ?? \"\",\n              keyType: (info.KeyType ?? \"rsa\") as KeyPairType,\n\n\n              privateKey: output?.privateKey,\n            });\n          }\n          return {\n            keyPairId: info.KeyPairId as KeyPairId,\n            keyName: info.KeyName ?? keyName,\n            keyFingerprint: info.KeyFingerprint ?? output?.keyFingerprint ?? \"\",\n            keyType: (info.KeyType ?? output?.keyType ?? \"rsa\") as KeyPairType,\n            privateKey: output?.privateKey,\n          };\n        }),",
+        "7": "\n        list: () =>\n          Effect.gen(function* () {\n            const result = yield* ec2.describeKeyPairs({});\n            return (result.KeyPairs ?? [])\n              .filter(\n                (\n                  kp,\n                ): kp is ec2.KeyPairInfo & {\n                  KeyPairId: string;\n                  KeyName: string;\n                } => kp.KeyPairId != null && kp.KeyName != null,\n              )\n              .filter((kp) =>\n                (kp.Tags ?? []).some((t) => t.Key === \"alchemy::stack\"),\n              )\n              .map((kp) => ({\n                keyPairId: kp.KeyPairId as KeyPairId,\n                keyName: kp.KeyName,\n                keyFingerprint: kp.KeyFingerprint ?? \"\",\n                keyType: (kp.KeyType ?? \"rsa\") as KeyPairType,\n                privateKey: undefined,\n              }));\n          }),\n\n        reconcile: Effect.fn(function* ({ id, news = {}, output, session }) {\n          const keyName = output?.keyName ?? (yield* toKeyName(id, news));\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...internalTags, ...news.tags };",
+        "8": "\n\n          let info = yield* describeByName(keyName);\n          let privateKey = output?.privateKey;\n\n\n          if (!info?.KeyPairId) {\n            if (news.publicKeyMaterial !== undefined) {\n              const imported = yield* ec2\n                .importKeyPair({\n                  KeyName: keyName,\n                  PublicKeyMaterial: new TextEncoder().encode(\n                    news.publicKeyMaterial,\n                  ),\n                  TagSpecifications: [\n                    {\n                      ResourceType: \"key-pair\",\n                      Tags: createTagsList(desiredTags),\n                    },\n                  ],\n                })\n                .pipe(\n                  Effect.catchTag(\"InvalidKeyPair.Duplicate\", () =>\n                    Effect.succeed(undefined),\n                  ),\n                );",
+        "9": "              if (imported?.KeyPairId) {\n                info = {\n                  KeyPairId: imported.KeyPairId,\n                  KeyName: imported.KeyName,\n                  KeyFingerprint: imported.KeyFingerprint,\n                  KeyType: \"rsa\",\n                };\n              } else {\n                info = yield* describeByName(keyName);\n              }\n            } else {\n              const created = yield* ec2\n                .createKeyPair({\n                  KeyName: keyName,\n                  KeyType: news.keyType ?? \"rsa\",\n                  KeyFormat: news.keyFormat ?? \"pem\",\n                  TagSpecifications: [\n                    {\n                      ResourceType: \"key-pair\",\n                      Tags: createTagsList(desiredTags),\n                    },\n                  ],\n                })\n                .pipe(\n                  Effect.catchTag(\"InvalidKeyPair.Duplicate\", () =>\n                    Effect.succeed(undefined),\n                  ),\n                );\n              if (created?.KeyPairId) {\n                privateKey = asRedacted(created.KeyMaterial) ?? privateKey;\n                info = {\n                  KeyPairId: created.KeyPairId,\n                  KeyName: created.KeyName,\n                  KeyFingerprint: created.KeyFingerprint,\n                  KeyType: (news.keyType ?? \"rsa\") as KeyPairType,\n                };\n              } else {\n                info = yield* describeByName(keyName);\n              }\n            }\n          }",
+        "10": "\n          if (!info?.KeyPairId) {\n            return yield* Effect.die(\n              new Error(`Failed to resolve EC2 key pair '${keyName}'`),\n            );\n          }\n          const keyPairId = info.KeyPairId as KeyPairId;\n\n\n          const observedTags = Object.fromEntries(\n            (info.Tags ?? []).map((t) => [t.Key!, t.Value!]),\n          ) as Record<string, string>;\n          const { removed, upsert } = diffTags(observedTags, desiredTags);\n          if (removed.length > 0) {\n            yield* ec2.deleteTags({\n              Resources: [keyPairId],\n              Tags: removed.map((key) => ({ Key: key })),\n            });\n          }\n          if (upsert.length > 0) {\n            yield* ec2.createTags({ Resources: [keyPairId], Tags: upsert });\n          }\n\n          yield* session.note(`Key pair ${keyName} (${keyPairId})`);",
+        "11": "          return {\n            keyPairId,\n            keyName: info.KeyName ?? keyName,\n            keyFingerprint: info.KeyFingerprint ?? \"\",\n            keyType: (info.KeyType ?? news.keyType ?? \"rsa\") as KeyPairType,\n            privateKey,\n          };\n        }),\n\n        delete: Effect.fn(function* ({ output }) {\n\n\n          yield* ec2.deleteKeyPair({ KeyPairId: output.keyPairId });\n        }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null,
+          "11": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as ec2 from \"@distilled.cloud/aws/ec2\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Redacted from \"effect/Redacted\";",
+          "4": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "5": "import { isResolved } from \"../../Diff.ts\";",
+          "6": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "7": "import * as Provider from \"../../Provider.ts\";",
+          "8": "import { Resource } from \"../../Resource.ts\";",
+          "9": "import {",
+          "10": "createInternalTags,",
+          "11": "createTagsList,",
+          "12": "diffTags,",
+          "13": "hasTags,",
+          "14": "} from \"../../Tags.ts\";",
+          "15": "import type { Providers } from \"../Providers.ts\";",
+          "17": "export type KeyPairId<ID extends string = string> = `key-${ID}`;",
+          "20": "export type KeyPairType = \"rsa\" | \"ed25519\";",
+          "23": "export type KeyPairFormat = \"pem\" | \"ppk\";"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as ec2 from \"@distilled.cloud/aws/ec2\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Redacted from \"effect/Redacted\";",
+          "4": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "5": "import { isResolved } from \"../../Diff.ts\";",
+          "6": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "7": "import * as Provider from \"../../Provider.ts\";",
+          "8": "import { Resource } from \"../../Resource.ts\";",
+          "9": "import {",
+          "10": "createInternalTags,",
+          "11": "createTagsList,",
+          "12": "diffTags,",
+          "13": "hasTags,",
+          "14": "} from \"../../Tags.ts\";",
+          "15": "import type { Providers } from \"../Providers.ts\";",
+          "17": "export type KeyPairId<ID extends string = string> = `key-${ID}`;",
+          "20": "export type KeyPairType = \"rsa\" | \"ed25519\";",
+          "23": "export type KeyPairFormat = \"pem\" | \"ppk\";"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "25": "export interface KeyPairProps {",
+          "30": "keyName?: string;",
+          "37": "keyType?: KeyPairType;",
+          "43": "keyFormat?: KeyPairFormat;",
+          "49": "publicKeyMaterial?: string;",
+          "53": "tags?: Record<string, string>;",
+          "54": "}"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "25": "export interface KeyPairProps {",
+          "30": "keyName?: string;",
+          "37": "keyType?: KeyPairType;",
+          "43": "keyFormat?: KeyPairFormat;",
+          "49": "publicKeyMaterial?: string;",
+          "53": "tags?: Record<string, string>;",
+          "54": "}"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "56": "export interface KeyPair extends Resource<",
+          "57": "\"AWS.EC2.KeyPair\",",
+          "58": "KeyPairProps,",
+          "59": "{",
+          "61": "keyPairId: KeyPairId;",
+          "63": "keyName: string;",
+          "65": "keyFingerprint: string;",
+          "67": "keyType: KeyPairType;",
+          "74": "privateKey?: Redacted.Redacted<string>;",
+          "75": "},",
+          "76": "never,",
+          "77": "Providers",
+          "78": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "56": "export interface KeyPair extends Resource<",
+          "57": "\"AWS.EC2.KeyPair\",",
+          "58": "KeyPairProps,",
+          "59": "{",
+          "61": "keyPairId: KeyPairId;",
+          "63": "keyName: string;",
+          "65": "keyFingerprint: string;",
+          "67": "keyType: KeyPairType;",
+          "74": "privateKey?: Redacted.Redacted<string>;",
+          "75": "},",
+          "76": "never,",
+          "77": "Providers",
+          "78": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "108": "export const KeyPair = Resource<KeyPair>(\"AWS.EC2.KeyPair\");",
+          "110": "const toKeyName = (id: string, props: { keyName?: string } = {}) =>",
+          "111": "props.keyName",
+          "112": "? Effect.succeed(props.keyName)",
+          "113": ": createPhysicalName({ id, maxLength: 255 });",
+          "115": "const asRedacted = (",
+          "116": "material: string | Redacted.Redacted<string> | undefined,",
+          "117": "): Redacted.Redacted<string> | undefined =>",
+          "118": "material === undefined",
+          "119": "? undefined",
+          "120": ": Redacted.isRedacted(material)",
+          "121": "? material",
+          "122": ": Redacted.make(material);",
+          "124": "export const KeyPairProvider = () =>",
+          "125": "Provider.effect(",
+          "126": "KeyPair,",
+          "127": "Effect.gen(function* () {",
+          "128": "const describeByName = (keyName: string) =>",
+          "129": "ec2.describeKeyPairs({ KeyNames: [keyName] }).pipe(",
+          "130": "Effect.catchTag(\"InvalidKeyPair.NotFound\", () =>",
+          "131": "Effect.succeed({ KeyPairs: [] }),",
+          "132": "),",
+          "133": "Effect.map((r) => r.KeyPairs?.[0]),",
+          "134": ");",
+          "136": "return {",
+          "137": "stables: [\"keyPairId\", \"keyName\", \"keyType\"],"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "108": "export const KeyPair = Resource<KeyPair>(\"AWS.EC2.KeyPair\");",
+          "110": "const toKeyName = (id: string, props: { keyName?: string } = {}) =>",
+          "111": "props.keyName",
+          "112": "? Effect.succeed(props.keyName)",
+          "113": ": createPhysicalName({ id, maxLength: 255 });",
+          "115": "const asRedacted = (",
+          "116": "material: string | Redacted.Redacted<string> | undefined,",
+          "117": "): Redacted.Redacted<string> | undefined =>",
+          "118": "material === undefined",
+          "119": "? undefined",
+          "120": ": Redacted.isRedacted(material)",
+          "121": "? material",
+          "122": ": Redacted.make(material);",
+          "124": "export const KeyPairProvider = () =>",
+          "125": "Provider.effect(",
+          "126": "KeyPair,",
+          "127": "Effect.gen(function* () {",
+          "128": "const describeByName = (keyName: string) =>",
+          "129": "ec2.describeKeyPairs({ KeyNames: [keyName] }).pipe(",
+          "130": "Effect.catchTag(\"InvalidKeyPair.NotFound\", () =>",
+          "131": "Effect.succeed({ KeyPairs: [] }),",
+          "132": "),",
+          "133": "Effect.map((r) => r.KeyPairs?.[0]),",
+          "134": ");",
+          "136": "return {",
+          "137": "stables: [\"keyPairId\", \"keyName\", \"keyType\"],"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "141": "diff: Effect.fn(function* ({ id, olds, news }) {",
+          "142": "if (!isResolved(news)) return;",
+          "143": "const oldName = yield* toKeyName(id, olds ?? {});",
+          "144": "const newName = yield* toKeyName(id, news);",
+          "145": "if (",
+          "146": "oldName !== newName ||",
+          "147": "(olds?.keyType ?? \"rsa\") !== (news.keyType ?? \"rsa\") ||",
+          "148": "(olds?.keyFormat ?? \"pem\") !== (news.keyFormat ?? \"pem\") ||",
+          "149": "olds?.publicKeyMaterial !== news.publicKeyMaterial",
+          "150": ") {",
+          "151": "return { action: \"replace\" } as const;",
+          "152": "}",
+          "153": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "141": "diff: Effect.fn(function* ({ id, olds, news }) {",
+          "142": "if (!isResolved(news)) return;",
+          "143": "const oldName = yield* toKeyName(id, olds ?? {});",
+          "144": "const newName = yield* toKeyName(id, news);",
+          "145": "if (",
+          "146": "oldName !== newName ||",
+          "147": "(olds?.keyType ?? \"rsa\") !== (news.keyType ?? \"rsa\") ||",
+          "148": "(olds?.keyFormat ?? \"pem\") !== (news.keyFormat ?? \"pem\") ||",
+          "149": "olds?.publicKeyMaterial !== news.publicKeyMaterial",
+          "150": ") {",
+          "151": "return { action: \"replace\" } as const;",
+          "152": "}",
+          "153": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "155": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "156": "const keyName = output?.keyName ?? (yield* toKeyName(id, olds ?? {}));",
+          "157": "const info = yield* describeByName(keyName);",
+          "158": "if (!info?.KeyPairId) return undefined;",
+          "159": "const tags = yield* createInternalTags(id);",
+          "160": "const observedTags: Record<string, string | undefined> =",
+          "161": "Object.fromEntries(",
+          "162": "(info.Tags ?? []).map((t) => [t.Key ?? \"\", t.Value]),",
+          "163": ");",
+          "164": "if (!hasTags(tags, observedTags)) {",
+          "166": "return Unowned({",
+          "167": "keyPairId: info.KeyPairId as KeyPairId,",
+          "168": "keyName: info.KeyName ?? keyName,",
+          "169": "keyFingerprint: info.KeyFingerprint ?? \"\",",
+          "170": "keyType: (info.KeyType ?? \"rsa\") as KeyPairType,",
+          "173": "privateKey: output?.privateKey,",
+          "174": "});",
+          "175": "}",
+          "176": "return {",
+          "177": "keyPairId: info.KeyPairId as KeyPairId,",
+          "178": "keyName: info.KeyName ?? keyName,",
+          "179": "keyFingerprint: info.KeyFingerprint ?? output?.keyFingerprint ?? \"\",",
+          "180": "keyType: (info.KeyType ?? output?.keyType ?? \"rsa\") as KeyPairType,",
+          "181": "privateKey: output?.privateKey,",
+          "182": "};",
+          "183": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "155": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "156": "const keyName = output?.keyName ?? (yield* toKeyName(id, olds ?? {}));",
+          "157": "const info = yield* describeByName(keyName);",
+          "158": "if (!info?.KeyPairId) return undefined;",
+          "159": "const tags = yield* createInternalTags(id);",
+          "160": "const observedTags: Record<string, string | undefined> =",
+          "161": "Object.fromEntries(",
+          "162": "(info.Tags ?? []).map((t) => [t.Key ?? \"\", t.Value]),",
+          "163": ");",
+          "164": "if (!hasTags(tags, observedTags)) {",
+          "166": "return Unowned({",
+          "167": "keyPairId: info.KeyPairId as KeyPairId,",
+          "168": "keyName: info.KeyName ?? keyName,",
+          "169": "keyFingerprint: info.KeyFingerprint ?? \"\",",
+          "170": "keyType: (info.KeyType ?? \"rsa\") as KeyPairType,",
+          "173": "privateKey: output?.privateKey,",
+          "174": "});",
+          "175": "}",
+          "176": "return {",
+          "177": "keyPairId: info.KeyPairId as KeyPairId,",
+          "178": "keyName: info.KeyName ?? keyName,",
+          "179": "keyFingerprint: info.KeyFingerprint ?? output?.keyFingerprint ?? \"\",",
+          "180": "keyType: (info.KeyType ?? output?.keyType ?? \"rsa\") as KeyPairType,",
+          "181": "privateKey: output?.privateKey,",
+          "182": "};",
+          "183": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "185": "list: () =>",
+          "186": "Effect.gen(function* () {",
+          "187": "const result = yield* ec2.describeKeyPairs({});",
+          "188": "return (result.KeyPairs ?? [])",
+          "189": ".filter(",
+          "190": "(",
+          "191": "kp,",
+          "192": "): kp is ec2.KeyPairInfo & {",
+          "193": "KeyPairId: string;",
+          "194": "KeyName: string;",
+          "195": "} => kp.KeyPairId != null && kp.KeyName != null,",
+          "196": ")",
+          "197": ".filter((kp) =>",
+          "198": "(kp.Tags ?? []).some((t) => t.Key === \"alchemy::stack\"),",
+          "199": ")",
+          "200": ".map((kp) => ({",
+          "201": "keyPairId: kp.KeyPairId as KeyPairId,",
+          "202": "keyName: kp.KeyName,",
+          "203": "keyFingerprint: kp.KeyFingerprint ?? \"\",",
+          "204": "keyType: (kp.KeyType ?? \"rsa\") as KeyPairType,",
+          "205": "privateKey: undefined,",
+          "206": "}));",
+          "207": "}),",
+          "209": "reconcile: Effect.fn(function* ({ id, news = {}, output, session }) {",
+          "210": "const keyName = output?.keyName ?? (yield* toKeyName(id, news));",
+          "211": "const internalTags = yield* createInternalTags(id);",
+          "212": "const desiredTags = { ...internalTags, ...news.tags };"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "185": "list: () =>",
+          "186": "Effect.gen(function* () {",
+          "187": "const result = yield* ec2.describeKeyPairs({});",
+          "188": "return (result.KeyPairs ?? [])",
+          "189": ".filter(",
+          "190": "(",
+          "191": "kp,",
+          "192": "): kp is ec2.KeyPairInfo & {",
+          "193": "KeyPairId: string;",
+          "194": "KeyName: string;",
+          "195": "} => kp.KeyPairId != null && kp.KeyName != null,",
+          "196": ")",
+          "197": ".filter((kp) =>",
+          "198": "(kp.Tags ?? []).some((t) => t.Key === \"alchemy::stack\"),",
+          "199": ")",
+          "200": ".map((kp) => ({",
+          "201": "keyPairId: kp.KeyPairId as KeyPairId,",
+          "202": "keyName: kp.KeyName,",
+          "203": "keyFingerprint: kp.KeyFingerprint ?? \"\",",
+          "204": "keyType: (kp.KeyType ?? \"rsa\") as KeyPairType,",
+          "205": "privateKey: undefined,",
+          "206": "}));",
+          "207": "}),",
+          "209": "reconcile: Effect.fn(function* ({ id, news = {}, output, session }) {",
+          "210": "const keyName = output?.keyName ?? (yield* toKeyName(id, news));",
+          "211": "const internalTags = yield* createInternalTags(id);",
+          "212": "const desiredTags = { ...internalTags, ...news.tags };"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "215": "let info = yield* describeByName(keyName);",
+          "216": "let privateKey = output?.privateKey;",
+          "219": "if (!info?.KeyPairId) {",
+          "220": "if (news.publicKeyMaterial !== undefined) {",
+          "221": "const imported = yield* ec2",
+          "222": ".importKeyPair({",
+          "223": "KeyName: keyName,",
+          "224": "PublicKeyMaterial: new TextEncoder().encode(",
+          "225": "news.publicKeyMaterial,",
+          "226": "),",
+          "227": "TagSpecifications: [",
+          "228": "{",
+          "229": "ResourceType: \"key-pair\",",
+          "230": "Tags: createTagsList(desiredTags),",
+          "231": "},",
+          "232": "],",
+          "233": "})",
+          "234": ".pipe(",
+          "235": "Effect.catchTag(\"InvalidKeyPair.Duplicate\", () =>",
+          "236": "Effect.succeed(undefined),",
+          "237": "),",
+          "238": ");"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "215": "let info = yield* describeByName(keyName);",
+          "216": "let privateKey = output?.privateKey;",
+          "219": "if (!info?.KeyPairId) {",
+          "220": "if (news.publicKeyMaterial !== undefined) {",
+          "221": "const imported = yield* ec2",
+          "222": ".importKeyPair({",
+          "223": "KeyName: keyName,",
+          "224": "PublicKeyMaterial: new TextEncoder().encode(",
+          "225": "news.publicKeyMaterial,",
+          "226": "),",
+          "227": "TagSpecifications: [",
+          "228": "{",
+          "229": "ResourceType: \"key-pair\",",
+          "230": "Tags: createTagsList(desiredTags),",
+          "231": "},",
+          "232": "],",
+          "233": "})",
+          "234": ".pipe(",
+          "235": "Effect.catchTag(\"InvalidKeyPair.Duplicate\", () =>",
+          "236": "Effect.succeed(undefined),",
+          "237": "),",
+          "238": ");"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "239": "if (imported?.KeyPairId) {",
+          "240": "info = {",
+          "241": "KeyPairId: imported.KeyPairId,",
+          "242": "KeyName: imported.KeyName,",
+          "243": "KeyFingerprint: imported.KeyFingerprint,",
+          "244": "KeyType: \"rsa\",",
+          "245": "};",
+          "246": "} else {",
+          "247": "info = yield* describeByName(keyName);",
+          "248": "}",
+          "249": "} else {",
+          "250": "const created = yield* ec2",
+          "251": ".createKeyPair({",
+          "252": "KeyName: keyName,",
+          "253": "KeyType: news.keyType ?? \"rsa\",",
+          "254": "KeyFormat: news.keyFormat ?? \"pem\",",
+          "255": "TagSpecifications: [",
+          "256": "{",
+          "257": "ResourceType: \"key-pair\",",
+          "258": "Tags: createTagsList(desiredTags),",
+          "259": "},",
+          "260": "],",
+          "261": "})",
+          "262": ".pipe(",
+          "263": "Effect.catchTag(\"InvalidKeyPair.Duplicate\", () =>",
+          "264": "Effect.succeed(undefined),",
+          "265": "),",
+          "266": ");",
+          "267": "if (created?.KeyPairId) {",
+          "268": "privateKey = asRedacted(created.KeyMaterial) ?? privateKey;",
+          "269": "info = {",
+          "270": "KeyPairId: created.KeyPairId,",
+          "271": "KeyName: created.KeyName,",
+          "272": "KeyFingerprint: created.KeyFingerprint,",
+          "273": "KeyType: (news.keyType ?? \"rsa\") as KeyPairType,",
+          "274": "};",
+          "275": "} else {",
+          "276": "info = yield* describeByName(keyName);",
+          "277": "}",
+          "278": "}",
+          "279": "}"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "239": "if (imported?.KeyPairId) {",
+          "240": "info = {",
+          "241": "KeyPairId: imported.KeyPairId,",
+          "242": "KeyName: imported.KeyName,",
+          "243": "KeyFingerprint: imported.KeyFingerprint,",
+          "244": "KeyType: \"rsa\",",
+          "245": "};",
+          "246": "} else {",
+          "247": "info = yield* describeByName(keyName);",
+          "248": "}",
+          "249": "} else {",
+          "250": "const created = yield* ec2",
+          "251": ".createKeyPair({",
+          "252": "KeyName: keyName,",
+          "253": "KeyType: news.keyType ?? \"rsa\",",
+          "254": "KeyFormat: news.keyFormat ?? \"pem\",",
+          "255": "TagSpecifications: [",
+          "256": "{",
+          "257": "ResourceType: \"key-pair\",",
+          "258": "Tags: createTagsList(desiredTags),",
+          "259": "},",
+          "260": "],",
+          "261": "})",
+          "262": ".pipe(",
+          "263": "Effect.catchTag(\"InvalidKeyPair.Duplicate\", () =>",
+          "264": "Effect.succeed(undefined),",
+          "265": "),",
+          "266": ");",
+          "267": "if (created?.KeyPairId) {",
+          "268": "privateKey = asRedacted(created.KeyMaterial) ?? privateKey;",
+          "269": "info = {",
+          "270": "KeyPairId: created.KeyPairId,",
+          "271": "KeyName: created.KeyName,",
+          "272": "KeyFingerprint: created.KeyFingerprint,",
+          "273": "KeyType: (news.keyType ?? \"rsa\") as KeyPairType,",
+          "274": "};",
+          "275": "} else {",
+          "276": "info = yield* describeByName(keyName);",
+          "277": "}",
+          "278": "}",
+          "279": "}"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "281": "if (!info?.KeyPairId) {",
+          "282": "return yield* Effect.die(",
+          "283": "new Error(`Failed to resolve EC2 key pair '${keyName}'`),",
+          "284": ");",
+          "285": "}",
+          "286": "const keyPairId = info.KeyPairId as KeyPairId;",
+          "289": "const observedTags = Object.fromEntries(",
+          "290": "(info.Tags ?? []).map((t) => [t.Key!, t.Value!]),",
+          "291": ") as Record<string, string>;",
+          "292": "const { removed, upsert } = diffTags(observedTags, desiredTags);",
+          "293": "if (removed.length > 0) {",
+          "294": "yield* ec2.deleteTags({",
+          "295": "Resources: [keyPairId],",
+          "296": "Tags: removed.map((key) => ({ Key: key })),",
+          "297": "});",
+          "298": "}",
+          "299": "if (upsert.length > 0) {",
+          "300": "yield* ec2.createTags({ Resources: [keyPairId], Tags: upsert });",
+          "301": "}",
+          "303": "yield* session.note(`Key pair ${keyName} (${keyPairId})`);"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "281": "if (!info?.KeyPairId) {",
+          "282": "return yield* Effect.die(",
+          "283": "new Error(`Failed to resolve EC2 key pair '${keyName}'`),",
+          "284": ");",
+          "285": "}",
+          "286": "const keyPairId = info.KeyPairId as KeyPairId;",
+          "289": "const observedTags = Object.fromEntries(",
+          "290": "(info.Tags ?? []).map((t) => [t.Key!, t.Value!]),",
+          "291": ") as Record<string, string>;",
+          "292": "const { removed, upsert } = diffTags(observedTags, desiredTags);",
+          "293": "if (removed.length > 0) {",
+          "294": "yield* ec2.deleteTags({",
+          "295": "Resources: [keyPairId],",
+          "296": "Tags: removed.map((key) => ({ Key: key })),",
+          "297": "});",
+          "298": "}",
+          "299": "if (upsert.length > 0) {",
+          "300": "yield* ec2.createTags({ Resources: [keyPairId], Tags: upsert });",
+          "301": "}",
+          "303": "yield* session.note(`Key pair ${keyName} (${keyPairId})`);"
+        }
+      },
+      "start:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "304": "return {",
+          "305": "keyPairId,",
+          "306": "keyName: info.KeyName ?? keyName,",
+          "307": "keyFingerprint: info.KeyFingerprint ?? \"\",",
+          "308": "keyType: (info.KeyType ?? news.keyType ?? \"rsa\") as KeyPairType,",
+          "309": "privateKey,",
+          "310": "};",
+          "311": "}),",
+          "313": "delete: Effect.fn(function* ({ output }) {",
+          "316": "yield* ec2.deleteKeyPair({ KeyPairId: output.keyPairId });",
+          "317": "}),",
+          "318": "};",
+          "319": "}),",
+          "320": ");"
+        }
+      },
+      "end:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "304": "return {",
+          "305": "keyPairId,",
+          "306": "keyName: info.KeyName ?? keyName,",
+          "307": "keyFingerprint: info.KeyFingerprint ?? \"\",",
+          "308": "keyType: (info.KeyType ?? news.keyType ?? \"rsa\") as KeyPairType,",
+          "309": "privateKey,",
+          "310": "};",
+          "311": "}),",
+          "313": "delete: Effect.fn(function* ({ output }) {",
+          "316": "yield* ec2.deleteKeyPair({ KeyPairId: output.keyPairId });",
+          "317": "}),",
+          "318": "};",
+          "319": "}),",
+          "320": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

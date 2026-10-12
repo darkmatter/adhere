@@ -1,0 +1,1053 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CodeDeploy/DeploymentGroup.ts",
+  "kind": "locate",
+  "ordinal": 167,
+  "artifact": "attempt-00167.json",
+  "started": "2026-10-11T03:20:41.099Z",
+  "estimatedTokens": 21915,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.2131100000005972,
+  "referencesPresent": false,
+  "bodyDigest": "5f14e5f10a2cdc4fb9dac8efc25a8673ade73084442e820ef238ef16a2aad981",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "20",
+    "end:providers/idempotent-delete:2": "20",
+    "start:providers/idempotent-delete:3": "40",
+    "end:providers/idempotent-delete:3": "40",
+    "start:providers/idempotent-delete:4": "61",
+    "end:providers/idempotent-delete:4": "61",
+    "start:providers/idempotent-delete:5": "89",
+    "end:providers/idempotent-delete:5": "89",
+    "start:providers/idempotent-delete:6": "122",
+    "end:providers/idempotent-delete:6": "122",
+    "start:providers/idempotent-delete:7": "153",
+    "end:providers/idempotent-delete:7": "153",
+    "start:providers/idempotent-delete:8": "202",
+    "end:providers/idempotent-delete:8": "202",
+    "start:providers/idempotent-delete:9": "234",
+    "end:providers/idempotent-delete:9": "234",
+    "start:providers/idempotent-delete:10": "255",
+    "end:providers/idempotent-delete:10": "255",
+    "start:providers/idempotent-delete:11": "276",
+    "end:providers/idempotent-delete:11": "276",
+    "start:providers/idempotent-delete:12": "305",
+    "end:providers/idempotent-delete:12": "305",
+    "start:providers/idempotent-delete:13": "318",
+    "end:providers/idempotent-delete:13": "318",
+    "start:providers/idempotent-delete:14": "348",
+    "end:providers/idempotent-delete:14": "348",
+    "start:providers/idempotent-delete:15": "355",
+    "end:providers/idempotent-delete:15": "355",
+    "start:providers/idempotent-delete:16": "383",
+    "end:providers/idempotent-delete:16": "383",
+    "start:providers/idempotent-delete:17": "411",
+    "end:providers/idempotent-delete:17": "411",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as codedeploy from \"@distilled.cloud/aws/codedeploy\";\nimport type * as Duration from \"effect/Duration\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, diffTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport { toWireMinutes } from \"../../Util/Duration.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";",
+        "2": "\n\n\n\n\n\nexport interface BlueGreenDeploymentConfigurationProps {\n\n\n\n\n  terminateBlueInstancesOnDeploymentSuccess?: {\n\n\n\n\n    action?: codedeploy.InstanceAction;\n\n\n\n\n    terminationWaitTime?: Duration.Input;\n  };",
+        "3": "\n\n\n  deploymentReadyOption?: {\n\n\n\n\n    actionOnTimeout?: codedeploy.DeploymentReadyAction;\n\n\n\n\n\n    waitTime?: Duration.Input;\n  };\n\n\n\n\n  greenFleetProvisioningOption?: codedeploy.GreenFleetProvisioningOption;\n}",
+        "4": "\n\nconst toWireBlueGreen = (\n  props: BlueGreenDeploymentConfigurationProps | undefined,\n): codedeploy.BlueGreenDeploymentConfiguration | undefined =>\n  props === undefined\n    ? undefined\n    : {\n        terminateBlueInstancesOnDeploymentSuccess:\n          props.terminateBlueInstancesOnDeploymentSuccess === undefined\n            ? undefined\n            : {\n                action: props.terminateBlueInstancesOnDeploymentSuccess.action,\n                terminationWaitTimeInMinutes: toWireMinutes(\n                  props.terminateBlueInstancesOnDeploymentSuccess\n                    .terminationWaitTime,\n                ),\n              },\n        deploymentReadyOption:\n          props.deploymentReadyOption === undefined\n            ? undefined\n            : {\n                actionOnTimeout: props.deploymentReadyOption.actionOnTimeout,\n                waitTimeInMinutes: toWireMinutes(\n                  props.deploymentReadyOption.waitTime,\n                ),\n              },\n        greenFleetProvisioningOption: props.greenFleetProvisioningOption,\n      };",
+        "5": "\nexport interface DeploymentGroupProps {\n\n\n\n\n\n  applicationName: string;\n\n\n\n\n  deploymentGroupName?: string;\n\n\n\n\n  serviceRoleArn: string;\n\n\n\n\n  deploymentConfigName?: string;\n\n\n\n  deploymentStyle?: codedeploy.DeploymentStyle;\n\n\n\n  autoRollbackConfiguration?: codedeploy.AutoRollbackConfiguration;",
+        "6": "\n\n\n  alarmConfiguration?: codedeploy.AlarmConfiguration;\n\n\n\n  loadBalancerInfo?: codedeploy.LoadBalancerInfo;\n\n\n\n\n\n  blueGreenDeploymentConfiguration?: BlueGreenDeploymentConfigurationProps;\n\n\n\n\n  ec2TagFilters?: codedeploy.EC2TagFilter[];\n\n\n\n  autoScalingGroups?: string[];\n\n\n\n  ecsServices?: codedeploy.ECSService[];\n\n\n\n  triggerConfigurations?: codedeploy.TriggerConfig[];",
+        "7": "\n\n\n  tags?: Record<string, string>;\n}\n\nexport interface DeploymentGroup extends Resource<\n  \"AWS.CodeDeploy.DeploymentGroup\",\n  DeploymentGroupProps,\n  {\n\n    deploymentGroupName: string;\n\n    deploymentGroupId: string;\n\n    deploymentGroupArn: string;\n\n    applicationName: string;\n\n    serviceRoleArn: string;\n  },\n  never,\n  Providers\n> {}",
+        "8": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const DeploymentGroup = Resource<DeploymentGroup>(\n  \"AWS.CodeDeploy.DeploymentGroup\",\n);\n\n\nconst deploymentGroupArn = (\n  region: string,\n  account: string,\n  appName: string,\n  groupName: string,\n): string =>\n  `arn:aws:codedeploy:${region}:${account}:deploymentgroup:${appName}/${groupName}`;\n\n\n\n\n\n\n\n\n\nconst retryThroughRolePropagation = <A, E extends { _tag: string }, R>(\n  effect: Effect.Effect<A, E, R>,\n): Effect.Effect<A, E, R> =>\n  effect.pipe(\n    Effect.retry({\n      while: (e: E) => e._tag === \"InvalidRoleException\",\n      schedule: Schedule.max([Schedule.fixed(2000), Schedule.recurs(15)]),\n    }),\n  );",
+        "9": "\n\nconst toTagRecord = (\n  tags: ReadonlyArray<{ Key?: string; Value?: string }> | undefined,\n): Record<string, string> =>\n  Object.fromEntries(\n    (tags ?? [])\n      .filter(\n        (tag): tag is { Key: string; Value: string } =>\n          typeof tag.Key === \"string\" && typeof tag.Value === \"string\",\n      )\n      .map((tag) => [tag.Key, tag.Value]),\n  );\n\nexport const DeploymentGroupProvider = () =>\n  Provider.effect(\n    DeploymentGroup,\n    Effect.gen(function* () {\n      const toName = (id: string, props: Partial<DeploymentGroupProps>) =>\n        props.deploymentGroupName\n          ? Effect.succeed(props.deploymentGroupName)\n          : createPhysicalName({ id, maxLength: 100 });",
+        "10": "\n      const getGroup = Effect.fn(function* (\n        appName: string,\n        groupName: string,\n      ) {\n        const response = yield* codedeploy\n          .getDeploymentGroup({\n            applicationName: appName,\n            deploymentGroupName: groupName,\n          })\n          .pipe(\n            Effect.catchTag(\n              [\n                \"DeploymentGroupDoesNotExistException\",\n                \"ApplicationDoesNotExistException\",\n              ],\n              () => Effect.succeed(undefined),\n            ),\n          );\n        return response?.deploymentGroupInfo;\n      });",
+        "11": "\n      const syncTags = Effect.fn(function* (\n        arn: string,\n        desiredTags: Record<string, string>,\n      ) {\n        const observed = yield* codedeploy\n          .listTagsForResource({ ResourceArn: arn })\n          .pipe(Effect.catch(() => Effect.succeed(undefined)));\n        const { removed, upsert } = diffTags(\n          toTagRecord(observed?.Tags),\n          desiredTags,\n        );\n        if (upsert.length > 0) {\n          yield* codedeploy.tagResource({ ResourceArn: arn, Tags: upsert });\n        }\n        if (removed.length > 0) {\n          yield* codedeploy.untagResource({\n            ResourceArn: arn,\n            TagKeys: removed,\n          });\n        }\n      });\n\n      return {\n        stables: [\n          \"deploymentGroupName\",\n          \"deploymentGroupId\",\n          \"applicationName\",\n        ],",
+        "12": "\n        diff: Effect.fn(function* ({ id, olds, news }) {\n          if (!isResolved(news)) return undefined;\n          if (\n            (yield* toName(id, olds ?? {})) !== (yield* toName(id, news ?? {}))\n          ) {\n            return { action: \"replace\" } as const;\n          }\n\n          if ((news?.applicationName ?? \"\") !== (olds?.applicationName ?? \"\")) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "13": "\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const appName = output?.applicationName ?? olds?.applicationName;\n          if (appName === undefined) return undefined;\n          const name =\n            output?.deploymentGroupName ?? (yield* toName(id, olds ?? {}));\n          const group = yield* getGroup(appName, name);\n          if (group?.deploymentGroupId === undefined) return undefined;\n          const arn = deploymentGroupArn(region, accountId, appName, name);\n          const attrs = {\n            deploymentGroupName: group.deploymentGroupName ?? name,\n            deploymentGroupId: group.deploymentGroupId,\n            deploymentGroupArn: arn,\n            applicationName: group.applicationName ?? appName,\n            serviceRoleArn: group.serviceRoleArn ?? \"\",\n          };\n          const tags = yield* codedeploy\n            .listTagsForResource({ ResourceArn: arn })\n            .pipe(\n              Effect.map((res) => toTagRecord(res.Tags)),\n              Effect.catch(() => Effect.succeed({})),\n            );\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const appName = news.applicationName;\n          const name = output?.deploymentGroupName ?? (yield* toName(id, news));\n          const arn = deploymentGroupArn(region, accountId, appName, name);",
+        "14": "          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...internalTags, ...news.tags };\n\n\n          let group = yield* getGroup(appName, name);",
+        "15": "\n\n          if (group?.deploymentGroupId === undefined) {\n            yield* retryThroughRolePropagation(\n              codedeploy.createDeploymentGroup({\n                applicationName: appName,\n                deploymentGroupName: name,\n                serviceRoleArn: news.serviceRoleArn,\n                deploymentConfigName: news.deploymentConfigName,\n                deploymentStyle: news.deploymentStyle,\n                autoRollbackConfiguration: news.autoRollbackConfiguration,\n                alarmConfiguration: news.alarmConfiguration,\n                loadBalancerInfo: news.loadBalancerInfo,\n                blueGreenDeploymentConfiguration: toWireBlueGreen(\n                  news.blueGreenDeploymentConfiguration,\n                ),\n                ec2TagFilters: news.ec2TagFilters,\n                autoScalingGroups: news.autoScalingGroups,\n                ecsServices: news.ecsServices,\n                triggerConfigurations: news.triggerConfigurations,\n                tags: Object.entries(desiredTags).map(([Key, Value]) => ({\n                  Key,\n                  Value,\n                })),\n              }),\n            ).pipe(\n              Effect.catchTag(\"DeploymentGroupAlreadyExistsException\", () =>\n                Effect.succeed(undefined),\n              ),\n            );",
+        "16": "            group = yield* getGroup(appName, name);\n          } else {\n\n            yield* codedeploy.updateDeploymentGroup({\n              applicationName: appName,\n              currentDeploymentGroupName: name,\n              serviceRoleArn: news.serviceRoleArn,\n              deploymentConfigName: news.deploymentConfigName,\n              deploymentStyle: news.deploymentStyle,\n              autoRollbackConfiguration: news.autoRollbackConfiguration,\n              alarmConfiguration: news.alarmConfiguration,\n              loadBalancerInfo: news.loadBalancerInfo,\n              blueGreenDeploymentConfiguration: toWireBlueGreen(\n                news.blueGreenDeploymentConfiguration,\n              ),\n              ec2TagFilters: news.ec2TagFilters,\n              autoScalingGroups: news.autoScalingGroups,\n              ecsServices: news.ecsServices,\n              triggerConfigurations: news.triggerConfigurations,\n            });\n            group = yield* getGroup(appName, name);\n          }\n\n\n          yield* syncTags(arn, desiredTags);\n\n\n          yield* session.note(name);",
+        "17": "          return {\n            deploymentGroupName: group?.deploymentGroupName ?? name,\n            deploymentGroupId: group?.deploymentGroupId ?? \"\",\n            deploymentGroupArn: arn,\n            applicationName: group?.applicationName ?? appName,\n            serviceRoleArn: group?.serviceRoleArn ?? news.serviceRoleArn,\n          };\n        }),\n\n        delete: Effect.fn(function* ({ output, olds }) {\n          const appName = output.applicationName || olds?.applicationName;\n          if (appName === undefined) return;\n\n\n\n          yield* codedeploy.deleteDeploymentGroup({\n            applicationName: appName,\n            deploymentGroupName: output.deploymentGroupName,\n          });\n        }),\n\n\n\n        list: () => Effect.succeed([]),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null,
+          "11": null,
+          "12": null,
+          "13": null,
+          "14": null,
+          "15": null,
+          "16": null,
+          "17": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as codedeploy from \"@distilled.cloud/aws/codedeploy\";",
+          "2": "import type * as Duration from \"effect/Duration\";",
+          "3": "import * as Effect from \"effect/Effect\";",
+          "4": "import * as Schedule from \"effect/Schedule\";",
+          "5": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "6": "import { isResolved } from \"../../Diff.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import { createInternalTags, diffTags, hasAlchemyTags } from \"../../Tags.ts\";",
+          "11": "import { toWireMinutes } from \"../../Util/Duration.ts\";",
+          "12": "import { AWSEnvironment } from \"../Environment.ts\";",
+          "13": "import type { Providers } from \"../Providers.ts\";"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as codedeploy from \"@distilled.cloud/aws/codedeploy\";",
+          "2": "import type * as Duration from \"effect/Duration\";",
+          "3": "import * as Effect from \"effect/Effect\";",
+          "4": "import * as Schedule from \"effect/Schedule\";",
+          "5": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "6": "import { isResolved } from \"../../Diff.ts\";",
+          "7": "import { createPhysicalName } from \"../../PhysicalName.ts\";",
+          "8": "import * as Provider from \"../../Provider.ts\";",
+          "9": "import { Resource } from \"../../Resource.ts\";",
+          "10": "import { createInternalTags, diffTags, hasAlchemyTags } from \"../../Tags.ts\";",
+          "11": "import { toWireMinutes } from \"../../Util/Duration.ts\";",
+          "12": "import { AWSEnvironment } from \"../Environment.ts\";",
+          "13": "import type { Providers } from \"../Providers.ts\";"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "20": "export interface BlueGreenDeploymentConfigurationProps {",
+          "25": "terminateBlueInstancesOnDeploymentSuccess?: {",
+          "30": "action?: codedeploy.InstanceAction;",
+          "35": "terminationWaitTime?: Duration.Input;",
+          "36": "};"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "20": "export interface BlueGreenDeploymentConfigurationProps {",
+          "25": "terminateBlueInstancesOnDeploymentSuccess?: {",
+          "30": "action?: codedeploy.InstanceAction;",
+          "35": "terminationWaitTime?: Duration.Input;",
+          "36": "};"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "40": "deploymentReadyOption?: {",
+          "45": "actionOnTimeout?: codedeploy.DeploymentReadyAction;",
+          "51": "waitTime?: Duration.Input;",
+          "52": "};",
+          "57": "greenFleetProvisioningOption?: codedeploy.GreenFleetProvisioningOption;",
+          "58": "}"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "40": "deploymentReadyOption?: {",
+          "45": "actionOnTimeout?: codedeploy.DeploymentReadyAction;",
+          "51": "waitTime?: Duration.Input;",
+          "52": "};",
+          "57": "greenFleetProvisioningOption?: codedeploy.GreenFleetProvisioningOption;",
+          "58": "}"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "61": "const toWireBlueGreen = (",
+          "62": "props: BlueGreenDeploymentConfigurationProps | undefined,",
+          "63": "): codedeploy.BlueGreenDeploymentConfiguration | undefined =>",
+          "64": "props === undefined",
+          "65": "? undefined",
+          "66": ": {",
+          "67": "terminateBlueInstancesOnDeploymentSuccess:",
+          "68": "props.terminateBlueInstancesOnDeploymentSuccess === undefined",
+          "69": "? undefined",
+          "70": ": {",
+          "71": "action: props.terminateBlueInstancesOnDeploymentSuccess.action,",
+          "72": "terminationWaitTimeInMinutes: toWireMinutes(",
+          "73": "props.terminateBlueInstancesOnDeploymentSuccess",
+          "74": ".terminationWaitTime,",
+          "75": "),",
+          "76": "},",
+          "77": "deploymentReadyOption:",
+          "78": "props.deploymentReadyOption === undefined",
+          "79": "? undefined",
+          "80": ": {",
+          "81": "actionOnTimeout: props.deploymentReadyOption.actionOnTimeout,",
+          "82": "waitTimeInMinutes: toWireMinutes(",
+          "83": "props.deploymentReadyOption.waitTime,",
+          "84": "),",
+          "85": "},",
+          "86": "greenFleetProvisioningOption: props.greenFleetProvisioningOption,",
+          "87": "};"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "61": "const toWireBlueGreen = (",
+          "62": "props: BlueGreenDeploymentConfigurationProps | undefined,",
+          "63": "): codedeploy.BlueGreenDeploymentConfiguration | undefined =>",
+          "64": "props === undefined",
+          "65": "? undefined",
+          "66": ": {",
+          "67": "terminateBlueInstancesOnDeploymentSuccess:",
+          "68": "props.terminateBlueInstancesOnDeploymentSuccess === undefined",
+          "69": "? undefined",
+          "70": ": {",
+          "71": "action: props.terminateBlueInstancesOnDeploymentSuccess.action,",
+          "72": "terminationWaitTimeInMinutes: toWireMinutes(",
+          "73": "props.terminateBlueInstancesOnDeploymentSuccess",
+          "74": ".terminationWaitTime,",
+          "75": "),",
+          "76": "},",
+          "77": "deploymentReadyOption:",
+          "78": "props.deploymentReadyOption === undefined",
+          "79": "? undefined",
+          "80": ": {",
+          "81": "actionOnTimeout: props.deploymentReadyOption.actionOnTimeout,",
+          "82": "waitTimeInMinutes: toWireMinutes(",
+          "83": "props.deploymentReadyOption.waitTime,",
+          "84": "),",
+          "85": "},",
+          "86": "greenFleetProvisioningOption: props.greenFleetProvisioningOption,",
+          "87": "};"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "89": "export interface DeploymentGroupProps {",
+          "95": "applicationName: string;",
+          "100": "deploymentGroupName?: string;",
+          "105": "serviceRoleArn: string;",
+          "110": "deploymentConfigName?: string;",
+          "114": "deploymentStyle?: codedeploy.DeploymentStyle;",
+          "118": "autoRollbackConfiguration?: codedeploy.AutoRollbackConfiguration;"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "89": "export interface DeploymentGroupProps {",
+          "95": "applicationName: string;",
+          "100": "deploymentGroupName?: string;",
+          "105": "serviceRoleArn: string;",
+          "110": "deploymentConfigName?: string;",
+          "114": "deploymentStyle?: codedeploy.DeploymentStyle;",
+          "118": "autoRollbackConfiguration?: codedeploy.AutoRollbackConfiguration;"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "122": "alarmConfiguration?: codedeploy.AlarmConfiguration;",
+          "126": "loadBalancerInfo?: codedeploy.LoadBalancerInfo;",
+          "132": "blueGreenDeploymentConfiguration?: BlueGreenDeploymentConfigurationProps;",
+          "137": "ec2TagFilters?: codedeploy.EC2TagFilter[];",
+          "141": "autoScalingGroups?: string[];",
+          "145": "ecsServices?: codedeploy.ECSService[];",
+          "149": "triggerConfigurations?: codedeploy.TriggerConfig[];"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "122": "alarmConfiguration?: codedeploy.AlarmConfiguration;",
+          "126": "loadBalancerInfo?: codedeploy.LoadBalancerInfo;",
+          "132": "blueGreenDeploymentConfiguration?: BlueGreenDeploymentConfigurationProps;",
+          "137": "ec2TagFilters?: codedeploy.EC2TagFilter[];",
+          "141": "autoScalingGroups?: string[];",
+          "145": "ecsServices?: codedeploy.ECSService[];",
+          "149": "triggerConfigurations?: codedeploy.TriggerConfig[];"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "153": "tags?: Record<string, string>;",
+          "154": "}",
+          "156": "export interface DeploymentGroup extends Resource<",
+          "157": "\"AWS.CodeDeploy.DeploymentGroup\",",
+          "158": "DeploymentGroupProps,",
+          "159": "{",
+          "161": "deploymentGroupName: string;",
+          "163": "deploymentGroupId: string;",
+          "165": "deploymentGroupArn: string;",
+          "167": "applicationName: string;",
+          "169": "serviceRoleArn: string;",
+          "170": "},",
+          "171": "never,",
+          "172": "Providers",
+          "173": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "153": "tags?: Record<string, string>;",
+          "154": "}",
+          "156": "export interface DeploymentGroup extends Resource<",
+          "157": "\"AWS.CodeDeploy.DeploymentGroup\",",
+          "158": "DeploymentGroupProps,",
+          "159": "{",
+          "161": "deploymentGroupName: string;",
+          "163": "deploymentGroupId: string;",
+          "165": "deploymentGroupArn: string;",
+          "167": "applicationName: string;",
+          "169": "serviceRoleArn: string;",
+          "170": "},",
+          "171": "never,",
+          "172": "Providers",
+          "173": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "202": "export const DeploymentGroup = Resource<DeploymentGroup>(",
+          "203": "\"AWS.CodeDeploy.DeploymentGroup\",",
+          "204": ");",
+          "207": "const deploymentGroupArn = (",
+          "208": "region: string,",
+          "209": "account: string,",
+          "210": "appName: string,",
+          "211": "groupName: string,",
+          "212": "): string =>",
+          "213": "`arn:aws:codedeploy:${region}:${account}:deploymentgroup:${appName}/${groupName}`;",
+          "223": "const retryThroughRolePropagation = <A, E extends { _tag: string }, R>(",
+          "224": "effect: Effect.Effect<A, E, R>,",
+          "225": "): Effect.Effect<A, E, R> =>",
+          "226": "effect.pipe(",
+          "227": "Effect.retry({",
+          "228": "while: (e: E) => e._tag === \"InvalidRoleException\",",
+          "229": "schedule: Schedule.max([Schedule.fixed(2000), Schedule.recurs(15)]),",
+          "230": "}),",
+          "231": ");"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "202": "export const DeploymentGroup = Resource<DeploymentGroup>(",
+          "203": "\"AWS.CodeDeploy.DeploymentGroup\",",
+          "204": ");",
+          "207": "const deploymentGroupArn = (",
+          "208": "region: string,",
+          "209": "account: string,",
+          "210": "appName: string,",
+          "211": "groupName: string,",
+          "212": "): string =>",
+          "213": "`arn:aws:codedeploy:${region}:${account}:deploymentgroup:${appName}/${groupName}`;",
+          "223": "const retryThroughRolePropagation = <A, E extends { _tag: string }, R>(",
+          "224": "effect: Effect.Effect<A, E, R>,",
+          "225": "): Effect.Effect<A, E, R> =>",
+          "226": "effect.pipe(",
+          "227": "Effect.retry({",
+          "228": "while: (e: E) => e._tag === \"InvalidRoleException\",",
+          "229": "schedule: Schedule.max([Schedule.fixed(2000), Schedule.recurs(15)]),",
+          "230": "}),",
+          "231": ");"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "234": "const toTagRecord = (",
+          "235": "tags: ReadonlyArray<{ Key?: string; Value?: string }> | undefined,",
+          "236": "): Record<string, string> =>",
+          "237": "Object.fromEntries(",
+          "238": "(tags ?? [])",
+          "239": ".filter(",
+          "240": "(tag): tag is { Key: string; Value: string } =>",
+          "241": "typeof tag.Key === \"string\" && typeof tag.Value === \"string\",",
+          "242": ")",
+          "243": ".map((tag) => [tag.Key, tag.Value]),",
+          "244": ");",
+          "246": "export const DeploymentGroupProvider = () =>",
+          "247": "Provider.effect(",
+          "248": "DeploymentGroup,",
+          "249": "Effect.gen(function* () {",
+          "250": "const toName = (id: string, props: Partial<DeploymentGroupProps>) =>",
+          "251": "props.deploymentGroupName",
+          "252": "? Effect.succeed(props.deploymentGroupName)",
+          "253": ": createPhysicalName({ id, maxLength: 100 });"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "234": "const toTagRecord = (",
+          "235": "tags: ReadonlyArray<{ Key?: string; Value?: string }> | undefined,",
+          "236": "): Record<string, string> =>",
+          "237": "Object.fromEntries(",
+          "238": "(tags ?? [])",
+          "239": ".filter(",
+          "240": "(tag): tag is { Key: string; Value: string } =>",
+          "241": "typeof tag.Key === \"string\" && typeof tag.Value === \"string\",",
+          "242": ")",
+          "243": ".map((tag) => [tag.Key, tag.Value]),",
+          "244": ");",
+          "246": "export const DeploymentGroupProvider = () =>",
+          "247": "Provider.effect(",
+          "248": "DeploymentGroup,",
+          "249": "Effect.gen(function* () {",
+          "250": "const toName = (id: string, props: Partial<DeploymentGroupProps>) =>",
+          "251": "props.deploymentGroupName",
+          "252": "? Effect.succeed(props.deploymentGroupName)",
+          "253": ": createPhysicalName({ id, maxLength: 100 });"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "255": "const getGroup = Effect.fn(function* (",
+          "256": "appName: string,",
+          "257": "groupName: string,",
+          "258": ") {",
+          "259": "const response = yield* codedeploy",
+          "260": ".getDeploymentGroup({",
+          "261": "applicationName: appName,",
+          "262": "deploymentGroupName: groupName,",
+          "263": "})",
+          "264": ".pipe(",
+          "265": "Effect.catchTag(",
+          "266": "[",
+          "267": "\"DeploymentGroupDoesNotExistException\",",
+          "268": "\"ApplicationDoesNotExistException\",",
+          "269": "],",
+          "270": "() => Effect.succeed(undefined),",
+          "271": "),",
+          "272": ");",
+          "273": "return response?.deploymentGroupInfo;",
+          "274": "});"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "255": "const getGroup = Effect.fn(function* (",
+          "256": "appName: string,",
+          "257": "groupName: string,",
+          "258": ") {",
+          "259": "const response = yield* codedeploy",
+          "260": ".getDeploymentGroup({",
+          "261": "applicationName: appName,",
+          "262": "deploymentGroupName: groupName,",
+          "263": "})",
+          "264": ".pipe(",
+          "265": "Effect.catchTag(",
+          "266": "[",
+          "267": "\"DeploymentGroupDoesNotExistException\",",
+          "268": "\"ApplicationDoesNotExistException\",",
+          "269": "],",
+          "270": "() => Effect.succeed(undefined),",
+          "271": "),",
+          "272": ");",
+          "273": "return response?.deploymentGroupInfo;",
+          "274": "});"
+        }
+      },
+      "start:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "276": "const syncTags = Effect.fn(function* (",
+          "277": "arn: string,",
+          "278": "desiredTags: Record<string, string>,",
+          "279": ") {",
+          "280": "const observed = yield* codedeploy",
+          "281": ".listTagsForResource({ ResourceArn: arn })",
+          "282": ".pipe(Effect.catch(() => Effect.succeed(undefined)));",
+          "283": "const { removed, upsert } = diffTags(",
+          "284": "toTagRecord(observed?.Tags),",
+          "285": "desiredTags,",
+          "286": ");",
+          "287": "if (upsert.length > 0) {",
+          "288": "yield* codedeploy.tagResource({ ResourceArn: arn, Tags: upsert });",
+          "289": "}",
+          "290": "if (removed.length > 0) {",
+          "291": "yield* codedeploy.untagResource({",
+          "292": "ResourceArn: arn,",
+          "293": "TagKeys: removed,",
+          "294": "});",
+          "295": "}",
+          "296": "});",
+          "298": "return {",
+          "299": "stables: [",
+          "300": "\"deploymentGroupName\",",
+          "301": "\"deploymentGroupId\",",
+          "302": "\"applicationName\",",
+          "303": "],"
+        }
+      },
+      "end:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "276": "const syncTags = Effect.fn(function* (",
+          "277": "arn: string,",
+          "278": "desiredTags: Record<string, string>,",
+          "279": ") {",
+          "280": "const observed = yield* codedeploy",
+          "281": ".listTagsForResource({ ResourceArn: arn })",
+          "282": ".pipe(Effect.catch(() => Effect.succeed(undefined)));",
+          "283": "const { removed, upsert } = diffTags(",
+          "284": "toTagRecord(observed?.Tags),",
+          "285": "desiredTags,",
+          "286": ");",
+          "287": "if (upsert.length > 0) {",
+          "288": "yield* codedeploy.tagResource({ ResourceArn: arn, Tags: upsert });",
+          "289": "}",
+          "290": "if (removed.length > 0) {",
+          "291": "yield* codedeploy.untagResource({",
+          "292": "ResourceArn: arn,",
+          "293": "TagKeys: removed,",
+          "294": "});",
+          "295": "}",
+          "296": "});",
+          "298": "return {",
+          "299": "stables: [",
+          "300": "\"deploymentGroupName\",",
+          "301": "\"deploymentGroupId\",",
+          "302": "\"applicationName\",",
+          "303": "],"
+        }
+      },
+      "start:providers/idempotent-delete:12": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"12\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "305": "diff: Effect.fn(function* ({ id, olds, news }) {",
+          "306": "if (!isResolved(news)) return undefined;",
+          "307": "if (",
+          "308": "(yield* toName(id, olds ?? {})) !== (yield* toName(id, news ?? {}))",
+          "309": ") {",
+          "310": "return { action: \"replace\" } as const;",
+          "311": "}",
+          "313": "if ((news?.applicationName ?? \"\") !== (olds?.applicationName ?? \"\")) {",
+          "314": "return { action: \"replace\" } as const;",
+          "315": "}",
+          "316": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:12": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"12\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "305": "diff: Effect.fn(function* ({ id, olds, news }) {",
+          "306": "if (!isResolved(news)) return undefined;",
+          "307": "if (",
+          "308": "(yield* toName(id, olds ?? {})) !== (yield* toName(id, news ?? {}))",
+          "309": ") {",
+          "310": "return { action: \"replace\" } as const;",
+          "311": "}",
+          "313": "if ((news?.applicationName ?? \"\") !== (olds?.applicationName ?? \"\")) {",
+          "314": "return { action: \"replace\" } as const;",
+          "315": "}",
+          "316": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:13": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"13\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "318": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "319": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "320": "const appName = output?.applicationName ?? olds?.applicationName;",
+          "321": "if (appName === undefined) return undefined;",
+          "322": "const name =",
+          "323": "output?.deploymentGroupName ?? (yield* toName(id, olds ?? {}));",
+          "324": "const group = yield* getGroup(appName, name);",
+          "325": "if (group?.deploymentGroupId === undefined) return undefined;",
+          "326": "const arn = deploymentGroupArn(region, accountId, appName, name);",
+          "327": "const attrs = {",
+          "328": "deploymentGroupName: group.deploymentGroupName ?? name,",
+          "329": "deploymentGroupId: group.deploymentGroupId,",
+          "330": "deploymentGroupArn: arn,",
+          "331": "applicationName: group.applicationName ?? appName,",
+          "332": "serviceRoleArn: group.serviceRoleArn ?? \"\",",
+          "333": "};",
+          "334": "const tags = yield* codedeploy",
+          "335": ".listTagsForResource({ ResourceArn: arn })",
+          "336": ".pipe(",
+          "337": "Effect.map((res) => toTagRecord(res.Tags)),",
+          "338": "Effect.catch(() => Effect.succeed({})),",
+          "339": ");",
+          "340": "return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);",
+          "341": "}),",
+          "343": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "344": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "345": "const appName = news.applicationName;",
+          "346": "const name = output?.deploymentGroupName ?? (yield* toName(id, news));",
+          "347": "const arn = deploymentGroupArn(region, accountId, appName, name);"
+        }
+      },
+      "end:providers/idempotent-delete:13": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"13\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "318": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "319": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "320": "const appName = output?.applicationName ?? olds?.applicationName;",
+          "321": "if (appName === undefined) return undefined;",
+          "322": "const name =",
+          "323": "output?.deploymentGroupName ?? (yield* toName(id, olds ?? {}));",
+          "324": "const group = yield* getGroup(appName, name);",
+          "325": "if (group?.deploymentGroupId === undefined) return undefined;",
+          "326": "const arn = deploymentGroupArn(region, accountId, appName, name);",
+          "327": "const attrs = {",
+          "328": "deploymentGroupName: group.deploymentGroupName ?? name,",
+          "329": "deploymentGroupId: group.deploymentGroupId,",
+          "330": "deploymentGroupArn: arn,",
+          "331": "applicationName: group.applicationName ?? appName,",
+          "332": "serviceRoleArn: group.serviceRoleArn ?? \"\",",
+          "333": "};",
+          "334": "const tags = yield* codedeploy",
+          "335": ".listTagsForResource({ ResourceArn: arn })",
+          "336": ".pipe(",
+          "337": "Effect.map((res) => toTagRecord(res.Tags)),",
+          "338": "Effect.catch(() => Effect.succeed({})),",
+          "339": ");",
+          "340": "return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);",
+          "341": "}),",
+          "343": "reconcile: Effect.fn(function* ({ id, news, output, session }) {",
+          "344": "const { accountId, region } = yield* AWSEnvironment.current;",
+          "345": "const appName = news.applicationName;",
+          "346": "const name = output?.deploymentGroupName ?? (yield* toName(id, news));",
+          "347": "const arn = deploymentGroupArn(region, accountId, appName, name);"
+        }
+      },
+      "start:providers/idempotent-delete:14": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"14\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "348": "const internalTags = yield* createInternalTags(id);",
+          "349": "const desiredTags = { ...internalTags, ...news.tags };",
+          "352": "let group = yield* getGroup(appName, name);"
+        }
+      },
+      "end:providers/idempotent-delete:14": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"14\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "348": "const internalTags = yield* createInternalTags(id);",
+          "349": "const desiredTags = { ...internalTags, ...news.tags };",
+          "352": "let group = yield* getGroup(appName, name);"
+        }
+      },
+      "start:providers/idempotent-delete:15": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"15\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "355": "if (group?.deploymentGroupId === undefined) {",
+          "356": "yield* retryThroughRolePropagation(",
+          "357": "codedeploy.createDeploymentGroup({",
+          "358": "applicationName: appName,",
+          "359": "deploymentGroupName: name,",
+          "360": "serviceRoleArn: news.serviceRoleArn,",
+          "361": "deploymentConfigName: news.deploymentConfigName,",
+          "362": "deploymentStyle: news.deploymentStyle,",
+          "363": "autoRollbackConfiguration: news.autoRollbackConfiguration,",
+          "364": "alarmConfiguration: news.alarmConfiguration,",
+          "365": "loadBalancerInfo: news.loadBalancerInfo,",
+          "366": "blueGreenDeploymentConfiguration: toWireBlueGreen(",
+          "367": "news.blueGreenDeploymentConfiguration,",
+          "368": "),",
+          "369": "ec2TagFilters: news.ec2TagFilters,",
+          "370": "autoScalingGroups: news.autoScalingGroups,",
+          "371": "ecsServices: news.ecsServices,",
+          "372": "triggerConfigurations: news.triggerConfigurations,",
+          "373": "tags: Object.entries(desiredTags).map(([Key, Value]) => ({",
+          "374": "Key,",
+          "375": "Value,",
+          "376": "})),",
+          "377": "}),",
+          "378": ").pipe(",
+          "379": "Effect.catchTag(\"DeploymentGroupAlreadyExistsException\", () =>",
+          "380": "Effect.succeed(undefined),",
+          "381": "),",
+          "382": ");"
+        }
+      },
+      "end:providers/idempotent-delete:15": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"15\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "355": "if (group?.deploymentGroupId === undefined) {",
+          "356": "yield* retryThroughRolePropagation(",
+          "357": "codedeploy.createDeploymentGroup({",
+          "358": "applicationName: appName,",
+          "359": "deploymentGroupName: name,",
+          "360": "serviceRoleArn: news.serviceRoleArn,",
+          "361": "deploymentConfigName: news.deploymentConfigName,",
+          "362": "deploymentStyle: news.deploymentStyle,",
+          "363": "autoRollbackConfiguration: news.autoRollbackConfiguration,",
+          "364": "alarmConfiguration: news.alarmConfiguration,",
+          "365": "loadBalancerInfo: news.loadBalancerInfo,",
+          "366": "blueGreenDeploymentConfiguration: toWireBlueGreen(",
+          "367": "news.blueGreenDeploymentConfiguration,",
+          "368": "),",
+          "369": "ec2TagFilters: news.ec2TagFilters,",
+          "370": "autoScalingGroups: news.autoScalingGroups,",
+          "371": "ecsServices: news.ecsServices,",
+          "372": "triggerConfigurations: news.triggerConfigurations,",
+          "373": "tags: Object.entries(desiredTags).map(([Key, Value]) => ({",
+          "374": "Key,",
+          "375": "Value,",
+          "376": "})),",
+          "377": "}),",
+          "378": ").pipe(",
+          "379": "Effect.catchTag(\"DeploymentGroupAlreadyExistsException\", () =>",
+          "380": "Effect.succeed(undefined),",
+          "381": "),",
+          "382": ");"
+        }
+      },
+      "start:providers/idempotent-delete:16": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"16\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "383": "group = yield* getGroup(appName, name);",
+          "384": "} else {",
+          "386": "yield* codedeploy.updateDeploymentGroup({",
+          "387": "applicationName: appName,",
+          "388": "currentDeploymentGroupName: name,",
+          "389": "serviceRoleArn: news.serviceRoleArn,",
+          "390": "deploymentConfigName: news.deploymentConfigName,",
+          "391": "deploymentStyle: news.deploymentStyle,",
+          "392": "autoRollbackConfiguration: news.autoRollbackConfiguration,",
+          "393": "alarmConfiguration: news.alarmConfiguration,",
+          "394": "loadBalancerInfo: news.loadBalancerInfo,",
+          "395": "blueGreenDeploymentConfiguration: toWireBlueGreen(",
+          "396": "news.blueGreenDeploymentConfiguration,",
+          "397": "),",
+          "398": "ec2TagFilters: news.ec2TagFilters,",
+          "399": "autoScalingGroups: news.autoScalingGroups,",
+          "400": "ecsServices: news.ecsServices,",
+          "401": "triggerConfigurations: news.triggerConfigurations,",
+          "402": "});",
+          "403": "group = yield* getGroup(appName, name);",
+          "404": "}",
+          "407": "yield* syncTags(arn, desiredTags);",
+          "410": "yield* session.note(name);"
+        }
+      },
+      "end:providers/idempotent-delete:16": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"16\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "383": "group = yield* getGroup(appName, name);",
+          "384": "} else {",
+          "386": "yield* codedeploy.updateDeploymentGroup({",
+          "387": "applicationName: appName,",
+          "388": "currentDeploymentGroupName: name,",
+          "389": "serviceRoleArn: news.serviceRoleArn,",
+          "390": "deploymentConfigName: news.deploymentConfigName,",
+          "391": "deploymentStyle: news.deploymentStyle,",
+          "392": "autoRollbackConfiguration: news.autoRollbackConfiguration,",
+          "393": "alarmConfiguration: news.alarmConfiguration,",
+          "394": "loadBalancerInfo: news.loadBalancerInfo,",
+          "395": "blueGreenDeploymentConfiguration: toWireBlueGreen(",
+          "396": "news.blueGreenDeploymentConfiguration,",
+          "397": "),",
+          "398": "ec2TagFilters: news.ec2TagFilters,",
+          "399": "autoScalingGroups: news.autoScalingGroups,",
+          "400": "ecsServices: news.ecsServices,",
+          "401": "triggerConfigurations: news.triggerConfigurations,",
+          "402": "});",
+          "403": "group = yield* getGroup(appName, name);",
+          "404": "}",
+          "407": "yield* syncTags(arn, desiredTags);",
+          "410": "yield* session.note(name);"
+        }
+      },
+      "start:providers/idempotent-delete:17": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"17\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "411": "return {",
+          "412": "deploymentGroupName: group?.deploymentGroupName ?? name,",
+          "413": "deploymentGroupId: group?.deploymentGroupId ?? \"\",",
+          "414": "deploymentGroupArn: arn,",
+          "415": "applicationName: group?.applicationName ?? appName,",
+          "416": "serviceRoleArn: group?.serviceRoleArn ?? news.serviceRoleArn,",
+          "417": "};",
+          "418": "}),",
+          "420": "delete: Effect.fn(function* ({ output, olds }) {",
+          "421": "const appName = output.applicationName || olds?.applicationName;",
+          "422": "if (appName === undefined) return;",
+          "426": "yield* codedeploy.deleteDeploymentGroup({",
+          "427": "applicationName: appName,",
+          "428": "deploymentGroupName: output.deploymentGroupName,",
+          "429": "});",
+          "430": "}),",
+          "434": "list: () => Effect.succeed([]),",
+          "435": "};",
+          "436": "}),",
+          "437": ");"
+        }
+      },
+      "end:providers/idempotent-delete:17": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"17\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "411": "return {",
+          "412": "deploymentGroupName: group?.deploymentGroupName ?? name,",
+          "413": "deploymentGroupId: group?.deploymentGroupId ?? \"\",",
+          "414": "deploymentGroupArn: arn,",
+          "415": "applicationName: group?.applicationName ?? appName,",
+          "416": "serviceRoleArn: group?.serviceRoleArn ?? news.serviceRoleArn,",
+          "417": "};",
+          "418": "}),",
+          "420": "delete: Effect.fn(function* ({ output, olds }) {",
+          "421": "const appName = output.applicationName || olds?.applicationName;",
+          "422": "if (appName === undefined) return;",
+          "426": "yield* codedeploy.deleteDeploymentGroup({",
+          "427": "applicationName: appName,",
+          "428": "deploymentGroupName: output.deploymentGroupName,",
+          "429": "});",
+          "430": "}),",
+          "434": "list: () => Effect.succeed([]),",
+          "435": "};",
+          "436": "}),",
+          "437": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

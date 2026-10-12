@@ -1,0 +1,55 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Neon/Storage.ts",
+  "kind": "judge",
+  "ordinal": 260,
+  "artifact": "attempt-00260.json",
+  "started": "2026-10-11T03:28:00.140Z",
+  "estimatedTokens": 4206,
+  "reservedTokens": 64000,
+  "chargedTokens": 2871,
+  "outcome": "answered",
+  "milliseconds": 86.04512999999861,
+  "referencesPresent": false,
+  "bodyDigest": "4fec72dc739b1d9f380733936d3b7325be315903aa2b6f1fcf8c87ee35a6810c",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.1}},\"usage\":{\"input_tokens\":2871,\"output_tokens\":25}}",
+  "inputTokens": 2871,
+  "answers": {
+    "providers/idempotent-delete": 0.1
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as Credentials from \"@distilled.cloud/aws/Credentials\";\nimport * as Endpoint from \"@distilled.cloud/aws/Endpoint\";\nimport { presignS3Url } from \"@distilled.cloud/aws/Presign\";\nimport * as Region from \"@distilled.cloud/aws/Region\";\nimport * as S3 from \"@distilled.cloud/aws/s3\";\nimport * as Data from \"effect/Data\";\nimport * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport * as Redacted from \"effect/Redacted\";\nimport * as HttpClient from \"effect/unstable/http/HttpClient\";\n\nexport interface StorageConfig {\n\n  endpoint: string;\n\n  region: string;\n\n  accessKeyId: string;\n\n  secretAccessKey: Redacted.Redacted<string>;\n}\n\nexport class StoragePaginationError extends Data.TaggedError(\n  \"StoragePaginationError\",\n)<{ message: string }> {}\nexport class StorageDeleteError extends Data.TaggedError(\"StorageDeleteError\")<{\n  message: string;\n}> {}",
+        "2": "\n\nexport const storageLayer = (config: StorageConfig) =>\n  Layer.mergeAll(\n    Endpoint.of(config.endpoint),\n    Region.of(config.region as Region.RegionName),\n    Layer.succeed(\n      Credentials.Credentials,\n      Effect.succeed({\n        accessKeyId: Redacted.make(config.accessKeyId),\n        secretAccessKey: config.secretAccessKey,\n        sessionToken: undefined,\n        region: config.region as Region.RegionName,\n      }),\n    ),\n  );\n\nexport type StoragePutOptions = Pick<\n  S3.PutObjectRequest,\n  | \"ContentType\"\n  | \"CacheControl\"\n  | \"ContentDisposition\"\n  | \"ContentEncoding\"\n  | \"ContentLanguage\"\n  | \"Metadata\"\n>;",
+        "3": "\n\nexport const makeStorageClient = Effect.fn(function* (\n  config: StorageConfig,\n  bucket: string,\n) {\n  const http = yield* HttpClient.HttpClient;\n  const layer = Layer.mergeAll(\n    storageLayer(config),\n    Layer.succeed(HttpClient.HttpClient, http),\n  );\n  const provide = <A, E, R>(effect: Effect.Effect<A, E, R>) =>\n    effect.pipe(Effect.provide(layer));\n  return {\n    get: (key: string) =>\n      provide(S3.getObject({ Bucket: bucket, Key: key })).pipe(\n        Effect.catchTag(\"NoSuchKey\", () => Effect.succeed(undefined)),\n      ),\n    head: (key: string) =>\n      provide(S3.headObject({ Bucket: bucket, Key: key })).pipe(\n        Effect.catchTag(\"NotFound\", () => Effect.succeed(undefined)),\n      ),",
+        "4": "    list: (\n      options: {\n        prefix?: string;\n        delimiter?: string;\n        cursor?: string;\n        limit?: number;\n      } = {},\n    ) =>\n      provide(\n        S3.listObjectsV2({\n          Bucket: bucket,\n          Prefix: options.prefix,\n          Delimiter: options.delimiter,\n          ContinuationToken: options.cursor,\n          MaxKeys: options.limit,\n        }),\n      ),\n    put: (\n      key: string,\n      body: string | Uint8Array,\n      options: StoragePutOptions = {},\n    ) =>\n      provide(\n        S3.putObject({ Bucket: bucket, Key: key, Body: body, ...options }),\n      ),\n    delete: (key: string) =>\n      provide(S3.deleteObject({ Bucket: bucket, Key: key })),",
+        "5": "    deleteMany: (keys: string[]) =>\n      Effect.gen(function* () {\n        const deleted: S3.DeletedObject[] = [];\n\n        for (let offset = 0; offset < keys.length; offset += 100) {\n          const result = yield* provide(\n            S3.deleteObjects({\n              Bucket: bucket,\n              Delete: {\n                Objects: keys\n                  .slice(offset, offset + 100)\n                  .map((Key) => ({ Key })),\n              },\n            }),\n          );\n          if (result.Errors?.length)\n            return yield* new StorageDeleteError({\n              message: `S3 refused ${result.Errors.length} object deletions`,\n            });\n          deleted.push(...(result.Deleted ?? []));\n        }\n        return { Deleted: deleted } satisfies S3.DeleteObjectsOutput;\n      }),\n    createMultipartUpload: (key: string, options: StoragePutOptions = {}) =>\n      provide(\n        S3.createMultipartUpload({ Bucket: bucket, Key: key, ...options }),\n      ),",
+        "6": "    uploadPart: (\n      key: string,\n      uploadId: string,\n      partNumber: number,\n      body: Uint8Array,\n    ) =>\n      provide(\n        S3.uploadPart({\n          Bucket: bucket,\n          Key: key,\n          UploadId: uploadId,\n          PartNumber: partNumber,\n          Body: body,\n        }),\n      ),\n    completeMultipartUpload: (\n      key: string,\n      uploadId: string,\n      parts: S3.CompletedPart[],\n    ) =>\n      provide(\n        S3.completeMultipartUpload({\n          Bucket: bucket,\n          Key: key,\n          UploadId: uploadId,\n          MultipartUpload: { Parts: parts },\n        }),\n      ),",
+        "7": "    abortMultipartUpload: (key: string, uploadId: string) =>\n      provide(\n        S3.abortMultipartUpload({\n          Bucket: bucket,\n          Key: key,\n          UploadId: uploadId,\n        }),\n      ).pipe(Effect.catchTag(\"NoSuchUpload\", () => Effect.void)),\n    listMultipartUploads: (keyMarker?: string, uploadIdMarker?: string) =>\n      provide(\n        S3.listMultipartUploads({\n          Bucket: bucket,\n          KeyMarker: keyMarker,\n          UploadIdMarker: uploadIdMarker,\n        }),\n      ),\n    listParts: (key: string, uploadId: string, partNumberMarker?: string) =>\n      provide(\n        S3.listParts({\n          Bucket: bucket,\n          Key: key,\n          UploadId: uploadId,\n          PartNumberMarker: partNumberMarker,\n        }),\n      ),\n    presign: (\n      key: string,\n      method: \"GET\" | \"PUT\",\n      options: { expiresIn?: number; contentType?: string } = {},\n    ) => provide(presignS3Url({ bucket, key, method, ...options })),",
+        "8": "    getTags: () =>\n      provide(S3.getBucketTagging({ Bucket: bucket })).pipe(\n        Effect.catchTag(\"NoSuchTagSet\", () => Effect.succeed({ TagSet: [] })),\n      ),\n    putTags: (tags: Record<string, string>) =>\n      provide(\n        S3.putBucketTagging({\n          Bucket: bucket,\n          Tagging: {\n            TagSet: Object.entries(tags).map(([Key, Value]) => ({\n              Key,\n              Value,\n            })),\n          },\n        }),\n      ),\n    getCors: () =>\n      provide(S3.getBucketCors({ Bucket: bucket })).pipe(\n        Effect.catchTag(\"NoSuchCORSConfiguration\", () =>\n          Effect.succeed({ CORSRules: [] }),\n        ),\n      ),\n    putCors: (rules: S3.CORSRule[]) =>\n      provide(\n        S3.putBucketCors({\n          Bucket: bucket,\n          CORSConfiguration: { CORSRules: rules },\n        }),\n      ),\n    deleteCors: () => provide(S3.deleteBucketCors({ Bucket: bucket })),",
+        "9": "    deleteBucket: () =>\n      provide(S3.deleteBucket({ Bucket: bucket })).pipe(\n        Effect.catchTag(\"NoSuchBucket\", () => Effect.void),\n      ),\n  };\n});\n\nexport type StorageClient = Effect.Success<\n  ReturnType<typeof makeStorageClient>\n>;\n\n\nexport const emptyStorageBucket = Effect.fn(function* (client: StorageClient) {\n  let cursor: string | undefined;\n  const seen = new Set<string>();\n  do {\n    const page = yield* client.list({ cursor, limit: 1000 });\n    const keys = (page.Contents ?? []).flatMap((object) =>\n      object.Key === undefined ? [] : [object.Key],\n    );\n    if (keys.length) yield* client.deleteMany(keys);\n    cursor = page.IsTruncated ? page.NextContinuationToken : undefined;\n    if (page.IsTruncated && (!cursor || seen.has(cursor))) {\n      return yield* new StoragePaginationError({\n        message: \"Object listing did not advance\",\n      });\n    }\n    if (cursor) seen.add(cursor);\n  } while (cursor);\n  let keyMarker: string | undefined;",
+        "10": "  let uploadMarker: string | undefined;\n  const uploadsSeen = new Set<string>();\n  for (;;) {\n    const page = yield* client.listMultipartUploads(keyMarker, uploadMarker);\n    for (const upload of page.Uploads ?? []) {\n      if (upload.Key && upload.UploadId)\n        yield* client.abortMultipartUpload(upload.Key, upload.UploadId);\n    }\n    if (!page.IsTruncated) break;\n    keyMarker = page.NextKeyMarker;\n    uploadMarker = page.NextUploadIdMarker;\n    const marker = `${keyMarker ?? \"\"}/${uploadMarker ?? \"\"}`;\n    if (!keyMarker || uploadsSeen.has(marker)) {\n      return yield* new StoragePaginationError({\n        message: \"Multipart listing did not advance\",\n      });\n    }\n    uploadsSeen.add(marker);\n  }\n});\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,669 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CloudWatch/CompositeAlarm.ts",
+  "kind": "locate",
+  "ordinal": 49,
+  "artifact": "attempt-00049.json",
+  "started": "2026-10-11T03:27:24.756Z",
+  "estimatedTokens": 13110,
+  "reservedTokens": 64000,
+  "chargedTokens": 13484,
+  "outcome": "answered",
+  "milliseconds": 154.58499500000016,
+  "referencesPresent": false,
+  "bodyDigest": "efd8930a941e8dd5dade13865ad34784d798db63c0ce2145c6982ba93bc51bde",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"choice\",\"choice\":\"8\",\"confidence\":1.0,\"probabilities\":{\"1\":0.0,\"2\":0.0,\"3\":0.0,\"4\":0.0,\"5\":0.0,\"6\":0.0,\"7\":0.0,\"8\":1.0,\"9\":0.0,\"10\":0.0}},\"start:providers/idempotent-delete:1\":{\"type\":\"choice\",\"choice\":\"8\",\"confidence\":0.69,\"probabilities\":{\"1\":0.08,\"2\":0.0,\"3\":0.0,\"4\":0.04,\"5\":0.0,\"6\":0.01,\"7\":0.01,\"8\":0.71,\"9\":0.01,\"10\":0.01,\"11\":0.02,\"12\":0.01,\"13\":0.0,\"14\":0.0,\"15\":0.01,\"16\":0.01,\"17\":0.02,\"19\":0.06}},\"end:providers/idempotent-delete:1\":{\"type\":\"choice\",\"choice\":\"8\",\"confidence\":0.66,\"probabilities\":{\"1\":0.08,\"2\":0.0,\"3\":0.01,\"4\":0.02,\"5\":0.0,\"6\":0.0,\"7\":0.01,\"8\":0.68,\"9\":0.01,\"10\":0.03,\"11\":0.01,\"12\":0.01,\"13\":0.0,\"14\":0.0,\"15\":0.01,\"16\":0.01,\"17\":0.03,\"19\":0.09}},\"start:providers/idempotent-delete:2\":{\"type\":\"choice\",\"choice\":\"33\",\"confidence\":0.16,\"probabilities\":{\"21\":0.22,\"22\":0.06,\"23\":0.08,\"24\":0.1,\"28\":0.08,\"32\":0.18,\"33\":0.28}},\"end:providers/idempotent-delete:2\":{\"type\":\"choice\",\"choice\":\"33\",\"confidence\":0.35,\"probabilities\":{\"21\":0.08,\"22\":0.03,\"23\":0.06,\"24\":0.11,\"28\":0.04,\"32\":0.24,\"33\":0.44}},\"start:providers/idempotent-delete:3\":{\"type\":\"choice\",\"choice\":\"52\",\"confidence\":0.18,\"probabilities\":{\"35\":0.1,\"36\":0.04,\"37\":0.02,\"38\":0.04,\"40\":0.04,\"42\":0.03,\"44\":0.03,\"46\":0.01,\"48\":0.02,\"50\":0.04,\"51\":0.11,\"52\":0.24,\"53\":0.05,\"54\":0.23}},\"end:providers/idempotent-delete:3\":{\"type\":\"choice\",\"choice\":\"54\",\"confidence\":0.39,\"probabilities\":{\"35\":0.07,\"36\":0.03,\"37\":0.02,\"38\":0.03,\"40\":0.02,\"42\":0.02,\"44\":0.02,\"46\":0.01,\"48\":0.02,\"50\":0.04,\"51\":0.12,\"52\":0.12,\"53\":0.05,\"54\":0.43}},\"start:providers/idempotent-delete:4\":{\"type\":\"choice\",\"choice\":\"87\",\"confidence\":0.14,\"probabilities\":{\"87\":0.19,\"88\":0.06,\"89\":0.1,\"91\":0.09,\"92\":0.05,\"93\":0.03,\"94\":0.07,\"95\":0.04,\"96\":0.02,\"98\":0.07,\"99\":0.07,\"100\":0.02,\"101\":0.02,\"102\":0.06,\"103\":0.03,\"104\":0.08}},\"end:providers/idempotent-delete:4\":{\"type\":\"choice\",\"choice\":\"104\",\"confidence\":0.08,\"probabilities\":{\"87\":0.13,\"88\":0.06,\"89\":0.13,\"91\":0.04,\"92\":0.02,\"93\":0.02,\"94\":0.05,\"95\":0.03,\"96\":0.02,\"98\":0.05,\"99\":0.06,\"100\":0.02,\"101\":0.02,\"102\":0.1,\"103\":0.11,\"104\":0.14}},\"start:providers/idempotent-delete:5\":{\"type\":\"choice\",\"choice\":\"133\",\"confidence\":0.2,\"probabilities\":{\"106\":0.14,\"107\":0.04,\"108\":0.02,\"109\":0.02,\"110\":0.04,\"111\":0.02,\"112\":0.01,\"113\":0.03,\"115\":0.04,\"116\":0.02,\"117\":0.05,\"119\":0.03,\"120\":0.08,\"121\":0.02,\"122\":0.02,\"123\":0.02,\"125\":0.02,\"126\":0.01,\"127\":0.01,\"128\":0.01,\"129\":0.01,\"130\":0.01,\"131\":0.02,\"132\":0.08,\"133\":0.23}},\"end:providers/idempotent-delete:5\":{\"type\":\"choice\",\"choice\":\"133\",\"confidence\":0.25,\"probabilities\":{\"106\":0.06,\"107\":0.02,\"108\":0.03,\"109\":0.02,\"110\":0.04,\"111\":0.02,\"112\":0.01,\"113\":0.04,\"115\":0.02,\"116\":0.02,\"117\":0.04,\"119\":0.03,\"120\":0.06,\"121\":0.04,\"122\":0.04,\"123\":0.03,\"125\":0.02,\"126\":0.01,\"127\":0.01,\"128\":0.01,\"129\":0.02,\"130\":0.01,\"131\":0.01,\"132\":0.11,\"133\":0.28}},\"start:providers/idempotent-delete:6\":{\"type\":\"choice\",\"choice\":\"160\",\"confidence\":0.28,\"probabilities\":{\"135\":0.02,\"136\":0.04,\"137\":0.02,\"138\":0.02,\"139\":0.01,\"140\":0.01,\"142\":0.01,\"143\":0.01,\"144\":0.01,\"145\":0.02,\"146\":0.02,\"147\":0.02,\"148\":0.02,\"149\":0.03,\"150\":0.01,\"151\":0.0,\"152\":0.0,\"153\":0.01,\"154\":0.05,\"155\":0.26,\"159\":0.1,\"160\":0.31}},\"end:providers/idempotent-delete:6\":{\"type\":\"choice\",\"choice\":\"160\",\"confidence\":0.25,\"probabilities\":{\"135\":0.02,\"136\":0.03,\"137\":0.02,\"138\":0.02,\"139\":0.01,\"140\":0.01,\"142\":0.01,\"143\":0.01,\"144\":0.02,\"145\":0.04,\"146\":0.02,\"147\":0.02,\"148\":0.02,\"149\":0.03,\"150\":0.02,\"151\":0.01,\"152\":0.0,\"153\":0.02,\"154\":0.060000000000000005,\"155\":0.27,\"159\":0.060000000000000005,\"160\":0.27999999999999997}},\"start:providers/idempotent-delete:7\":{\"type\":\"choice\",\"choice\":\"186\",\"confidence\":0.23,\"probabilities\":{\"165\":0.26,\"166\":0.07,\"167\":0.01,\"168\":0.01,\"169\":0.02,\"170\":0.02,\"175\":0.01,\"176\":0.0,\"177\":0.01,\"178\":0.01,\"179\":0.01,\"180\":0.01,\"182\":0.07,\"184\":0.01,\"185\":0.08,\"186\":0.27,\"187\":0.05,\"188\":0.03,\"189\":0.05}},\"end:providers/idempotent-delete:7\":{\"type\":\"choice\",\"choice\":\"165\",\"confidence\":0.16,\"probabilities\":{\"165\":0.19999999999999998,\"166\":0.04,\"167\":0.01,\"168\":0.02,\"169\":0.03,\"170\":0.05,\"175\":0.01,\"176\":0.0,\"177\":0.01,\"178\":0.01,\"179\":0.01,\"180\":0.02,\"182\":0.03,\"184\":0.01,\"185\":0.06,\"186\":0.19,\"187\":0.09,\"188\":0.12000000000000001,\"189\":0.09}},\"start:providers/idempotent-delete:8\":{\"type\":\"choice\",\"choice\":\"197\",\"confidence\":0.28,\"probabilities\":{\"191\":0.01,\"192\":0.01,\"193\":0.01,\"194\":0.02,\"195\":0.02,\"196\":0.15,\"197\":0.33999999999999997,\"198\":0.26,\"199\":0.03,\"200\":0.07,\"201\":0.03,\"202\":0.05}},\"end:providers/idempotent-delete:8\":{\"type\":\"choice\",\"choice\":\"201\",\"confidence\":0.17,\"probabilities\":{\"191\":0.01,\"192\":0.01,\"193\":0.01,\"194\":0.02,\"195\":0.04,\"196\":0.03,\"197\":0.12,\"198\":0.04,\"199\":0.05,\"200\":0.2,\"201\":0.23,\"202\":0.24000000000000002}},\"start:providers/idempotent-delete:9\":{\"type\":\"choice\",\"choice\":\"203\",\"confidence\":0.31,\"probabilities\":{\"203\":0.33999999999999997,\"204\":0.16999999999999998,\"208\":0.14,\"209\":0.06,\"210\":0.03,\"211\":0.03,\"212\":0.01,\"213\":0.02,\"214\":0.02,\"215\":0.01,\"216\":0.01,\"217\":0.01,\"218\":0.01,\"219\":0.01,\"220\":0.01,\"221\":0.01,\"222\":0.01,\"223\":0.02,\"224\":0.02,\"225\":0.02,\"226\":0.04}},\"end:providers/idempotent-delete:9\":{\"type\":\"choice\",\"choice\":\"203\",\"confidence\":0.17,\"probabilities\":{\"203\":0.21,\"204\":0.11,\"208\":0.06,\"209\":0.07,\"210\":0.02,\"211\":0.02,\"212\":0.01,\"213\":0.02,\"214\":0.02,\"215\":0.01,\"216\":0.01,\"217\":0.01,\"218\":0.01,\"219\":0.02,\"220\":0.01,\"221\":0.01,\"222\":0.04,\"223\":0.05,\"224\":0.06,\"225\":0.05,\"226\":0.18}},\"start:providers/idempotent-delete:10\":{\"type\":\"choice\",\"choice\":\"228\",\"confidence\":0.15,\"probabilities\":{\"228\":0.19,\"229\":0.03,\"230\":0.03,\"231\":0.04,\"232\":0.1,\"233\":0.02,\"234\":0.02,\"235\":0.01,\"236\":0.01,\"237\":0.01,\"238\":0.01,\"239\":0.01,\"240\":0.01,\"241\":0.02,\"242\":0.01,\"243\":0.02,\"244\":0.05,\"245\":0.09,\"246\":0.08,\"247\":0.06,\"248\":0.09,\"249\":0.09}},\"end:providers/idempotent-delete:10\":{\"type\":\"choice\",\"choice\":\"249\",\"confidence\":0.12,\"probabilities\":{\"228\":0.07,\"229\":0.01,\"230\":0.01,\"231\":0.02,\"232\":0.04,\"233\":0.02,\"234\":0.04,\"235\":0.01,\"236\":0.01,\"237\":0.01,\"238\":0.01,\"239\":0.01,\"240\":0.0,\"241\":0.02,\"242\":0.02,\"243\":0.03,\"244\":0.06,\"245\":0.12,\"246\":0.1,\"247\":0.09,\"248\":0.14,\"249\":0.16}},\"sufficient:providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.57}},\"usage\":{\"input_tokens\":13484,\"output_tokens\":3684}}",
+  "inputTokens": 13484,
+  "answers": {
+    "providers/idempotent-delete": "8",
+    "start:providers/idempotent-delete:1": "8",
+    "end:providers/idempotent-delete:1": "8",
+    "start:providers/idempotent-delete:2": "33",
+    "end:providers/idempotent-delete:2": "33",
+    "start:providers/idempotent-delete:3": "52",
+    "end:providers/idempotent-delete:3": "54",
+    "start:providers/idempotent-delete:4": "87",
+    "end:providers/idempotent-delete:4": "104",
+    "start:providers/idempotent-delete:5": "133",
+    "end:providers/idempotent-delete:5": "133",
+    "start:providers/idempotent-delete:6": "160",
+    "end:providers/idempotent-delete:6": "160",
+    "start:providers/idempotent-delete:7": "186",
+    "end:providers/idempotent-delete:7": "165",
+    "start:providers/idempotent-delete:8": "197",
+    "end:providers/idempotent-delete:8": "201",
+    "start:providers/idempotent-delete:9": "203",
+    "end:providers/idempotent-delete:9": "203",
+    "start:providers/idempotent-delete:10": "228",
+    "end:providers/idempotent-delete:10": "249",
+    "sufficient:providers/idempotent-delete": 0.57
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as cloudwatch from \"@distilled.cloud/aws/cloudwatch\";\nimport * as Effect from \"effect/Effect\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { hasAlchemyTags } from \"../../Tags.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport type { AlarmArn } from \"./Alarm.ts\";\nimport {\n  createName,\n  readResourceTags,\n  retryConcurrent,\n  updateResourceTags,\n} from \"./common.ts\";\n\nexport type CompositeAlarmName = string;",
+        "2": "\nexport interface CompositeAlarmProps extends Omit<\n  cloudwatch.PutCompositeAlarmInput,\n  \"AlarmName\" | \"Tags\"\n> {\n\n\n\n  name?: CompositeAlarmName;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "3": "\nexport interface CompositeAlarm extends Resource<\n  \"AWS.CloudWatch.CompositeAlarm\",\n  CompositeAlarmProps,\n  {\n\n    alarmName: CompositeAlarmName;\n\n    alarmArn: AlarmArn;\n\n    stateValue: cloudwatch.StateValue | undefined;\n\n    stateReason: string | undefined;\n\n    compositeAlarm: cloudwatch.CompositeAlarm;\n\n    tags: Record<string, string>;\n  },\n  never,\n  Providers\n> {}",
+        "4": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const CompositeAlarm = Resource<CompositeAlarm>(\n  \"AWS.CloudWatch.CompositeAlarm\",\n);\n\nexport const CompositeAlarmProvider = () =>\n  Provider.effect(\n    CompositeAlarm,\n    Effect.gen(function* () {\n      const createAlarmName = (id: string, props: { name?: string } = {}) =>\n        createName(id, props.name, 255);\n\n      const alarmArn = (alarmName: string) =>\n        AWSEnvironment.current.pipe(\n          Effect.map(\n            (env) =>\n              `arn:aws:cloudwatch:${env.region}:${env.accountId}:alarm:${alarmName}` as AlarmArn,\n          ),\n        );",
+        "5": "\n      const readCompositeAlarm = Effect.fn(function* (alarmName: string) {\n        const described = yield* cloudwatch.describeAlarms({\n          AlarmNames: [alarmName],\n          AlarmTypes: [\"CompositeAlarm\"],\n        });\n        const compositeAlarm = described.CompositeAlarms?.find(\n          (candidate) => candidate.AlarmName === alarmName,\n        );\n\n        if (!compositeAlarm?.AlarmName || !compositeAlarm.AlarmArn) {\n          return undefined;\n        }\n\n        const tags = yield* readResourceTags(compositeAlarm.AlarmArn).pipe(\n          Effect.catchTag(\"ResourceNotFoundException\", () =>\n            Effect.succeed({}),\n          ),\n        );\n\n        return {\n          alarmName: compositeAlarm.AlarmName,\n          alarmArn: compositeAlarm.AlarmArn as AlarmArn,\n          stateValue: compositeAlarm.StateValue,\n          stateReason: compositeAlarm.StateReason,\n          compositeAlarm,\n          tags,\n        };\n      });",
+        "6": "\n      return {\n        stables: [\"alarmName\", \"alarmArn\"],\n        diff: Effect.fn(function* ({ id, olds = {}, news = {} }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createAlarmName(id, olds);\n          const newName = yield* createAlarmName(id, news);\n\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name =\n            output?.alarmName ?? (yield* createAlarmName(id, olds ?? {}));\n          const state = yield* readCompositeAlarm(name);\n          if (!state) return undefined;\n          return (yield* hasAlchemyTags(id, state.tags))\n            ? state\n            : Unowned(state);\n        }),\n        reconcile: Effect.fn(function* ({ id, news, olds, output, session }) {\n\n\n\n          const name = output?.alarmName ?? (yield* createAlarmName(id, news));\n          const existing = yield* readCompositeAlarm(name);",
+        "7": "\n\n\n\n          yield* retryConcurrent(\n            cloudwatch.putCompositeAlarm({\n              ...news,\n              AlarmName: name,\n            }),\n          );\n\n\n\n\n          const tags = yield* updateResourceTags({\n            id,\n            resourceArn: yield* alarmArn(name),\n            olds: olds?.tags ?? existing?.tags,\n            news: news.tags,\n          });\n\n          yield* session.note(yield* alarmArn(name));\n\n          const state = yield* readCompositeAlarm(name);\n          if (!state) {\n            return yield* Effect.fail(\n              new Error(`failed to read reconciled composite alarm '${name}'`),\n            );\n          }",
+        "8": "\n          return {\n            ...state,\n            tags,\n          };\n        }),\n        delete: Effect.fn(function* ({ output }) {\n          yield* retryConcurrent(\n            cloudwatch.deleteAlarms({\n              AlarmNames: [output.alarmName],\n            }),\n          );\n        }),",
+        "9": "        list: () =>\n          Effect.gen(function* () {\n\n\n\n            const alarms = yield* cloudwatch.describeAlarms\n              .pages({ AlarmTypes: [\"CompositeAlarm\"] })\n              .pipe(\n                Stream.runCollect,\n                Effect.map((chunk) =>\n                  Array.from(chunk).flatMap((page) =>\n                    (page.CompositeAlarms ?? []).filter(\n                      (\n                        candidate,\n                      ): candidate is cloudwatch.CompositeAlarm & {\n                        AlarmName: string;\n                        AlarmArn: string;\n                      } =>\n                        candidate.AlarmName != null &&\n                        candidate.AlarmArn != null,\n                    ),\n                  ),\n                ),\n              );",
+        "10": "\n            return yield* Effect.forEach(\n              alarms,\n              (compositeAlarm) =>\n                readResourceTags(compositeAlarm.AlarmArn).pipe(\n                  Effect.catchTag(\"ResourceNotFoundException\", () =>\n                    Effect.succeed({}),\n                  ),\n                  Effect.map((tags) => ({\n                    alarmName: compositeAlarm.AlarmName,\n                    alarmArn: compositeAlarm.AlarmArn as AlarmArn,\n                    stateValue: compositeAlarm.StateValue,\n                    stateReason: compositeAlarm.StateReason,\n                    compositeAlarm,\n                    tags,\n                  })),\n                ),\n              { concurrency: 10 },\n            );\n          }),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as cloudwatch from \"@distilled.cloud/aws/cloudwatch\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Stream from \"effect/Stream\";",
+          "4": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "5": "import { isResolved } from \"../../Diff.ts\";",
+          "6": "import * as Provider from \"../../Provider.ts\";",
+          "7": "import { Resource } from \"../../Resource.ts\";",
+          "8": "import { hasAlchemyTags } from \"../../Tags.ts\";",
+          "9": "import { AWSEnvironment } from \"../Environment.ts\";",
+          "10": "import type { Providers } from \"../Providers.ts\";",
+          "11": "import type { AlarmArn } from \"./Alarm.ts\";",
+          "12": "import {",
+          "13": "createName,",
+          "14": "readResourceTags,",
+          "15": "retryConcurrent,",
+          "16": "updateResourceTags,",
+          "17": "} from \"./common.ts\";",
+          "19": "export type CompositeAlarmName = string;"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as cloudwatch from \"@distilled.cloud/aws/cloudwatch\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Stream from \"effect/Stream\";",
+          "4": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "5": "import { isResolved } from \"../../Diff.ts\";",
+          "6": "import * as Provider from \"../../Provider.ts\";",
+          "7": "import { Resource } from \"../../Resource.ts\";",
+          "8": "import { hasAlchemyTags } from \"../../Tags.ts\";",
+          "9": "import { AWSEnvironment } from \"../Environment.ts\";",
+          "10": "import type { Providers } from \"../Providers.ts\";",
+          "11": "import type { AlarmArn } from \"./Alarm.ts\";",
+          "12": "import {",
+          "13": "createName,",
+          "14": "readResourceTags,",
+          "15": "retryConcurrent,",
+          "16": "updateResourceTags,",
+          "17": "} from \"./common.ts\";",
+          "19": "export type CompositeAlarmName = string;"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "21": "export interface CompositeAlarmProps extends Omit<",
+          "22": "cloudwatch.PutCompositeAlarmInput,",
+          "23": "\"AlarmName\" | \"Tags\"",
+          "24": "> {",
+          "28": "name?: CompositeAlarmName;",
+          "32": "tags?: Record<string, string>;",
+          "33": "}"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "21": "export interface CompositeAlarmProps extends Omit<",
+          "22": "cloudwatch.PutCompositeAlarmInput,",
+          "23": "\"AlarmName\" | \"Tags\"",
+          "24": "> {",
+          "28": "name?: CompositeAlarmName;",
+          "32": "tags?: Record<string, string>;",
+          "33": "}"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "35": "export interface CompositeAlarm extends Resource<",
+          "36": "\"AWS.CloudWatch.CompositeAlarm\",",
+          "37": "CompositeAlarmProps,",
+          "38": "{",
+          "40": "alarmName: CompositeAlarmName;",
+          "42": "alarmArn: AlarmArn;",
+          "44": "stateValue: cloudwatch.StateValue | undefined;",
+          "46": "stateReason: string | undefined;",
+          "48": "compositeAlarm: cloudwatch.CompositeAlarm;",
+          "50": "tags: Record<string, string>;",
+          "51": "},",
+          "52": "never,",
+          "53": "Providers",
+          "54": "> {}"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "35": "export interface CompositeAlarm extends Resource<",
+          "36": "\"AWS.CloudWatch.CompositeAlarm\",",
+          "37": "CompositeAlarmProps,",
+          "38": "{",
+          "40": "alarmName: CompositeAlarmName;",
+          "42": "alarmArn: AlarmArn;",
+          "44": "stateValue: cloudwatch.StateValue | undefined;",
+          "46": "stateReason: string | undefined;",
+          "48": "compositeAlarm: cloudwatch.CompositeAlarm;",
+          "50": "tags: Record<string, string>;",
+          "51": "},",
+          "52": "never,",
+          "53": "Providers",
+          "54": "> {}"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "87": "export const CompositeAlarm = Resource<CompositeAlarm>(",
+          "88": "\"AWS.CloudWatch.CompositeAlarm\",",
+          "89": ");",
+          "91": "export const CompositeAlarmProvider = () =>",
+          "92": "Provider.effect(",
+          "93": "CompositeAlarm,",
+          "94": "Effect.gen(function* () {",
+          "95": "const createAlarmName = (id: string, props: { name?: string } = {}) =>",
+          "96": "createName(id, props.name, 255);",
+          "98": "const alarmArn = (alarmName: string) =>",
+          "99": "AWSEnvironment.current.pipe(",
+          "100": "Effect.map(",
+          "101": "(env) =>",
+          "102": "`arn:aws:cloudwatch:${env.region}:${env.accountId}:alarm:${alarmName}` as AlarmArn,",
+          "103": "),",
+          "104": ");"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "87": "export const CompositeAlarm = Resource<CompositeAlarm>(",
+          "88": "\"AWS.CloudWatch.CompositeAlarm\",",
+          "89": ");",
+          "91": "export const CompositeAlarmProvider = () =>",
+          "92": "Provider.effect(",
+          "93": "CompositeAlarm,",
+          "94": "Effect.gen(function* () {",
+          "95": "const createAlarmName = (id: string, props: { name?: string } = {}) =>",
+          "96": "createName(id, props.name, 255);",
+          "98": "const alarmArn = (alarmName: string) =>",
+          "99": "AWSEnvironment.current.pipe(",
+          "100": "Effect.map(",
+          "101": "(env) =>",
+          "102": "`arn:aws:cloudwatch:${env.region}:${env.accountId}:alarm:${alarmName}` as AlarmArn,",
+          "103": "),",
+          "104": ");"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "106": "const readCompositeAlarm = Effect.fn(function* (alarmName: string) {",
+          "107": "const described = yield* cloudwatch.describeAlarms({",
+          "108": "AlarmNames: [alarmName],",
+          "109": "AlarmTypes: [\"CompositeAlarm\"],",
+          "110": "});",
+          "111": "const compositeAlarm = described.CompositeAlarms?.find(",
+          "112": "(candidate) => candidate.AlarmName === alarmName,",
+          "113": ");",
+          "115": "if (!compositeAlarm?.AlarmName || !compositeAlarm.AlarmArn) {",
+          "116": "return undefined;",
+          "117": "}",
+          "119": "const tags = yield* readResourceTags(compositeAlarm.AlarmArn).pipe(",
+          "120": "Effect.catchTag(\"ResourceNotFoundException\", () =>",
+          "121": "Effect.succeed({}),",
+          "122": "),",
+          "123": ");",
+          "125": "return {",
+          "126": "alarmName: compositeAlarm.AlarmName,",
+          "127": "alarmArn: compositeAlarm.AlarmArn as AlarmArn,",
+          "128": "stateValue: compositeAlarm.StateValue,",
+          "129": "stateReason: compositeAlarm.StateReason,",
+          "130": "compositeAlarm,",
+          "131": "tags,",
+          "132": "};",
+          "133": "});"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "106": "const readCompositeAlarm = Effect.fn(function* (alarmName: string) {",
+          "107": "const described = yield* cloudwatch.describeAlarms({",
+          "108": "AlarmNames: [alarmName],",
+          "109": "AlarmTypes: [\"CompositeAlarm\"],",
+          "110": "});",
+          "111": "const compositeAlarm = described.CompositeAlarms?.find(",
+          "112": "(candidate) => candidate.AlarmName === alarmName,",
+          "113": ");",
+          "115": "if (!compositeAlarm?.AlarmName || !compositeAlarm.AlarmArn) {",
+          "116": "return undefined;",
+          "117": "}",
+          "119": "const tags = yield* readResourceTags(compositeAlarm.AlarmArn).pipe(",
+          "120": "Effect.catchTag(\"ResourceNotFoundException\", () =>",
+          "121": "Effect.succeed({}),",
+          "122": "),",
+          "123": ");",
+          "125": "return {",
+          "126": "alarmName: compositeAlarm.AlarmName,",
+          "127": "alarmArn: compositeAlarm.AlarmArn as AlarmArn,",
+          "128": "stateValue: compositeAlarm.StateValue,",
+          "129": "stateReason: compositeAlarm.StateReason,",
+          "130": "compositeAlarm,",
+          "131": "tags,",
+          "132": "};",
+          "133": "});"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "135": "return {",
+          "136": "stables: [\"alarmName\", \"alarmArn\"],",
+          "137": "diff: Effect.fn(function* ({ id, olds = {}, news = {} }) {",
+          "138": "if (!isResolved(news)) return undefined;",
+          "139": "const oldName = yield* createAlarmName(id, olds);",
+          "140": "const newName = yield* createAlarmName(id, news);",
+          "142": "if (oldName !== newName) {",
+          "143": "return { action: \"replace\" } as const;",
+          "144": "}",
+          "145": "}),",
+          "146": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "147": "const name =",
+          "148": "output?.alarmName ?? (yield* createAlarmName(id, olds ?? {}));",
+          "149": "const state = yield* readCompositeAlarm(name);",
+          "150": "if (!state) return undefined;",
+          "151": "return (yield* hasAlchemyTags(id, state.tags))",
+          "152": "? state",
+          "153": ": Unowned(state);",
+          "154": "}),",
+          "155": "reconcile: Effect.fn(function* ({ id, news, olds, output, session }) {",
+          "159": "const name = output?.alarmName ?? (yield* createAlarmName(id, news));",
+          "160": "const existing = yield* readCompositeAlarm(name);"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "135": "return {",
+          "136": "stables: [\"alarmName\", \"alarmArn\"],",
+          "137": "diff: Effect.fn(function* ({ id, olds = {}, news = {} }) {",
+          "138": "if (!isResolved(news)) return undefined;",
+          "139": "const oldName = yield* createAlarmName(id, olds);",
+          "140": "const newName = yield* createAlarmName(id, news);",
+          "142": "if (oldName !== newName) {",
+          "143": "return { action: \"replace\" } as const;",
+          "144": "}",
+          "145": "}),",
+          "146": "read: Effect.fn(function* ({ id, olds, output }) {",
+          "147": "const name =",
+          "148": "output?.alarmName ?? (yield* createAlarmName(id, olds ?? {}));",
+          "149": "const state = yield* readCompositeAlarm(name);",
+          "150": "if (!state) return undefined;",
+          "151": "return (yield* hasAlchemyTags(id, state.tags))",
+          "152": "? state",
+          "153": ": Unowned(state);",
+          "154": "}),",
+          "155": "reconcile: Effect.fn(function* ({ id, news, olds, output, session }) {",
+          "159": "const name = output?.alarmName ?? (yield* createAlarmName(id, news));",
+          "160": "const existing = yield* readCompositeAlarm(name);"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "165": "yield* retryConcurrent(",
+          "166": "cloudwatch.putCompositeAlarm({",
+          "167": "...news,",
+          "168": "AlarmName: name,",
+          "169": "}),",
+          "170": ");",
+          "175": "const tags = yield* updateResourceTags({",
+          "176": "id,",
+          "177": "resourceArn: yield* alarmArn(name),",
+          "178": "olds: olds?.tags ?? existing?.tags,",
+          "179": "news: news.tags,",
+          "180": "});",
+          "182": "yield* session.note(yield* alarmArn(name));",
+          "184": "const state = yield* readCompositeAlarm(name);",
+          "185": "if (!state) {",
+          "186": "return yield* Effect.fail(",
+          "187": "new Error(`failed to read reconciled composite alarm '${name}'`),",
+          "188": ");",
+          "189": "}"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "165": "yield* retryConcurrent(",
+          "166": "cloudwatch.putCompositeAlarm({",
+          "167": "...news,",
+          "168": "AlarmName: name,",
+          "169": "}),",
+          "170": ");",
+          "175": "const tags = yield* updateResourceTags({",
+          "176": "id,",
+          "177": "resourceArn: yield* alarmArn(name),",
+          "178": "olds: olds?.tags ?? existing?.tags,",
+          "179": "news: news.tags,",
+          "180": "});",
+          "182": "yield* session.note(yield* alarmArn(name));",
+          "184": "const state = yield* readCompositeAlarm(name);",
+          "185": "if (!state) {",
+          "186": "return yield* Effect.fail(",
+          "187": "new Error(`failed to read reconciled composite alarm '${name}'`),",
+          "188": ");",
+          "189": "}"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "191": "return {",
+          "192": "...state,",
+          "193": "tags,",
+          "194": "};",
+          "195": "}),",
+          "196": "delete: Effect.fn(function* ({ output }) {",
+          "197": "yield* retryConcurrent(",
+          "198": "cloudwatch.deleteAlarms({",
+          "199": "AlarmNames: [output.alarmName],",
+          "200": "}),",
+          "201": ");",
+          "202": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "191": "return {",
+          "192": "...state,",
+          "193": "tags,",
+          "194": "};",
+          "195": "}),",
+          "196": "delete: Effect.fn(function* ({ output }) {",
+          "197": "yield* retryConcurrent(",
+          "198": "cloudwatch.deleteAlarms({",
+          "199": "AlarmNames: [output.alarmName],",
+          "200": "}),",
+          "201": ");",
+          "202": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "203": "list: () =>",
+          "204": "Effect.gen(function* () {",
+          "208": "const alarms = yield* cloudwatch.describeAlarms",
+          "209": ".pages({ AlarmTypes: [\"CompositeAlarm\"] })",
+          "210": ".pipe(",
+          "211": "Stream.runCollect,",
+          "212": "Effect.map((chunk) =>",
+          "213": "Array.from(chunk).flatMap((page) =>",
+          "214": "(page.CompositeAlarms ?? []).filter(",
+          "215": "(",
+          "216": "candidate,",
+          "217": "): candidate is cloudwatch.CompositeAlarm & {",
+          "218": "AlarmName: string;",
+          "219": "AlarmArn: string;",
+          "220": "} =>",
+          "221": "candidate.AlarmName != null &&",
+          "222": "candidate.AlarmArn != null,",
+          "223": "),",
+          "224": "),",
+          "225": "),",
+          "226": ");"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "203": "list: () =>",
+          "204": "Effect.gen(function* () {",
+          "208": "const alarms = yield* cloudwatch.describeAlarms",
+          "209": ".pages({ AlarmTypes: [\"CompositeAlarm\"] })",
+          "210": ".pipe(",
+          "211": "Stream.runCollect,",
+          "212": "Effect.map((chunk) =>",
+          "213": "Array.from(chunk).flatMap((page) =>",
+          "214": "(page.CompositeAlarms ?? []).filter(",
+          "215": "(",
+          "216": "candidate,",
+          "217": "): candidate is cloudwatch.CompositeAlarm & {",
+          "218": "AlarmName: string;",
+          "219": "AlarmArn: string;",
+          "220": "} =>",
+          "221": "candidate.AlarmName != null &&",
+          "222": "candidate.AlarmArn != null,",
+          "223": "),",
+          "224": "),",
+          "225": "),",
+          "226": ");"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "228": "return yield* Effect.forEach(",
+          "229": "alarms,",
+          "230": "(compositeAlarm) =>",
+          "231": "readResourceTags(compositeAlarm.AlarmArn).pipe(",
+          "232": "Effect.catchTag(\"ResourceNotFoundException\", () =>",
+          "233": "Effect.succeed({}),",
+          "234": "),",
+          "235": "Effect.map((tags) => ({",
+          "236": "alarmName: compositeAlarm.AlarmName,",
+          "237": "alarmArn: compositeAlarm.AlarmArn as AlarmArn,",
+          "238": "stateValue: compositeAlarm.StateValue,",
+          "239": "stateReason: compositeAlarm.StateReason,",
+          "240": "compositeAlarm,",
+          "241": "tags,",
+          "242": "})),",
+          "243": "),",
+          "244": "{ concurrency: 10 },",
+          "245": ");",
+          "246": "}),",
+          "247": "};",
+          "248": "}),",
+          "249": ");"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "228": "return yield* Effect.forEach(",
+          "229": "alarms,",
+          "230": "(compositeAlarm) =>",
+          "231": "readResourceTags(compositeAlarm.AlarmArn).pipe(",
+          "232": "Effect.catchTag(\"ResourceNotFoundException\", () =>",
+          "233": "Effect.succeed({}),",
+          "234": "),",
+          "235": "Effect.map((tags) => ({",
+          "236": "alarmName: compositeAlarm.AlarmName,",
+          "237": "alarmArn: compositeAlarm.AlarmArn as AlarmArn,",
+          "238": "stateValue: compositeAlarm.StateValue,",
+          "239": "stateReason: compositeAlarm.StateReason,",
+          "240": "compositeAlarm,",
+          "241": "tags,",
+          "242": "})),",
+          "243": "),",
+          "244": "{ concurrency: 10 },",
+          "245": ");",
+          "246": "}),",
+          "247": "};",
+          "248": "}),",
+          "249": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

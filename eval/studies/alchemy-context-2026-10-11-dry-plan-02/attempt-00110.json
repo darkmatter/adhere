@@ -1,0 +1,48 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/ApplicationSignals/GroupingConfiguration.ts",
+  "kind": "judge",
+  "ordinal": 110,
+  "artifact": "attempt-00110.json",
+  "started": "2026-10-11T03:20:39.124Z",
+  "estimatedTokens": 2657,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.02109999999993306,
+  "referencesPresent": false,
+  "bodyDigest": "fb12f8f34d4929170fb25990f85e42c42657fc895bf9d335ada796123eb130fc",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as appsignals from \"@distilled.cloud/aws/application-signals\";\nimport * as Effect from \"effect/Effect\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface GroupingConfigurationProps {\n\n\n\n\n\n\n\n  groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[];\n}",
+        "2": "\nexport interface GroupingConfiguration extends Resource<\n  \"AWS.ApplicationSignals.GroupingConfiguration\",\n  GroupingConfigurationProps,\n  {\n\n\n\n    groupingAttributeDefinitions: appsignals.GroupingAttributeDefinition[];\n\n\n\n    updatedAt: string | undefined;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const GroupingConfiguration = Resource<GroupingConfiguration>(\n  \"AWS.ApplicationSignals.GroupingConfiguration\",\n);\n\n\nconst normalizeDefinition = (\n  definition: appsignals.GroupingAttributeDefinition,\n) => ({\n  GroupingName: definition.GroupingName,\n  GroupingSourceKeys: definition.GroupingSourceKeys ?? [],\n  DefaultGroupingValue: definition.DefaultGroupingValue,\n});\n\nconst sameDefinitions = (\n  desired: appsignals.GroupingAttributeDefinition[],\n  observed: appsignals.GroupingAttributeDefinition[],\n): boolean =>\n  desired.length === observed.length &&\n  desired.every(\n    (d, i) =>\n      JSON.stringify(normalizeDefinition(d)) ===\n      JSON.stringify(normalizeDefinition(observed[i])),\n  );\n\nexport const GroupingConfigurationProvider = () =>\n  Provider.effect(\n    GroupingConfiguration,",
+        "4": "    Effect.gen(function* () {\n\n\n\n\n\n      const observe = appsignals.listGroupingAttributeDefinitions({}).pipe(\n        Effect.map((response) =>\n          response.UpdatedAt === undefined &&\n          response.GroupingAttributeDefinitions.length === 0\n            ? undefined\n            : {\n                groupingAttributeDefinitions: [\n                  ...response.GroupingAttributeDefinitions,\n                ],\n                updatedAt: response.UpdatedAt?.toISOString(),\n              },\n        ),\n      );\n\n      return {\n        stables: [],",
+        "5": "\n        read: Effect.fn(function* ({ olds, output }) {\n          const observed = yield* observe;\n          if (observed === undefined) return undefined;\n\n\n\n          return output !== undefined || olds !== undefined\n            ? observed\n            : Unowned(observed);\n        }),\n\n        reconcile: Effect.fn(function* ({ id, news, session }) {\n          const desired = news.groupingAttributeDefinitions;\n\n\n          const observed = yield* observe;",
+        "6": "\n\n\n\n          const fresh =\n            observed !== undefined &&\n            sameDefinitions(desired, observed.groupingAttributeDefinitions)\n              ? observed\n              : yield* appsignals\n                  .putGroupingConfiguration({\n                    GroupingAttributeDefinitions: desired,\n                  })\n                  .pipe(\n                    Effect.map((response) => ({\n                      groupingAttributeDefinitions: [\n                        ...response.GroupingConfiguration\n                          .GroupingAttributeDefinitions,\n                      ],\n                      updatedAt:\n                        response.GroupingConfiguration.UpdatedAt?.toISOString(),\n                    })),\n                  );\n\n          yield* session.note(id);\n          return fresh;\n        }),\n\n        delete: Effect.fn(function* () {\n\n\n          yield* appsignals.deleteGroupingConfiguration({});\n        }),",
+        "7": "\n\n        list: () => Effect.succeed([]),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

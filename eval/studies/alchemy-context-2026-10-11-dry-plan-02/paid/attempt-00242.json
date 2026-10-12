@@ -1,0 +1,56 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Cloudflare/Tags/AccountResourceTags.ts",
+  "kind": "judge",
+  "ordinal": 242,
+  "artifact": "attempt-00242.json",
+  "started": "2026-10-11T03:27:57.404Z",
+  "estimatedTokens": 3738,
+  "reservedTokens": 64000,
+  "chargedTokens": 2453,
+  "outcome": "answered",
+  "milliseconds": 92.37412800000311,
+  "referencesPresent": false,
+  "bodyDigest": "95f33f971bacfaf09fa4a8de8b9b25a44f0c2dc89c8df01406b85b463b5ef2f7",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":2453,\"output_tokens\":25}}",
+  "inputTokens": 2453,
+  "answers": {
+    "providers/idempotent-delete": 0.92
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as resourceTagging from \"@distilled.cloud/cloudflare/resource-tagging\";\nimport * as Effect from \"effect/Effect\";\nimport * as Predicate from \"effect/Predicate\";\nimport * as Stream from \"effect/Stream\";\n\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport type { Input } from \"../../Input.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { recordsEqual } from \"../../Util/equal.ts\";\nimport { CloudflareEnvironment } from \"../CloudflareEnvironment.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nconst TypeId = \"Cloudflare.Tags.AccountResourceTags\" as const;\ntype TypeId = typeof TypeId;",
+        "2": "\n\n\n\n\nexport type AccountTagResourceType =\n  | \"access_application\"\n  | \"access_group\"\n  | \"account\"\n  | \"ai_gateway\"\n  | \"alerting_policy\"\n  | \"alerting_webhook\"\n  | \"cloudflared_tunnel\"\n  | \"d1_database\"\n  | \"durable_object_namespace\"\n  | \"gateway_list\"\n  | \"gateway_rule\"\n  | \"image\"\n  | \"kv_namespace\"\n  | \"queue\"\n  | \"r2_bucket\"\n  | \"resource_share\"\n  | \"stream_live_input\"\n  | \"stream_video\"\n  | \"worker\"\n  | \"worker_version\"\n  | (string & {});",
+        "3": "\nexport interface AccountResourceTagsProps {\n\n\n\n\n\n\n\n\n\n\n  resourceType: AccountTagResourceType;\n\n\n\n\n\n\n  resourceId: string;\n\n\n\n\n\n\n  workerId?: string;",
+        "4": "\n\n\n\n\n\n\n\n  tags: Record<string, string>;\n}\n\nexport interface AccountResourceTagsAttributes {\n\n  accountId: string;\n\n  resourceType: AccountTagResourceType;\n\n  resourceId: string;\n\n  workerId: string | undefined;\n\n  tags: Record<string, string>;\n\n  etag: string;\n}\n\nexport type AccountResourceTags = Resource<\n  TypeId,\n  AccountResourceTagsProps,\n  AccountResourceTagsAttributes,\n  never,\n  Providers\n>;",
+        "5": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const AccountResourceTags = Resource<AccountResourceTags>(TypeId);\n\n\n\n\nexport const isAccountResourceTags = (\n  value: unknown,\n): value is AccountResourceTags =>\n  Predicate.hasProperty(value, \"Type\") && value.Type === TypeId;\n\nexport const AccountResourceTagsProvider = () =>\n  Provider.succeed(AccountResourceTags, {\n    stables: [\"accountId\", \"resourceType\", \"resourceId\", \"workerId\"],",
+        "6": "\n\n\n\n    list: Effect.fn(function* () {\n      const { accountId } = yield* yield* CloudflareEnvironment;\n      return yield* resourceTagging.listResourceTaggings\n        .pages({ accountId })\n        .pipe(\n          Stream.runCollect,\n          Effect.map((chunk) =>\n            Array.from(chunk).flatMap((page) =>\n              (page.result ?? []).map(\n                (item): AccountResourceTagsAttributes => ({\n                  accountId,\n                  resourceType: item.type,\n                  resourceId: item.id,\n                  workerId:\n                    \"workerId\" in item ? (item.workerId as string) : undefined,\n                  tags: narrowTags(item.tags),\n                  etag: item.etag,\n                }),\n              ),\n            ),\n          ),\n        );\n    }),",
+        "7": "\n    diff: Effect.fn(function* ({ olds = {}, news }) {\n      const o = olds as Partial<AccountResourceTagsProps>;\n      const n = news as AccountResourceTagsProps;\n      if (o.resourceType !== undefined && o.resourceType !== n.resourceType) {\n        return { action: \"replace\" } as const;\n      }\n\n\n      if (\n        typeof o.resourceId === \"string\" &&\n        typeof n.resourceId === \"string\" &&\n        o.resourceId !== n.resourceId\n      ) {\n        return { action: \"replace\" } as const;\n      }\n      if (\n        typeof o.workerId === \"string\" &&\n        typeof n.workerId === \"string\" &&\n        o.workerId !== n.workerId\n      ) {\n        return { action: \"replace\" } as const;\n      }\n    }),\n\n    read: Effect.fn(function* ({ output, olds }) {\n      const { accountId } = yield* yield* CloudflareEnvironment;\n      const acct = output?.accountId ?? accountId;",
+        "8": "\n\n\n      const resolvedOlds =\n        olds !== undefined && isResolved(olds) ? olds : undefined;\n      const resourceId = output?.resourceId ?? resolvedOlds?.resourceId;\n      const resourceType = output?.resourceType ?? resolvedOlds?.resourceType;\n      const workerId = output?.workerId ?? resolvedOlds?.workerId;\n      if (!resourceId || !resourceType) return undefined;\n\n      const observed = yield* resourceTagging.getAccountTag({\n        accountId: acct,\n        resourceId,\n        resourceType,\n        workerId,\n      });\n      const tags = narrowTags(observed.tags);\n\n\n      if (Object.keys(tags).length === 0) return undefined;\n\n      const attrs: AccountResourceTagsAttributes = {\n        accountId: acct,\n        resourceType,\n        resourceId,\n        workerId,\n        tags,\n        etag: observed.etag,\n      };",
+        "9": "\n\n\n      return output ? attrs : Unowned(attrs);\n    }),\n\n    reconcile: Effect.fn(function* ({ news, output }) {\n      const { accountId } = yield* yield* CloudflareEnvironment;\n      const acct = output?.accountId ?? accountId;\n\n      const resourceId = news.resourceId as string;\n      const workerId = news.workerId as string | undefined;\n      const desired = resolveTags(news.tags);\n\n\n\n\n      const observed = yield* resourceTagging.getAccountTag({\n        accountId: acct,\n        resourceId,\n        resourceType: news.resourceType,\n        workerId,\n      });",
+        "10": "\n\n\n      if (recordsEqual(narrowTags(observed.tags), desired)) {\n        return {\n          accountId: acct,\n          resourceType: news.resourceType,\n          resourceId,\n          workerId,\n          tags: desired,\n          etag: observed.etag,\n        } satisfies AccountResourceTagsAttributes;\n      }\n\n      const updated = yield* resourceTagging.putAccountTag({\n        accountId: acct,\n        resourceId,\n        resourceType: news.resourceType,\n        workerId,\n        tags: desired,\n      });\n      return {\n        accountId: acct,\n        resourceType: news.resourceType,\n        resourceId,\n        workerId,\n        tags: narrowTags(updated.tags),\n        etag: updated.etag,\n      } satisfies AccountResourceTagsAttributes;\n    }),",
+        "11": "\n    delete: Effect.fn(function* ({ output }) {\n\n\n      yield* resourceTagging.deleteAccountTag({\n        accountId: output.accountId,\n        resourceId: output.resourceId,\n        resourceType: output.resourceType,\n        workerId: output.workerId,\n      });\n    }),\n  });\n\n\nconst narrowTags = (tags: Record<string, unknown>): Record<string, string> =>\n  Object.fromEntries(\n    Object.entries(tags).map(([k, v]) => [k, String(v)] as const),\n  );\n\n\nconst resolveTags = (\n  tags: Record<string, Input<string>>,\n): Record<string, string> =>\n  Object.fromEntries(\n    Object.entries(tags).map(([k, v]) => [k, v as string] as const),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

@@ -10,6 +10,7 @@
 - Installed-package native-read verification on Linux and macOS ARM/Intel, with macOS checks gating publishing.
 - Shared TypeScript context for lint requests: compiler-rendered symbol types and documentation, outgoing declaration snippets, and workspace metadata limited to packages imported by the audited file.
 - Native compiler support in npm-installed adhere, with the JavaScript SDK bundled in the executable and matching compiler resources installed through platform-specific dependencies.
+- Configurable `maxSymbolLength` and `maxSymbolDocumentationLength` keys (default 256 each) cap each symbol's resolved content and its documentation; `0` omits documentation
 
 ### Changed
 
@@ -18,6 +19,9 @@
 - `--limit` counts files needing requests, including all pending rules for each selected file, rather than individual rule checks.
 - Rules share file context and batch their questions, splitting requests when necessary. Rules with `appendState` retain separate request groups.
 - Planning does not resolve native context. Source loading and execution are bounded, with native context prepared on demand for the current file.
+- Flattened `references` read state to `symbol:pathname` keys with complete declaration excerpts, omitting compiler built-in declarations
+- Audits that overflow the provider context retry once without `references` before skipping the file, keeping references available to `appendState` hooks
+- Provider request state maps now carry a reserved `__comment` explaining the context, and first or overflowing request payloads are logged at debug level
 
 ### Fixed
 
@@ -25,10 +29,3 @@
 - Replace per-symbol IDE hover calls with compiler API queries, bounded parallel formatting, and deduplicated types and documentation.
 - Detect changed source or ignore directives before sending or caching results under a planned content key.
 - Fix the native API panic when reading const-asserted empty tuple properties by pinning the SDK and compiler to `7.1.0-dev.20261009.1`, which includes [TypeScript #64080](https://github.com/microsoft/TypeScript/pull/64080).
-
-### Notes
-
-- Newly added provider-study labels are agent-drafted and not yet reviewed; the reports distinguish these research limits.
-- Semantic reads send additional type information, documentation, and complete declaration scopes to the configured provider. Oversized contexts are skipped rather than silently truncated.
-- Cache validity remains based on the audited file and rule/model fingerprints, not imported files, reader selection, or semantic context.
-- The compiler is an exact prerelease pin; its SDK and native executable must match. Bounded request buffers do not bound the compiler's retained project memory.

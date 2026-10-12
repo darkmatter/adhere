@@ -1,0 +1,47 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/SimpleDB/Domain.ts",
+  "kind": "judge",
+  "ordinal": 230,
+  "artifact": "attempt-00230.json",
+  "started": "2026-10-11T03:20:43.397Z",
+  "estimatedTokens": 2780,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.035968000000139,
+  "referencesPresent": false,
+  "bodyDigest": "33050d2246a311a0af132d0c0e548b7f06af6860bf7a774fa6a1244b7c221fd2",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as sdb from \"@distilled.cloud/aws/simpledb\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface DomainProps {\n\n\n\n\n\n  domainName?: string;\n}\n\nexport interface Domain extends Resource<\n  \"AWS.SimpleDB.Domain\",\n  DomainProps,\n  {\n    domainName: string;\n    domainArn: string;\n  },\n  {},\n  Providers\n> {}",
+        "2": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Domain = Resource<Domain>(\"AWS.SimpleDB.Domain\");\n\n\n\n\n\n\nconst retryWhileNoSuchDomain = <A, E extends { readonly _tag: string }, R>(\n  self: Effect.Effect<A, E, R>,\n): Effect.Effect<A, E, R> =>\n  Effect.retry(self, {\n    while: (e) => e._tag === \"NoSuchDomain\",\n    schedule: Schedule.max([Schedule.fixed(\"2 seconds\"), Schedule.recurs(10)]),\n  });\n\nexport const DomainProvider = () =>\n  Provider.effect(\n    Domain,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (id: string, props: DomainProps) {\n        return (\n          props.domainName ??\n          (yield* createPhysicalName({ id, maxLength: 255 }))\n        );\n      });\n\n      const domainArn = (region: string, accountId: string, name: string) =>\n        `arn:aws:sdb:${region}:${accountId}:domain/${name}`;",
+        "3": "\n      const observeDomain = Effect.fn(function* (name: string) {\n        return yield* sdb\n          .domainMetadata({ DomainName: name })\n          .pipe(\n            Effect.catchTag(\"NoSuchDomain\", () => Effect.succeed(undefined)),\n          );\n      });\n\n      return Domain.Provider.of({\n        stables: [\"domainName\", \"domainArn\"],\n\n        list: () =>\n          Effect.gen(function* () {\n            const { accountId, region } = yield* AWSEnvironment.current;\n            const names = yield* sdb.listDomains\n              .items({})\n              .pipe(Stream.runCollect);\n            return Array.from(names).map((name) => ({\n              domainName: name,\n              domainArn: domainArn(region, accountId, name),\n            }));\n          }),",
+        "4": "\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name =\n            output?.domainName ?? (yield* createName(id, olds ?? {}));\n          const metadata = yield* observeDomain(name);\n          if (metadata === undefined) {\n            return undefined;\n          }\n\n\n          return {\n            domainName: name,\n            domainArn: domainArn(region, accountId, name),\n          };\n        }),\n\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds ?? {});\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "5": "\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name = output?.domainName ?? (yield* createName(id, news));\n\n\n          const metadata = yield* observeDomain(name);\n\n\n\n          if (metadata === undefined) {\n            yield* sdb.createDomain({ DomainName: name });\n            yield* retryWhileNoSuchDomain(\n              sdb.domainMetadata({ DomainName: name }),\n            );\n          }\n\n\n\n          yield* session.note(name);\n          return {\n            domainName: name,\n            domainArn: domainArn(region, accountId, name),\n          };\n        }),",
+        "6": "\n        delete: Effect.fn(function* ({ output }) {\n\n          yield* sdb.deleteDomain({ DomainName: output.domainName });\n        }),\n      });\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

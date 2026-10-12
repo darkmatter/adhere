@@ -1,0 +1,683 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/Cloudflare/SecurityTxt/SecurityTxt.ts",
+  "kind": "locate",
+  "ordinal": 234,
+  "artifact": "attempt-00234.json",
+  "started": "2026-10-11T03:27:56.029Z",
+  "estimatedTokens": 14192,
+  "reservedTokens": 64000,
+  "chargedTokens": 14321,
+  "outcome": "answered",
+  "milliseconds": 139.42691500000365,
+  "referencesPresent": false,
+  "bodyDigest": "5cfabf9c18d9463c581fb100a0a0d4a41244d016b0a55d4efbf6858179b59797",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"choice\",\"choice\":\"9\",\"confidence\":0.98,\"probabilities\":{\"1\":0.0,\"2\":0.0,\"3\":0.0,\"4\":0.0,\"5\":0.0,\"6\":0.0,\"7\":0.0,\"8\":0.02,\"9\":0.98,\"10\":0.0,\"11\":0.0}},\"start:providers/idempotent-delete:1\":{\"type\":\"choice\",\"choice\":\"9\",\"confidence\":0.48,\"probabilities\":{\"1\":0.08,\"2\":0.0,\"3\":0.0,\"5\":0.05,\"6\":0.02,\"7\":0.02,\"8\":0.08,\"9\":0.52,\"10\":0.04,\"12\":0.03,\"13\":0.01,\"15\":0.02,\"21\":0.05,\"28\":0.08}},\"end:providers/idempotent-delete:1\":{\"type\":\"choice\",\"choice\":\"9\",\"confidence\":0.44,\"probabilities\":{\"1\":0.05,\"2\":0.0,\"3\":0.01,\"5\":0.04,\"6\":0.01,\"7\":0.03,\"8\":0.11,\"9\":0.48,\"10\":0.06,\"12\":0.02,\"13\":0.02,\"15\":0.01,\"21\":0.04,\"28\":0.12}},\"start:providers/idempotent-delete:2\":{\"type\":\"choice\",\"choice\":\"41\",\"confidence\":0.11,\"probabilities\":{\"34\":0.21,\"41\":0.26,\"46\":0.13,\"51\":0.06,\"56\":0.14,\"61\":0.2}},\"end:providers/idempotent-delete:2\":{\"type\":\"choice\",\"choice\":\"61\",\"confidence\":0.1,\"probabilities\":{\"34\":0.18,\"41\":0.24,\"46\":0.17,\"51\":0.05,\"56\":0.11,\"61\":0.25}},\"start:providers/idempotent-delete:3\":{\"type\":\"choice\",\"choice\":\"72\",\"confidence\":0.09,\"probabilities\":{\"66\":0.07,\"71\":0.05,\"72\":0.15,\"74\":0.09,\"76\":0.08,\"78\":0.06,\"80\":0.04,\"82\":0.05,\"84\":0.03,\"86\":0.02,\"88\":0.05,\"90\":0.06,\"92\":0.06,\"94\":0.09,\"95\":0.1}},\"end:providers/idempotent-delete:3\":{\"type\":\"choice\",\"choice\":\"72\",\"confidence\":0.19,\"probabilities\":{\"66\":0.04,\"71\":0.05,\"72\":0.24,\"74\":0.05,\"76\":0.04,\"78\":0.02,\"80\":0.03,\"82\":0.03,\"84\":0.02,\"86\":0.02,\"88\":0.05,\"90\":0.04,\"92\":0.05,\"94\":0.13,\"95\":0.19}},\"start:providers/idempotent-delete:4\":{\"type\":\"choice\",\"choice\":\"97\",\"confidence\":1.0,\"probabilities\":{\"97\":1.0}},\"end:providers/idempotent-delete:4\":{\"type\":\"choice\",\"choice\":\"97\",\"confidence\":1.0,\"probabilities\":{\"97\":1.0}},\"start:providers/idempotent-delete:5\":{\"type\":\"choice\",\"choice\":\"166\",\"confidence\":0.15,\"probabilities\":{\"154\":0.17,\"155\":0.04,\"156\":0.11,\"161\":0.08,\"162\":0.06,\"164\":0.18,\"165\":0.1,\"166\":0.26}},\"end:providers/idempotent-delete:5\":{\"type\":\"choice\",\"choice\":\"166\",\"confidence\":0.22,\"probabilities\":{\"154\":0.08,\"155\":0.04,\"156\":0.2,\"161\":0.05,\"162\":0.07,\"164\":0.14,\"165\":0.1,\"166\":0.32}},\"start:providers/idempotent-delete:6\":{\"type\":\"choice\",\"choice\":\"191\",\"confidence\":0.26,\"probabilities\":{\"168\":0.11,\"169\":0.08,\"175\":0.02,\"176\":0.02,\"177\":0.02,\"178\":0.03,\"179\":0.06,\"180\":0.04,\"181\":0.02,\"182\":0.02,\"183\":0.02,\"184\":0.01,\"185\":0.01,\"186\":0.02,\"187\":0.03,\"188\":0.04,\"189\":0.04,\"190\":0.11,\"191\":0.3}},\"end:providers/idempotent-delete:6\":{\"type\":\"choice\",\"choice\":\"191\",\"confidence\":0.29,\"probabilities\":{\"168\":0.03,\"169\":0.06,\"175\":0.01,\"176\":0.02,\"177\":0.02,\"178\":0.02,\"179\":0.03,\"180\":0.03,\"181\":0.02,\"182\":0.01,\"183\":0.02,\"184\":0.01,\"185\":0.01,\"186\":0.05,\"187\":0.04,\"188\":0.07,\"189\":0.08,\"190\":0.14,\"191\":0.33}},\"start:providers/idempotent-delete:7\":{\"type\":\"choice\",\"choice\":\"222\",\"confidence\":0.31,\"probabilities\":{\"193\":0.04,\"194\":0.02,\"195\":0.02,\"197\":0.03,\"198\":0.05,\"199\":0.02,\"200\":0.01,\"201\":0.01,\"202\":0.01,\"203\":0.01,\"204\":0.02,\"205\":0.03,\"206\":0.02,\"207\":0.07,\"209\":0.04,\"210\":0.03,\"211\":0.02,\"212\":0.07,\"214\":0.03,\"215\":0.03,\"220\":0.04,\"221\":0.04,\"222\":0.33999999999999997}},\"end:providers/idempotent-delete:7\":{\"type\":\"choice\",\"choice\":\"222\",\"confidence\":0.37,\"probabilities\":{\"193\":0.02,\"194\":0.02,\"195\":0.02,\"197\":0.02,\"198\":0.04,\"199\":0.02,\"200\":0.01,\"201\":0.01,\"202\":0.01,\"203\":0.01,\"204\":0.02,\"205\":0.03,\"206\":0.02,\"207\":0.07,\"209\":0.03,\"210\":0.02,\"211\":0.02,\"212\":0.06,\"214\":0.03,\"215\":0.02,\"220\":0.03,\"221\":0.07,\"222\":0.4}},\"start:providers/idempotent-delete:8\":{\"type\":\"choice\",\"choice\":\"253\",\"confidence\":0.12,\"probabilities\":{\"224\":0.1,\"226\":0.05,\"227\":0.03,\"231\":0.09,\"236\":0.02,\"237\":0.03,\"238\":0.03,\"239\":0.02,\"240\":0.03,\"241\":0.16,\"242\":0.1,\"243\":0.03,\"244\":0.01,\"245\":0.02,\"246\":0.01,\"247\":0.01,\"248\":0.01,\"249\":0.02,\"250\":0.02,\"251\":0.02,\"252\":0.04,\"253\":0.15}},\"end:providers/idempotent-delete:8\":{\"type\":\"choice\",\"choice\":\"253\",\"confidence\":0.17,\"probabilities\":{\"224\":0.05,\"226\":0.06,\"227\":0.03,\"231\":0.07,\"236\":0.02,\"237\":0.02,\"238\":0.02,\"239\":0.02,\"240\":0.03,\"241\":0.2,\"242\":0.07,\"243\":0.03,\"244\":0.01,\"245\":0.02,\"246\":0.01,\"247\":0.01,\"248\":0.01,\"249\":0.01,\"250\":0.02,\"251\":0.03,\"252\":0.05,\"253\":0.21}},\"start:providers/idempotent-delete:9\":{\"type\":\"choice\",\"choice\":\"263\",\"confidence\":0.85,\"probabilities\":{\"256\":0.0,\"257\":0.01,\"258\":0.02,\"260\":0.09999999999999999,\"263\":0.86,\"264\":0.01,\"265\":0.0,\"268\":0.0,\"269\":0.0,\"270\":0.0,\"271\":0.0,\"272\":0.0,\"273\":0.0,\"274\":0.0,\"275\":0.0,\"276\":0.0,\"277\":0.0,\"278\":0.0,\"279\":0.0,\"280\":0.0}},\"end:providers/idempotent-delete:9\":{\"type\":\"choice\",\"choice\":\"263\",\"confidence\":0.78,\"probabilities\":{\"256\":0.01,\"257\":0.01,\"258\":0.060000000000000005,\"260\":0.01,\"263\":0.79,\"264\":0.08,\"265\":0.03,\"268\":0.0,\"269\":0.0,\"270\":0.0,\"271\":0.0,\"272\":0.0,\"273\":0.0,\"274\":0.0,\"275\":0.0,\"276\":0.0,\"277\":0.0,\"278\":0.0,\"279\":0.0,\"280\":0.0}},\"start:providers/idempotent-delete:10\":{\"type\":\"choice\",\"choice\":\"301\",\"confidence\":0.22,\"probabilities\":{\"283\":0.11,\"284\":0.06,\"285\":0.04,\"286\":0.06,\"287\":0.04,\"288\":0.04,\"289\":0.01,\"290\":0.02,\"291\":0.02,\"292\":0.02,\"293\":0.01,\"294\":0.02,\"296\":0.02,\"297\":0.02,\"298\":0.01,\"299\":0.01,\"300\":0.03,\"301\":0.25,\"304\":0.04,\"305\":0.01,\"306\":0.02,\"307\":0.02,\"308\":0.02,\"309\":0.1}},\"end:providers/idempotent-delete:10\":{\"type\":\"choice\",\"choice\":\"301\",\"confidence\":0.22,\"probabilities\":{\"283\":0.06,\"284\":0.03,\"285\":0.03,\"286\":0.04,\"287\":0.03,\"288\":0.03,\"289\":0.01,\"290\":0.02,\"291\":0.02,\"292\":0.01,\"293\":0.01,\"294\":0.02,\"296\":0.01,\"297\":0.01,\"298\":0.01,\"299\":0.02,\"300\":0.07,\"301\":0.25,\"304\":0.03,\"305\":0.01,\"306\":0.02,\"307\":0.02,\"308\":0.02,\"309\":0.22}},\"start:providers/idempotent-delete:11\":{\"type\":\"choice\",\"choice\":\"311\",\"confidence\":0.17,\"probabilities\":{\"311\":0.22,\"312\":0.03,\"313\":0.02,\"314\":0.04,\"315\":0.03,\"316\":0.07,\"317\":0.17,\"319\":0.09,\"320\":0.03,\"321\":0.02,\"322\":0.02,\"323\":0.01,\"324\":0.02,\"325\":0.01,\"326\":0.01,\"327\":0.01,\"328\":0.02,\"329\":0.18}},\"end:providers/idempotent-delete:11\":{\"type\":\"choice\",\"choice\":\"329\",\"confidence\":0.33,\"probabilities\":{\"311\":0.09,\"312\":0.03,\"313\":0.01,\"314\":0.03,\"315\":0.02,\"316\":0.08,\"317\":0.19,\"319\":0.06,\"320\":0.03,\"321\":0.01,\"322\":0.01,\"323\":0.01,\"324\":0.01,\"325\":0.01,\"326\":0.01,\"327\":0.01,\"328\":0.02,\"329\":0.37}},\"sufficient:providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.55}},\"usage\":{\"input_tokens\":14321,\"output_tokens\":3667}}",
+  "inputTokens": 14321,
+  "answers": {
+    "providers/idempotent-delete": "9",
+    "start:providers/idempotent-delete:1": "9",
+    "end:providers/idempotent-delete:1": "9",
+    "start:providers/idempotent-delete:2": "41",
+    "end:providers/idempotent-delete:2": "61",
+    "start:providers/idempotent-delete:3": "72",
+    "end:providers/idempotent-delete:3": "72",
+    "start:providers/idempotent-delete:4": "97",
+    "end:providers/idempotent-delete:4": "97",
+    "start:providers/idempotent-delete:5": "166",
+    "end:providers/idempotent-delete:5": "166",
+    "start:providers/idempotent-delete:6": "191",
+    "end:providers/idempotent-delete:6": "191",
+    "start:providers/idempotent-delete:7": "222",
+    "end:providers/idempotent-delete:7": "222",
+    "start:providers/idempotent-delete:8": "253",
+    "end:providers/idempotent-delete:8": "253",
+    "start:providers/idempotent-delete:9": "263",
+    "end:providers/idempotent-delete:9": "263",
+    "start:providers/idempotent-delete:10": "301",
+    "end:providers/idempotent-delete:10": "301",
+    "start:providers/idempotent-delete:11": "311",
+    "end:providers/idempotent-delete:11": "329",
+    "sufficient:providers/idempotent-delete": 0.55
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as securityTxt from \"@distilled.cloud/cloudflare/security-txt\";\nimport * as Effect from \"effect/Effect\";\nimport * as Predicate from \"effect/Predicate\";\n\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { CloudflareEnvironment } from \"../CloudflareEnvironment.ts\";\nimport type { Providers } from \"../Providers.ts\";\nimport { listAllZones } from \"../Zone/lookup.ts\";\n\nconst TypeId = \"Cloudflare.SecurityTxt.SecurityTxt\" as const;\ntype TypeId = typeof TypeId;\n\nexport type Props = {\n\n\n\n\n\n  zoneId: string;\n\n\n\n\n\n\n  enabled?: boolean;",
+        "2": "\n\n\n\n\n  contact: string[];\n\n\n\n\n\n\n  expires: string;\n\n\n\n\n  acknowledgments?: string[];\n\n\n\n\n  canonical?: string[];\n\n\n\n\n  encryption?: string[];\n\n\n\n\n  hiring?: string[];",
+        "3": "\n\n\n\n  policy?: string[];\n\n\n\n\n  preferredLanguages?: string;\n};\n\nexport type Attributes = {\n\n  zoneId: string;\n\n  enabled: boolean;\n\n  contact: string[];\n\n  expires: string;\n\n  acknowledgments: string[] | undefined;\n\n  canonical: string[] | undefined;\n\n  encryption: string[] | undefined;\n\n  hiring: string[] | undefined;\n\n  policy: string[] | undefined;\n\n  preferredLanguages: string | undefined;\n};",
+        "4": "\nexport type SecurityTxt = Resource<TypeId, Props, Attributes, never, Providers>;",
+        "5": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const SecurityTxt = Resource<SecurityTxt>(TypeId, {\n  aliases: [\"Cloudflare.SecurityTxt\"],\n});\n\n\n\n\nexport const isSecurityTxt = (value: unknown): value is SecurityTxt =>\n  Predicate.hasProperty(value, \"Type\") && value.Type === TypeId;\n\nexport const SecurityTxtProvider = () =>\n  Provider.succeed(SecurityTxt, {\n    stables: [\"zoneId\"],",
+        "6": "\n    list: Effect.fn(function* () {\n      const { accountId } = yield* yield* CloudflareEnvironment;\n\n\n\n\n\n      const allZones = yield* listAllZones(accountId);\n      const rows = yield* Effect.forEach(\n        allZones.map((zone) => zone.id),\n        (zoneId) =>\n          securityTxt\n            .getSecurityTxt({ zoneId })\n            .pipe(\n              Effect.map((observed) =>\n                typeof observed === \"string\"\n                  ? undefined\n                  : toAttributes(zoneId, observed),\n              ),\n            ),\n        { concurrency: 10 },\n      );\n      return rows.filter((row): row is Attributes => row !== undefined);\n    }),",
+        "7": "\n    diff: Effect.fn(function* ({ olds = {}, news, output }) {\n      const o = olds as Props;\n      const n = news as Props;\n\n      const oldZoneId =\n        output?.zoneId ?? (typeof o.zoneId === \"string\" ? o.zoneId : undefined);\n      if (\n        oldZoneId !== undefined &&\n        typeof n.zoneId === \"string\" &&\n        oldZoneId !== n.zoneId\n      ) {\n        return { action: \"replace\" } as const;\n      }\n      return undefined;\n    }),\n\n    read: Effect.fn(function* ({ output, olds }) {\n      const zoneId = output?.zoneId ?? (olds?.zoneId as string | undefined);\n      if (!zoneId) return undefined;\n      const observed = yield* securityTxt.getSecurityTxt({ zoneId });\n\n      if (typeof observed === \"string\") return undefined;\n      const attrs = toAttributes(zoneId, observed);\n\n\n\n\n      if (output === undefined) return Unowned(attrs);\n      return attrs;\n    }),",
+        "8": "\n    reconcile: Effect.fn(function* ({ news }) {\n\n      const zoneId = news.zoneId as string;\n      const desired = desiredAttributes(zoneId, news);\n\n\n\n      const observed = yield* securityTxt.getSecurityTxt({ zoneId });\n\n\n\n\n      if (\n        typeof observed !== \"string\" &&\n        attributesEqual(toAttributes(zoneId, observed), desired)\n      ) {\n        return toAttributes(zoneId, observed);\n      }\n      yield* securityTxt.putSecurityTxt({\n        zoneId,\n        enabled: desired.enabled,\n        contact: desired.contact,\n        expires: desired.expires,\n        acknowledgments: desired.acknowledgments,\n        canonical: desired.canonical,\n        encryption: desired.encryption,\n        hiring: desired.hiring,\n        policy: desired.policy,\n        preferredLanguages: desired.preferredLanguages,\n      });",
+        "9": "\n\n      const final = yield* securityTxt.getSecurityTxt({ zoneId });\n      return typeof final === \"string\" ? desired : toAttributes(zoneId, final);\n    }),\n\n    delete: Effect.fn(function* ({ output }) {\n\n\n      yield* securityTxt.deleteSecurityTxt({ zoneId: output.zoneId });\n    }),\n  });\n\n\nconst desiredAttributes = (zoneId: string, news: Props): Attributes => ({\n  zoneId,\n  enabled: news.enabled ?? true,\n  contact: [...news.contact],\n  expires: news.expires,\n  acknowledgments: nonEmpty(news.acknowledgments),\n  canonical: nonEmpty(news.canonical),\n  encryption: nonEmpty(news.encryption),\n  hiring: nonEmpty(news.hiring),\n  policy: nonEmpty(news.policy),\n  preferredLanguages:\n    news.preferredLanguages === \"\" ? undefined : news.preferredLanguages,\n});",
+        "10": "\n\nconst toAttributes = (\n  zoneId: string,\n  observed: Exclude<securityTxt.GetSecurityTxtResponse, string>,\n): Attributes => ({\n  zoneId,\n  enabled: observed.enabled ?? false,\n  contact: [...(observed.contact ?? [])],\n  expires: observed.expires ?? \"\",\n  acknowledgments: nonEmpty(observed.acknowledgments),\n  canonical: nonEmpty(observed.canonical),\n  encryption: nonEmpty(observed.encryption),\n  hiring: nonEmpty(observed.hiring),\n\n  policy: nonEmpty(observed.policy),\n  preferredLanguages:\n    observed.preferredLanguages === \"\"\n      ? undefined\n      : (observed.preferredLanguages ?? undefined),\n});\n\n\nconst nonEmpty = (\n  values: readonly string[] | null | undefined,\n): string[] | undefined =>\n  values === null || values === undefined || values.length === 0\n    ? undefined\n    : [...values];",
+        "11": "\nconst listEquals = (\n  a: string[] | undefined,\n  b: string[] | undefined,\n): boolean => {\n  if (a === undefined || b === undefined) return a === b;\n  return a.length === b.length && a.every((v, i) => v === b[i]);\n};\n\nconst attributesEqual = (a: Attributes, b: Attributes): boolean =>\n  a.zoneId === b.zoneId &&\n  a.enabled === b.enabled &&\n  a.expires === b.expires &&\n  a.preferredLanguages === b.preferredLanguages &&\n  listEquals(a.contact, b.contact) &&\n  listEquals(a.acknowledgments, b.acknowledgments) &&\n  listEquals(a.canonical, b.canonical) &&\n  listEquals(a.encryption, b.encryption) &&\n  listEquals(a.hiring, b.hiring) &&\n  listEquals(a.policy, b.policy);\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null,
+          "11": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as securityTxt from \"@distilled.cloud/cloudflare/security-txt\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Predicate from \"effect/Predicate\";",
+          "5": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "6": "import * as Provider from \"../../Provider.ts\";",
+          "7": "import { Resource } from \"../../Resource.ts\";",
+          "8": "import { CloudflareEnvironment } from \"../CloudflareEnvironment.ts\";",
+          "9": "import type { Providers } from \"../Providers.ts\";",
+          "10": "import { listAllZones } from \"../Zone/lookup.ts\";",
+          "12": "const TypeId = \"Cloudflare.SecurityTxt.SecurityTxt\" as const;",
+          "13": "type TypeId = typeof TypeId;",
+          "15": "export type Props = {",
+          "21": "zoneId: string;",
+          "28": "enabled?: boolean;"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as securityTxt from \"@distilled.cloud/cloudflare/security-txt\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Predicate from \"effect/Predicate\";",
+          "5": "import { Unowned } from \"../../AdoptPolicy.ts\";",
+          "6": "import * as Provider from \"../../Provider.ts\";",
+          "7": "import { Resource } from \"../../Resource.ts\";",
+          "8": "import { CloudflareEnvironment } from \"../CloudflareEnvironment.ts\";",
+          "9": "import type { Providers } from \"../Providers.ts\";",
+          "10": "import { listAllZones } from \"../Zone/lookup.ts\";",
+          "12": "const TypeId = \"Cloudflare.SecurityTxt.SecurityTxt\" as const;",
+          "13": "type TypeId = typeof TypeId;",
+          "15": "export type Props = {",
+          "21": "zoneId: string;",
+          "28": "enabled?: boolean;"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "34": "contact: string[];",
+          "41": "expires: string;",
+          "46": "acknowledgments?: string[];",
+          "51": "canonical?: string[];",
+          "56": "encryption?: string[];",
+          "61": "hiring?: string[];"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "34": "contact: string[];",
+          "41": "expires: string;",
+          "46": "acknowledgments?: string[];",
+          "51": "canonical?: string[];",
+          "56": "encryption?: string[];",
+          "61": "hiring?: string[];"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "66": "policy?: string[];",
+          "71": "preferredLanguages?: string;",
+          "72": "};",
+          "74": "export type Attributes = {",
+          "76": "zoneId: string;",
+          "78": "enabled: boolean;",
+          "80": "contact: string[];",
+          "82": "expires: string;",
+          "84": "acknowledgments: string[] | undefined;",
+          "86": "canonical: string[] | undefined;",
+          "88": "encryption: string[] | undefined;",
+          "90": "hiring: string[] | undefined;",
+          "92": "policy: string[] | undefined;",
+          "94": "preferredLanguages: string | undefined;",
+          "95": "};"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "66": "policy?: string[];",
+          "71": "preferredLanguages?: string;",
+          "72": "};",
+          "74": "export type Attributes = {",
+          "76": "zoneId: string;",
+          "78": "enabled: boolean;",
+          "80": "contact: string[];",
+          "82": "expires: string;",
+          "84": "acknowledgments: string[] | undefined;",
+          "86": "canonical: string[] | undefined;",
+          "88": "encryption: string[] | undefined;",
+          "90": "hiring: string[] | undefined;",
+          "92": "policy: string[] | undefined;",
+          "94": "preferredLanguages: string | undefined;",
+          "95": "};"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "97": "export type SecurityTxt = Resource<TypeId, Props, Attributes, never, Providers>;"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "97": "export type SecurityTxt = Resource<TypeId, Props, Attributes, never, Providers>;"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "154": "export const SecurityTxt = Resource<SecurityTxt>(TypeId, {",
+          "155": "aliases: [\"Cloudflare.SecurityTxt\"],",
+          "156": "});",
+          "161": "export const isSecurityTxt = (value: unknown): value is SecurityTxt =>",
+          "162": "Predicate.hasProperty(value, \"Type\") && value.Type === TypeId;",
+          "164": "export const SecurityTxtProvider = () =>",
+          "165": "Provider.succeed(SecurityTxt, {",
+          "166": "stables: [\"zoneId\"],"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "154": "export const SecurityTxt = Resource<SecurityTxt>(TypeId, {",
+          "155": "aliases: [\"Cloudflare.SecurityTxt\"],",
+          "156": "});",
+          "161": "export const isSecurityTxt = (value: unknown): value is SecurityTxt =>",
+          "162": "Predicate.hasProperty(value, \"Type\") && value.Type === TypeId;",
+          "164": "export const SecurityTxtProvider = () =>",
+          "165": "Provider.succeed(SecurityTxt, {",
+          "166": "stables: [\"zoneId\"],"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "168": "list: Effect.fn(function* () {",
+          "169": "const { accountId } = yield* yield* CloudflareEnvironment;",
+          "175": "const allZones = yield* listAllZones(accountId);",
+          "176": "const rows = yield* Effect.forEach(",
+          "177": "allZones.map((zone) => zone.id),",
+          "178": "(zoneId) =>",
+          "179": "securityTxt",
+          "180": ".getSecurityTxt({ zoneId })",
+          "181": ".pipe(",
+          "182": "Effect.map((observed) =>",
+          "183": "typeof observed === \"string\"",
+          "184": "? undefined",
+          "185": ": toAttributes(zoneId, observed),",
+          "186": "),",
+          "187": "),",
+          "188": "{ concurrency: 10 },",
+          "189": ");",
+          "190": "return rows.filter((row): row is Attributes => row !== undefined);",
+          "191": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "168": "list: Effect.fn(function* () {",
+          "169": "const { accountId } = yield* yield* CloudflareEnvironment;",
+          "175": "const allZones = yield* listAllZones(accountId);",
+          "176": "const rows = yield* Effect.forEach(",
+          "177": "allZones.map((zone) => zone.id),",
+          "178": "(zoneId) =>",
+          "179": "securityTxt",
+          "180": ".getSecurityTxt({ zoneId })",
+          "181": ".pipe(",
+          "182": "Effect.map((observed) =>",
+          "183": "typeof observed === \"string\"",
+          "184": "? undefined",
+          "185": ": toAttributes(zoneId, observed),",
+          "186": "),",
+          "187": "),",
+          "188": "{ concurrency: 10 },",
+          "189": ");",
+          "190": "return rows.filter((row): row is Attributes => row !== undefined);",
+          "191": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "193": "diff: Effect.fn(function* ({ olds = {}, news, output }) {",
+          "194": "const o = olds as Props;",
+          "195": "const n = news as Props;",
+          "197": "const oldZoneId =",
+          "198": "output?.zoneId ?? (typeof o.zoneId === \"string\" ? o.zoneId : undefined);",
+          "199": "if (",
+          "200": "oldZoneId !== undefined &&",
+          "201": "typeof n.zoneId === \"string\" &&",
+          "202": "oldZoneId !== n.zoneId",
+          "203": ") {",
+          "204": "return { action: \"replace\" } as const;",
+          "205": "}",
+          "206": "return undefined;",
+          "207": "}),",
+          "209": "read: Effect.fn(function* ({ output, olds }) {",
+          "210": "const zoneId = output?.zoneId ?? (olds?.zoneId as string | undefined);",
+          "211": "if (!zoneId) return undefined;",
+          "212": "const observed = yield* securityTxt.getSecurityTxt({ zoneId });",
+          "214": "if (typeof observed === \"string\") return undefined;",
+          "215": "const attrs = toAttributes(zoneId, observed);",
+          "220": "if (output === undefined) return Unowned(attrs);",
+          "221": "return attrs;",
+          "222": "}),"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "193": "diff: Effect.fn(function* ({ olds = {}, news, output }) {",
+          "194": "const o = olds as Props;",
+          "195": "const n = news as Props;",
+          "197": "const oldZoneId =",
+          "198": "output?.zoneId ?? (typeof o.zoneId === \"string\" ? o.zoneId : undefined);",
+          "199": "if (",
+          "200": "oldZoneId !== undefined &&",
+          "201": "typeof n.zoneId === \"string\" &&",
+          "202": "oldZoneId !== n.zoneId",
+          "203": ") {",
+          "204": "return { action: \"replace\" } as const;",
+          "205": "}",
+          "206": "return undefined;",
+          "207": "}),",
+          "209": "read: Effect.fn(function* ({ output, olds }) {",
+          "210": "const zoneId = output?.zoneId ?? (olds?.zoneId as string | undefined);",
+          "211": "if (!zoneId) return undefined;",
+          "212": "const observed = yield* securityTxt.getSecurityTxt({ zoneId });",
+          "214": "if (typeof observed === \"string\") return undefined;",
+          "215": "const attrs = toAttributes(zoneId, observed);",
+          "220": "if (output === undefined) return Unowned(attrs);",
+          "221": "return attrs;",
+          "222": "}),"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "224": "reconcile: Effect.fn(function* ({ news }) {",
+          "226": "const zoneId = news.zoneId as string;",
+          "227": "const desired = desiredAttributes(zoneId, news);",
+          "231": "const observed = yield* securityTxt.getSecurityTxt({ zoneId });",
+          "236": "if (",
+          "237": "typeof observed !== \"string\" &&",
+          "238": "attributesEqual(toAttributes(zoneId, observed), desired)",
+          "239": ") {",
+          "240": "return toAttributes(zoneId, observed);",
+          "241": "}",
+          "242": "yield* securityTxt.putSecurityTxt({",
+          "243": "zoneId,",
+          "244": "enabled: desired.enabled,",
+          "245": "contact: desired.contact,",
+          "246": "expires: desired.expires,",
+          "247": "acknowledgments: desired.acknowledgments,",
+          "248": "canonical: desired.canonical,",
+          "249": "encryption: desired.encryption,",
+          "250": "hiring: desired.hiring,",
+          "251": "policy: desired.policy,",
+          "252": "preferredLanguages: desired.preferredLanguages,",
+          "253": "});"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "224": "reconcile: Effect.fn(function* ({ news }) {",
+          "226": "const zoneId = news.zoneId as string;",
+          "227": "const desired = desiredAttributes(zoneId, news);",
+          "231": "const observed = yield* securityTxt.getSecurityTxt({ zoneId });",
+          "236": "if (",
+          "237": "typeof observed !== \"string\" &&",
+          "238": "attributesEqual(toAttributes(zoneId, observed), desired)",
+          "239": ") {",
+          "240": "return toAttributes(zoneId, observed);",
+          "241": "}",
+          "242": "yield* securityTxt.putSecurityTxt({",
+          "243": "zoneId,",
+          "244": "enabled: desired.enabled,",
+          "245": "contact: desired.contact,",
+          "246": "expires: desired.expires,",
+          "247": "acknowledgments: desired.acknowledgments,",
+          "248": "canonical: desired.canonical,",
+          "249": "encryption: desired.encryption,",
+          "250": "hiring: desired.hiring,",
+          "251": "policy: desired.policy,",
+          "252": "preferredLanguages: desired.preferredLanguages,",
+          "253": "});"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "256": "const final = yield* securityTxt.getSecurityTxt({ zoneId });",
+          "257": "return typeof final === \"string\" ? desired : toAttributes(zoneId, final);",
+          "258": "}),",
+          "260": "delete: Effect.fn(function* ({ output }) {",
+          "263": "yield* securityTxt.deleteSecurityTxt({ zoneId: output.zoneId });",
+          "264": "}),",
+          "265": "});",
+          "268": "const desiredAttributes = (zoneId: string, news: Props): Attributes => ({",
+          "269": "zoneId,",
+          "270": "enabled: news.enabled ?? true,",
+          "271": "contact: [...news.contact],",
+          "272": "expires: news.expires,",
+          "273": "acknowledgments: nonEmpty(news.acknowledgments),",
+          "274": "canonical: nonEmpty(news.canonical),",
+          "275": "encryption: nonEmpty(news.encryption),",
+          "276": "hiring: nonEmpty(news.hiring),",
+          "277": "policy: nonEmpty(news.policy),",
+          "278": "preferredLanguages:",
+          "279": "news.preferredLanguages === \"\" ? undefined : news.preferredLanguages,",
+          "280": "});"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "256": "const final = yield* securityTxt.getSecurityTxt({ zoneId });",
+          "257": "return typeof final === \"string\" ? desired : toAttributes(zoneId, final);",
+          "258": "}),",
+          "260": "delete: Effect.fn(function* ({ output }) {",
+          "263": "yield* securityTxt.deleteSecurityTxt({ zoneId: output.zoneId });",
+          "264": "}),",
+          "265": "});",
+          "268": "const desiredAttributes = (zoneId: string, news: Props): Attributes => ({",
+          "269": "zoneId,",
+          "270": "enabled: news.enabled ?? true,",
+          "271": "contact: [...news.contact],",
+          "272": "expires: news.expires,",
+          "273": "acknowledgments: nonEmpty(news.acknowledgments),",
+          "274": "canonical: nonEmpty(news.canonical),",
+          "275": "encryption: nonEmpty(news.encryption),",
+          "276": "hiring: nonEmpty(news.hiring),",
+          "277": "policy: nonEmpty(news.policy),",
+          "278": "preferredLanguages:",
+          "279": "news.preferredLanguages === \"\" ? undefined : news.preferredLanguages,",
+          "280": "});"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "283": "const toAttributes = (",
+          "284": "zoneId: string,",
+          "285": "observed: Exclude<securityTxt.GetSecurityTxtResponse, string>,",
+          "286": "): Attributes => ({",
+          "287": "zoneId,",
+          "288": "enabled: observed.enabled ?? false,",
+          "289": "contact: [...(observed.contact ?? [])],",
+          "290": "expires: observed.expires ?? \"\",",
+          "291": "acknowledgments: nonEmpty(observed.acknowledgments),",
+          "292": "canonical: nonEmpty(observed.canonical),",
+          "293": "encryption: nonEmpty(observed.encryption),",
+          "294": "hiring: nonEmpty(observed.hiring),",
+          "296": "policy: nonEmpty(observed.policy),",
+          "297": "preferredLanguages:",
+          "298": "observed.preferredLanguages === \"\"",
+          "299": "? undefined",
+          "300": ": (observed.preferredLanguages ?? undefined),",
+          "301": "});",
+          "304": "const nonEmpty = (",
+          "305": "values: readonly string[] | null | undefined,",
+          "306": "): string[] | undefined =>",
+          "307": "values === null || values === undefined || values.length === 0",
+          "308": "? undefined",
+          "309": ": [...values];"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "283": "const toAttributes = (",
+          "284": "zoneId: string,",
+          "285": "observed: Exclude<securityTxt.GetSecurityTxtResponse, string>,",
+          "286": "): Attributes => ({",
+          "287": "zoneId,",
+          "288": "enabled: observed.enabled ?? false,",
+          "289": "contact: [...(observed.contact ?? [])],",
+          "290": "expires: observed.expires ?? \"\",",
+          "291": "acknowledgments: nonEmpty(observed.acknowledgments),",
+          "292": "canonical: nonEmpty(observed.canonical),",
+          "293": "encryption: nonEmpty(observed.encryption),",
+          "294": "hiring: nonEmpty(observed.hiring),",
+          "296": "policy: nonEmpty(observed.policy),",
+          "297": "preferredLanguages:",
+          "298": "observed.preferredLanguages === \"\"",
+          "299": "? undefined",
+          "300": ": (observed.preferredLanguages ?? undefined),",
+          "301": "});",
+          "304": "const nonEmpty = (",
+          "305": "values: readonly string[] | null | undefined,",
+          "306": "): string[] | undefined =>",
+          "307": "values === null || values === undefined || values.length === 0",
+          "308": "? undefined",
+          "309": ": [...values];"
+        }
+      },
+      "start:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "311": "const listEquals = (",
+          "312": "a: string[] | undefined,",
+          "313": "b: string[] | undefined,",
+          "314": "): boolean => {",
+          "315": "if (a === undefined || b === undefined) return a === b;",
+          "316": "return a.length === b.length && a.every((v, i) => v === b[i]);",
+          "317": "};",
+          "319": "const attributesEqual = (a: Attributes, b: Attributes): boolean =>",
+          "320": "a.zoneId === b.zoneId &&",
+          "321": "a.enabled === b.enabled &&",
+          "322": "a.expires === b.expires &&",
+          "323": "a.preferredLanguages === b.preferredLanguages &&",
+          "324": "listEquals(a.contact, b.contact) &&",
+          "325": "listEquals(a.acknowledgments, b.acknowledgments) &&",
+          "326": "listEquals(a.canonical, b.canonical) &&",
+          "327": "listEquals(a.encryption, b.encryption) &&",
+          "328": "listEquals(a.hiring, b.hiring) &&",
+          "329": "listEquals(a.policy, b.policy);"
+        }
+      },
+      "end:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "311": "const listEquals = (",
+          "312": "a: string[] | undefined,",
+          "313": "b: string[] | undefined,",
+          "314": "): boolean => {",
+          "315": "if (a === undefined || b === undefined) return a === b;",
+          "316": "return a.length === b.length && a.every((v, i) => v === b[i]);",
+          "317": "};",
+          "319": "const attributesEqual = (a: Attributes, b: Attributes): boolean =>",
+          "320": "a.zoneId === b.zoneId &&",
+          "321": "a.enabled === b.enabled &&",
+          "322": "a.expires === b.expires &&",
+          "323": "a.preferredLanguages === b.preferredLanguages &&",
+          "324": "listEquals(a.contact, b.contact) &&",
+          "325": "listEquals(a.acknowledgments, b.acknowledgments) &&",
+          "326": "listEquals(a.canonical, b.canonical) &&",
+          "327": "listEquals(a.encryption, b.encryption) &&",
+          "328": "listEquals(a.hiring, b.hiring) &&",
+          "329": "listEquals(a.policy, b.policy);"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

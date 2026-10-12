@@ -1,0 +1,203 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/AWS/ApiGateway/DeleteUsagePlanKeyHttp.ts",
+  "kind": "locate",
+  "ordinal": 109,
+  "artifact": "attempt-00109.json",
+  "started": "2026-10-11T03:20:39.103Z",
+  "estimatedTokens": 5229,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.0622270000003482,
+  "referencesPresent": false,
+  "bodyDigest": "f054ca69082bff09dca65dc494ee58dc8c8e4763ca2e247fef26c10d7623109f",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "1",
+    "end:providers/idempotent-delete:1": "1",
+    "start:providers/idempotent-delete:2": "17",
+    "end:providers/idempotent-delete:2": "17",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "ag": "```typescript\ntypeof ag\n```",
+        "cap": "```typescript\nstring\n```",
+        "deleteUsagePlanKey": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<ag.DeleteUsagePlanKeyRequest, ag.DeleteUsagePlanKeyResponse, ag.DeleteUsagePlanKeyError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").Ht",
+        "DeleteUsagePlanKey": "```typescript\nDeleteUsagePlanKey\n```\n\nRuntime binding for removing an API key from a UsagePlan\n(`apigateway:DELETE` on `/usageplans/{id}/keys/{keyId}`).\n\nProvide `ApiGateway.DeleteUsagePlanKeyHttp` on the Function effect to\nimplement the binding.\n\n### Mana",
+        "DeleteUsagePlanKeyHttp": "```typescript\nLayer.Layer<DeleteUsagePlanKey, never, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```\n\nHTTP implementation of the DeleteUsagePlanKey binding. Grants\n`apigateway:DELETE` on th",
+        "effect": "```typescript\n{ <I, S>(service: import(\"effect/Context\").Key<I, S>): <E, R>(effect: Effect.Effect<S, E, R>) => Layer.Layer<I, E, Exclude<R, import(\"effect/Scope\").Scope>>; <I, S, E, R>(service: import(\"effect/Context\").Key<I, S>, effect: Effect.Effect<impo",
+        "Effect": "```typescript\ntypeof Effect\n```",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "id": "```typescript\nOutput.Output<string, never>\n```",
+        "interpolate": "```typescript\n<Args extends any[]>(template: TemplateStringsArray, ...args: Args) => Output.All<Args> extends Output.Output<any, infer Req> ? Output.Output<string, Req> : never\n```",
+        "Layer": "```typescript\ntypeof Layer\n```",
+        "LogicalId": "```typescript\nstring\n```\n\nLogical ID of the Resource (e.g. MyFunction)",
+        "Output": "```typescript\ntypeof Output\n```",
+        "paths": "```typescript\n(region: string) => Output.Output<string, unknown>[]\n```",
+        "region": "```typescript\nstring\n```",
+        "registerApiGatewayBinding": "```typescript\n(opts: { cap: string; target: unknown; verb: import(\"./BindingHttp.ts\").ApiGatewayIamVerb; paths: (region: string) => ReadonlyArray<import(\"../../Input.ts\").Input<string>>; }) => Effect.Effect<void, never, never>\n```\n\nDeploy-time half of an A",
+        "request": "```typescript\nDeleteUsagePlanKeyRequest\n```",
+        "target": "```typescript\nP\n```",
+        "usagePlan": "```typescript\nP\n```",
+        "UsagePlan": "**@resource**",
+        "usagePlanId": "```typescript\nstring\n```",
+        "UsagePlanId": "```typescript\nOutput.Accessor<string>\n```",
+        "verb": "```typescript\n\"DELETE\"\n```"
+      },
+      "code": {
+        "1": "import * as ag from \"@distilled.cloud/aws/api-gateway\";\nimport * as Effect from \"effect/Effect\";\nimport * as Layer from \"effect/Layer\";\nimport * as Output from \"../../Output.ts\";\nimport { registerApiGatewayBinding } from \"./BindingHttp.ts\";\nimport {\n  DeleteUsagePlanKey,\n  type DeleteUsagePlanKeyRequest,\n} from \"./DeleteUsagePlanKey.ts\";\nimport type { UsagePlan } from \"./UsagePlan.ts\";",
+        "2": "\n\n\n\n\n\nexport const DeleteUsagePlanKeyHttp = Layer.effect(\n  DeleteUsagePlanKey,\n  Effect.gen(function* () {\n    const deleteUsagePlanKey = yield* ag.deleteUsagePlanKey;\n    return Effect.fn(function* <P extends UsagePlan>(usagePlan: P) {\n      const UsagePlanId = yield* usagePlan.id;\n      yield* registerApiGatewayBinding({\n        cap: \"AWS.ApiGateway.DeleteUsagePlanKey\",\n        target: usagePlan,\n        verb: \"DELETE\",\n        paths: (region) => [\n          Output.interpolate`arn:aws:apigateway:${region}::/usageplans/${usagePlan.id}/keys/*`,\n        ],\n      });\n      return Effect.fn(\n        `AWS.ApiGateway.DeleteUsagePlanKey(${usagePlan.LogicalId})`,\n      )(function* (request: DeleteUsagePlanKeyRequest) {\n        return yield* deleteUsagePlanKey({\n          ...request,\n          usagePlanId: yield* UsagePlanId,\n        });\n      });\n    });\n  }),\n);\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as ag from \"@distilled.cloud/aws/api-gateway\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Layer from \"effect/Layer\";",
+          "4": "import * as Output from \"../../Output.ts\";",
+          "5": "import { registerApiGatewayBinding } from \"./BindingHttp.ts\";",
+          "6": "import {",
+          "7": "DeleteUsagePlanKey,",
+          "8": "type DeleteUsagePlanKeyRequest,",
+          "9": "} from \"./DeleteUsagePlanKey.ts\";",
+          "10": "import type { UsagePlan } from \"./UsagePlan.ts\";"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": "import * as ag from \"@distilled.cloud/aws/api-gateway\";",
+          "2": "import * as Effect from \"effect/Effect\";",
+          "3": "import * as Layer from \"effect/Layer\";",
+          "4": "import * as Output from \"../../Output.ts\";",
+          "5": "import { registerApiGatewayBinding } from \"./BindingHttp.ts\";",
+          "6": "import {",
+          "7": "DeleteUsagePlanKey,",
+          "8": "type DeleteUsagePlanKeyRequest,",
+          "9": "} from \"./DeleteUsagePlanKey.ts\";",
+          "10": "import type { UsagePlan } from \"./UsagePlan.ts\";"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "17": "export const DeleteUsagePlanKeyHttp = Layer.effect(",
+          "18": "DeleteUsagePlanKey,",
+          "19": "Effect.gen(function* () {",
+          "20": "const deleteUsagePlanKey = yield* ag.deleteUsagePlanKey;",
+          "21": "return Effect.fn(function* <P extends UsagePlan>(usagePlan: P) {",
+          "22": "const UsagePlanId = yield* usagePlan.id;",
+          "23": "yield* registerApiGatewayBinding({",
+          "24": "cap: \"AWS.ApiGateway.DeleteUsagePlanKey\",",
+          "25": "target: usagePlan,",
+          "26": "verb: \"DELETE\",",
+          "27": "paths: (region) => [",
+          "28": "Output.interpolate`arn:aws:apigateway:${region}::/usageplans/${usagePlan.id}/keys/*`,",
+          "29": "],",
+          "30": "});",
+          "31": "return Effect.fn(",
+          "32": "`AWS.ApiGateway.DeleteUsagePlanKey(${usagePlan.LogicalId})`,",
+          "33": ")(function* (request: DeleteUsagePlanKeyRequest) {",
+          "34": "return yield* deleteUsagePlanKey({",
+          "35": "...request,",
+          "36": "usagePlanId: yield* UsagePlanId,",
+          "37": "});",
+          "38": "});",
+          "39": "});",
+          "40": "}),",
+          "41": ");"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "17": "export const DeleteUsagePlanKeyHttp = Layer.effect(",
+          "18": "DeleteUsagePlanKey,",
+          "19": "Effect.gen(function* () {",
+          "20": "const deleteUsagePlanKey = yield* ag.deleteUsagePlanKey;",
+          "21": "return Effect.fn(function* <P extends UsagePlan>(usagePlan: P) {",
+          "22": "const UsagePlanId = yield* usagePlan.id;",
+          "23": "yield* registerApiGatewayBinding({",
+          "24": "cap: \"AWS.ApiGateway.DeleteUsagePlanKey\",",
+          "25": "target: usagePlan,",
+          "26": "verb: \"DELETE\",",
+          "27": "paths: (region) => [",
+          "28": "Output.interpolate`arn:aws:apigateway:${region}::/usageplans/${usagePlan.id}/keys/*`,",
+          "29": "],",
+          "30": "});",
+          "31": "return Effect.fn(",
+          "32": "`AWS.ApiGateway.DeleteUsagePlanKey(${usagePlan.LogicalId})`,",
+          "33": ")(function* (request: DeleteUsagePlanKeyRequest) {",
+          "34": "return yield* deleteUsagePlanKey({",
+          "35": "...request,",
+          "36": "usagePlanId: yield* UsagePlanId,",
+          "37": "});",
+          "38": "});",
+          "39": "});",
+          "40": "}),",
+          "41": ");"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` and `symbols`, without knowing what other files, libraries, services, or configuration do beyond what they show?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` and `symbols` show everything needed to tell whether `code` breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` and `symbols` do not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

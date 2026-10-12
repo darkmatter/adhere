@@ -5,6 +5,6 @@
 import { defineConfig } from "@drkmttr/adhere";
 
 export default defineConfig({
-  presets: ["effect"],
-  threshold: 0.9,
+  presets: ["effect", "typescript"],
+  threshold: 0.8,
 });

@@ -1,0 +1,1389 @@
+{
+  "arm": "code-only",
+  "file": "packages/cloudflare-runtime/src/core/bindings/cache/Cache.worker.ts",
+  "kind": "locate",
+  "ordinal": 303,
+  "artifact": "attempt-00303.json",
+  "started": "2026-10-11T03:20:46.103Z",
+  "estimatedTokens": 26995,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.3082800000011048,
+  "referencesPresent": false,
+  "bodyDigest": "26b9ef41a49204c21542d9a5fef455cf9150a0fc3e04dce82baef1e007110ef0",
+  "answers": {
+    "providers/idempotent-delete": "1",
+    "start:providers/idempotent-delete:1": "21",
+    "end:providers/idempotent-delete:1": "21",
+    "start:providers/idempotent-delete:2": "52",
+    "end:providers/idempotent-delete:2": "52",
+    "start:providers/idempotent-delete:3": "75",
+    "end:providers/idempotent-delete:3": "75",
+    "start:providers/idempotent-delete:4": "97",
+    "end:providers/idempotent-delete:4": "97",
+    "start:providers/idempotent-delete:5": "126",
+    "end:providers/idempotent-delete:5": "126",
+    "start:providers/idempotent-delete:6": "156",
+    "end:providers/idempotent-delete:6": "156",
+    "start:providers/idempotent-delete:7": "181",
+    "end:providers/idempotent-delete:7": "181",
+    "start:providers/idempotent-delete:8": "197",
+    "end:providers/idempotent-delete:8": "197",
+    "start:providers/idempotent-delete:9": "226",
+    "end:providers/idempotent-delete:9": "226",
+    "start:providers/idempotent-delete:10": "252",
+    "end:providers/idempotent-delete:10": "252",
+    "start:providers/idempotent-delete:11": "281",
+    "end:providers/idempotent-delete:11": "281",
+    "start:providers/idempotent-delete:12": "301",
+    "end:providers/idempotent-delete:12": "301",
+    "start:providers/idempotent-delete:13": "330",
+    "end:providers/idempotent-delete:13": "330",
+    "start:providers/idempotent-delete:14": "355",
+    "end:providers/idempotent-delete:14": "355",
+    "start:providers/idempotent-delete:15": "382",
+    "end:providers/idempotent-delete:15": "382",
+    "start:providers/idempotent-delete:16": "400",
+    "end:providers/idempotent-delete:16": "400",
+    "start:providers/idempotent-delete:17": "427",
+    "end:providers/idempotent-delete:17": "427",
+    "start:providers/idempotent-delete:18": "446",
+    "end:providers/idempotent-delete:18": "446",
+    "start:providers/idempotent-delete:19": "472",
+    "end:providers/idempotent-delete:19": "472",
+    "start:providers/idempotent-delete:20": "505",
+    "end:providers/idempotent-delete:20": "505",
+    "start:providers/idempotent-delete:21": "530",
+    "end:providers/idempotent-delete:21": "530",
+    "sufficient:providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nimport CachePolicy from \"http-cache-semantics\";\nimport type {\n  InclusiveRange,\n  MultipartReadableStream,\n} from \"../../internal/shared.worker.ts\";\nimport {\n  assert,\n  BlobStore,\n  HttpError,\n  KeyValueStorage,\n  parseRanges,\n  Timers,\n} from \"../../internal/shared.worker.ts\";\nimport type { CacheServiceProps } from \"./CacheOptions.shared.ts\";\nimport {\n  BINDING_CACHE_BLOBS,\n  BINDING_CACHE_ENABLE_CONTROL_ENDPOINTS,\n  BINDING_CACHE_OBJECT,\n  HEADER_CACHE_CONTROL_OP,\n  HEADER_CACHE_NAMESPACE,\n  HEADER_CACHE_OBJECT_NAME,\n  HEADER_CACHE_STATUS,\n} from \"./CacheOptions.shared.ts\";\nimport { parseHttpResponse } from \"./parse-http.shared.ts\";\n\ninterface Env {\n  [BINDING_CACHE_OBJECT]: DurableObjectNamespace;\n  [BINDING_CACHE_BLOBS]: Fetcher;\n  [BINDING_CACHE_ENABLE_CONTROL_ENDPOINTS]?: boolean;\n}",
+        "2": "\nexport default {\n  async fetch(request, env, ctx) {\n    const { enabled } = (ctx as { props: CacheServiceProps }).props;\n    if (!enabled) return noopFetch(request);\n\n\n    const namespace = request.headers.get(HEADER_CACHE_NAMESPACE);\n    const name = namespace === null ? \"default\" : `named:${namespace}`;\n    const stub = env[BINDING_CACHE_OBJECT].getByName(name);\n    const headers = new Headers(request.headers);\n    headers.set(HEADER_CACHE_OBJECT_NAME, encodeURIComponent(name));\n\n\n    return stub.fetch(new Request(request, { headers }), {\n      cf: request.cf as Record<string, unknown>,\n    });\n  },\n} satisfies ExportedHandler<Env>;",
+        "3": "\n\n\n\n\nasync function noopFetch(request: Request): Promise<Response> {\n  if (request.method === \"GET\") {\n    return new Response(null, {\n      status: 504,\n      headers: { [HEADER_CACHE_STATUS]: \"MISS\" },\n    });\n  } else if (request.method === \"PUT\") {\n\n\n    await request.body?.pipeTo(new WritableStream());\n    return new Response(null, { status: 204 });\n  } else if (request.method === \"PURGE\") {\n    return new Response(null, { status: 404 });\n  } else {\n    return new Response(null, { status: 405 });\n  }\n}",
+        "4": "\n\n\n\n\nclass CacheError extends HttpError {\n  constructor(\n    code: number,\n    message: string,\n    readonly headers: HeadersInit = [],\n  ) {\n    super(code, message);\n  }\n\n  override toResponse(): Response {\n    return new Response(null, {\n      status: this.code,\n      headers: this.headers,\n    });\n  }\n}\n\nclass StorageFailure extends CacheError {\n  constructor() {\n    super(413, \"Cache storage failed\");\n  }\n}\n\nclass PurgeFailure extends CacheError {\n  constructor() {\n    super(404, \"Couldn't find asset to purge\");\n  }\n}",
+        "5": "\nclass CacheMiss extends CacheError {\n  constructor() {\n    super(\n\n      504,\n      \"Asset not found in cache\",\n      [[HEADER_CACHE_STATUS, \"MISS\"]],\n    );\n  }\n}\n\nclass RangeNotSatisfiable extends CacheError {\n  constructor(size: number) {\n    super(416, \"Range not satisfiable\", [\n      [\"Content-Range\", `bytes */${size}`],\n      [HEADER_CACHE_STATUS, \"HIT\"],\n    ]);\n  }\n}\n\n\n\n\n\ninterface CacheMetadata {\n  headers: Array<Array<string>>;\n  status: number;\n  size: number;\n}",
+        "6": "\ntype CacheRequest = Request<unknown, RequestInitCfProperties>;\n\nfunction getCacheKey(req: CacheRequest): string {\n  return req.cf?.cacheKey ? String(req.cf?.cacheKey) : req.url;\n}\n\nfunction getExpiration(timers: Timers, req: Request, res: Response) {\n\n  const reqHeaders = normaliseHeaders(req.headers);\n  delete reqHeaders[\"cache-control\"];\n\n\n\n\n  const resHeaders = normaliseHeaders(res.headers);\n  if (\n    resHeaders[\"cache-control\"]?.toLowerCase().includes(\"private=set-cookie\")\n  ) {\n    resHeaders[\"cache-control\"] = resHeaders[\"cache-control\"]\n      ?.toLowerCase()\n      .replace(/private=set-cookie;?/i, \"\");\n    delete resHeaders[\"set-cookie\"];\n  }",
+        "7": "\n\n  const cacheReq: CachePolicy.Request = {\n    url: req.url,\n\n\n    method: \"GET\",\n    headers: reqHeaders,\n  };\n  const cacheRes: CachePolicy.Response = {\n    status: res.status,\n    headers: resHeaders,\n  };\n\n\n  const originalNow = CachePolicy.prototype.now;\n\n  CachePolicy.prototype.now = timers.now;",
+        "8": "  try {\n    const policy = new CachePolicy(cacheReq, cacheRes, { shared: true });\n\n    return {\n\n      storable: policy.storable() && !(\"set-cookie\" in resHeaders),\n      expiration: policy.timeToLive(),\n\n\n      headers: policy.responseHeaders() as HeadersInit,\n    };\n  } finally {\n\n    CachePolicy.prototype.now = originalNow;\n  }\n}\n\n\n\n\n\nfunction normaliseHeaders(headers: Headers): Record<string, string> {\n  const result: Record<string, string> = {};\n  for (const [key, value] of headers) result[key.toLowerCase()] = value;\n  return result;\n}\n\n\nconst etagRegexp = /^(W\\/)?\"(.+)\"$/;",
+        "9": "function parseETag(value: string): string | undefined {\n\n\n\n  return etagRegexp.exec(value.trim())?.[2] ?? undefined;\n}\n\n\nconst utcDateRegexp =\n  /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \\d\\d (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \\d\\d\\d\\d \\d\\d:\\d\\d:\\d\\d GMT$/;\nfunction parseUTCDate(value: string): number {\n  return utcDateRegexp.test(value) ? Date.parse(value) : NaN;\n}\n\ninterface CachedResponse {\n  status: number;\n  headers: Headers;\n  ranges: Array<InclusiveRange>;\n  body: ReadableStream<Uint8Array> | MultipartReadableStream;\n  totalSize: number;\n}\nfunction getMatchResponse(reqHeaders: Headers, res: CachedResponse): Response {\n\n\n  const reqIfNoneMatchHeader = reqHeaders.get(\"If-None-Match\");\n  const resETagHeader = res.headers.get(\"ETag\");",
+        "10": "  if (reqIfNoneMatchHeader !== null && resETagHeader !== null) {\n    const resETag = parseETag(resETagHeader);\n    if (resETag !== undefined) {\n      if (reqIfNoneMatchHeader.trim() === \"*\") {\n        return new Response(null, { status: 304, headers: res.headers });\n      }\n      for (const reqIfNoneMatch of reqIfNoneMatchHeader.split(\",\")) {\n        if (resETag === parseETag(reqIfNoneMatch)) {\n          return new Response(null, { status: 304, headers: res.headers });\n        }\n      }\n    }\n  }\n\n\n\n  const reqIfModifiedSinceHeader = reqHeaders.get(\"If-Modified-Since\");\n  const resLastModifiedHeader = res.headers.get(\"Last-Modified\");\n  if (reqIfModifiedSinceHeader !== null && resLastModifiedHeader !== null) {\n    const reqIfModifiedSince = parseUTCDate(reqIfModifiedSinceHeader);\n    const resLastModified = parseUTCDate(resLastModifiedHeader);\n\n    if (resLastModified <= reqIfModifiedSince) {\n      return new Response(null, { status: 304, headers: res.headers });\n    }\n  }",
+        "11": "\n\n\n  if (res.ranges.length > 0) {\n    res.status = 206;\n    if (res.ranges.length > 1) {\n      assert(!(res.body instanceof ReadableStream));\n      res.headers.set(\"Content-Type\", res.body.multipartContentType);\n    } else {\n      const { start, end } = res.ranges[0];\n      res.headers.set(\n        \"Content-Range\",\n        `bytes ${start}-${end}/${res.totalSize}`,\n      );\n      res.headers.set(\"Content-Length\", `${end - start + 1}`);\n    }\n  }\n\n  if (!(res.body instanceof ReadableStream)) res.body = res.body.body;\n  return new Response(res.body, { status: res.status, headers: res.headers });\n}\n\nclass SizingStream extends TransformStream<Uint8Array, Uint8Array> {",
+        "12": "  readonly size: Promise<number>;\n\n  constructor() {\n    let resolveSize!: (size: number) => void;\n    const sizePromise = new Promise<number>(\n      (resolve) => (resolveSize = resolve),\n    );\n    let size = 0;\n    super({\n      transform(chunk, controller) {\n        size += chunk.byteLength;\n        controller.enqueue(chunk);\n      },\n      flush() {\n        resolveSize(size);\n      },\n    });\n    this.size = sizePromise;\n  }\n}\n\ninterface ControlOp {\n  name: string;\n  args?: Array<unknown>;\n}\n\nexport class CacheObject implements DurableObject {\n  readonly timers = new Timers();",
+        "13": "\n  #name?: string;\n  #blob?: BlobStore;\n  #storage?: KeyValueStorage<CacheMetadata>;\n\n  constructor(\n    readonly state: DurableObjectState,\n    readonly env: Env,\n  ) {}\n\n  get name(): string {\n\n    assert(\n      this.#name !== undefined,\n      \"Expected `CacheObject#fetch()` call before `name` access\",\n    );\n    return this.#name;\n  }\n\n  get blob(): BlobStore {\n    return (this.#blob ??= new BlobStore(\n      this.env[BINDING_CACHE_BLOBS],\n      this.name,\n    ));\n  }",
+        "14": "\n  get storage(): KeyValueStorage<CacheMetadata> {\n\n    return (this.#storage ??= new KeyValueStorage(\n      this.state.storage,\n      this.blob,\n      this.timers,\n    ));\n  }\n\n  async fetch(req: Request): Promise<Response> {\n\n\n\n    const encodedName = req.headers.get(HEADER_CACHE_OBJECT_NAME);\n    assert(encodedName !== null, `Expected ${HEADER_CACHE_OBJECT_NAME} header`);\n    this.#name = decodeURIComponent(encodedName);\n\n\n\n    if (this.env[BINDING_CACHE_ENABLE_CONTROL_ENDPOINTS] === true) {\n      const controlOpHeader = req.headers.get(HEADER_CACHE_CONTROL_OP);\n      if (controlOpHeader !== null) {\n        const controlOp = (await req.json()) as ControlOp;\n        return this.#handleControlOp(controlOp);\n      }\n    }",
+        "15": "\n    try {\n      return await this.#route(req as CacheRequest);\n    } catch (e) {\n      if (e instanceof HttpError) return e.toResponse();\n      const error = e instanceof Error ? e : new Error(String(e));\n      const fallback = error.stack ?? error.message;\n      console.error(fallback);\n      return new Response(fallback, { status: 500 });\n    } finally {\n\n\n\n      if (req.body !== null && !req.bodyUsed) {\n        await req.body.pipeTo(new WritableStream());\n      }\n    }\n  }",
+        "16": "\n  async #handleControlOp({ name, args = [] }: ControlOp): Promise<Response> {\n    if (name === \"sqlQuery\") {\n\n      const [query, ...params] = args;\n      assert(typeof query === \"string\");\n      const results = this.state.storage.sql\n        .exec(query, ...(params as Array<SqlStorageValue>))\n        .toArray();\n      return Response.json(results);\n    } else if (name === \"getBlob\") {\n\n      const [id] = args;\n      assert(typeof id === \"string\");\n      const stream = await this.blob.get(id);\n      return new Response(stream, { status: stream === null ? 404 : 200 });\n    } else {\n\n      const func: unknown = this.timers[name as keyof Timers];\n      assert(typeof func === \"function\", `Unknown control op: ${name}`);\n      const result = await (func as (...args: Array<unknown>) => unknown).apply(\n        this.timers,\n        args,\n      );\n      return Response.json(result ?? null);\n    }\n  }",
+        "17": "\n  #route(req: CacheRequest): Promise<Response> | Response {\n    switch (req.method) {\n      case \"GET\":\n        return this.#match(req);\n      case \"PUT\":\n        return this.#put(req);\n      case \"PURGE\":\n        return this.#delete(req);\n      default:\n        return new Response(null, { status: 405 });\n    }\n  }\n\n  async #match(req: CacheRequest): Promise<Response> {\n    const cacheKey = getCacheKey(req);\n\n    let resHeaders: Headers | undefined;\n    let resRanges: Array<InclusiveRange> | undefined;",
+        "18": "\n    const cached = await this.storage.get(cacheKey, ({ size, headers }) => {\n      resHeaders = new Headers(headers as HeadersInit);\n      const contentType = resHeaders.get(\"Content-Type\");\n\n\n      const rangeHeader = req.headers.get(\"Range\");\n      if (rangeHeader !== null) {\n        resRanges = parseRanges(rangeHeader, size);\n        if (resRanges === undefined) throw new RangeNotSatisfiable(size);\n      }\n\n      return {\n        ranges: resRanges,\n        contentLength: size,\n        contentType: contentType ?? undefined,\n      };\n    });\n    if (cached?.metadata === undefined) throw new CacheMiss();\n\n\n\n\n    assert(resHeaders !== undefined);\n    resHeaders.set(\"CF-Cache-Status\", \"HIT\");\n    resRanges ??= [];",
+        "19": "\n    return getMatchResponse(req.headers, {\n      status: cached.metadata.status,\n      headers: resHeaders,\n      ranges: resRanges,\n      body: cached.value,\n      totalSize: cached.metadata.size,\n    });\n  }\n\n  async #put(req: CacheRequest): Promise<Response> {\n    const cacheKey = getCacheKey(req);\n\n    assert(req.body !== null);\n    const res = await parseHttpResponse(req.body);\n    let body = res.body;\n    assert(body !== null);\n\n    const { storable, expiration, headers } = getExpiration(\n      this.timers,\n      req,\n      res,\n    );\n    if (!storable) {\n\n\n      try {\n        await body.pipeTo(new WritableStream());\n      } catch {}\n      throw new StorageFailure();\n    }",
+        "20": "\n\n\n    const contentLength = parseInt(res.headers.get(\"Content-Length\") ?? \"NaN\");\n    let sizePromise: Promise<number>;\n    if (Number.isNaN(contentLength)) {\n      const stream = new SizingStream();\n      body = body.pipeThrough(stream);\n      sizePromise = stream.size;\n    } else {\n      sizePromise = Promise.resolve(contentLength);\n    }\n\n    const metadata: Promise<CacheMetadata> = sizePromise.then((size) => ({\n      headers: Object.entries(headers),\n      status: res.status,\n      size,\n    }));\n\n    await this.storage.put({\n      key: cacheKey,\n      value: body,\n      expiration: this.timers.now() + expiration,\n      metadata,\n    });\n    return new Response(null, { status: 204 });\n  }",
+        "21": "\n  async #delete(req: CacheRequest): Promise<Response> {\n    const cacheKey = getCacheKey(req);\n\n    const deleted = await this.storage.delete(cacheKey);\n\n\n    if (!deleted) throw new PurgeFailure();\n    return new Response(null);\n  }\n}\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which entry of `code` most clearly diverges from `must` or resembles `never`?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "1": null,
+          "2": null,
+          "3": null,
+          "4": null,
+          "5": null,
+          "6": null,
+          "7": null,
+          "8": null,
+          "9": null,
+          "10": null,
+          "11": null,
+          "12": null,
+          "13": null,
+          "14": null,
+          "15": null,
+          "16": null,
+          "17": null,
+          "18": null,
+          "19": null,
+          "20": null,
+          "21": null
+        }
+      },
+      "start:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "21": "import CachePolicy from \"http-cache-semantics\";",
+          "22": "import type {",
+          "23": "InclusiveRange,",
+          "24": "MultipartReadableStream,",
+          "25": "} from \"../../internal/shared.worker.ts\";",
+          "26": "import {",
+          "27": "assert,",
+          "28": "BlobStore,",
+          "29": "HttpError,",
+          "30": "KeyValueStorage,",
+          "31": "parseRanges,",
+          "32": "Timers,",
+          "33": "} from \"../../internal/shared.worker.ts\";",
+          "34": "import type { CacheServiceProps } from \"./CacheOptions.shared.ts\";",
+          "35": "import {",
+          "36": "BINDING_CACHE_BLOBS,",
+          "37": "BINDING_CACHE_ENABLE_CONTROL_ENDPOINTS,",
+          "38": "BINDING_CACHE_OBJECT,",
+          "39": "HEADER_CACHE_CONTROL_OP,",
+          "40": "HEADER_CACHE_NAMESPACE,",
+          "41": "HEADER_CACHE_OBJECT_NAME,",
+          "42": "HEADER_CACHE_STATUS,",
+          "43": "} from \"./CacheOptions.shared.ts\";",
+          "44": "import { parseHttpResponse } from \"./parse-http.shared.ts\";",
+          "46": "interface Env {",
+          "47": "[BINDING_CACHE_OBJECT]: DurableObjectNamespace;",
+          "48": "[BINDING_CACHE_BLOBS]: Fetcher;",
+          "49": "[BINDING_CACHE_ENABLE_CONTROL_ENDPOINTS]?: boolean;",
+          "50": "}"
+        }
+      },
+      "end:providers/idempotent-delete:1": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"1\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "21": "import CachePolicy from \"http-cache-semantics\";",
+          "22": "import type {",
+          "23": "InclusiveRange,",
+          "24": "MultipartReadableStream,",
+          "25": "} from \"../../internal/shared.worker.ts\";",
+          "26": "import {",
+          "27": "assert,",
+          "28": "BlobStore,",
+          "29": "HttpError,",
+          "30": "KeyValueStorage,",
+          "31": "parseRanges,",
+          "32": "Timers,",
+          "33": "} from \"../../internal/shared.worker.ts\";",
+          "34": "import type { CacheServiceProps } from \"./CacheOptions.shared.ts\";",
+          "35": "import {",
+          "36": "BINDING_CACHE_BLOBS,",
+          "37": "BINDING_CACHE_ENABLE_CONTROL_ENDPOINTS,",
+          "38": "BINDING_CACHE_OBJECT,",
+          "39": "HEADER_CACHE_CONTROL_OP,",
+          "40": "HEADER_CACHE_NAMESPACE,",
+          "41": "HEADER_CACHE_OBJECT_NAME,",
+          "42": "HEADER_CACHE_STATUS,",
+          "43": "} from \"./CacheOptions.shared.ts\";",
+          "44": "import { parseHttpResponse } from \"./parse-http.shared.ts\";",
+          "46": "interface Env {",
+          "47": "[BINDING_CACHE_OBJECT]: DurableObjectNamespace;",
+          "48": "[BINDING_CACHE_BLOBS]: Fetcher;",
+          "49": "[BINDING_CACHE_ENABLE_CONTROL_ENDPOINTS]?: boolean;",
+          "50": "}"
+        }
+      },
+      "start:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "52": "export default {",
+          "53": "async fetch(request, env, ctx) {",
+          "54": "const { enabled } = (ctx as { props: CacheServiceProps }).props;",
+          "55": "if (!enabled) return noopFetch(request);",
+          "58": "const namespace = request.headers.get(HEADER_CACHE_NAMESPACE);",
+          "59": "const name = namespace === null ? \"default\" : `named:${namespace}`;",
+          "60": "const stub = env[BINDING_CACHE_OBJECT].getByName(name);",
+          "61": "const headers = new Headers(request.headers);",
+          "62": "headers.set(HEADER_CACHE_OBJECT_NAME, encodeURIComponent(name));",
+          "65": "return stub.fetch(new Request(request, { headers }), {",
+          "66": "cf: request.cf as Record<string, unknown>,",
+          "67": "});",
+          "68": "},",
+          "69": "} satisfies ExportedHandler<Env>;"
+        }
+      },
+      "end:providers/idempotent-delete:2": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"2\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "52": "export default {",
+          "53": "async fetch(request, env, ctx) {",
+          "54": "const { enabled } = (ctx as { props: CacheServiceProps }).props;",
+          "55": "if (!enabled) return noopFetch(request);",
+          "58": "const namespace = request.headers.get(HEADER_CACHE_NAMESPACE);",
+          "59": "const name = namespace === null ? \"default\" : `named:${namespace}`;",
+          "60": "const stub = env[BINDING_CACHE_OBJECT].getByName(name);",
+          "61": "const headers = new Headers(request.headers);",
+          "62": "headers.set(HEADER_CACHE_OBJECT_NAME, encodeURIComponent(name));",
+          "65": "return stub.fetch(new Request(request, { headers }), {",
+          "66": "cf: request.cf as Record<string, unknown>,",
+          "67": "});",
+          "68": "},",
+          "69": "} satisfies ExportedHandler<Env>;"
+        }
+      },
+      "start:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "75": "async function noopFetch(request: Request): Promise<Response> {",
+          "76": "if (request.method === \"GET\") {",
+          "77": "return new Response(null, {",
+          "78": "status: 504,",
+          "79": "headers: { [HEADER_CACHE_STATUS]: \"MISS\" },",
+          "80": "});",
+          "81": "} else if (request.method === \"PUT\") {",
+          "84": "await request.body?.pipeTo(new WritableStream());",
+          "85": "return new Response(null, { status: 204 });",
+          "86": "} else if (request.method === \"PURGE\") {",
+          "87": "return new Response(null, { status: 404 });",
+          "88": "} else {",
+          "89": "return new Response(null, { status: 405 });",
+          "90": "}",
+          "91": "}"
+        }
+      },
+      "end:providers/idempotent-delete:3": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"3\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "75": "async function noopFetch(request: Request): Promise<Response> {",
+          "76": "if (request.method === \"GET\") {",
+          "77": "return new Response(null, {",
+          "78": "status: 504,",
+          "79": "headers: { [HEADER_CACHE_STATUS]: \"MISS\" },",
+          "80": "});",
+          "81": "} else if (request.method === \"PUT\") {",
+          "84": "await request.body?.pipeTo(new WritableStream());",
+          "85": "return new Response(null, { status: 204 });",
+          "86": "} else if (request.method === \"PURGE\") {",
+          "87": "return new Response(null, { status: 404 });",
+          "88": "} else {",
+          "89": "return new Response(null, { status: 405 });",
+          "90": "}",
+          "91": "}"
+        }
+      },
+      "start:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "97": "class CacheError extends HttpError {",
+          "98": "constructor(",
+          "99": "code: number,",
+          "100": "message: string,",
+          "101": "readonly headers: HeadersInit = [],",
+          "102": ") {",
+          "103": "super(code, message);",
+          "104": "}",
+          "106": "override toResponse(): Response {",
+          "107": "return new Response(null, {",
+          "108": "status: this.code,",
+          "109": "headers: this.headers,",
+          "110": "});",
+          "111": "}",
+          "112": "}",
+          "114": "class StorageFailure extends CacheError {",
+          "115": "constructor() {",
+          "116": "super(413, \"Cache storage failed\");",
+          "117": "}",
+          "118": "}",
+          "120": "class PurgeFailure extends CacheError {",
+          "121": "constructor() {",
+          "122": "super(404, \"Couldn't find asset to purge\");",
+          "123": "}",
+          "124": "}"
+        }
+      },
+      "end:providers/idempotent-delete:4": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"4\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "97": "class CacheError extends HttpError {",
+          "98": "constructor(",
+          "99": "code: number,",
+          "100": "message: string,",
+          "101": "readonly headers: HeadersInit = [],",
+          "102": ") {",
+          "103": "super(code, message);",
+          "104": "}",
+          "106": "override toResponse(): Response {",
+          "107": "return new Response(null, {",
+          "108": "status: this.code,",
+          "109": "headers: this.headers,",
+          "110": "});",
+          "111": "}",
+          "112": "}",
+          "114": "class StorageFailure extends CacheError {",
+          "115": "constructor() {",
+          "116": "super(413, \"Cache storage failed\");",
+          "117": "}",
+          "118": "}",
+          "120": "class PurgeFailure extends CacheError {",
+          "121": "constructor() {",
+          "122": "super(404, \"Couldn't find asset to purge\");",
+          "123": "}",
+          "124": "}"
+        }
+      },
+      "start:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "126": "class CacheMiss extends CacheError {",
+          "127": "constructor() {",
+          "128": "super(",
+          "130": "504,",
+          "131": "\"Asset not found in cache\",",
+          "132": "[[HEADER_CACHE_STATUS, \"MISS\"]],",
+          "133": ");",
+          "134": "}",
+          "135": "}",
+          "137": "class RangeNotSatisfiable extends CacheError {",
+          "138": "constructor(size: number) {",
+          "139": "super(416, \"Range not satisfiable\", [",
+          "140": "[\"Content-Range\", `bytes */${size}`],",
+          "141": "[HEADER_CACHE_STATUS, \"HIT\"],",
+          "142": "]);",
+          "143": "}",
+          "144": "}",
+          "150": "interface CacheMetadata {",
+          "151": "headers: Array<Array<string>>;",
+          "152": "status: number;",
+          "153": "size: number;",
+          "154": "}"
+        }
+      },
+      "end:providers/idempotent-delete:5": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"5\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "126": "class CacheMiss extends CacheError {",
+          "127": "constructor() {",
+          "128": "super(",
+          "130": "504,",
+          "131": "\"Asset not found in cache\",",
+          "132": "[[HEADER_CACHE_STATUS, \"MISS\"]],",
+          "133": ");",
+          "134": "}",
+          "135": "}",
+          "137": "class RangeNotSatisfiable extends CacheError {",
+          "138": "constructor(size: number) {",
+          "139": "super(416, \"Range not satisfiable\", [",
+          "140": "[\"Content-Range\", `bytes */${size}`],",
+          "141": "[HEADER_CACHE_STATUS, \"HIT\"],",
+          "142": "]);",
+          "143": "}",
+          "144": "}",
+          "150": "interface CacheMetadata {",
+          "151": "headers: Array<Array<string>>;",
+          "152": "status: number;",
+          "153": "size: number;",
+          "154": "}"
+        }
+      },
+      "start:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "156": "type CacheRequest = Request<unknown, RequestInitCfProperties>;",
+          "158": "function getCacheKey(req: CacheRequest): string {",
+          "159": "return req.cf?.cacheKey ? String(req.cf?.cacheKey) : req.url;",
+          "160": "}",
+          "162": "function getExpiration(timers: Timers, req: Request, res: Response) {",
+          "164": "const reqHeaders = normaliseHeaders(req.headers);",
+          "165": "delete reqHeaders[\"cache-control\"];",
+          "170": "const resHeaders = normaliseHeaders(res.headers);",
+          "171": "if (",
+          "172": "resHeaders[\"cache-control\"]?.toLowerCase().includes(\"private=set-cookie\")",
+          "173": ") {",
+          "174": "resHeaders[\"cache-control\"] = resHeaders[\"cache-control\"]",
+          "175": "?.toLowerCase()",
+          "176": ".replace(/private=set-cookie;?/i, \"\");",
+          "177": "delete resHeaders[\"set-cookie\"];",
+          "178": "}"
+        }
+      },
+      "end:providers/idempotent-delete:6": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"6\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "156": "type CacheRequest = Request<unknown, RequestInitCfProperties>;",
+          "158": "function getCacheKey(req: CacheRequest): string {",
+          "159": "return req.cf?.cacheKey ? String(req.cf?.cacheKey) : req.url;",
+          "160": "}",
+          "162": "function getExpiration(timers: Timers, req: Request, res: Response) {",
+          "164": "const reqHeaders = normaliseHeaders(req.headers);",
+          "165": "delete reqHeaders[\"cache-control\"];",
+          "170": "const resHeaders = normaliseHeaders(res.headers);",
+          "171": "if (",
+          "172": "resHeaders[\"cache-control\"]?.toLowerCase().includes(\"private=set-cookie\")",
+          "173": ") {",
+          "174": "resHeaders[\"cache-control\"] = resHeaders[\"cache-control\"]",
+          "175": "?.toLowerCase()",
+          "176": ".replace(/private=set-cookie;?/i, \"\");",
+          "177": "delete resHeaders[\"set-cookie\"];",
+          "178": "}"
+        }
+      },
+      "start:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "181": "const cacheReq: CachePolicy.Request = {",
+          "182": "url: req.url,",
+          "185": "method: \"GET\",",
+          "186": "headers: reqHeaders,",
+          "187": "};",
+          "188": "const cacheRes: CachePolicy.Response = {",
+          "189": "status: res.status,",
+          "190": "headers: resHeaders,",
+          "191": "};",
+          "194": "const originalNow = CachePolicy.prototype.now;",
+          "196": "CachePolicy.prototype.now = timers.now;"
+        }
+      },
+      "end:providers/idempotent-delete:7": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"7\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "181": "const cacheReq: CachePolicy.Request = {",
+          "182": "url: req.url,",
+          "185": "method: \"GET\",",
+          "186": "headers: reqHeaders,",
+          "187": "};",
+          "188": "const cacheRes: CachePolicy.Response = {",
+          "189": "status: res.status,",
+          "190": "headers: resHeaders,",
+          "191": "};",
+          "194": "const originalNow = CachePolicy.prototype.now;",
+          "196": "CachePolicy.prototype.now = timers.now;"
+        }
+      },
+      "start:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "197": "try {",
+          "198": "const policy = new CachePolicy(cacheReq, cacheRes, { shared: true });",
+          "200": "return {",
+          "202": "storable: policy.storable() && !(\"set-cookie\" in resHeaders),",
+          "203": "expiration: policy.timeToLive(),",
+          "206": "headers: policy.responseHeaders() as HeadersInit,",
+          "207": "};",
+          "208": "} finally {",
+          "210": "CachePolicy.prototype.now = originalNow;",
+          "211": "}",
+          "212": "}",
+          "218": "function normaliseHeaders(headers: Headers): Record<string, string> {",
+          "219": "const result: Record<string, string> = {};",
+          "220": "for (const [key, value] of headers) result[key.toLowerCase()] = value;",
+          "221": "return result;",
+          "222": "}",
+          "225": "const etagRegexp = /^(W\\/)?\"(.+)\"$/;"
+        }
+      },
+      "end:providers/idempotent-delete:8": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"8\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "197": "try {",
+          "198": "const policy = new CachePolicy(cacheReq, cacheRes, { shared: true });",
+          "200": "return {",
+          "202": "storable: policy.storable() && !(\"set-cookie\" in resHeaders),",
+          "203": "expiration: policy.timeToLive(),",
+          "206": "headers: policy.responseHeaders() as HeadersInit,",
+          "207": "};",
+          "208": "} finally {",
+          "210": "CachePolicy.prototype.now = originalNow;",
+          "211": "}",
+          "212": "}",
+          "218": "function normaliseHeaders(headers: Headers): Record<string, string> {",
+          "219": "const result: Record<string, string> = {};",
+          "220": "for (const [key, value] of headers) result[key.toLowerCase()] = value;",
+          "221": "return result;",
+          "222": "}",
+          "225": "const etagRegexp = /^(W\\/)?\"(.+)\"$/;"
+        }
+      },
+      "start:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "226": "function parseETag(value: string): string | undefined {",
+          "230": "return etagRegexp.exec(value.trim())?.[2] ?? undefined;",
+          "231": "}",
+          "234": "const utcDateRegexp =",
+          "235": "/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \\d\\d (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \\d\\d\\d\\d \\d\\d:\\d\\d:\\d\\d GMT$/;",
+          "236": "function parseUTCDate(value: string): number {",
+          "237": "return utcDateRegexp.test(value) ? Date.parse(value) : NaN;",
+          "238": "}",
+          "240": "interface CachedResponse {",
+          "241": "status: number;",
+          "242": "headers: Headers;",
+          "243": "ranges: Array<InclusiveRange>;",
+          "244": "body: ReadableStream<Uint8Array> | MultipartReadableStream;",
+          "245": "totalSize: number;",
+          "246": "}",
+          "247": "function getMatchResponse(reqHeaders: Headers, res: CachedResponse): Response {",
+          "250": "const reqIfNoneMatchHeader = reqHeaders.get(\"If-None-Match\");",
+          "251": "const resETagHeader = res.headers.get(\"ETag\");"
+        }
+      },
+      "end:providers/idempotent-delete:9": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"9\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "226": "function parseETag(value: string): string | undefined {",
+          "230": "return etagRegexp.exec(value.trim())?.[2] ?? undefined;",
+          "231": "}",
+          "234": "const utcDateRegexp =",
+          "235": "/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \\d\\d (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \\d\\d\\d\\d \\d\\d:\\d\\d:\\d\\d GMT$/;",
+          "236": "function parseUTCDate(value: string): number {",
+          "237": "return utcDateRegexp.test(value) ? Date.parse(value) : NaN;",
+          "238": "}",
+          "240": "interface CachedResponse {",
+          "241": "status: number;",
+          "242": "headers: Headers;",
+          "243": "ranges: Array<InclusiveRange>;",
+          "244": "body: ReadableStream<Uint8Array> | MultipartReadableStream;",
+          "245": "totalSize: number;",
+          "246": "}",
+          "247": "function getMatchResponse(reqHeaders: Headers, res: CachedResponse): Response {",
+          "250": "const reqIfNoneMatchHeader = reqHeaders.get(\"If-None-Match\");",
+          "251": "const resETagHeader = res.headers.get(\"ETag\");"
+        }
+      },
+      "start:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "252": "if (reqIfNoneMatchHeader !== null && resETagHeader !== null) {",
+          "253": "const resETag = parseETag(resETagHeader);",
+          "254": "if (resETag !== undefined) {",
+          "255": "if (reqIfNoneMatchHeader.trim() === \"*\") {",
+          "256": "return new Response(null, { status: 304, headers: res.headers });",
+          "257": "}",
+          "258": "for (const reqIfNoneMatch of reqIfNoneMatchHeader.split(\",\")) {",
+          "259": "if (resETag === parseETag(reqIfNoneMatch)) {",
+          "260": "return new Response(null, { status: 304, headers: res.headers });",
+          "261": "}",
+          "262": "}",
+          "263": "}",
+          "264": "}",
+          "268": "const reqIfModifiedSinceHeader = reqHeaders.get(\"If-Modified-Since\");",
+          "269": "const resLastModifiedHeader = res.headers.get(\"Last-Modified\");",
+          "270": "if (reqIfModifiedSinceHeader !== null && resLastModifiedHeader !== null) {",
+          "271": "const reqIfModifiedSince = parseUTCDate(reqIfModifiedSinceHeader);",
+          "272": "const resLastModified = parseUTCDate(resLastModifiedHeader);",
+          "274": "if (resLastModified <= reqIfModifiedSince) {",
+          "275": "return new Response(null, { status: 304, headers: res.headers });",
+          "276": "}",
+          "277": "}"
+        }
+      },
+      "end:providers/idempotent-delete:10": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"10\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "252": "if (reqIfNoneMatchHeader !== null && resETagHeader !== null) {",
+          "253": "const resETag = parseETag(resETagHeader);",
+          "254": "if (resETag !== undefined) {",
+          "255": "if (reqIfNoneMatchHeader.trim() === \"*\") {",
+          "256": "return new Response(null, { status: 304, headers: res.headers });",
+          "257": "}",
+          "258": "for (const reqIfNoneMatch of reqIfNoneMatchHeader.split(\",\")) {",
+          "259": "if (resETag === parseETag(reqIfNoneMatch)) {",
+          "260": "return new Response(null, { status: 304, headers: res.headers });",
+          "261": "}",
+          "262": "}",
+          "263": "}",
+          "264": "}",
+          "268": "const reqIfModifiedSinceHeader = reqHeaders.get(\"If-Modified-Since\");",
+          "269": "const resLastModifiedHeader = res.headers.get(\"Last-Modified\");",
+          "270": "if (reqIfModifiedSinceHeader !== null && resLastModifiedHeader !== null) {",
+          "271": "const reqIfModifiedSince = parseUTCDate(reqIfModifiedSinceHeader);",
+          "272": "const resLastModified = parseUTCDate(resLastModifiedHeader);",
+          "274": "if (resLastModified <= reqIfModifiedSince) {",
+          "275": "return new Response(null, { status: 304, headers: res.headers });",
+          "276": "}",
+          "277": "}"
+        }
+      },
+      "start:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "281": "if (res.ranges.length > 0) {",
+          "282": "res.status = 206;",
+          "283": "if (res.ranges.length > 1) {",
+          "284": "assert(!(res.body instanceof ReadableStream));",
+          "285": "res.headers.set(\"Content-Type\", res.body.multipartContentType);",
+          "286": "} else {",
+          "287": "const { start, end } = res.ranges[0];",
+          "288": "res.headers.set(",
+          "289": "\"Content-Range\",",
+          "290": "`bytes ${start}-${end}/${res.totalSize}`,",
+          "291": ");",
+          "292": "res.headers.set(\"Content-Length\", `${end - start + 1}`);",
+          "293": "}",
+          "294": "}",
+          "296": "if (!(res.body instanceof ReadableStream)) res.body = res.body.body;",
+          "297": "return new Response(res.body, { status: res.status, headers: res.headers });",
+          "298": "}",
+          "300": "class SizingStream extends TransformStream<Uint8Array, Uint8Array> {"
+        }
+      },
+      "end:providers/idempotent-delete:11": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"11\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "281": "if (res.ranges.length > 0) {",
+          "282": "res.status = 206;",
+          "283": "if (res.ranges.length > 1) {",
+          "284": "assert(!(res.body instanceof ReadableStream));",
+          "285": "res.headers.set(\"Content-Type\", res.body.multipartContentType);",
+          "286": "} else {",
+          "287": "const { start, end } = res.ranges[0];",
+          "288": "res.headers.set(",
+          "289": "\"Content-Range\",",
+          "290": "`bytes ${start}-${end}/${res.totalSize}`,",
+          "291": ");",
+          "292": "res.headers.set(\"Content-Length\", `${end - start + 1}`);",
+          "293": "}",
+          "294": "}",
+          "296": "if (!(res.body instanceof ReadableStream)) res.body = res.body.body;",
+          "297": "return new Response(res.body, { status: res.status, headers: res.headers });",
+          "298": "}",
+          "300": "class SizingStream extends TransformStream<Uint8Array, Uint8Array> {"
+        }
+      },
+      "start:providers/idempotent-delete:12": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"12\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "301": "readonly size: Promise<number>;",
+          "303": "constructor() {",
+          "304": "let resolveSize!: (size: number) => void;",
+          "305": "const sizePromise = new Promise<number>(",
+          "306": "(resolve) => (resolveSize = resolve),",
+          "307": ");",
+          "308": "let size = 0;",
+          "309": "super({",
+          "310": "transform(chunk, controller) {",
+          "311": "size += chunk.byteLength;",
+          "312": "controller.enqueue(chunk);",
+          "313": "},",
+          "314": "flush() {",
+          "315": "resolveSize(size);",
+          "316": "},",
+          "317": "});",
+          "318": "this.size = sizePromise;",
+          "319": "}",
+          "320": "}",
+          "322": "interface ControlOp {",
+          "323": "name: string;",
+          "324": "args?: Array<unknown>;",
+          "325": "}",
+          "327": "export class CacheObject implements DurableObject {",
+          "328": "readonly timers = new Timers();"
+        }
+      },
+      "end:providers/idempotent-delete:12": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"12\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "301": "readonly size: Promise<number>;",
+          "303": "constructor() {",
+          "304": "let resolveSize!: (size: number) => void;",
+          "305": "const sizePromise = new Promise<number>(",
+          "306": "(resolve) => (resolveSize = resolve),",
+          "307": ");",
+          "308": "let size = 0;",
+          "309": "super({",
+          "310": "transform(chunk, controller) {",
+          "311": "size += chunk.byteLength;",
+          "312": "controller.enqueue(chunk);",
+          "313": "},",
+          "314": "flush() {",
+          "315": "resolveSize(size);",
+          "316": "},",
+          "317": "});",
+          "318": "this.size = sizePromise;",
+          "319": "}",
+          "320": "}",
+          "322": "interface ControlOp {",
+          "323": "name: string;",
+          "324": "args?: Array<unknown>;",
+          "325": "}",
+          "327": "export class CacheObject implements DurableObject {",
+          "328": "readonly timers = new Timers();"
+        }
+      },
+      "start:providers/idempotent-delete:13": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"13\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "330": "#name?: string;",
+          "331": "#blob?: BlobStore;",
+          "332": "#storage?: KeyValueStorage<CacheMetadata>;",
+          "334": "constructor(",
+          "335": "readonly state: DurableObjectState,",
+          "336": "readonly env: Env,",
+          "337": ") {}",
+          "339": "get name(): string {",
+          "341": "assert(",
+          "342": "this.#name !== undefined,",
+          "343": "\"Expected `CacheObject#fetch()` call before `name` access\",",
+          "344": ");",
+          "345": "return this.#name;",
+          "346": "}",
+          "348": "get blob(): BlobStore {",
+          "349": "return (this.#blob ??= new BlobStore(",
+          "350": "this.env[BINDING_CACHE_BLOBS],",
+          "351": "this.name,",
+          "352": "));",
+          "353": "}"
+        }
+      },
+      "end:providers/idempotent-delete:13": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"13\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "330": "#name?: string;",
+          "331": "#blob?: BlobStore;",
+          "332": "#storage?: KeyValueStorage<CacheMetadata>;",
+          "334": "constructor(",
+          "335": "readonly state: DurableObjectState,",
+          "336": "readonly env: Env,",
+          "337": ") {}",
+          "339": "get name(): string {",
+          "341": "assert(",
+          "342": "this.#name !== undefined,",
+          "343": "\"Expected `CacheObject#fetch()` call before `name` access\",",
+          "344": ");",
+          "345": "return this.#name;",
+          "346": "}",
+          "348": "get blob(): BlobStore {",
+          "349": "return (this.#blob ??= new BlobStore(",
+          "350": "this.env[BINDING_CACHE_BLOBS],",
+          "351": "this.name,",
+          "352": "));",
+          "353": "}"
+        }
+      },
+      "start:providers/idempotent-delete:14": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"14\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "355": "get storage(): KeyValueStorage<CacheMetadata> {",
+          "357": "return (this.#storage ??= new KeyValueStorage(",
+          "358": "this.state.storage,",
+          "359": "this.blob,",
+          "360": "this.timers,",
+          "361": "));",
+          "362": "}",
+          "364": "async fetch(req: Request): Promise<Response> {",
+          "368": "const encodedName = req.headers.get(HEADER_CACHE_OBJECT_NAME);",
+          "369": "assert(encodedName !== null, `Expected ${HEADER_CACHE_OBJECT_NAME} header`);",
+          "370": "this.#name = decodeURIComponent(encodedName);",
+          "374": "if (this.env[BINDING_CACHE_ENABLE_CONTROL_ENDPOINTS] === true) {",
+          "375": "const controlOpHeader = req.headers.get(HEADER_CACHE_CONTROL_OP);",
+          "376": "if (controlOpHeader !== null) {",
+          "377": "const controlOp = (await req.json()) as ControlOp;",
+          "378": "return this.#handleControlOp(controlOp);",
+          "379": "}",
+          "380": "}"
+        }
+      },
+      "end:providers/idempotent-delete:14": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"14\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "355": "get storage(): KeyValueStorage<CacheMetadata> {",
+          "357": "return (this.#storage ??= new KeyValueStorage(",
+          "358": "this.state.storage,",
+          "359": "this.blob,",
+          "360": "this.timers,",
+          "361": "));",
+          "362": "}",
+          "364": "async fetch(req: Request): Promise<Response> {",
+          "368": "const encodedName = req.headers.get(HEADER_CACHE_OBJECT_NAME);",
+          "369": "assert(encodedName !== null, `Expected ${HEADER_CACHE_OBJECT_NAME} header`);",
+          "370": "this.#name = decodeURIComponent(encodedName);",
+          "374": "if (this.env[BINDING_CACHE_ENABLE_CONTROL_ENDPOINTS] === true) {",
+          "375": "const controlOpHeader = req.headers.get(HEADER_CACHE_CONTROL_OP);",
+          "376": "if (controlOpHeader !== null) {",
+          "377": "const controlOp = (await req.json()) as ControlOp;",
+          "378": "return this.#handleControlOp(controlOp);",
+          "379": "}",
+          "380": "}"
+        }
+      },
+      "start:providers/idempotent-delete:15": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"15\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "382": "try {",
+          "383": "return await this.#route(req as CacheRequest);",
+          "384": "} catch (e) {",
+          "385": "if (e instanceof HttpError) return e.toResponse();",
+          "386": "const error = e instanceof Error ? e : new Error(String(e));",
+          "387": "const fallback = error.stack ?? error.message;",
+          "388": "console.error(fallback);",
+          "389": "return new Response(fallback, { status: 500 });",
+          "390": "} finally {",
+          "394": "if (req.body !== null && !req.bodyUsed) {",
+          "395": "await req.body.pipeTo(new WritableStream());",
+          "396": "}",
+          "397": "}",
+          "398": "}"
+        }
+      },
+      "end:providers/idempotent-delete:15": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"15\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "382": "try {",
+          "383": "return await this.#route(req as CacheRequest);",
+          "384": "} catch (e) {",
+          "385": "if (e instanceof HttpError) return e.toResponse();",
+          "386": "const error = e instanceof Error ? e : new Error(String(e));",
+          "387": "const fallback = error.stack ?? error.message;",
+          "388": "console.error(fallback);",
+          "389": "return new Response(fallback, { status: 500 });",
+          "390": "} finally {",
+          "394": "if (req.body !== null && !req.bodyUsed) {",
+          "395": "await req.body.pipeTo(new WritableStream());",
+          "396": "}",
+          "397": "}",
+          "398": "}"
+        }
+      },
+      "start:providers/idempotent-delete:16": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"16\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "400": "async #handleControlOp({ name, args = [] }: ControlOp): Promise<Response> {",
+          "401": "if (name === \"sqlQuery\") {",
+          "403": "const [query, ...params] = args;",
+          "404": "assert(typeof query === \"string\");",
+          "405": "const results = this.state.storage.sql",
+          "406": ".exec(query, ...(params as Array<SqlStorageValue>))",
+          "407": ".toArray();",
+          "408": "return Response.json(results);",
+          "409": "} else if (name === \"getBlob\") {",
+          "411": "const [id] = args;",
+          "412": "assert(typeof id === \"string\");",
+          "413": "const stream = await this.blob.get(id);",
+          "414": "return new Response(stream, { status: stream === null ? 404 : 200 });",
+          "415": "} else {",
+          "417": "const func: unknown = this.timers[name as keyof Timers];",
+          "418": "assert(typeof func === \"function\", `Unknown control op: ${name}`);",
+          "419": "const result = await (func as (...args: Array<unknown>) => unknown).apply(",
+          "420": "this.timers,",
+          "421": "args,",
+          "422": ");",
+          "423": "return Response.json(result ?? null);",
+          "424": "}",
+          "425": "}"
+        }
+      },
+      "end:providers/idempotent-delete:16": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"16\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "400": "async #handleControlOp({ name, args = [] }: ControlOp): Promise<Response> {",
+          "401": "if (name === \"sqlQuery\") {",
+          "403": "const [query, ...params] = args;",
+          "404": "assert(typeof query === \"string\");",
+          "405": "const results = this.state.storage.sql",
+          "406": ".exec(query, ...(params as Array<SqlStorageValue>))",
+          "407": ".toArray();",
+          "408": "return Response.json(results);",
+          "409": "} else if (name === \"getBlob\") {",
+          "411": "const [id] = args;",
+          "412": "assert(typeof id === \"string\");",
+          "413": "const stream = await this.blob.get(id);",
+          "414": "return new Response(stream, { status: stream === null ? 404 : 200 });",
+          "415": "} else {",
+          "417": "const func: unknown = this.timers[name as keyof Timers];",
+          "418": "assert(typeof func === \"function\", `Unknown control op: ${name}`);",
+          "419": "const result = await (func as (...args: Array<unknown>) => unknown).apply(",
+          "420": "this.timers,",
+          "421": "args,",
+          "422": ");",
+          "423": "return Response.json(result ?? null);",
+          "424": "}",
+          "425": "}"
+        }
+      },
+      "start:providers/idempotent-delete:17": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"17\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "427": "#route(req: CacheRequest): Promise<Response> | Response {",
+          "428": "switch (req.method) {",
+          "429": "case \"GET\":",
+          "430": "return this.#match(req);",
+          "431": "case \"PUT\":",
+          "432": "return this.#put(req);",
+          "433": "case \"PURGE\":",
+          "434": "return this.#delete(req);",
+          "435": "default:",
+          "436": "return new Response(null, { status: 405 });",
+          "437": "}",
+          "438": "}",
+          "440": "async #match(req: CacheRequest): Promise<Response> {",
+          "441": "const cacheKey = getCacheKey(req);",
+          "443": "let resHeaders: Headers | undefined;",
+          "444": "let resRanges: Array<InclusiveRange> | undefined;"
+        }
+      },
+      "end:providers/idempotent-delete:17": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"17\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "427": "#route(req: CacheRequest): Promise<Response> | Response {",
+          "428": "switch (req.method) {",
+          "429": "case \"GET\":",
+          "430": "return this.#match(req);",
+          "431": "case \"PUT\":",
+          "432": "return this.#put(req);",
+          "433": "case \"PURGE\":",
+          "434": "return this.#delete(req);",
+          "435": "default:",
+          "436": "return new Response(null, { status: 405 });",
+          "437": "}",
+          "438": "}",
+          "440": "async #match(req: CacheRequest): Promise<Response> {",
+          "441": "const cacheKey = getCacheKey(req);",
+          "443": "let resHeaders: Headers | undefined;",
+          "444": "let resRanges: Array<InclusiveRange> | undefined;"
+        }
+      },
+      "start:providers/idempotent-delete:18": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"18\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "446": "const cached = await this.storage.get(cacheKey, ({ size, headers }) => {",
+          "447": "resHeaders = new Headers(headers as HeadersInit);",
+          "448": "const contentType = resHeaders.get(\"Content-Type\");",
+          "451": "const rangeHeader = req.headers.get(\"Range\");",
+          "452": "if (rangeHeader !== null) {",
+          "453": "resRanges = parseRanges(rangeHeader, size);",
+          "454": "if (resRanges === undefined) throw new RangeNotSatisfiable(size);",
+          "455": "}",
+          "457": "return {",
+          "458": "ranges: resRanges,",
+          "459": "contentLength: size,",
+          "460": "contentType: contentType ?? undefined,",
+          "461": "};",
+          "462": "});",
+          "463": "if (cached?.metadata === undefined) throw new CacheMiss();",
+          "468": "assert(resHeaders !== undefined);",
+          "469": "resHeaders.set(\"CF-Cache-Status\", \"HIT\");",
+          "470": "resRanges ??= [];"
+        }
+      },
+      "end:providers/idempotent-delete:18": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"18\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "446": "const cached = await this.storage.get(cacheKey, ({ size, headers }) => {",
+          "447": "resHeaders = new Headers(headers as HeadersInit);",
+          "448": "const contentType = resHeaders.get(\"Content-Type\");",
+          "451": "const rangeHeader = req.headers.get(\"Range\");",
+          "452": "if (rangeHeader !== null) {",
+          "453": "resRanges = parseRanges(rangeHeader, size);",
+          "454": "if (resRanges === undefined) throw new RangeNotSatisfiable(size);",
+          "455": "}",
+          "457": "return {",
+          "458": "ranges: resRanges,",
+          "459": "contentLength: size,",
+          "460": "contentType: contentType ?? undefined,",
+          "461": "};",
+          "462": "});",
+          "463": "if (cached?.metadata === undefined) throw new CacheMiss();",
+          "468": "assert(resHeaders !== undefined);",
+          "469": "resHeaders.set(\"CF-Cache-Status\", \"HIT\");",
+          "470": "resRanges ??= [];"
+        }
+      },
+      "start:providers/idempotent-delete:19": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"19\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "472": "return getMatchResponse(req.headers, {",
+          "473": "status: cached.metadata.status,",
+          "474": "headers: resHeaders,",
+          "475": "ranges: resRanges,",
+          "476": "body: cached.value,",
+          "477": "totalSize: cached.metadata.size,",
+          "478": "});",
+          "479": "}",
+          "481": "async #put(req: CacheRequest): Promise<Response> {",
+          "482": "const cacheKey = getCacheKey(req);",
+          "484": "assert(req.body !== null);",
+          "485": "const res = await parseHttpResponse(req.body);",
+          "486": "let body = res.body;",
+          "487": "assert(body !== null);",
+          "489": "const { storable, expiration, headers } = getExpiration(",
+          "490": "this.timers,",
+          "491": "req,",
+          "492": "res,",
+          "493": ");",
+          "494": "if (!storable) {",
+          "497": "try {",
+          "498": "await body.pipeTo(new WritableStream());",
+          "499": "} catch {}",
+          "500": "throw new StorageFailure();",
+          "501": "}"
+        }
+      },
+      "end:providers/idempotent-delete:19": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"19\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "472": "return getMatchResponse(req.headers, {",
+          "473": "status: cached.metadata.status,",
+          "474": "headers: resHeaders,",
+          "475": "ranges: resRanges,",
+          "476": "body: cached.value,",
+          "477": "totalSize: cached.metadata.size,",
+          "478": "});",
+          "479": "}",
+          "481": "async #put(req: CacheRequest): Promise<Response> {",
+          "482": "const cacheKey = getCacheKey(req);",
+          "484": "assert(req.body !== null);",
+          "485": "const res = await parseHttpResponse(req.body);",
+          "486": "let body = res.body;",
+          "487": "assert(body !== null);",
+          "489": "const { storable, expiration, headers } = getExpiration(",
+          "490": "this.timers,",
+          "491": "req,",
+          "492": "res,",
+          "493": ");",
+          "494": "if (!storable) {",
+          "497": "try {",
+          "498": "await body.pipeTo(new WritableStream());",
+          "499": "} catch {}",
+          "500": "throw new StorageFailure();",
+          "501": "}"
+        }
+      },
+      "start:providers/idempotent-delete:20": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"20\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "505": "const contentLength = parseInt(res.headers.get(\"Content-Length\") ?? \"NaN\");",
+          "506": "let sizePromise: Promise<number>;",
+          "507": "if (Number.isNaN(contentLength)) {",
+          "508": "const stream = new SizingStream();",
+          "509": "body = body.pipeThrough(stream);",
+          "510": "sizePromise = stream.size;",
+          "511": "} else {",
+          "512": "sizePromise = Promise.resolve(contentLength);",
+          "513": "}",
+          "515": "const metadata: Promise<CacheMetadata> = sizePromise.then((size) => ({",
+          "516": "headers: Object.entries(headers),",
+          "517": "status: res.status,",
+          "518": "size,",
+          "519": "}));",
+          "521": "await this.storage.put({",
+          "522": "key: cacheKey,",
+          "523": "value: body,",
+          "524": "expiration: this.timers.now() + expiration,",
+          "525": "metadata,",
+          "526": "});",
+          "527": "return new Response(null, { status: 204 });",
+          "528": "}"
+        }
+      },
+      "end:providers/idempotent-delete:20": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"20\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "505": "const contentLength = parseInt(res.headers.get(\"Content-Length\") ?? \"NaN\");",
+          "506": "let sizePromise: Promise<number>;",
+          "507": "if (Number.isNaN(contentLength)) {",
+          "508": "const stream = new SizingStream();",
+          "509": "body = body.pipeThrough(stream);",
+          "510": "sizePromise = stream.size;",
+          "511": "} else {",
+          "512": "sizePromise = Promise.resolve(contentLength);",
+          "513": "}",
+          "515": "const metadata: Promise<CacheMetadata> = sizePromise.then((size) => ({",
+          "516": "headers: Object.entries(headers),",
+          "517": "status: res.status,",
+          "518": "size,",
+          "519": "}));",
+          "521": "await this.storage.put({",
+          "522": "key: cacheKey,",
+          "523": "value: body,",
+          "524": "expiration: this.timers.now() + expiration,",
+          "525": "metadata,",
+          "526": "});",
+          "527": "return new Response(null, { status: 204 });",
+          "528": "}"
+        }
+      },
+      "start:providers/idempotent-delete:21": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"21\"]` does the code that breaks `rule` start on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "530": "async #delete(req: CacheRequest): Promise<Response> {",
+          "531": "const cacheKey = getCacheKey(req);",
+          "533": "const deleted = await this.storage.delete(cacheKey);",
+          "536": "if (!deleted) throw new PurgeFailure();",
+          "537": "return new Response(null);",
+          "538": "}",
+          "539": "}"
+        }
+      },
+      "end:providers/idempotent-delete:21": {
+        "type": "choice",
+        "instructions": {
+          "question": "Which line of `code[\"21\"]` does the code that breaks `rule` end on?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "530": "async #delete(req: CacheRequest): Promise<Response> {",
+          "531": "const cacheKey = getCacheKey(req);",
+          "533": "const deleted = await this.storage.delete(cacheKey);",
+          "536": "if (!deleted) throw new PurgeFailure();",
+          "537": "return new Response(null);",
+          "538": "}",
+          "539": "}"
+        }
+      },
+      "sufficient:providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Can you tell whether `code` breaks `rule` from `code` alone, without knowing what other files, libraries, services, or configuration do?",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` shows everything needed to tell whether it breaks `rule`",
+          "false": "Whether `code` breaks `rule` depends on something `code` does not show, such as another file, a library, a service, or configuration"
+        }
+      }
+    }
+  }
+}

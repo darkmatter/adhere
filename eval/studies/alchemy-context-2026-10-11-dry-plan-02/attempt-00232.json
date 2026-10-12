@@ -1,0 +1,113 @@
+{
+  "arm": "symbols",
+  "file": "packages/alchemy/src/AWS/SimpleDB/Domain.ts",
+  "kind": "judge",
+  "ordinal": 232,
+  "artifact": "attempt-00232.json",
+  "started": "2026-10-11T03:20:43.469Z",
+  "estimatedTokens": 6487,
+  "reservedTokens": 64000,
+  "chargedTokens": 0,
+  "outcome": "simulated-answered",
+  "milliseconds": 0.06208699999842793,
+  "referencesPresent": false,
+  "bodyDigest": "22bb5a1ed58313e23c5cd5f952792e5d8a9c176f2b4a1c7fbebb818bc1e797e5",
+  "answers": {
+    "providers/idempotent-delete": 0.99
+  },
+  "returnedModel": "SIMULATED-NOT-A-MODEL-RESULT",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "symbols": {
+        "__comment": "Compiler-rendered types and documentation for symbols used in `code`; keys are symbol names. A declared type, assertion, or type predicate is only a compile-time claim, not proof of runtime validation. When `references` show an implementation, inspect its actual checks. A predicate that returns true, tests only truthiness, or checks only whether a value is an object does not validate the fields it claims.",
+        "_tag": "```typescript\nstring\n```",
+        "accountId": "```typescript\nstring\n```",
+        "action": "```typescript\n\"replace\"\n```",
+        "AWSEnvironment": "```typescript\ntypeof AWSEnvironment\n```",
+        "catchTag": "```typescript\n{ <const K extends import(\"effect/Types\").Tags<E> | import(\"effect/Array\").NonEmptyReadonlyArray<import(\"effect/Types\").Tags<E>>, E, A1, E1, R1, A2 = import(\"effect/Types\").unassigned, E2 = never, R2 = never>(k: K, f: (e: import(\"effect/Types",
+        "createDomain": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<sdb.CreateDomainRequest, sdb.CreateDomainResponse, sdb.CreateDomainError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```\n\n",
+        "createName": "```typescript\n(id: string, props: DomainProps) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").InstanceId | import(\"../../Stack.ts\").Stack | import(\"../../Stage.ts\").Stage>\n```",
+        "createPhysicalName": "```typescript\n(args_0: { id: string; prefix?: string; instanceId?: string; suffixLength?: number; maxLength?: number; delimiter?: string; lowercase?: boolean; forbiddenPrefixes?: string[]; }) => Effect.Effect<string, never, import(\"../../InstanceId.ts\").In",
+        "current": "```typescript\nEffect.Effect<import(\"../Environment.ts\").AWSEnvironmentShape, never, AWSEnvironment>\n```",
+        "delete": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: DomainProps; output: { domainName: string; domainArn: string; }; session: import(\"../../Report.ts\").ScopedPlanStatusSession; bindings: import(\"../../Resource.ts\").ResourceBinding<{",
+        "deleteDomain": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<sdb.DeleteDomainRequest, sdb.DeleteDomainResponse, sdb.DeleteDomainError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```\n\n",
+        "diff": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: DomainProps; news: import(\"../../Input.ts\").Input<DomainProps>; oldBindings: import(\"../../Resource.ts\").ResourceBinding<{}>[]; newBindings: import(\"../../Input.ts\").Input<import(\"",
+        "Domain": "```typescript\nimport(\"../../Resource.ts\").ResourceClass<Domain>\n```\n\nAn Amazon SimpleDB domain — the container for SimpleDB items and\nattributes, analogous to a table.\n\nSimpleDB is a legacy service (closed to accounts that never used it and\nslated for migr",
+        "domainArn": "```typescript\nstring\n```\n\n---\n\n```typescript\n(region: string, accountId: string, name: string) => string\n```",
+        "domainMetadata": "```typescript\nimport(\"@distilled.cloud/core/api\").OperationMethod<sdb.DomainMetadataRequest, sdb.DomainMetadataResponse, sdb.DomainMetadataError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>",
+        "domainName": "```typescript\nstring | undefined\n```\n\nName of the SimpleDB domain. 3-255 characters; letters, digits, `_`,\n`-`, and `.` are allowed. Changing the name replaces the domain.\n\n**@default** a generated physical name\n\n---\n\n```typescript\nstring\n```\n\n---\n\n```type",
+        "DomainName": "```typescript\nstring\n```",
+        "DomainProvider": "```typescript\n() => import(\"effect/Layer\").Layer<Provider.Provider<Domain>, never, AWSEnvironment | import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient | import(\"../../Stack.ts\").Stack | import(\"../",
+        "e": "```typescript\nE\n```",
+        "effect": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike, Req = never, ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(cls: import(\"../../Resource.",
+        "Effect": "The `Effect` interface defines a value that lazily describes a workflow or\njob. The workflow requires some context `R`, and may fail with an error of\ntype `E`, or succeed with a value of type `A`.\n\n**When to use**\n\nUse when you need to represent a lazy, co",
+        "fixed": "```typescript\n(interval: import(\"effect/Duration\").Input) => Schedule.Schedule<number>\n```\n\nReturns a `Schedule` that recurs on the specified fixed `interval` and\noutputs the number of repetitions of the schedule so far.\n\n**When to use**\n\nUse when recurren",
+        "fn": "```typescript\nEffect.fn.Traced & ((name: string, options?: import(\"effect/Tracer\").SpanOptionsNoTrace) => Effect.fn.Traced)\n```\n\nType helpers for functions built with `Effect.fn` and `Effect.fnUntraced`.\n\n**Details**\n\nUse these to describe generator-based ",
+        "gen": "```typescript\n{ <Eff extends Effect.Effect<any, any, any>, AEff>(f: () => Generator<Eff, AEff, never>): Effect.Effect<AEff, [Eff] extends [never] ? never : [Eff] extends [Effect.Effect<infer _A, infer E, infer _R>] ? E : never, [Eff] extends [never] ? neve",
+        "id": "```typescript\nstring\n```",
+        "isResolved": "```typescript\n<T>(value: import(\"../../Input.ts\").Input<T>) => value is T\n```",
+        "items": "```typescript\n(input: sdb.ListDomainsRequest) => Stream.Stream<string, sdb.ListDomainsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "list": "```typescript\n() => Effect.Effect<{ domainName: string; domainArn: string; }[], sdb.ListDomainsError, AWSEnvironment | import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient>\n```",
+        "listDomains": "```typescript\nimport(\"@distilled.cloud/core/api\").PaginatedOperationMethod<sdb.ListDomainsRequest, sdb.ListDomainsResponse, sdb.ListDomainsError, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClient\").HttpClient,",
+        "max": "```typescript\n<const Schedules extends import(\"effect/Array\").NonEmptyReadonlyArray<Schedule.Schedule<any, any, any, any>>>(schedules: Schedules) => Schedule.Schedule<import(\"effect/Duration\").Duration, import(\"effect/Types\").UnionToIntersection<Schedule.I",
+        "maxLength": "```typescript\nnumber\n```",
+        "metadata": "```typescript\nsdb.DomainMetadataResponse | undefined\n```",
+        "name": "```typescript\nstring\n```",
+        "names": "```typescript\nstring[]\n```",
+        "newName": "```typescript\nstring\n```",
+        "news": "```typescript\nimport(\"../../Input.ts\").Input<DomainProps>\n```\n\n```typescript\nDomainProps\n```\n\n---\n\n```typescript\nDomainProps\n```",
+        "note": "```typescript\n(note: string, options?: { readonly kind?: import(\"../../Report.ts\").NoteKind; }) => Effect.Effect<void>\n```",
+        "observeDomain": "```typescript\n(name: string) => Effect.Effect<sdb.DomainMetadataResponse | undefined, sdb.MissingParameter | import(\"@distilled.cloud/aws/Errors\").CommonErrors, import(\"@distilled.cloud/aws/Credentials\").Credentials | import(\"effect/unstable/http/HttpClien",
+        "of": "```typescript\n<ReadReq = never, DiffReq = never, PrecreateReq = never, ReconcileReq = never, DeleteReq = never, TailReq = never, LogsReq = never, ListReq = never>(service: Omit<Provider.ProviderService<Domain, ReadReq, DiffReq, PrecreateReq, ReconcileReq, ",
+        "oldName": "```typescript\nstring\n```",
+        "olds": "```typescript\nDomainProps\n```",
+        "output": "```typescript\n{ domainName: string; domainArn: string; } | undefined\n```\n\n---\n\n```typescript\n{ domainName: string; domainArn: string; }\n```",
+        "pipe": "```typescript\n{ <A>(this: A): A; <A, B = never>(this: A, ab: (_: A) => B): B; <A, B = never, C = never>(this: A, ab: (_: A) => B, bc: (_: B) => C): C; <A, B = never, C = never, D = never>(this: A, ab: (_: A) => B, bc: (_: B) => C, cd: (_: C) => D): D; <A, ",
+        "props": "```typescript\nDomainProps\n```",
+        "Provider": "```typescript\ntypeof Provider\n```\n\n---\n\n```typescript\nProvider.Provider<Domain>\n```",
+        "read": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; olds: DomainProps; output: { domainName: string; domainArn: string; } | undefined; }) => Effect.Effect<{ domainName: string; domainArn: string; } | undefined, sdb.MissingParameter | impo",
+        "reconcile": "```typescript\n(args_0: { id: string; fqn: string; instanceId: string; news: DomainProps; olds: DomainProps | undefined; output: { domainName: string; domainArn: string; } | undefined; session: import(\"../../Report.ts\").ScopedPlanStatusSession; bindings: im",
+        "recurs": "```typescript\n(times: number) => Schedule.Schedule<number>\n```\n\nReturns a `Schedule` which can only be stepped the specified number of\n`times` before it terminates.\n\n**When to use**\n\nUse when you need a counter schedule with no additional delay.\n\n**Gotchas",
+        "region": "```typescript\nstring\n```",
+        "Resource": "```typescript\n<R extends import(\"../../Resource.ts\").ResourceLike>(type: R[\"Type\"], options?: import(\"../../Resource.ts\").ResourceOptions) => import(\"../../Resource.ts\").ResourceClass<R>\n```\n\nCreates a resource constructor for a concrete resource type.\n\nTh",
+        "retry": "```typescript\n{ <E, O extends Effect.Retry.Options<E>>(options: O): <A, R>(self: Effect.Effect<A, E, R>) => Effect.Retry.Return<R, E, A, O>; <B, E, Error, Env>(policy: Schedule.Schedule<B, import(\"effect/Types\").NoInfer<E>, Error, Env>): <A, R>(self: Effec",
+        "retryWhileNoSuchDomain": "```typescript\n<A, E extends { readonly _tag: string; }, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>\n```\n\nCreateDomain is eventually consistent — DomainMetadata directly after a\ncreate can briefly report NoSuchDomain. Explicitly typed so the\n",
+        "runCollect": "```typescript\n<A, E, R>(self: Stream.Stream<A, E, R>) => Effect.Effect<Array<A>, E, R>\n```\n\nRuns the stream and collects all elements into an array.\n\n**Example** (Collecting stream values)\n\n```ts import.meta.vitest\nimport { Effect, Stream } from \"effect\"\n\n",
+        "schedule": "```typescript\nSchedule.Schedule<import(\"effect/Duration\").Duration, unknown, never, never>\n```",
+        "Schedule": "```typescript\ntypeof Schedule\n```",
+        "sdb": "```typescript\ntypeof sdb\n```",
+        "self": "```typescript\nEffect.Effect<A, E, R>\n```",
+        "session": "```typescript\nimport(\"../../Report.ts\").ScopedPlanStatusSession\n```",
+        "stables": "```typescript\n(\"domainArn\" | \"domainName\")[]\n```",
+        "Stream": "```typescript\ntypeof Stream\n```",
+        "succeed": "```typescript\n<A>(value: A) => Effect.Effect<A>\n```\n\nCreates an `Effect` that always succeeds with a given value.\n\n**When to use**\n\nUse when an effect should complete successfully with a specific value without any errors\nor external dependencies.\n\n**Exampl",
+        "while": "```typescript\n(e: E) => boolean\n```"
+      },
+      "code": {
+        "1": "import * as sdb from \"@distilled.cloud/aws/simpledb\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { AWSEnvironment } from \"../Environment.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface DomainProps {\n\n\n\n\n\n  domainName?: string;\n}\n\nexport interface Domain extends Resource<\n  \"AWS.SimpleDB.Domain\",\n  DomainProps,\n  {\n    domainName: string;\n    domainArn: string;\n  },\n  {},\n  Providers\n> {}",
+        "2": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Domain = Resource<Domain>(\"AWS.SimpleDB.Domain\");\n\n\n\n\n\n\nconst retryWhileNoSuchDomain = <A, E extends { readonly _tag: string }, R>(\n  self: Effect.Effect<A, E, R>,\n): Effect.Effect<A, E, R> =>\n  Effect.retry(self, {\n    while: (e) => e._tag === \"NoSuchDomain\",\n    schedule: Schedule.max([Schedule.fixed(\"2 seconds\"), Schedule.recurs(10)]),\n  });\n\nexport const DomainProvider = () =>\n  Provider.effect(\n    Domain,\n    Effect.gen(function* () {\n      const createName = Effect.fn(function* (id: string, props: DomainProps) {\n        return (\n          props.domainName ??\n          (yield* createPhysicalName({ id, maxLength: 255 }))\n        );\n      });\n\n      const domainArn = (region: string, accountId: string, name: string) =>\n        `arn:aws:sdb:${region}:${accountId}:domain/${name}`;",
+        "3": "\n      const observeDomain = Effect.fn(function* (name: string) {\n        return yield* sdb\n          .domainMetadata({ DomainName: name })\n          .pipe(\n            Effect.catchTag(\"NoSuchDomain\", () => Effect.succeed(undefined)),\n          );\n      });\n\n      return Domain.Provider.of({\n        stables: [\"domainName\", \"domainArn\"],\n\n        list: () =>\n          Effect.gen(function* () {\n            const { accountId, region } = yield* AWSEnvironment.current;\n            const names = yield* sdb.listDomains\n              .items({})\n              .pipe(Stream.runCollect);\n            return Array.from(names).map((name) => ({\n              domainName: name,\n              domainArn: domainArn(region, accountId, name),\n            }));\n          }),",
+        "4": "\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name =\n            output?.domainName ?? (yield* createName(id, olds ?? {}));\n          const metadata = yield* observeDomain(name);\n          if (metadata === undefined) {\n            return undefined;\n          }\n\n\n          return {\n            domainName: name,\n            domainArn: domainArn(region, accountId, name),\n          };\n        }),\n\n        diff: Effect.fn(function* ({ id, news, olds }) {\n          if (!isResolved(news)) return undefined;\n          const oldName = yield* createName(id, olds ?? {});\n          const newName = yield* createName(id, news);\n          if (oldName !== newName) {\n            return { action: \"replace\" } as const;\n          }\n        }),",
+        "5": "\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const { accountId, region } = yield* AWSEnvironment.current;\n          const name = output?.domainName ?? (yield* createName(id, news));\n\n\n          const metadata = yield* observeDomain(name);\n\n\n\n          if (metadata === undefined) {\n            yield* sdb.createDomain({ DomainName: name });\n            yield* retryWhileNoSuchDomain(\n              sdb.domainMetadata({ DomainName: name }),\n            );\n          }\n\n\n\n          yield* session.note(name);\n          return {\n            domainName: name,\n            domainArn: domainArn(region, accountId, name),\n          };\n        }),",
+        "6": "\n        delete: Effect.fn(function* ({ output }) {\n\n          yield* sdb.deleteDomain({ DomainName: output.domainName });\n        }),\n      });\n    }),\n  );\n"
+      },
+      "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

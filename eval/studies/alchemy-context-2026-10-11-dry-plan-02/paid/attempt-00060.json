@@ -1,0 +1,55 @@
+{
+  "arm": "code-only",
+  "file": "packages/alchemy/src/AWS/CodeArtifact/Domain.ts",
+  "kind": "judge",
+  "ordinal": 60,
+  "artifact": "attempt-00060.json",
+  "started": "2026-10-11T03:27:26.542Z",
+  "estimatedTokens": 3764,
+  "reservedTokens": 64000,
+  "chargedTokens": 2253,
+  "outcome": "answered",
+  "milliseconds": 76.36812399999872,
+  "referencesPresent": false,
+  "bodyDigest": "f3e4f5f83ef143ffd59c2d3712d55fc665461428e56b5bcc5407c227dd385818",
+  "wireVerified": true,
+  "httpStatus": 200,
+  "rawResponse": "{\"model\":\"jev-1.13.0\",\"answers\":{\"providers/idempotent-delete\":{\"type\":\"noul\",\"noul\":0.87}},\"usage\":{\"input_tokens\":2253,\"output_tokens\":25}}",
+  "inputTokens": 2253,
+  "answers": {
+    "providers/idempotent-delete": 0.87
+  },
+  "returnedModel": "jev-1.13.0",
+  "body": {
+    "model": "jev-1.13.0",
+    "state": {
+      "code": {
+        "1": "import * as codeartifact from \"@distilled.cloud/aws/codeartifact\";\nimport * as Effect from \"effect/Effect\";\nimport * as Schedule from \"effect/Schedule\";\nimport * as Stream from \"effect/Stream\";\nimport { Unowned } from \"../../AdoptPolicy.ts\";\nimport { isResolved } from \"../../Diff.ts\";\nimport { createPhysicalName } from \"../../PhysicalName.ts\";\nimport * as Provider from \"../../Provider.ts\";\nimport { Resource } from \"../../Resource.ts\";\nimport { createInternalTags, diffTags, hasAlchemyTags } from \"../../Tags.ts\";\nimport type { Providers } from \"../Providers.ts\";\n\nexport interface DomainProps {\n\n\n\n\n\n  domainName?: string;\n\n\n\n\n  encryptionKey?: string;\n\n\n\n  tags?: Record<string, string>;\n}",
+        "2": "\nexport interface Domain extends Resource<\n  \"AWS.CodeArtifact.Domain\",\n  DomainProps,\n  {\n\n    domainName: string;\n\n    domainArn: string;\n\n    owner: string;\n\n    status: string;\n\n    encryptionKey: string;\n\n    s3BucketArn: string;\n  },\n  never,\n  Providers\n> {}",
+        "3": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const Domain = Resource<Domain>(\"AWS.CodeArtifact.Domain\");\n\n\nconst toTagRecord = (\n  tags: ReadonlyArray<{ key?: string; value?: string }> | undefined,\n): Record<string, string> =>\n  Object.fromEntries(\n    (tags ?? [])\n      .filter(\n        (tag): tag is { key: string; value: string } =>\n          typeof tag.key === \"string\" && typeof tag.value === \"string\",\n      )\n      .map((tag) => [tag.key, tag.value]),\n  );\n\nexport const DomainProvider = () =>\n  Provider.effect(\n    Domain,\n    Effect.gen(function* () {\n      const toName = (id: string, props: Partial<DomainProps>) =>\n        props.domainName\n          ? Effect.succeed(props.domainName)\n          : createPhysicalName({ id, maxLength: 50 });",
+        "4": "\n      const getDomain = Effect.fn(function* (name: string) {\n        const response = yield* codeartifact\n          .describeDomain({ domain: name })\n          .pipe(\n            Effect.catchTag(\"ResourceNotFoundException\", () =>\n              Effect.succeed(undefined),\n            ),\n          );\n        return response?.domain;\n      });\n\n      const toAttrs = (\n        domain: codeartifact.DomainDescription,\n        name: string,\n      ) => ({\n        domainName: domain.name ?? name,\n        domainArn: domain.arn!,\n        owner: domain.owner ?? \"\",\n        status: domain.status ?? \"Active\",\n        encryptionKey: domain.encryptionKey ?? \"\",\n        s3BucketArn: domain.s3BucketArn ?? \"\",\n      });",
+        "5": "\n      const syncTags = Effect.fn(function* (\n        arn: string,\n        desiredTags: Record<string, string>,\n      ) {\n        const observed = yield* codeartifact\n          .listTagsForResource({ resourceArn: arn })\n          .pipe(Effect.catch(() => Effect.succeed(undefined)));\n        const { removed, upsert } = diffTags(\n          toTagRecord(observed?.tags),\n          desiredTags,\n        );\n        if (upsert.length > 0) {\n          yield* codeartifact.tagResource({\n            resourceArn: arn,\n            tags: upsert.map((t) => ({ key: t.Key, value: t.Value })),\n          });\n        }\n        if (removed.length > 0) {\n          yield* codeartifact.untagResource({\n            resourceArn: arn,\n            tagKeys: removed,\n          });\n        }\n      });\n\n      return {\n        stables: [\"domainName\", \"domainArn\", \"owner\"],",
+        "6": "\n        diff: Effect.fn(function* ({ id, olds, news }) {\n          if (!isResolved(news)) return undefined;\n          if (\n            (yield* toName(id, olds ?? {})) !== (yield* toName(id, news ?? {}))\n          ) {\n            return { action: \"replace\" } as const;\n          }\n\n          if (\n            (news?.encryptionKey ?? undefined) !==\n            (olds?.encryptionKey ?? undefined)\n          ) {\n            return { action: \"replace\" } as const;\n          }\n        }),\n\n        read: Effect.fn(function* ({ id, olds, output }) {\n          const name = output?.domainName ?? (yield* toName(id, olds ?? {}));\n          const domain = yield* getDomain(name);\n          if (domain?.arn === undefined) return undefined;\n          const attrs = toAttrs(domain, name);\n          const tags = yield* codeartifact\n            .listTagsForResource({ resourceArn: attrs.domainArn })\n            .pipe(\n              Effect.map((res) => toTagRecord(res.tags)),\n              Effect.catch(() => Effect.succeed({})),\n            );\n          return (yield* hasAlchemyTags(id, tags)) ? attrs : Unowned(attrs);\n        }),",
+        "7": "\n        reconcile: Effect.fn(function* ({ id, news, output, session }) {\n          const name = output?.domainName ?? (yield* toName(id, news));\n          const internalTags = yield* createInternalTags(id);\n          const desiredTags = { ...internalTags, ...news.tags };\n\n\n          let observed = yield* getDomain(name);",
+        "8": "\n\n\n\n\n\n          if (observed?.arn === undefined) {\n            observed = yield* codeartifact\n              .createDomain({\n                domain: name,\n                encryptionKey: news.encryptionKey,\n                tags: Object.entries(desiredTags).map(([key, value]) => ({\n                  key,\n                  value,\n                })),\n              })\n              .pipe(\n                Effect.map((res) => res.domain),\n                Effect.catchTag(\"ConflictException\", () => getDomain(name)),\n                Effect.repeat({\n                  until: (domain): boolean => domain?.arn !== undefined,\n                  schedule: Schedule.spaced(\"2 seconds\"),\n                  times: 10,\n                }),\n              );\n          }\n\n\n          yield* syncTags(observed!.arn!, desiredTags);\n\n\n          yield* session.note(name);\n          return toAttrs(observed!, name);\n        }),",
+        "9": "\n        delete: Effect.fn(function* ({ output }) {\n\n\n\n\n          yield* codeartifact.deleteDomain({ domain: output.domainName }).pipe(\n            Effect.retry({\n              while: (e): boolean => e._tag === \"ConflictException\",\n              schedule: Schedule.spaced(\"2 seconds\"),\n              times: 10,\n            }),\n          );\n        }),",
+        "10": "\n        list: () =>\n          codeartifact.listDomains.pages({}).pipe(\n            Stream.runCollect,\n            Effect.map((chunk) =>\n              Array.from(chunk)\n                .flatMap((page) => page.domains ?? [])\n                .flatMap((d) =>\n                  d.arn !== undefined && d.name !== undefined\n                    ? [\n                        {\n                          domainName: d.name,\n                          domainArn: d.arn,\n                          owner: d.owner ?? \"\",\n                          status: d.status ?? \"Active\",\n                          encryptionKey: d.encryptionKey ?? \"\",\n                          s3BucketArn: \"\",\n                        },\n                      ]\n                    : [],\n                ),\n            ),\n          ),\n      };\n    }),\n  );\n"
+      }
+    },
+    "questions": {
+      "providers/idempotent-delete": {
+        "type": "noul",
+        "instructions": {
+          "question": "Does `code` diverge from the pattern shown in `must`, for example by doing what `never` shows, as described by `rule`? Answer no if the pattern does not apply to this file.",
+          "rule": "The delete handler of a resource provider, the `delete:` lifecycle method given the resource's `output`, must treat a resource that is already gone as success, catching the not-found error, never failing when it runs again. Code outside a provider's delete handler, such as a runtime binding, a Worker route, or a storage client, is not in scope.",
+          "must": "delete: ({ output }) =>\n  Effect.tryPromise(() => stripe.products.del(output.productId)).pipe(\n    Effect.catchIf(isNotFound, () => Effect.void),\n  ),",
+          "never": "delete: ({ output }) => Effect.promise(() => stripe.products.del(output.productId)),"
+        },
+        "criteria": {
+          "true": "`code` diverges from the pattern shown in `must`, for example by doing what `never` shows, in code that `rule` is about",
+          "false": "`code` follows the pattern, or has no code that `rule` is about"
+        }
+      }
+    }
+  }
+}

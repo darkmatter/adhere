@@ -1,6 +1,6 @@
 {
   "name": "@drkmttr/adhere",
-  "version": "0.15.0",
+  "version": "0.18.1",
   "private": false,
   "description": "Lints a repository against the rules in .adhere/, judged by Jev.",
   "license": "MIT",
@@ -58,7 +58,7 @@
   "devEngines": {
     "packageManager": {
       "name": "bun",
-      "version": "1.4.2",
+      "version": "1.4.3",
       "onFail": "download"
     },
     "runtime": {
@@ -80,7 +80,13 @@
     },
     "npm": {
       "allowSameVersion": true,
-      "publish": false
+      "publish": false,
+      "versionArgs": [
+        "--force"
+      ]
     }
-  }
+  },
+  "versionArgs": [
+    "--force"
+  ]
 }
