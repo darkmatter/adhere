@@ -43,7 +43,7 @@
   "devDependencies": {
     "@effect/platform-bun": "4.0.3",
     "@types/bun": "^1.4.2",
-    "@types/node": "^24.13.6",
+    "@types/node": "^26.0.0",
     "release-it": "^21.1.0",
     "typescript": "7.1.0-dev.20261011.1",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
@@ -63,7 +63,7 @@
     },
     "runtime": {
       "name": "node",
-      "version": "24.21.0",
+      "version": "26.11.1",
       "onFail": "download"
     }
   },
