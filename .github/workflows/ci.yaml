@@ -26,7 +26,9 @@ jobs:
 
   verify-macos:
     name: macOS native reads
-    runs-on: macos-latest
+    # Fork PRs keep Linux verification and never execute on trusted Macs.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ARM64, dm-aarch64-darwin]
     timeout-minutes: 15
     permissions:
       contents: read
