@@ -28,7 +28,7 @@ export class AdhereConfig extends Context.Service<AdhereConfig, ResolvedConfig>(
   "@drkmttr/adhere/services/AdhereConfig",
 ) {}
 
-const loadConfigFile = Effect.fn("AdhereConfig.load")(function* (file: string) {
+export const loadConfigFile = Effect.fn("AdhereConfig.load")(function* (file: string) {
   const path = yield* Path.Path;
   const url = yield* path.toFileUrl(file).pipe(Effect.orDie);
   const loaded = yield* Effect.tryPromise({
@@ -53,6 +53,23 @@ const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (name: PresetN
   return [name, { ...preset, rules } satisfies Loaded<Preset>] as const;
 });
 
+/** Locate the optional config without loading rules or presets. */
+export const findConfigFile = Effect.fn("AdhereConfig.find")(function* (cwd: string) {
+  const path = yield* Path.Path;
+  const fs = yield* FileSystem.FileSystem;
+  const found = yield* Effect.filter(CONFIG_FILES, (file) =>
+    fs
+      .exists(path.join(cwd, file))
+      .pipe(Effect.mapError((problem) => ConfigUnavailable.make({ message: problem.message }))),
+  );
+  if (found.length > 1) {
+    return yield* ConfigUnavailable.make({
+      message: `More than one config file: ${found.join(", ")}. Keep one.`,
+    });
+  }
+  return found[0];
+});
+
 /** Every rule of every built-in preset, by the id a report names it with. */
 const everyPresetRule = Effect.fn("AdhereConfig.everyPresetRule")(function* (base: string) {
   const loaded = yield* Effect.forEach(Object.entries(presets), ([name, preset]) =>
@@ -73,19 +90,8 @@ export const AdhereConfigLive = (flags: Flags) =>
   Layer.effect(AdhereConfig)(
     Effect.gen(function* () {
       const path = yield* Path.Path;
-      const fs = yield* FileSystem.FileSystem;
       const cwd = path.resolve();
-      const present = (target: string) =>
-        fs
-          .exists(path.join(cwd, target))
-          .pipe(Effect.mapError((problem) => ConfigUnavailable.make({ message: problem.message })));
-      const found = yield* Effect.filter(CONFIG_FILES, present);
-      if (found.length > 1) {
-        return yield* ConfigUnavailable.make({
-          message: `More than one config file: ${found.join(", ")}. Keep one.`,
-        });
-      }
-      const configFile = found[0];
+      const configFile = yield* findConfigFile(cwd);
       const hasPreset = flags.presets !== undefined && flags.presets.length > 0;
       const config: typeof AdhereConfigSchema.Type =
         configFile === undefined

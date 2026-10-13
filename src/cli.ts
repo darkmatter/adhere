@@ -30,6 +30,7 @@ import type { Flags } from "#config.ts";
 import { findContradictions, formatContradictions } from "#contradictions.ts";
 import { type Install, initProject } from "#init.ts";
 import { installRules, listRules, parseSource } from "#install.ts";
+import { renderInstructions } from "#instructions.ts";
 import { formatLinterCheck, tallyProjectRules } from "#mechanical.ts";
 import { type PresetName, presetNames } from "#presets.ts";
 import type { SavedKey } from "#providers/provider.ts";
@@ -556,6 +557,13 @@ export const skillCommand = Command.make("skill", { name: skillName }, ({ name }
   ),
 );
 
+export const postinstallCommand = Command.make("postinstall", {}, () =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    yield* Console.log(yield* renderInstructions(path.resolve()));
+  }),
+).pipe(Command.withDescription("Render instruction files into a managed block in AGENTS.md."));
+
 /** The whole CLI. Bare `adhere` prints its help. */
 export const cli = Command.make("adhere").pipe(
   Command.withDescription("Lint a repository against the rules in .adhere/rules/, judged by Jev."),
@@ -580,6 +588,7 @@ export const cli = Command.make("adhere").pipe(
     lintCommand,
     validateCommand,
     initCommand,
+    postinstallCommand,
     listCommand,
     installCommand,
     loginCommand,

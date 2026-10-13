@@ -367,19 +367,51 @@ writing a rule.
 
 ## Commands
 
-| Command                           | What it does                                                                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `adhere lint`                     | Audit the working directory. See [Running lint](#running-lint).                                                           |
-| `adhere validate`                 | Check the rules' wording, and ask Jev whether any contradict. See [Check for contradictions](#check-for-contradictions).  |
-| `adhere init [--force]`           | Scaffold `.adhere/config.ts` and two example rules. See [Init](#init).                                                    |
-| `adhere init --shared org/repo`   | Scaffold a repo of rules other repos install. See [Creating a shared repo](#creating-a-shared-repo).                      |
-| `adhere list org/repo`            | List the rules in another repo's `.adhere/rules/`. See [Install rules from other repos](#install-rules-from-other-repos). |
-| `adhere install org/repo`         | Copy them into this repo's `.adhere/rules/org/repo/`.                                                                     |
-| `adhere login`, `adhere logout`   | Save or delete a TypeSafe AI API key, or with `--openai`, an OpenAI one. See [Login](#login).                             |
-| `adhere skill [docs\|setup\|fix]` | Print an agent skill. See [Agent skills](#agent-skills).                                                                  |
+| Command                           | What it does                                                                                                               |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `adhere lint`                     | Audit the working directory. See [Running lint](#running-lint).                                                            |
+| `adhere validate`                 | Check the rules' wording, and ask Jev whether any contradict. See [Check for contradictions](#check-for-contradictions).   |
+| `adhere postinstall`              | Render instruction files into a managed block in `AGENTS.md`. See [Render agent instructions](#render-agent-instructions). |
+| `adhere init [--force]`           | Scaffold `.adhere/config.ts` and two example rules. See [Init](#init).                                                     |
+| `adhere init --shared org/repo`   | Scaffold a repo of rules other repos install. See [Creating a shared repo](#creating-a-shared-repo).                       |
+| `adhere list org/repo`            | List the rules in another repo's `.adhere/rules/`. See [Install rules from other repos](#install-rules-from-other-repos).  |
+| `adhere install org/repo`         | Copy them into this repo's `.adhere/rules/org/repo/`.                                                                      |
+| `adhere login`, `adhere logout`   | Save or delete a TypeSafe AI API key, or with `--openai`, an OpenAI one. See [Login](#login).                              |
+| `adhere skill [docs\|setup\|fix]` | Print an agent skill. See [Agent skills](#agent-skills).                                                                   |
 
 Bare `adhere` prints the help. `adhere <command> --help` lists a command's
 flags, and `adhere --completions <shell>` prints a completion script.
+
+### Compose your AGENTS.md
+
+Adhere includes a convenience function which can be used as your `postinstall` script for managing regular agent instructions (AGENTS.md). Any markdown files(s) in `.adhere/instructions` or `.agents/instructions` will be rendered into your AGENTS.md.
+
+To run it after installing dependencies, add this to your package scripts
+(or append it to your existing postinstall script):
+
+```json
+{
+  "scripts": {
+    "postinstall": "adhere postinstall"
+  }
+}
+```
+
+The command creates `AGENTS.md` if needed, appends a managed block if absent,
+and otherwise replaces only the content between these markers:
+
+```markdown
+<!-- adhere:instructions:start -->
+
+Generated instructions
+
+<!-- adhere:instructions:end -->
+```
+
+Everything outside the block is preserved. Missing instruction directories
+are a no-op; an empty directory clears the generated content but keeps the
+markers. Malformed or duplicate markers fail without writing. Instruction
+files must not contain these reserved markers.
 
 ## Reading the report
 
@@ -815,21 +847,22 @@ type UserId = typeof UserId.Type
 });
 ```
 
-| Key                            | Default                 | Meaning                                                                                                                                                                |
-| ------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `model`                        | `"jev-latest"`          | The model id sent to TypeSafe.                                                                                                                                         |
-| `threshold`                    | `0.8`                   | Report a rule when Jev's probability is above this.                                                                                                                    |
-| `sufficiencyThreshold`         | `0.6`                   | Below it, a finding warns that Jev may not see enough to decide.                                                                                                       |
-| `presets`                      | none                    | Built-in rule sets, or their topics. See [Presets](#presets).                                                                                                          |
-| `rules`                        | `.adhere/rules/`        | Rules inline, as above, or a directory (see [Where rules live](#where-rules-live)). Either replaces `.adhere/rules/`: none of its rules, root or nested, is read then. |
-| `exclude`                      | none                    | Globs, relative to the working directory, of files no rule judges.                                                                                                     |
-| `overrides`                    | none                    | Settings for a rule by its id. See [Overrides](#overrides).                                                                                                            |
-| `includeComments`              | `false`                 | Send every comment to Jev. See [Comments](#comments).                                                                                                                  |
-| `reads`                        | `["workspacePackages"]` | Chooses workspace context only. `[]` omits it; native read entries do not enable type awareness. See [What Jev reads](#what-jev-reads).                                |
-| `typeAware`                    | `false`                 | Opt in to both compiler `symbols` and declaration `references`, regardless of `reads`. Also enabled by `--type-aware`.                                                 |
-| `maxSymbolDocumentationLength` | `256`                   | Maximum characters of each symbol's combined documentation and JSDoc tags, before `maxSymbolLength` applies. A non-negative integer; `0` omits them.                   |
-| `maxSymbolLength`              | `256`                   | Maximum characters of each complete `symbols[name]` string, including type signatures and documentation. A non-negative integer; `0` leaves names with empty content.  |
-| `provider`                     | TypeSafe's Jev          | Where the questions go instead, with its own model. See [Providers](#providers).                                                                                       |
+| Key                            | Default                                               | Meaning                                                                                                                                                                |
+| ------------------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`                        | `"jev-latest"`                                        | The model id sent to TypeSafe.                                                                                                                                         |
+| `threshold`                    | `0.8`                                                 | Report a rule when Jev's probability is above this.                                                                                                                    |
+| `sufficiencyThreshold`         | `0.6`                                                 | Below it, a finding warns that Jev may not see enough to decide.                                                                                                       |
+| `presets`                      | none                                                  | Built-in rule sets, or their topics. See [Presets](#presets).                                                                                                          |
+| `rules`                        | `.adhere/rules/`                                      | Rules inline, as above, or a directory (see [Where rules live](#where-rules-live)). Either replaces `.adhere/rules/`: none of its rules, root or nested, is read then. |
+| `instructions`                 | `.adhere/instructions/`, then `.agents/instructions/` | Instructions directory relative to the config file, used by `adhere postinstall`.                                                                                      |
+| `exclude`                      | none                                                  | Globs, relative to the working directory, of files no rule judges.                                                                                                     |
+| `overrides`                    | none                                                  | Settings for a rule by its id. See [Overrides](#overrides).                                                                                                            |
+| `includeComments`              | `false`                                               | Send every comment to Jev. See [Comments](#comments).                                                                                                                  |
+| `reads`                        | `["workspacePackages"]`                               | Chooses workspace context only. `[]` omits it; native read entries do not enable type awareness. See [What Jev reads](#what-jev-reads).                                |
+| `typeAware`                    | `false`                                               | Opt in to both compiler `symbols` and declaration `references`, regardless of `reads`. Also enabled by `--type-aware`.                                                 |
+| `maxSymbolDocumentationLength` | `256`                                                 | Maximum characters of each symbol's combined documentation and JSDoc tags, before `maxSymbolLength` applies. A non-negative integer; `0` omits them.                   |
+| `maxSymbolLength`              | `256`                                                 | Maximum characters of each complete `symbols[name]` string, including type signatures and documentation. A non-negative integer; `0` leaves names with empty content.  |
+| `provider`                     | TypeSafe's Jev                                        | Where the questions go instead, with its own model. See [Providers](#providers).                                                                                       |
 
 - An invalid shape refuses the run.
 - A config can import other files by relative path, but no packages besides

@@ -28,6 +28,7 @@ describe("cli", () => {
       "lint",
       "validate",
       "init",
+      "postinstall",
       "list",
       "install",
       "login",

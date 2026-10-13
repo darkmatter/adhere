@@ -234,6 +234,8 @@ export const AdhereConfig = Schema.Struct({
    * `.adhere/rules/`, and in any nested `.adhere/rules/`.
    */
   rules: Schema.optionalKey(Schema.Union([Schema.Record(Schema.String, Rule), Schema.String])),
+  /** Instructions directory relative to the config file. Unset: .adhere/instructions, then .agents/instructions. */
+  instructions: Schema.optionalKey(Schema.NonEmptyString),
   /**
    * Globs, relative to the working directory, of files no rule judges: what
    * `--filter '!<glob>'` leaves out of one run, left out of every run.

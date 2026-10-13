@@ -11,6 +11,9 @@
 - Shared TypeScript context for lint requests: compiler-rendered symbol types and documentation, outgoing declaration snippets, and workspace metadata limited to packages imported by the audited file.
 - Native compiler support in npm-installed adhere, with the JavaScript SDK bundled in the executable and matching compiler resources installed through platform-specific dependencies.
 - Configurable `maxSymbolLength` and `maxSymbolDocumentationLength` keys (default 256 each) cap each symbol's resolved content and its documentation; `0` omits documentation
+- `postinstall` command that renders instruction files from the instructions directory into an `AGENTS.md` block, idempotently inserting or replacing between `<!-- adhere:instructions:start -->` and `<!-- adhere:instructions:end -->` markers; run it to sync `AGENTS.md` after changing instructions
+- Configurable `instructions` config key selecting an instructions directory relative to the config file; unset it searches `.adhere/instructions`, then `.agents/instructions`
+- Reserved markers inside an instruction file abort `postinstall` before any write
 
 ### Changed
 
