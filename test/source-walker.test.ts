@@ -10,7 +10,7 @@ import {
   DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
   DEFAULT_MAX_SYMBOL_LENGTH,
 } from "../src/config.ts";
-import { workspacePackagesOf } from "../src/workspaces.ts";
+import { workspaceDependentsOf, workspacePackagesOf } from "../src/workspaces.ts";
 
 import { AdhereConfig, AdhereConfigLive } from "../src/services/AdhereConfig.ts";
 
@@ -204,6 +204,37 @@ describe("workspace packages", () => {
     expect(await packagesOf(await onDisk({ "package.json": named("alone") }))).toEqual({});
     expect(await packagesOf(await onDisk({ "package.json": "{ not json" }))).toEqual({});
     expect(await packagesOf(await onDisk({ "README.md": "no manifest" }))).toEqual({});
+  });
+
+  it("lists, per package, the other workspace packages whose manifest depends on it", async () => {
+    const root = await onDisk({
+      "package.json": JSON.stringify({ workspaces: ["packages/*"] }),
+      "packages/core/package.json": JSON.stringify({
+        name: "core",
+        dependencies: { core: "workspace:*", zod: "^4" },
+      }),
+      "packages/web/package.json": JSON.stringify({
+        name: "web",
+        dependencies: { core: "workspace:*" },
+        devDependencies: { tools: "workspace:*" },
+      }),
+      "packages/api/package.json": JSON.stringify({
+        name: "api",
+        peerDependencies: { core: "*" },
+        optionalDependencies: { tools: "*" },
+      }),
+      "packages/tools/package.json": named("tools"),
+    });
+    const dependents = await Effect.runPromise(
+      Effect.flatMap(workspacePackagesOf(root), (catalog) =>
+        workspaceDependentsOf(root, catalog),
+      ).pipe(Effect.provide(realFileSystem)),
+    );
+    expect(dependents).toEqual({
+      core: { api: "packages/api", web: "packages/web" },
+      tools: { api: "packages/api", web: "packages/web" },
+    });
+    expect(Object.keys(dependents.core!)).toEqual(["api", "web"]);
   });
 });
 

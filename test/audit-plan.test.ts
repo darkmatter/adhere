@@ -13,6 +13,7 @@ import {
   fixtureWalker,
   audit,
   findingA,
+  emptySourceReads,
 } from "./audit.fixtures.ts";
 
 import { Effect, Layer, Record } from "effect";
@@ -410,6 +411,8 @@ describe("plan", () => {
         rules: { a },
         files: [imported],
         cache,
+        reads: ["workspacePackages"],
+        workspacePackages,
         jev: recordingJev({ judge: { a: 0.9 }, locate: {} }).layer,
       });
       const reads: Array<string> = [];
@@ -815,6 +818,9 @@ describe("plan", () => {
       rules,
       files: [cached],
       cache,
+      typeAware: true,
+      reads: DEFAULT_READS,
+      sourceReads: emptySourceReads,
       jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: {} }).layer,
     });
     const generated: ScannedFile = {

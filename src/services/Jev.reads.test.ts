@@ -194,6 +194,28 @@ describe("prepared shared Jev reads", () => {
     expect(locateRequests(lines, rules, readState)).toBe(3);
   });
 
+  it("sends a rule's options in requests of its own, under `options`", () => {
+    const optioned = { ...plain, optionValues: { edgePaths: ["src/edge"] } };
+    const rules = { plain, optioned, alsoPlain: plain };
+    const readState: ReadState = { workspacePackages: { orders: "packages/orders" } };
+    const groups = requestGroups(rules);
+    expect(groups.map((group) => Object.keys(group))).toEqual([
+      ["plain", "alsoPlain"],
+      ["optioned"],
+    ]);
+    const [shared, own] = groups.map((group) => locateBody("", lines, group, readState).state);
+    expect(shared?.options).toBeUndefined();
+    expect(own?.options).toEqual({
+      edgePaths: ["src/edge"],
+      __comment: expect.stringMatching(/options\./),
+    });
+    expect(judgeBody("", lines, { optioned }, [], readState).state).toEqual(own);
+    expect(own?.workspacePackages).toEqual(shared?.workspacePackages);
+    const huge = { ...plain, optionValues: { edgePaths: ["p".repeat(120_000)] } };
+    expect(fits(lines, { plain, optioned }, readState)).toBe(true);
+    expect(fits(lines, { plain, huge }, readState)).toBe(false);
+  });
+
   it("preserves caller comments and raw context through judge, locate, and appended maps", async () => {
     const readState = {
       __comment: "User context: only target code is audited.",

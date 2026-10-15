@@ -13,6 +13,7 @@ import {
   fixtureWalker,
   audit,
   findingA,
+  emptySourceReads,
   onDisk,
 } from "./audit.fixtures.ts";
 import { readFile, rm, writeFile } from "node:fs/promises";
@@ -28,6 +29,7 @@ import {
   DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
   DEFAULT_MAX_SYMBOL_LENGTH,
   type ReadState,
+  type ResolvedConfig,
   resolveConfig,
 } from "../src/config.ts";
 
@@ -151,6 +153,25 @@ describe("pipeline", () => {
     expect(third.calls).toEqual({ judge: [], locate: [] });
   });
 
+  it("re-judges a rule whose options change, and nothing else", async () => {
+    const cache = memoryCache();
+    const optioned = (edgePaths: ReadonlyArray<string>) => ({ ...b, optionValues: { edgePaths } });
+    await audit({
+      rules: { a, b: optioned(["src/edge"]) },
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
+      cache,
+    });
+
+    const same = recordingJev({ judge: {}, locate: {} });
+    await audit({ rules: { a, b: optioned(["src/edge"]) }, jev: same.layer, cache });
+    expect(same.calls).toEqual({ judge: [], locate: [] });
+
+    const changed = optioned(["src/edge", "src/worker"]);
+    const second = recordingJev({ judge: { b: 0.2 }, locate: {} });
+    await audit({ rules: { a, b: changed }, jev: second.layer, cache });
+    expect(second.calls).toEqual({ judge: [{ b: changed }], locate: [] });
+  });
+
   it("keeps judgments cached when workspace packages change, but refreshes an edited target", async () => {
     const imported = {
       ...source,
@@ -194,7 +215,7 @@ describe("pipeline", () => {
     });
   });
 
-  it("keeps explicit code-only reads lazy without a tsconfig and shares their cache entries", async () => {
+  it("keeps explicit code-only reads lazy without a tsconfig, and re-judges once reads are enabled", async () => {
     const imported = {
       ...source,
       lines: [...source.lines, 'import type { Order } from "orders-core/types";'],
@@ -245,11 +266,44 @@ describe("pipeline", () => {
         sourceReads,
         workspacePackages: { billing: "packages/billing" },
       });
-      expect(enabled.calls).toEqual({ judge: [], locate: [] });
-      expect(enabled.states).toEqual({ judge: [], locate: [] });
+      expect(enabled.calls).toEqual({ judge: [rules], locate: [{ a }] });
+      expect(enabled.states.judge).toEqual([{ workspacePackages: {} }]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  it("re-judges every rule once when the reads change, and only then", async () => {
+    const cache = memoryCache();
+    const run = (settings: {
+      readonly typeAware?: boolean;
+      readonly reads?: ResolvedConfig["reads"];
+      readonly maxSymbolLength?: number;
+      readonly includeComments?: boolean;
+    }) => {
+      const jev = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+      return audit({
+        rules,
+        cache,
+        jev: jev.layer,
+        sourceReads: emptySourceReads,
+        ...settings,
+      }).then(() => jev.calls.judge.length);
+    };
+    expect(await run({})).toBe(1);
+    expect(await run({})).toBe(0);
+    expect(await run({ reads: ["workspacePackages"] })).toBe(1);
+    expect(await run({ reads: ["workspacePackages"] })).toBe(0);
+    expect(await run({ typeAware: true, reads: ["workspacePackages"] })).toBe(1);
+    expect(await run({ typeAware: true, reads: ["workspacePackages"] })).toBe(0);
+    expect(await run({ typeAware: true })).toBe(1);
+    expect(await run({ typeAware: true })).toBe(0);
+    expect(await run({ typeAware: true, maxSymbolLength: 64 })).toBe(1);
+    expect(await run({ typeAware: true, maxSymbolLength: 64 })).toBe(0);
+    // The target has no comments, so only the referenced excerpts can differ.
+    expect(await run({ typeAware: true, maxSymbolLength: 64, includeComments: true })).toBe(1);
+    expect(await run({ includeComments: true })).toBe(0);
+    expect(await run({})).toBe(0);
   });
 
   it.each([false, true])(
@@ -301,6 +355,42 @@ describe("pipeline", () => {
       }
     },
   );
+
+  it("adds each file's dependent packages and capped relative importers when reads names dependents", async () => {
+    const at = (file: string) => join(process.cwd(), file);
+    const importers = Array.from({ length: 52 }, (_, index) => ({
+      path: at(`packages/web/src/use${String(index).padStart(2, "0")}.ts`),
+      lines: ['import { order } from "../../core/src/order.js";'],
+    }));
+    const files = [
+      { path: at("packages/core/src/order.ts"), lines: ['import "./lonely";'] },
+      { path: at("packages/core/src/lonely.ts"), lines: ["export const lonely = 1;"] },
+      ...importers,
+    ];
+    const planned = await planOf({
+      rules,
+      files,
+      cache: memoryCache(),
+      reads: ["dependents"],
+      workspacePackages: { core: "packages/core", web: "packages/web" },
+      workspaceDependents: { core: { web: "packages/web" } },
+    });
+    const stateOf = (file: string) =>
+      planned.files.find(({ file: { path } }) => path === at(file))!.readState;
+    expect(stateOf("packages/core/src/order.ts")).toEqual({
+      dependents: {
+        packages: { web: "packages/web" },
+        files: importers.slice(0, 50).map(({ path }) => path.slice(process.cwd().length + 1)),
+        omittedFiles: 2,
+      },
+    });
+    expect(stateOf("packages/core/src/lonely.ts")).toEqual({
+      dependents: { packages: { web: "packages/web" }, files: ["packages/core/src/order.ts"] },
+    });
+    expect(stateOf("packages/web/src/use00.ts")).toEqual({
+      dependents: { packages: {}, files: [] },
+    });
+  });
 
   it.each([
     { policy: "default", reads: DEFAULT_READS, typeAware: undefined },
@@ -401,6 +491,9 @@ describe("pipeline", () => {
     await audit({
       rules,
       cache,
+      typeAware: true,
+      reads: DEFAULT_READS,
+      sourceReads: emptySourceReads,
       jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: {} }).layer,
     });
     const sourceReads = Layer.succeed(SourceReads, {
@@ -452,6 +545,9 @@ describe("pipeline", () => {
         rules,
         files,
         cache,
+        typeAware: true,
+        reads: DEFAULT_READS,
+        sourceReads: emptySourceReads,
         jev: recordingJev({ judge: { a: 0.9, b: 0.9 }, locate: { b: 2 } }).layer,
       });
       const c = { description: "Ports must be named.", must: "const serverPort = 3000;" };
@@ -569,6 +665,9 @@ describe("pipeline", () => {
       rules,
       files: [imported],
       cache,
+      typeAware: true,
+      reads: DEFAULT_READS,
+      sourceReads: emptySourceReads,
       jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } }).layer,
     });
     const workspacePackages = { "@acme/workspace": "packages/" + "workspace-".repeat(12_000) };
@@ -604,6 +703,9 @@ describe("pipeline", () => {
     const first = await audit({
       rules: { a },
       cache,
+      typeAware: true,
+      reads: ["references"],
+      sourceReads: emptySourceReads,
       jev: recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } }).layer,
     });
     const sourceReads = Layer.succeed(SourceReads, {
@@ -636,7 +738,14 @@ describe("pipeline", () => {
     expect(result.findings).toEqual(first.findings);
     expect(failing(result.findings)).toHaveLength(1);
     expect(attempts).toEqual([{}]);
-    const reused = await audit({ rules: { a }, cache, jev: noHttp });
+    const reused = await audit({
+      rules: { a },
+      cache,
+      typeAware: true,
+      reads: ["references"],
+      sourceReads: emptySourceReads,
+      jev: noHttp,
+    });
     expect(reused.findings).toEqual(first.findings);
   });
 
@@ -645,6 +754,9 @@ describe("pipeline", () => {
     await audit({
       rules,
       cache,
+      typeAware: true,
+      reads: DEFAULT_READS,
+      sourceReads: emptySourceReads,
       jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: {} }).layer,
     });
     const symbols = { port: "const port: number" };
@@ -805,6 +917,9 @@ describe("pipeline", () => {
       rules,
       files: [cached],
       cache,
+      typeAware: true,
+      reads: ["symbols", "references"],
+      sourceReads: emptySourceReads,
       jev: recordingJev({ judge: { a: 0.1, b: 0.2 }, locate: {} }).layer,
     });
     const preparations: Array<readonly string[]> = [];
@@ -1098,7 +1213,14 @@ describe("pipeline", () => {
         expect(attempts[phase]).toEqual([{ symbols, references }, { symbols }]);
         expect(done[0]?.requests).toBe(phase === "judge" ? 2 : 3);
         const retry = recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
-        await audit({ rules, cache, jev: retry.layer });
+        await audit({
+          rules,
+          cache,
+          typeAware: true,
+          reads: ["symbols", "references"],
+          sourceReads: emptySourceReads,
+          jev: retry.layer,
+        });
         expect(retry.calls.judge).toHaveLength(1);
         expect(Object.keys(retry.calls.judge[0]!)).toEqual(["a", "b"]);
         return;
@@ -1117,7 +1239,14 @@ describe("pipeline", () => {
         conflicts: () => Effect.die("unused"),
         contradicts: () => Effect.die("unused"),
       });
-      const cached = await audit({ rules, cache, jev: noRequests });
+      const cached = await audit({
+        rules,
+        cache,
+        typeAware: true,
+        reads: ["symbols", "references"],
+        sourceReads: emptySourceReads,
+        jev: noRequests,
+      });
       expect(cached.findings).toEqual(result.findings);
     },
   );
@@ -1215,7 +1344,14 @@ describe("pipeline", () => {
     for (const body of sent.slice(0, 2))
       expect(body.state.references).toMatchObject({ "hook:caller.ts": "use(port);" });
     const again = recordingJev({ judge: {}, locate: {} });
-    const cached = await audit({ rules: hooked, cache, jev: again.layer });
+    const cached = await audit({
+      rules: hooked,
+      cache,
+      typeAware: true,
+      reads: ["symbols", "references"],
+      sourceReads: emptySourceReads,
+      jev: again.layer,
+    });
     expect(again.calls).toEqual({ judge: [], locate: [] });
     expect(cached.findings).toEqual(result.findings);
     expect(cached.cached).toBe(1);

@@ -612,6 +612,7 @@ no native compiler startup. Opt in with `typeAware: true` in the config or
 | Name                | What Jev reads                                                                                                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `workspacePackages` | The repo's own packages the file imports, each name with its directory, as in `{ "orders-core": "packages/orders" }`. A package it imports that is not listed is an installed one.          |
+| `dependents`        | Off by default. What depends on the file: `packages`, the workspace packages whose `package.json` depends on the file's package, and `files`, the files that import it by a relative path.  |
 | `symbols`           | The compiler's type blocks for each name, plus compiler documentation and JSDoc tags; not literal editor hover text.                                                                        |
 | `references`        | Whole declarations of symbols the code uses from other files of the repo, keyed by `symbol:repository-relative pathname`: a function with its body, a method without the rest of its class. |
 
@@ -634,7 +635,8 @@ with `…` between them. For example, code importing `twice as scale` can receiv
 }
 ```
 
-When sent to Jev, each enabled `references`, `symbols`, and `workspacePackages`
+When sent to Jev, each enabled `references`, `symbols`, `workspacePackages`,
+`dependents`, and `options`
 map includes a reserved `__comment` explaining its contents. These comments are
 included before `appendState` hooks and restored after hooks. Top-level guidance
 also tells Jev that these maps are context only: judge the target `code`, not the
@@ -648,9 +650,33 @@ size but can cut off type signatures, overloads, useful details, or examples.
 
 `typeAware` defaults to `false`. When enabled, it adds **both** `symbols` and
 `references`, regardless of `reads`. The `reads` setting now chooses workspace
-context only: its default is `["workspacePackages"]`; `[]` omits that map.
+context only: its default is `["workspacePackages"]`; `[]` omits that map, and
+`["workspacePackages", "dependents"]` adds `dependents`.
 Legacy `"symbols"` or `"references"` entries in `reads` alone do not enable native
 context, and leaving them out does not disable it when `typeAware` is true.
+
+`dependents` is read without the compiler, the way `workspacePackages` is:
+
+```json
+{
+  "dependents": {
+    "packages": { "web": "packages/web" },
+    "files": ["packages/core/src/index.ts"],
+    "omittedFiles": 2
+  }
+}
+```
+
+- `packages` names the workspace packages whose `dependencies`,
+  `devDependencies`, `peerDependencies`, or `optionalDependencies` name the
+  package the file is in. It is the same for every file of a package.
+- `files` lists, sorted, at most 50 of the files lint reads that import the file
+  by a relative path, such as `./order`, `./order.js`, or `./lib` for
+  `./lib/index.ts`. `omittedFiles` counts the rest, when there are more.
+  Imports by package name or `tsconfig` path alias do not count, nor do files
+  `--filter` or `exclude` leaves out.
+- With `dependents` on, lint reads every file once more before it plans, to
+  find its imports.
 
 ```ts
 // .adhere/config.ts
@@ -784,6 +810,44 @@ export default defineRule({
 - A config's inline rules can have `appendState` too.
 
 </details>
+
+#### Options
+
+A `RULE.ts` can take settings from each project that uses it, such as which
+paths run on the edge. It declares them with an Effect Schema as `options`, and
+a config sets them under the rule's id in [`overrides`](#overrides):
+
+```ts
+// .adhere/rules/edge/no-node/RULE.ts
+import { defineRule, Schema } from "@drkmttr/adhere";
+
+export default defineRule({
+  description: "A file under a path in `options.edgePaths` must never import a `node:` module.",
+  never: 'import { readFileSync } from "node:fs";',
+  options: Schema.Struct({ edgePaths: Schema.Array(Schema.String) }),
+});
+```
+
+```ts
+// .adhere/config.ts
+export default defineConfig({
+  overrides: { "edge/no-node": { options: { edgePaths: ["src/edge", "workers"] } } },
+});
+```
+
+- Jev reads the decoded settings as `options`, so the description can name
+  them in backticks. A rule's `appendState` gets them too, in its `state`.
+- A key the schema does not make optional must be set: an unset or invalid
+  option refuses the run, naming the rule. So do options for a rule that takes
+  none.
+- A rule with options goes to Jev in requests of its own, as one with a hook
+  does, and each of those requests sends the file and its context again.
+- Changing a rule's options judges the rule again, and no other rule.
+- The plan counts the tokens options add, and a file whose options leave no
+  room for a question is skipped before any request.
+- `Schema` is Effect's, re-exported by adhere, so a `RULE.ts` needs no `effect`
+  of its own and decodes with the same copy adhere does.
+- A `RULE.md` cannot take options.
 
 ### Where rules live
 
@@ -1135,11 +1199,11 @@ export default defineConfig({
 });
 ```
 
-| Value                  | Effect               |
-| ---------------------- | -------------------- |
-| `"off"`                | drops the rule       |
-| `"warning"`, `"error"` | sets its level       |
-| `{ level, threshold }` | sets either, or both |
+| Value                           | Effect                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| `"off"`                         | drops the rule                                                                    |
+| `"warning"`, `"error"`          | sets its level                                                                    |
+| `{ level, threshold, options }` | sets any of them; `options` only for a rule that takes them ([options](#options)) |
 
 An id that no preset or project rule has refuses the run, so a typo does not go
 unnoticed. A rule of a preset the run does not name is accepted.
@@ -1344,15 +1408,16 @@ paid request, and Jev's answers vary a little from run to run, so a committed
 cache gives everyone and CI the same findings without paying for them again, and
 a pull request changes the judgments of only the files it changes.
 
-| What changed                                                                                 | What is judged again                                                             |
-| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| A file's code                                                                                | Every rule, for that file.                                                       |
-| A file's comments alone                                                                      | Nothing.                                                                         |
-| A file is moved or copied                                                                    | Nothing. Identical files share their judgments.                                  |
-| A rule's text, a matcher, or the source of its `appendState`                                 | That rule, for every file.                                                       |
-| Anything else Jev read: a file it imports, the workspace's packages, or the config's `reads` | Nothing, so a judgment can go stale. Delete the cache to judge every file again. |
-| The threshold is lowered                                                                     | Nothing. Cached judgments newly above it are located.                            |
-| adhere asks its questions differently, after an upgrade                                      | Every rule, once.                                                                |
+| What changed                                                                                                                    | What is judged again                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| A file's code                                                                                                                   | Every rule, for that file.                                                       |
+| A file's comments alone                                                                                                         | Nothing.                                                                         |
+| A file is moved or copied                                                                                                       | Nothing. Identical files share their judgments.                                  |
+| A rule's text, a matcher, the source of its `appendState`, or its options                                                       | That rule, for every file.                                                       |
+| The config's `reads`, `typeAware`, `maxSymbolLength`, or `maxSymbolDocumentationLength`, and `includeComments` with `typeAware` | Every rule, once.                                                                |
+| What the reads find: a file it imports, the workspace's packages, the file's `dependents`                                       | Nothing, so a judgment can go stale. Delete the cache to judge every file again. |
+| The threshold is lowered                                                                                                        | Nothing. Cached judgments newly above it are located.                            |
+| adhere asks its questions differently, after an upgrade                                                                         | Every rule, once.                                                                |
 
 To keep the cache out of diffs, mark it as generated in `.gitattributes`:
 

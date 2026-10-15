@@ -1,4 +1,5 @@
 import { Effect, FileSystem, Path } from "effect";
+import { posix } from "node:path";
 import { scan, type Token } from "#highlight.ts";
 
 /** A workspace's packages: each one's name, with its directory from the root. */
@@ -38,15 +39,12 @@ const specifierOf = (token: Token | undefined, templates = false): string | unde
 };
 
 /**
- * Only packages named by this file's literal imports, type imports, re-exports,
- * or import/require calls. Tokens keep comments, strings, regexes, and templates
- * opaque; computed modules and imports inside template substitutions are not resolved.
- * Subpaths identify their canonical package, without walking the global catalog.
+ * Every module specifier named by this file's literal imports, type imports,
+ * re-exports, or import/require calls, once each, in order. Tokens keep comments,
+ * strings, regexes, and templates opaque; computed modules and imports inside
+ * template substitutions are not resolved.
  */
-export const workspacePackagesIn = (
-  code: string,
-  catalog: WorkspacePackages,
-): WorkspacePackages => {
+export const importSpecifiersIn = (code: string): ReadonlyArray<string> => {
   const tokens = scan(code).flatMap((token) => {
     if (token.kind === "comment" || token.text.trim() === "") return [];
     // Highlighting groups punctuation; module clauses need individual delimiters.
@@ -54,11 +52,9 @@ export const workspacePackagesIn = (
       ? [...token.text].map((text): Token => ({ text }))
       : [token];
   });
-  const names = new Set<string>();
+  const specifiers = new Set<string>();
   const keep = (specifier: string | undefined) => {
-    if (specifier === undefined || specifier.startsWith(".") || specifier.startsWith("/")) return;
-    const name = specifier.split("/", specifier.startsWith("@") ? 2 : 1).join("/");
-    if (Object.hasOwn(catalog, name)) names.add(name);
+    if (specifier !== undefined) specifiers.add(specifier);
   };
   for (const [index, token] of tokens.entries()) {
     if (tokens[index - 1]?.text === ".") continue;
@@ -90,6 +86,23 @@ export const workspacePackagesIn = (
       }
       if (part.kind === "keyword" && !["type", "as", "from"].includes(part.text)) break;
     }
+  }
+  return [...specifiers];
+};
+
+/**
+ * Only packages this file imports, by `importSpecifiersIn`. Subpaths identify
+ * their canonical package, without walking the global catalog.
+ */
+export const workspacePackagesIn = (
+  code: string,
+  catalog: WorkspacePackages,
+): WorkspacePackages => {
+  const names = new Set<string>();
+  for (const specifier of importSpecifiersIn(code)) {
+    if (specifier.startsWith(".") || specifier.startsWith("/")) continue;
+    const name = specifier.split("/", specifier.startsWith("@") ? 2 : 1).join("/");
+    if (Object.hasOwn(catalog, name)) names.add(name);
   }
   return Object.fromEntries([...names].sort().map((name) => [name, catalog[name]!]));
 };
@@ -230,3 +243,99 @@ export const workspacePackagesOf = Effect.fn("workspacePackagesOf")(function* (r
     named.flat().sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
   ) as WorkspacePackages;
 });
+
+const DEPENDENCY_FIELDS = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+] as const;
+
+/**
+ * For each workspace package, the other workspace packages whose package.json
+ * depends on it, by name with directory, sorted. A package no other one names
+ * is left out.
+ */
+export const workspaceDependentsOf = Effect.fn("workspaceDependentsOf")(function* (
+  root: string,
+  catalog: WorkspacePackages,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const dependents = new Map<string, Map<string, string>>();
+  // Sequential over the sorted catalog, so each package's dependents are inserted sorted.
+  yield* Effect.forEach(Object.entries(catalog), ([name, directory]) =>
+    Effect.map(
+      fs
+        .readFileString(path.join(root, directory, "package.json"))
+        .pipe(Effect.orElseSucceed(() => "")),
+      (text) => {
+        const manifest = parsed(text) as Readonly<Record<string, unknown>> | undefined;
+        for (const field of DEPENDENCY_FIELDS) {
+          const named = manifest?.[field];
+          if (named === null || typeof named !== "object") continue;
+          for (const dependency of Object.keys(named)) {
+            if (dependency === name || !Object.hasOwn(catalog, dependency)) continue;
+            const found = dependents.get(dependency) ?? new Map<string, string>();
+            dependents.set(dependency, found.set(name, directory));
+          }
+        }
+      },
+    ),
+  );
+  return Object.fromEntries(
+    [...dependents].map(([name, found]) => [name, Object.fromEntries(found)]),
+  ) as Readonly<Record<string, WorkspacePackages>>;
+});
+
+/** TypeScript source extensions an import resolves to, in the order tried. */
+const SOURCE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"] as const;
+/** The source extensions an emitted extension in a specifier stands for. */
+const EMITTED: Readonly<Record<string, ReadonlyArray<string>>> = {
+  ".js": [".ts", ".tsx"],
+  ".jsx": [".tsx"],
+  ".mjs": [".mts"],
+  ".cjs": [".cts"],
+};
+
+/** The paths a relative specifier can name, most specific first. */
+const candidatesOf = (target: string): ReadonlyArray<string> => {
+  const extension = posix.extname(target);
+  const emitted = EMITTED[extension] ?? [];
+  const stem = target.slice(0, target.length - extension.length);
+  return [
+    target,
+    ...emitted.map((source) => `${stem}${source}`),
+    ...SOURCE_EXTENSIONS.map((source) => `${target}${source}`),
+    ...SOURCE_EXTENSIONS.map((source) => `${target}/index${source}`),
+  ];
+};
+
+/**
+ * For each file, the files that import it by a relative specifier, sorted.
+ * Keys and values are `/`-separated paths from one root, as `imports` gives
+ * them; a specifier resolves only to a file `imports` has, by the first of its
+ * candidates found: as written, with `.js` as `.ts`, with a source extension
+ * added, then as a directory's index. Package and path-alias imports do not count.
+ */
+export const dependentFilesIn = (
+  imports: ReadonlyMap<string, ReadonlyArray<string>>,
+): ReadonlyMap<string, ReadonlyArray<string>> => {
+  const dependents = new Map<string, Set<string>>();
+  for (const [importer, specifiers] of imports) {
+    for (const specifier of specifiers) {
+      if (specifier !== "." && specifier !== ".." && !/^\.\.?\//.test(specifier)) continue;
+      const target = posix.join(posix.dirname(importer), specifier);
+      const found = candidatesOf(target).find((candidate) => imports.has(candidate));
+      if (found === undefined || found === importer) continue;
+      dependents.set(found, (dependents.get(found) ?? new Set()).add(importer));
+    }
+  }
+  return new Map([...dependents].map(([file, found]) => [file, [...found].sort()]));
+};
+
+/** The workspace package a `/`-separated path from the root lies in: the one with the deepest directory holding it. */
+export const packageOf = (file: string, catalog: WorkspacePackages): string | undefined =>
+  Object.entries(catalog)
+    .filter(([, directory]) => file.startsWith(`${directory}/`))
+    .sort(([, a], [, b]) => b.length - a.length)[0]?.[0];

@@ -1,5 +1,5 @@
 import { loaded, a, b, rules } from "./audit.fixtures.ts";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import {
   AdhereConfig as AdhereConfigSchema,
@@ -129,7 +129,7 @@ describe("config", () => {
     expect(refused._tag).toBe("ConfigUnavailable");
   });
 
-  it("applies overrides by the id a report shows: off drops a rule, a level or threshold replaces its own", () => {
+  it("applies overrides by the id a report shows: off drops a rule, a level or threshold replaces its own", async () => {
     const entry = (id: string, preset?: string): RuleEntry => ({
       id,
       ...(preset === undefined ? {} : { preset }),
@@ -142,16 +142,45 @@ describe("config", () => {
       entry("style/names"),
       entry("style/kept"),
     ];
-    const overridden = withOverrides(entries, {
-      "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
-      "effect/basics/gen-for-sequencing": "off",
-      "style/names": "warning",
-    });
+    const overridden = await Effect.runPromise(
+      withOverrides(entries, {
+        "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
+        "effect/basics/gen-for-sequencing": "off",
+        "style/names": "warning",
+      }),
+    );
     expect(overridden.map((one) => [shownId(one), one.rule.level, one.rule.threshold])).toEqual([
       ["alchemy/providers/idempotent-delete", "warning", 0.9],
       ["style/names", "warning", 0.7],
       ["style/kept", undefined, 0.7],
     ]);
+  });
+
+  it("decodes a rule's options from its override, refusing missing, invalid, or untaken ones", async () => {
+    const options = Schema.Struct({
+      edgePaths: Schema.Array(Schema.String),
+      strict: Schema.optionalKey(Schema.Boolean),
+    });
+    const entries: ReadonlyArray<RuleEntry> = [
+      { id: "edge", scope: "/repo", rule: { description: "edge", must: "a()", options } },
+      { id: "plain", scope: "/repo", rule: { description: "plain", must: "a()" } },
+    ];
+    const [edge, plain] = await Effect.runPromise(
+      withOverrides(entries, { edge: { options: { strict: true, edgePaths: ["src/edge"] } } }),
+    );
+    expect(edge?.rule.optionValues).toEqual({ edgePaths: ["src/edge"], strict: true });
+    expect(plain?.rule.optionValues).toBeUndefined();
+    const refusal = (overrides: Parameters<typeof withOverrides>[1]) =>
+      Effect.runPromise(Effect.flip(withOverrides(entries, overrides)));
+    for (const overrides of [{}, { edge: "warning" as const }]) {
+      expect((await refusal(overrides)).message).toMatch(/options of edge.*edgePaths/s);
+    }
+    expect((await refusal({ edge: { options: { edgePaths: "src/edge" } } })).message).toMatch(
+      /options of edge/,
+    );
+    expect((await refusal({ edge: "off", plain: { options: {} } })).message).toBe(
+      "overrides sets options for plain, which takes none.",
+    );
   });
 
   it("keeps the config's exclude globs, and refuses a rule's tests other than only or include", async () => {
@@ -211,15 +240,15 @@ describe("config", () => {
   });
 
   it("keeps configured shared reads through resolution and refuses unknown reads", async () => {
-    const reads = ["workspacePackages", "symbols", "references"] as const;
+    const reads = ["workspacePackages", "dependents", "symbols", "references"] as const;
     const decoded = await Effect.runPromise(decodeConfig({ reads, rules }));
     expect(decoded.reads).toEqual(reads);
     expect(decoded.rules).toEqual(rules);
-    expect(resolveConfig({ ...decoded, rules }).reads).toEqual(["workspacePackages"]);
+    expect(resolveConfig({ ...decoded, rules }).reads).toEqual(["workspacePackages", "dependents"]);
     expect(resolveConfig({ ...decoded, rules }).typeAware).toBe(false);
     const refused = await Effect.runPromise(Effect.flip(decodeConfig({ reads: ["comments"] })));
     expect(refused.message).toContain(
-      'Expected "workspacePackages" | "symbols" | "references"\n  at ["reads"][0]',
+      'Expected "workspacePackages" | "dependents" | "symbols" | "references"\n  at ["reads"][0]',
     );
   });
 

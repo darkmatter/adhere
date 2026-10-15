@@ -255,25 +255,47 @@ export const globalRuleSet = (rules: Readonly<Record<RuleId, Rule>>, root: strin
 /**
  * The rules as a config's overrides leave them, each found by the id a report
  * names it with: a rule set `off` gone, and any other with the level and
- * threshold its override gives, over its own.
+ * threshold its override gives, over its own, and its `options` decoded by
+ * the rule's schema, `{}` when unset. Options a rule does not take, or that
+ * do not decode, refuse the run.
  */
-export const withOverrides = (
+export const withOverrides = Effect.fn("withOverrides")(function* (
   entries: RuleSet,
   overrides: Readonly<Record<string, Override>>,
-): RuleSet =>
-  entries.flatMap((entry) => {
-    const override = overrides[shownId(entry)];
-    if (override === undefined) return [entry];
-    const { level, threshold }: Exclude<Override, string> =
-      typeof override === "string" ? { level: override } : override;
-    if (level === "off") return [];
-    const rule: Rule = {
-      ...entry.rule,
-      ...(level === undefined ? {} : { level }),
-      ...(threshold === undefined ? {} : { threshold }),
-    };
-    return [{ ...entry, rule }];
-  });
+) {
+  const kept = yield* Effect.forEach(entries, (entry) =>
+    Effect.gen(function* () {
+      const id = shownId(entry);
+      const override = overrides[id];
+      const { level, threshold, options }: Exclude<Override, string> =
+        typeof override === "string" ? { level: override } : (override ?? {});
+      if (level === "off") return [];
+      if (entry.rule.options === undefined && options !== undefined) {
+        return yield* ConfigUnavailable.make({
+          message: `overrides sets options for ${id}, which takes none.`,
+        });
+      }
+      const optionValues =
+        entry.rule.options === undefined
+          ? undefined
+          : yield* Schema.decodeUnknownEffect(entry.rule.options)(options ?? {}).pipe(
+              Effect.mapError((problem) =>
+                ConfigUnavailable.make({
+                  message: `The options of ${id}, set in overrides, did not decode: ${problem.message}`,
+                }),
+              ),
+            );
+      const rule: Rule = {
+        ...entry.rule,
+        ...(level === undefined ? {} : { level }),
+        ...(threshold === undefined ? {} : { threshold }),
+        ...(optionValues === undefined ? {} : { optionValues }),
+      };
+      return [{ ...entry, rule }];
+    }),
+  );
+  return kept.flat();
+});
 
 /**
  * Whether a rule judges a file: a test file only when the rule says `tests`,

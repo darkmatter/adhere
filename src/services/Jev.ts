@@ -146,6 +146,10 @@ const READ_COMMENTS: Readonly<Record<string, string>> = {
     "Declarations of symbols used in `code`. Each key is `symbol:pathname`: the symbol name as used in `code` followed by its repository-relative declaration path. Each value is a complete declaration excerpt.",
   workspacePackages:
     "Workspace packages imported by `code`; keys are package names and values are repository-relative package directories. Only packages imported by this file are listed.",
+  dependents:
+    "What depends on the file `code` holds. `packages` maps workspace packages whose package.json depends on this file's package to their repository-relative directories. `files` lists repository-relative paths of files that import this file by a relative path; `omittedFiles`, when present, counts more that are not listed. Package-name imports of this file are not in `files`.",
+  options:
+    "Settings this project gives the rule the questions ask about, which the rule names as `options.<key>`.",
 };
 
 /** Explain the known context maps while preserving caller-provided descriptions and target code. */
@@ -347,10 +351,20 @@ export const matcherQuestions = (id: RuleId, rule: Rule) =>
         [matcherKey(kind, id, index), matcherQuestion(rule, kind, matcher)] as const,
     ),
   );
-
-/** The room for one question beside the file and its shared prepared context. Hooks are not predicted. */
+/** The room for one question beside the file and the prepared context of its request. Hooks are not predicted. */
 export const questionRoom = (lines: Lines, readState: ReadState = {}): number =>
   QUESTION_CONTEXT - WRAPPER - tokensOf(stateOf(lines, readState));
+
+/**
+ * The shared context, with the options of the rule in `rules` that has them
+ * under `options`: `requestGroups` gives such a rule a body of its own.
+ */
+const withOptions = (rules: Rules, readState: ReadState): ReadState => {
+  const options = Object.values(rules).find(
+    (rule) => rule.optionValues !== undefined,
+  )?.optionValues;
+  return options === undefined ? readState : { ...readState, options };
+};
 
 /**
  * One question per rule, one per matcher of each rule, and the linter
@@ -364,7 +378,7 @@ export const judgeBody = (
   readState: ReadState = {},
 ) => ({
   model,
-  state: stateOf(lines, readState),
+  state: stateOf(lines, withOptions(rules, readState)),
   questions: {
     ...Record.map(rules, (rule): ReturnType<typeof judgeQuestion> => judgeQuestion(rule)),
     ...Object.fromEntries(
@@ -482,7 +496,7 @@ export const locateBody = (
   readState: ReadState = {},
 ) => {
   const sections = sectionsOf(lines);
-  const state = stateOf(lines, readState, sections);
+  const state = stateOf(lines, withOptions(rules, readState), sections);
   const criteria = Record.map(state.code, () => null);
   const choosing = sections.length > 1;
   const withCode = sections.map((section) => lineCriteria(lines, section));
@@ -513,10 +527,16 @@ export const locateBody = (
 };
 
 /**
- * Whether Jev can take every request a file may need: its sections within
- * one choice, and the shared state beside its longest question. Hooks are not predicted.
+ * Whether Jev can take every request a file may need: each request group's
+ * sections within one choice, and its state, options and all, beside its
+ * longest question. Hooks are not predicted.
  */
-export const fits = (lines: Lines, rules: Rules, readState: ReadState = {}): boolean => {
+export const fits = (lines: Lines, rules: Rules, readState: ReadState = {}): boolean =>
+  Record.isEmptyRecord(rules)
+    ? groupFits(lines, rules, readState)
+    : requestGroups(rules).every((group) => groupFits(lines, group, withOptions(group, readState)));
+
+const groupFits = (lines: Lines, rules: Rules, readState: ReadState): boolean => {
   const sections = sectionsOf(lines);
   if (sections.length > CHOICE_LIMIT) return false;
   const state = stateOf(lines, readState, sections);
@@ -633,16 +653,18 @@ export const requestsOf = <Q>(body: Body<Q>): ReadonlyArray<Body<Q>> => {
 };
 
 /**
- * All rules share one body except those with `appendState`, each in a body
- * of its own so only its questions read what its hook adds to the shared state.
+ * All rules share one body except those with `appendState` or options, each
+ * in a body of its own so only its questions read what it adds to the shared state.
  */
 export const requestGroups = (rules: Rules): ReadonlyArray<Rules> => {
-  const shared = Record.filter(rules, (rule) => rule.appendState === undefined);
+  const alone = Record.filter(
+    rules,
+    (rule) => rule.appendState !== undefined || rule.optionValues !== undefined,
+  );
+  const shared = Record.filter(rules, (_, id) => !(id in alone));
   return [
     ...(Record.isEmptyRecord(shared) ? [] : [shared]),
-    ...Object.entries(rules).flatMap(([id, rule]) =>
-      rule.appendState === undefined ? [] : [{ [id]: rule }],
-    ),
+    ...Object.entries(alone).map(([id, rule]) => ({ [id]: rule })),
   ];
 };
 
