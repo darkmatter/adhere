@@ -88,18 +88,23 @@ your rules.
 
 - [Install](#install)
 - [Quick start](#quick-start)
-- [Generate rules from your repo](#generate-rules-from-your-repo)
-- [Install rules from other repos](#install-rules-from-other-repos)
-- [Check for contradictions](#check-for-contradictions)
-- [Live evals](#live-evals)
-- [Writing good rules](#writing-good-rules)
-- [Commands](#commands)
-- [Reading the report](#reading-the-report)
-- [Rule format](#rule-format)
-- [Config](#config)
-- [Other Providers](#providers)
-- [Running lint](#running-lint)
-- [Comments and suppressions](#comments-and-suppressions)
+- [Usage](#usage)
+  - [Commands](#commands)
+  - [Config](#config)
+  - [Rule format](#rule-format)
+  - [Running lint](#running-lint)
+  - [Reading the report](#reading-the-report)
+- [Creating Rules](#creating-rules)
+  - [Generate rules from your repo](#generate-rules-from-your-repo)
+  - [Install rules from other repos](#install-rules-from-other-repos)
+- [Validate & Improve Rules](#improving-rules)
+  - [Writing good rules](#writing-good-rules)
+  - [Check for contradictions](#check-for-contradictions)
+  - [Live evals](#live-evals)
+- [Advanced Features](#advanced-features) 
+  - [State Hooks and Type-Awareness](#state-hooks-and-type-awareness)
+  - [Other Providers](#providers)
+  - [Comments and suppressions](#comments-and-suppressions)
 - [Cache](#cache)
 - [Agent skills](#agent-skills)
 - [How a file is judged](#how-a-file-is-judged)
@@ -603,7 +608,7 @@ finding its matchers dropped, with their scores.
 > scored an `excludeIf` near 0.5 for real and false findings alike. See
 > [Writing good rules](#writing-good-rules).
 
-### What Jev reads
+### State Hooks and Type-Awareness
 
 By default, Jev reads the file's code and its imported workspace packages, with
 no native compiler startup. Opt in with `typeAware: true` in the config or
