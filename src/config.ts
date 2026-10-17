@@ -56,12 +56,16 @@ export type AppendState = (
  * What the config can have Jev read beside each file's code, shared by all
  * its rules. Each name is the key the state carries it under, which a rule's
  * description can name in backticks. `workspacePackages` maps only workspace
- * packages imported by this file to their directories. `symbols` maps names
+ * packages imported by this file to their directories. `dependents` lists what
+ * depends on this file: workspace packages whose package.json names its package,
+ * and files that import it by a relative path. `symbols` maps names
  * to native compiler types, with documentation and JSDoc tags shared across variants.
  * `references` maps used names to complete AST declaration scopes by
  * repo-relative path, rather than fixed line windows or full related files.
  */
-export const Reads = Schema.Array(Schema.Literals(["workspacePackages", "symbols", "references"]));
+export const Reads = Schema.Array(
+  Schema.Literals(["workspacePackages", "dependents", "symbols", "references"]),
+);
 
 /**
  * A rule's examples, named in RFC 2119's words, which Jev reads as written. A
@@ -115,6 +119,17 @@ const RuleFields = Schema.Struct({
       expected: "a function",
     }),
   ),
+  /**
+   * The settings a rule written in TypeScript takes, as an Effect Schema,
+   * set under the rule's id in a config's `overrides`, as `options`. A key
+   * the schema does not make optional must be set. Jev reads the decoded
+   * settings as `options`, in requests of the rule's own.
+   */
+  options: Schema.optionalKey(
+    Schema.declare((value: unknown): value is Schema.Decoder<unknown> => Schema.isSchema(value), {
+      expected: "an Effect Schema",
+    }),
+  ),
 });
 
 /** Before 0.7, a rule's examples were `reference` and `avoid`: read as `must` and `never`. */
@@ -153,7 +168,10 @@ export const Rule = Schema.Struct({
           : "a rule needs an example: must, never, should, or shouldNot";
     }),
   );
-export interface Rule extends Schema.Schema.Type<typeof Rule> {}
+export interface Rule extends Schema.Schema.Type<typeof Rule> {
+  /** The settings `options` decoded from the config's override, set as the config is loaded. */
+  readonly optionValues?: unknown;
+}
 
 /** How a finding is reported: an error fails the run, a warning does not. */
 export type Level = NonNullable<Rule["level"]>;
@@ -186,12 +204,13 @@ export type Rules = Readonly<Record<RuleId, Rule>>;
 /** Rules inline, or a directory of Markdown rule files (see `markdown.ts`). */
 export type RuleSource = Rules | string | URL;
 
-/** A rule's setting in a config's `overrides`: `off`, a level, or a level and a threshold. */
+/** A rule's setting in a config's `overrides`: `off`, a level, or a level, a threshold, and its options. */
 const Override = Schema.Union([
   Schema.Literals(["off", "error", "warning"]),
   Schema.Struct({
     level: Schema.optionalKey(Schema.Literals(["off", "error", "warning"])),
     threshold: Schema.optionalKey(Schema.Finite),
+    options: Schema.optionalKey(Schema.Unknown),
   }),
 ]);
 export type Override = typeof Override.Type;
@@ -220,7 +239,7 @@ export const AdhereConfig = Schema.Struct({
   presets: Schema.Array(Schema.Literals(presetNames)).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed([])),
   ),
-  /** Workspace context shared by every rule. Defaults to workspacePackages; [] disables it. Native read names do not enable type awareness. */
+  /** Workspace context shared by every rule: workspacePackages (the default) and dependents; [] disables it. Native read names do not enable type awareness. */
   reads: Schema.optionalKey(Reads),
   /** Include both compiler-resolved symbols and declaration excerpts. Defaults to false. */
   typeAware: Schema.optionalKey(Schema.Boolean),
@@ -244,7 +263,7 @@ export const AdhereConfig = Schema.Struct({
   /**
    * Settings for rules by the id a report names them with, a preset's with
    * its preset first, as in `alchemy/providers/idempotent-delete`: `off`, a
-   * level, or `{ level, threshold }`. A preset's rule changes without its text
+   * level, or `{ level, threshold, options }`. A preset's rule changes without its text
    * being copied into `rules`.
    */
   overrides: Schema.optionalKey(Schema.Record(Schema.String, Override)),
@@ -368,9 +387,11 @@ export interface ResolvedConfig {
   /**
    * The workspace's packages, each name with its directory from the working
    * directory, read from its manifests on every run when the config's reads
-   * names them.
+   * names `workspacePackages` or `dependents`.
    */
   readonly workspacePackages?: Readonly<Record<string, string>>;
+  /** Per workspace package, the workspace packages that depend on it, when reads names `dependents`. */
+  readonly workspaceDependents?: Readonly<Record<string, Readonly<Record<string, string>>>>;
 }
 
 /** Command-line values that apply on top of the config file. */
@@ -431,7 +452,9 @@ export const resolveConfig = (
     ...(config.includeComments === undefined ? {} : { includeComments: config.includeComments }),
     typeAware,
     reads: [
-      ...(config.reads ?? DEFAULT_READS).filter((read) => read === "workspacePackages"),
+      ...(config.reads ?? DEFAULT_READS).filter(
+        (read) => read === "workspacePackages" || read === "dependents",
+      ),
       ...(typeAware ? (["symbols", "references"] as const) : []),
     ],
     maxSymbolLength: config.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,

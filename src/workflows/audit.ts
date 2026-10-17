@@ -40,7 +40,13 @@ import { SAMPLE, tallyKeyOf } from "#mechanical.ts";
 import { priceOf } from "#pricing.ts";
 import { applicableRules, judgesFile, shownId } from "#rules.ts";
 import { suppresses, type Suppressions, suppressionsOf } from "#suppress.ts";
-import { workspacePackagesIn } from "#workspaces.ts";
+import {
+  dependentFilesIn,
+  importSpecifiersIn,
+  packageOf,
+  workspacePackagesIn,
+} from "#workspaces.ts";
+import { relative, sep } from "node:path";
 import { type Crypto, Duration, Effect, Option, Record, Result, Semaphore, Stream } from "effect";
 
 export interface Finding {
@@ -125,19 +131,24 @@ const LAYOUT = "sections";
 
 /**
  * What a judgment depends on besides the file: the model, how the file is
- * laid out, and the questions asked for the rule, which carry the rule: its
- * judge question, and its matchers' when it has any. An edited rule or
- * matcher re-judges the rule, and a question asked differently re-judges
- * every rule. So does an edited `appendState`, by its source; what the hook
- * reads outside the file is not known until it runs, so a change there does
- * not. Shared read context and related files do not invalidate judgments.
+ * laid out, what the config has Jev read, and the questions asked for the
+ * rule, which carry the rule: its judge question, and its matchers' when it
+ * has any. An edited rule or matcher re-judges the rule, and a question asked
+ * differently, or other reads, re-judge every rule. So does an edited
+ * `appendState`, by its source; what the hook reads outside the file is not
+ * known until it runs, so a change there does not. Options set differently
+ * re-judge their rule: decoded, a struct's keys come in its schema's order,
+ * however the config writes them. What the reads find, such as related
+ * files, does not invalidate judgments.
  */
-const fingerprintOf = (model: string, rule: Rule) => {
+const fingerprintOf = (model: string, reads: string, rule: Rule) => {
   const matchers = matcherQuestions("", rule).map(([, question]) => question);
   const scope = matchers.length === 0 ? "" : `\u0000${JSON.stringify(matchers)}`;
   const hook = rule.appendState === undefined ? "" : `\u0000${rule.appendState.toString()}`;
+  const options =
+    rule.optionValues === undefined ? "" : `\u0000${JSON.stringify(rule.optionValues)}`;
   return sha256(
-    `${model}\u0000${LAYOUT}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}${hook}`,
+    `${model}\u0000${LAYOUT}${reads}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}${hook}${options}`,
   );
 };
 
@@ -368,6 +379,9 @@ const hasLocatedFindings = (plan: FilePlan): boolean =>
     );
   });
 
+/** At most this many of a file's dependent files are listed; the rest are counted. */
+const MAX_DEPENDENT_FILES = 50;
+
 export interface PlanOptions {
   /** Select at most this many files needing judge or cached-locate requests; zero plans only. */
   readonly limit?: number | undefined;
@@ -386,6 +400,7 @@ export const planAudit = (
     const workspacePackages = config.reads.includes("workspacePackages")
       ? (config.workspacePackages ?? {})
       : undefined;
+    const catalog = config.workspacePackages ?? {};
     const nativeReads: SourceReadRequest = {
       symbols: config.typeAware,
       references: config.typeAware,
@@ -395,6 +410,39 @@ export const planAudit = (
     };
     const walker = yield* SourceWalker;
     const files = yield* walker.files;
+    // Each file's path from the working directory, `/`-separated, as Jev reads it.
+    const fromRoot = new Map(
+      files.map((file) => [file.path, relative(process.cwd(), file.path).split(sep).join("/")]),
+    );
+    // Only the specifiers stay in memory: each file is read again when it is planned.
+    const dependentFiles = config.reads.includes("dependents")
+      ? dependentFilesIn(
+          new Map(
+            yield* Effect.forEach(
+              files,
+              (file) =>
+                Effect.map(
+                  walker.read(file),
+                  ({ lines }) =>
+                    [fromRoot.get(file.path)!, importSpecifiersIn(lines.join("\n"))] as const,
+                ),
+              { concurrency: 8 },
+            ),
+          ),
+        )
+      : undefined;
+    const dependentsOf = (file: SourceFile) => {
+      const at = fromRoot.get(file.path)!;
+      const name = packageOf(at, catalog);
+      const importers = dependentFiles?.get(at) ?? [];
+      return {
+        packages: (name === undefined ? undefined : config.workspaceDependents?.[name]) ?? {},
+        files: importers.slice(0, MAX_DEPENDENT_FILES),
+        ...(importers.length > MAX_DEPENDENT_FILES
+          ? { omittedFiles: importers.length - MAX_DEPENDENT_FILES }
+          : {}),
+      };
+    };
 
     // Each preset's rule, with the preset it came from, for its findings to name.
     const presetOfRule = new Map(
@@ -416,11 +464,23 @@ export const planAudit = (
       );
 
     // Model, thresholds, and presets are fixed per plan; share immutable descriptors by Rule identity.
+    // The reads that take effect key every judgment; code-only keeps the key it always had.
+    // includeComments shapes other files' `references` excerpts, which the target's hash misses.
+    const reads = [
+      ...(workspacePackages === undefined ? [] : ["workspacePackages"]),
+      ...(dependentFiles === undefined ? [] : ["dependents"]),
+      ...(config.typeAware
+        ? [
+            `symbols:${config.maxSymbolLength}:${config.maxSymbolDocumentationLength}:${config.includeComments === true}`,
+          ]
+        : []),
+    ];
+    const readsKey = reads.length === 0 ? "" : `\u0000${reads.join(",")}`;
     const preparedRules = new Map<Rule, PreparedRule>(
       yield* Effect.forEach(
         new Set(config.scopedRules?.map(({ rule }) => rule) ?? Object.values(config.rules)),
         (rule) =>
-          Effect.map(fingerprintOf(config.model, rule), (fingerprint) => {
+          Effect.map(fingerprintOf(config.model, readsKey, rule), (fingerprint) => {
             const preset = presetOfRule.get(rule);
             return [
               rule,
@@ -440,10 +500,12 @@ export const planAudit = (
       const { lines, suppressions } = normalized(original.lines, config.includeComments === true);
       const rules = configuredRules(file, suppressions);
       const code = lines.join("\n");
-      const readState: ReadState =
-        workspacePackages === undefined
+      const readState: ReadState = {
+        ...(workspacePackages === undefined
           ? {}
-          : { workspacePackages: workspacePackagesIn(code, workspacePackages) };
+          : { workspacePackages: workspacePackagesIn(code, workspacePackages) }),
+        ...(dependentFiles === undefined ? {} : { dependents: dependentsOf(file) }),
+      };
       // Hashed even when unjudged or skipped, so a prune keeps what other runs know of its content.
       const hash = yield* sha256(code);
       const prepared = Record.map(rules, (rule) => preparedRules.get(rule)!);
@@ -802,7 +864,13 @@ export const executeAudit = (
       const room = questionRoom(file.lines, readState);
       const sentSamples = Record.filter(sampled, (_, id) => {
         const k = pending[id];
-        return k !== undefined && tokensOf(linterQuestion(k.rule)) <= room;
+        if (k === undefined) return false;
+        // A rule with options asks beside them, in a request of its own.
+        const left =
+          k.rule.optionValues === undefined
+            ? room
+            : questionRoom(file.lines, { ...readState, options: k.rule.optionValues });
+        return tokensOf(linterQuestion(k.rule)) <= left;
       });
       const sampleIds = Object.keys(sentSamples);
       const { probabilities, linter, matchers }: Judged = isEmpty(pending)

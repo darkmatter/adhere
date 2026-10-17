@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
-import { workspacePackagesIn } from "./workspaces.ts";
+import {
+  dependentFilesIn,
+  importSpecifiersIn,
+  packageOf,
+  workspacePackagesIn,
+} from "./workspaces.ts";
 
 const catalog = {
   "@repo/foo": "packages/foo",
@@ -69,5 +74,36 @@ describe("file-local workspace packages", () => {
       "@repo/foo": "packages/foo",
     });
     expect(workspacePackagesIn("import(`@repo/foo/${name}`)", catalog)).toEqual({});
+  });
+});
+
+describe("dependent files", () => {
+  it("resolves relative specifiers to known files as written, by emitted extension, added extension, or index", () => {
+    const dependents = dependentFilesIn(
+      new Map([
+        ["src/a.ts", importSpecifiersIn('import { b } from "./b.js"; export * from "./lib";')],
+        ["src/b.ts", importSpecifiersIn('import "../util"; import x from "pkg/./b";')],
+        [
+          "src/lib/index.ts",
+          importSpecifiersIn('const self = require("./index.ts"); import("..");'),
+        ],
+        ["src/c.tsx", importSpecifiersIn('import { b } from "./b"; import "./missing";')],
+        ["util.ts", []],
+        ["src/index.ts", []],
+      ]),
+    );
+    expect(Object.fromEntries(dependents)).toEqual({
+      "src/b.ts": ["src/a.ts", "src/c.tsx"],
+      "src/lib/index.ts": ["src/a.ts"],
+      "util.ts": ["src/b.ts"],
+      "src/index.ts": ["src/lib/index.ts"],
+    });
+  });
+
+  it("places a file in the deepest package directory that holds it", () => {
+    const catalog = { outer: "packages/outer", inner: "packages/outer/inner", other: "packages/o" };
+    expect(packageOf("packages/outer/inner/src/a.ts", catalog)).toBe("inner");
+    expect(packageOf("packages/outer/src/a.ts", catalog)).toBe("outer");
+    expect(packageOf("packages/outer-x/a.ts", catalog)).toBeUndefined();
   });
 });

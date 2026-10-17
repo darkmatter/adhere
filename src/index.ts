@@ -37,3 +37,5 @@ export {
   type RuleEntry,
   type RuleSet,
 } from "#rules.ts";
+/** For a `RULE.ts`'s `options`: the executable resolves no `effect` of the repo's own. */
+export { Schema } from "effect";

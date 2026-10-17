@@ -14,6 +14,8 @@
 - `postinstall` command that renders instruction files from the instructions directory into an `AGENTS.md` block, idempotently inserting or replacing between `<!-- adhere:instructions:start -->` and `<!-- adhere:instructions:end -->` markers; run it to sync `AGENTS.md` after changing instructions
 - Configurable `instructions` config key selecting an instructions directory relative to the config file; unset it searches `.adhere/instructions`, then `.agents/instructions`
 - Reserved markers inside an instruction file abort `postinstall` before any write
+- `dependents` read, enabled with `reads: ["workspacePackages", "dependents"]`: per file, the workspace packages whose `package.json` depends on its package (`dependents.packages`) and up to 50 files that import it by a relative path (`dependents.files`, with `omittedFiles` counting the rest). Like other shared context, a change in dependents does not invalidate cached judgments.
+- Rule options: a `RULE.ts` declares settings as an Effect Schema in `options`, and a config sets them as `overrides[id].options`. Unset required or invalid options refuse the run. Jev, and the rule's `appendState`, read the decoded settings as state `options`, in requests of the rule's own; preflight counts them, and changing them re-judges only that rule. adhere re-exports `Schema` for rule files.
 
 ### Changed
 
@@ -23,6 +25,7 @@
 - Rules share file context and batch their questions, splitting requests when necessary. Rules with `appendState` retain separate request groups.
 - Planning does not resolve native context. Source loading and execution are bounded, with native context prepared on demand for the current file.
 - Flattened `references` read state to `symbol:pathname` keys with complete declaration excerpts, omitting compiler built-in declarations
+- Cached judgments are kept per read setting: changing `reads`, `typeAware`, `maxSymbolLength`, or `maxSymbolDocumentationLength`, or `includeComments` with `typeAware` (it shapes the `references` excerpts), re-judges every rule once. What the reads find still does not invalidate a judgment. A cache written with reads enabled is judged again once after upgrading.
 - Audits that overflow the provider context retry once without `references` before skipping the file, keeping references available to `appendState` hooks
 - Provider request state maps now carry a reserved `__comment` explaining the context, and first or overflowing request payloads are logged at debug level
 

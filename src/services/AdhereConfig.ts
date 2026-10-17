@@ -21,7 +21,7 @@ import {
   shownId,
   withOverrides,
 } from "#rules.ts";
-import { workspacePackagesOf } from "#workspaces.ts";
+import { workspaceDependentsOf, workspacePackagesOf } from "#workspaces.ts";
 import { Context, Effect, FileSystem, Layer, Path, Record } from "effect";
 
 export class AdhereConfig extends Context.Service<AdhereConfig, ResolvedConfig>()(
@@ -136,15 +136,22 @@ export const AdhereConfigLive = (flags: Flags) =>
           });
         }
       }
-      const scopedRules = withOverrides(entries, overrides);
+      const scopedRules = yield* withOverrides(entries, overrides);
       // Read on every run so workspace edits are seen, but only when the config enables this context.
-      const workspacePackages = resolved.reads.includes("workspacePackages")
-        ? yield* workspacePackagesOf(cwd)
-        : undefined;
+      const dependents = resolved.reads.includes("dependents");
+      const workspacePackages =
+        dependents || resolved.reads.includes("workspacePackages")
+          ? yield* workspacePackagesOf(cwd)
+          : undefined;
+      const workspaceDependents =
+        dependents && workspacePackages !== undefined
+          ? yield* workspaceDependentsOf(cwd, workspacePackages)
+          : undefined;
       return AdhereConfig.of({
         ...resolved,
         scopedRules,
         ...(workspacePackages === undefined ? {} : { workspacePackages }),
+        ...(workspaceDependents === undefined ? {} : { workspaceDependents }),
       });
     }),
   );

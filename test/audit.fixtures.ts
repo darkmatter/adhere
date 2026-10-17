@@ -160,6 +160,12 @@ export const fixtureWalker = (files: ReadonlyArray<ScannedFile>) =>
       }),
   });
 
+/** Native reads that find nothing: for a run that must share the read settings, and so the cache, of another. */
+export const emptySourceReads = Layer.succeed(SourceReads, {
+  prepare: () => Effect.void,
+  read: () => Effect.succeed({}),
+});
+
 export const audit = (options: {
   readonly rules: Rules;
   readonly model?: string;
@@ -169,6 +175,7 @@ export const audit = (options: {
   readonly files?: ReadonlyArray<ScannedFile>;
   readonly includeComments?: boolean;
   readonly typeAware?: boolean;
+  readonly maxSymbolLength?: number;
   readonly reads?: ResolvedConfig["reads"];
   readonly workspacePackages?: Readonly<Record<string, string>>;
   readonly sourceReads?: Layer.Layer<SourceReads>;
@@ -183,7 +190,7 @@ export const audit = (options: {
             threshold: options.threshold ?? 0.7,
             sufficiencyThreshold: 0.7,
             maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
-            maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+            maxSymbolLength: options.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,
             reads: options.reads ?? [],
             rules: options.rules,
             ...(options.includeComments === undefined
@@ -243,6 +250,7 @@ export const planOf = (options: {
   readonly maxSymbolLength?: number;
   readonly includeComments?: boolean;
   readonly workspacePackages?: Readonly<Record<string, string>>;
+  readonly workspaceDependents?: ResolvedConfig["workspaceDependents"];
   readonly sourceReads?: Layer.Layer<SourceReads>;
   readonly walker?: Layer.Layer<SourceWalker>;
   readonly scopedRules?: RuleSet;
@@ -268,6 +276,9 @@ export const planOf = (options: {
             ...(options.workspacePackages === undefined
               ? {}
               : { workspacePackages: options.workspacePackages }),
+            ...(options.workspaceDependents === undefined
+              ? {}
+              : { workspaceDependents: options.workspaceDependents }),
           }),
           options.walker ?? fixtureWalker(options.files),
           options.cache,
