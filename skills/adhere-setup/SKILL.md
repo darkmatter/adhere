@@ -56,17 +56,18 @@ and validate do not start the compiler.
 In a repo without a `package.json`, inspect any `adhere` on PATH with
 `adhere --version`, then **Ask** whether to use the npm/Bun package launcher
 or a raw executable for the same default compiler-free audit. The raw release
-(`adhere-Windows-x86_64.exe` on Windows) needs no Node or package manager and
-runs with workspace context without special configuration. It cannot run a
-type-aware audit: use the package launcher or a checkout if the user opts in.
-Do not silently turn off an explicitly chosen `typeAware` setting. Only fetch
-the raw release after the user chooses that alternative:
+needs no Node or package manager and runs with workspace context without
+special configuration. It cannot run a type-aware audit: use the package
+launcher or a checkout if the user opts in. Do not silently turn off an
+explicitly chosen `typeAware` setting. Only fetch the raw release after the
+user chooses that alternative. On macOS and Linux:
 
 ```sh
-curl -fsSL --create-dirs -o ~/.local/bin/adhere \
-  https://github.com/darkmatter/adhere/releases/latest/download/adhere-$(uname -s)-$(uname -m)
-chmod +x ~/.local/bin/adhere
+curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh
 ```
+
+On Windows, download `adhere-Windows-x86_64.exe` from
+https://github.com/darkmatter/adhere/releases/latest.
 
 Validate and lint's paid requests need a TypeSafe AI API key: `TYPESAFE_API_KEY`,
 or one saved by `adhere login`, which the user runs; never ask for the key in
