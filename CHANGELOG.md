@@ -16,6 +16,8 @@
 - Reserved markers inside an instruction file abort `postinstall` before any write
 - `dependents` read, enabled with `reads: ["workspacePackages", "dependents"]`: per file, the workspace packages whose `package.json` depends on its package (`dependents.packages`) and up to 50 files that import it by a relative path (`dependents.files`, with `omittedFiles` counting the rest). Like other shared context, a change in dependents does not invalidate cached judgments.
 - Rule options: a `RULE.ts` declares settings as an Effect Schema in `options`, and a config sets them as `overrides[id].options`. Unset required or invalid options refuse the run. Jev, and the rule's `appendState`, read the decoded settings as state `options`, in requests of the rule's own; preflight counts them, and changing them re-judges only that rule. adhere re-exports `Schema` for rule files.
+- An install script for the standalone executable: `curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh` puts this machine's executable from the latest release in `~/.local/bin`.
+- An install script for the standalone executable: `curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh` puts this machine's executable from the latest release in `~/.local/bin`
 
 ### Changed
 
@@ -29,9 +31,16 @@
 - Audits that overflow the provider context retry once without `references` before skipping the file, keeping references available to `appendState` hooks
 - Provider request state maps now carry a reserved `__comment` explaining the context, and first or overflowing request payloads are logged at debug level
 
+### Removed
+
+- The `reference` and `avoid` keys of a config rule, `avoid` as a fence tag or heading in a `RULE.md`, and the refusal of a rule-level `reads`. A config rule whose only example is under `reference` or `avoid` fails for lack of an example, a fence tagged `avoid` or under an `Avoid` heading is code to write, and a rule-level `reads` is ignored.
+- The `reference` and `avoid` keys of a config rule, `avoid` as a fence tag or heading in a `RULE.md`, and the refusal of a rule-level `reads`. A config rule whose only example is under `reference` or `avoid` fails for lack of an example, a fence tagged `avoid` or under an `Avoid` heading is code to write, and a rule-level `reads` is ignored
+
 ### Fixed
 
 - Avoid opening every eligible document before sending the first request; each native read owns and releases its document and snapshot.
 - Replace per-symbol IDE hover calls with compiler API queries, bounded parallel formatting, and deduplicated types and documentation.
 - Detect changed source or ignore directives before sending or caching results under a planned content key.
 - Fix the native API panic when reading const-asserted empty tuple properties by pinning the SDK and compiler to `7.1.0-dev.20261009.1`, which includes [TypeScript #64080](https://github.com/microsoft/TypeScript/pull/64080).
+- Stop refusing to run when `.adhere/` holds a Markdown file outside every rule's directory, such as an instructions file in `.adhere/instructions/`, the default for `adhere postinstall`. Like any file not named `RULE.md` or `RULE.ts`, it is ignored.
+- Stop refusing to run when `.adhere/` holds a Markdown file outside every rule's directory, such as an instructions file in `.adhere/instructions/`, the default for `adhere postinstall`. Like any file not named `RULE.md` or `RULE.ts`, it is ignored

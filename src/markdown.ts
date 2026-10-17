@@ -28,7 +28,7 @@ import { Effect, Schema } from "effect";
  * fence's own word wins over its heading's. The first fence under each word is
  * that example, and a rule has either or both. An untagged fence outside those
  * sections is the code to write, and without a fence the whole body is.
- * `avoid`, the word before 0.7, means `never`. `threshold` is optional, and
+ * `threshold` is optional, and
  * so is `tests`: `only` for a rule about test files, which rules otherwise
  * skip, and `include` for a rule that judges them too. So is `level`:
  * `warning` reports the rule's findings as warnings, which do not fail a run.
@@ -85,11 +85,11 @@ interface Heading {
   readonly word: Word | undefined;
 }
 
-/** `must not`, like `never` and the older `avoid`, names code never to write. */
+/** `must not`, like `never`, names code never to write. */
 const wordOf = (info: string): Word | undefined => {
   const words = info.trim().toLowerCase().split(/\s+/);
   const not = words.includes("not");
-  if (words.includes("never") || words.includes("avoid")) return "never";
+  if (words.includes("never")) return "never";
   if (words.includes("should")) return not ? "should not" : "should";
   if (words.includes("must")) return not ? "never" : "must";
   return undefined;
@@ -99,7 +99,6 @@ const HEADING_WORDS: ReadonlySet<string> = new Set([
   "must",
   "must not",
   "never",
-  "avoid",
   "should",
   "should not",
 ]);
@@ -208,11 +207,6 @@ export const parseRuleMarkdown = (
       });
     }
     const fields = parseFrontMatter(match[1]);
-    if (Object.hasOwn(fields, "reads")) {
-      return yield* ConfigUnavailable.make({
-        message: `${file}: move reads from the rule's front matter to the top level of defineConfig({...}) in your config file.`,
-      });
-    }
     const front = yield* Schema.decodeUnknownEffect(FrontMatter)(fields).pipe(
       Effect.mapError((problem) =>
         ConfigUnavailable.make({ message: `${file}: ${problem.message}` }),

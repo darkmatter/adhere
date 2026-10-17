@@ -1,7 +1,7 @@
 import { type PresetName, presetNames } from "#presets.ts";
 import { type Provider, SAVED_KEYS } from "#providers/provider.ts";
 import type { RuleSet } from "#rules.ts";
-import { Effect, Predicate, Schema, SchemaTransformation } from "effect";
+import { Effect, Predicate, Schema } from "effect";
 
 export type RuleId = string;
 
@@ -73,7 +73,7 @@ export const Reads = Schema.Array(
  * be. A guideline, which asks for less, shows code that `should` be written
  * and code that `shouldNot` be.
  */
-const RuleFields = Schema.Struct({
+export const Rule = Schema.Struct({
   description: Schema.String,
   /**
    * What the description leaves out, such as why the rule holds or where it
@@ -130,44 +130,17 @@ const RuleFields = Schema.Struct({
       expected: "an Effect Schema",
     }),
   ),
-});
-
-/** Before 0.7, a rule's examples were `reference` and `avoid`: read as `must` and `never`. */
-export const Rule = Schema.Struct({
-  ...RuleFields.fields,
-  reference: Schema.optionalKey(Schema.String),
-  avoid: Schema.optionalKey(Schema.String),
-  // Guard the removed key instead of silently dropping it as an excess property.
-  reads: Schema.optionalKey(
-    Schema.declare((_value: unknown): _value is never => false, {
-      expected: "no rule-level reads; move reads to the top level of defineConfig({...})",
-    }),
-  ),
-})
-  .pipe(
-    Schema.decodeTo(
-      RuleFields,
-      SchemaTransformation.transform({
-        decode: ({ reference, avoid, ...rule }) => ({
-          ...rule,
-          ...(rule.must === undefined && reference !== undefined ? { must: reference } : {}),
-          ...(rule.never === undefined && avoid !== undefined ? { never: avoid } : {}),
-        }),
-        encode: (rule) => rule,
-      }),
-    ),
-  )
-  .check(
-    Schema.makeFilter((rule) => {
-      const requirement = rule.must !== undefined || rule.never !== undefined;
-      const guideline = rule.should !== undefined || rule.shouldNot !== undefined;
-      return requirement && guideline
-        ? "a rule is a requirement (must, never) or a guideline (should, shouldNot), not both"
-        : requirement || guideline
-          ? undefined
-          : "a rule needs an example: must, never, should, or shouldNot";
-    }),
-  );
+}).check(
+  Schema.makeFilter((rule) => {
+    const requirement = rule.must !== undefined || rule.never !== undefined;
+    const guideline = rule.should !== undefined || rule.shouldNot !== undefined;
+    return requirement && guideline
+      ? "a rule is a requirement (must, never) or a guideline (should, shouldNot), not both"
+      : requirement || guideline
+        ? undefined
+        : "a rule needs an example: must, never, should, or shouldNot";
+  }),
+);
 export interface Rule extends Schema.Schema.Type<typeof Rule> {
   /** The settings `options` decoded from the config's override, set as the config is loaded. */
   readonly optionValues?: unknown;

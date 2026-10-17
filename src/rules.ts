@@ -60,11 +60,9 @@ interface RuleFile {
 
 /**
  * The rules among `leaves`, the paths in `directory`, whose rules sit under
- * `prefix` one to a directory: `<id>/RULE.md` or `<id>/RULE.ts`. Anything else
- * in a rule's directory, such as a helper its RULE.ts imports, is not a rule.
- * A directory with both files refuses, and so does a Markdown file outside
- * every rule's directory, but a README.md: before rule directories, it was a
- * rule, and the refusal says where it goes now to keep its id.
+ * `prefix` one to a directory: `<id>/RULE.md` or `<id>/RULE.ts`. Any other
+ * file, such as a helper a RULE.ts imports, is not a rule. A directory with
+ * both files refuses.
  */
 const ruleFilesIn = (
   directory: string,
@@ -82,29 +80,6 @@ const ruleFilesIn = (
     return Effect.fail(
       ConfigUnavailable.make({
         message: `${directory}/${prefix}${both.id}: a rule is a RULE.md or a RULE.ts, not both`,
-      }),
-    );
-  }
-  const homes = files.map(({ leaf }) => leaf.slice(0, leaf.lastIndexOf("/") + 1));
-  const flat = leaves.filter((leaf) => {
-    const name = segmentsOf(leaf).at(-1) ?? "";
-    return (
-      leaf.endsWith(".md") &&
-      !RULE_FILES.has(name) &&
-      name !== "README.md" &&
-      !homes.some((home) => leaf.startsWith(home))
-    );
-  });
-  if (flat.length > 0) {
-    return Effect.fail(
-      ConfigUnavailable.make({
-        message: [
-          `Rules now live one to a directory, as ${directory}/${prefix}<id>/RULE.md or RULE.ts. Move each of these to keep its id:`,
-          ...flat.map(
-            (leaf) =>
-              `  ${directory}/${leaf} → ${directory}/${prefix}${leaf.slice(0, -".md".length)}/RULE.md`,
-          ),
-        ].join("\n"),
       }),
     );
   }

@@ -173,9 +173,9 @@ Opting in with `typeAware: true` or `--type-aware` enables both `symbols` and
 `references`, regardless of `reads`. Legacy native-reader entries in `reads`
 alone do not enable the compiler; leaving them out does not disable it when
 type awareness is on. Code alone requires `reads: []` and type awareness off.
-Presets do not own or override this selection. Rule-level `reads`, in Markdown
-front matter, `defineRule`, or inline rules, is rejected with guidance to move
-it to the config. The context maps are:
+Presets do not own or override this selection. A rule-level `reads`, in
+Markdown front matter, `defineRule`, or an inline rule, has no effect. The
+context maps are:
 
 - `workspacePackages`: only packages matched by this file's literal imports,
   as `{ canonicalPackageName: directory }`. Subpaths match the owning package;

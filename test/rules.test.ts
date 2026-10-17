@@ -120,38 +120,9 @@ describe("markdown rules", () => {
     expect(await fenced("ts must not\nb()")).toEqual({ description: "d", never: "b()" });
   });
 
-  it("a fence tagged avoid, the word before 0.7, is code never to write", async () => {
-    const rule = await parse(
-      [
-        "---",
-        "description: A domain failure is a tagged error.",
-        "---",
-        "",
-        "Not this:",
-        "",
-        "```ts avoid",
-        'throw new Error("not found")',
-        "```",
-        "",
-        "This:",
-        "",
-        "```ts",
-        'class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {}) {}',
-        "```",
-        "",
-      ].join("\n"),
-    );
-    expect(rule).toEqual({
-      description: "A domain failure is a tagged error.",
-      details: "Not this:\n\nThis:",
-      must: 'class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {}) {}',
-      never: 'throw new Error("not found")',
-    });
-  });
-
   it("a rule can be only code never to write", async () => {
     const rule = await parse(
-      "---\ndescription: A module has no default export.\n---\n\n```ts avoid\nexport default {}\n```\n",
+      "---\ndescription: A module has no default export.\n---\n\n```ts never\nexport default {}\n```\n",
     );
     expect(rule).toEqual({
       description: "A module has no default export.",
@@ -244,24 +215,6 @@ describe("markdown rules", () => {
       ),
     );
     expect(refused.message).toContain("rules/a.md");
-  });
-
-  it("refuses front matter's reads, naming the file and telling the user to move them to the config", async () => {
-    for (const reads of [
-      '["workspacePackages", "symbols", "references"]',
-      "[]",
-      '["workspacePackagez"]',
-    ]) {
-      const refused = await Effect.runPromise(
-        Effect.flip(
-          parseRuleMarkdown(`---\ndescription: d\nreads: ${reads}\n---\na()\n`, "rules/a.md"),
-        ),
-      );
-      expect(refused.message).toContain("rules/a.md");
-      expect(refused.message).toContain("reads");
-      expect(refused.message).toMatch(/move/i);
-      expect(refused.message).toMatch(/config/i);
-    }
   });
 
   it("front matter's appliesTo and excludeIf are JSON arrays of strings", async () => {
@@ -449,28 +402,6 @@ describe("nested .adhere rules", () => {
 
     expect(refused.message).toContain(
       `${root}/.adhere/rules/ports/RULE.ts: a rule file must default-export defineRule({...})`,
-    );
-  });
-
-  it("refuses a Markdown file outside every rule's directory, saying where it goes to keep its id", async () => {
-    const root = await onDisk({
-      ".adhere/rules/data/ports/RULE.md": "---\ndescription: ports\n---\nports()\n",
-      ".adhere/rules/data/ports/why.md": "In a rule's directory, so no rule.\n",
-      ".adhere/rules/README.md": "# The rules\n",
-      ".adhere/rules/secrets.md": "---\ndescription: secrets\n---\nsecrets()\n",
-      ".adhere/style/service.md": "---\ndescription: service\n---\nservice()\n",
-    });
-
-    const refused = await Effect.runPromise(
-      Effect.flip(loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem))),
-    );
-
-    expect(refused.message).toBe(
-      [
-        "Rules now live one to a directory, as .adhere/rules/<id>/RULE.md or RULE.ts. Move each of these to keep its id:",
-        "  .adhere/rules/secrets.md → .adhere/rules/rules/secrets/RULE.md",
-        "  .adhere/style/service.md → .adhere/rules/style/service/RULE.md",
-      ].join("\n"),
     );
   });
 

@@ -267,23 +267,4 @@ describe("config", () => {
       );
     }
   });
-
-  it("refuses rule-level reads with instructions to move them to the config", async () => {
-    for (const reads of [["workspacePackages", "symbols", "references"], [], ["comments"]]) {
-      const refused = await Effect.runPromise(
-        Effect.flip(decodeConfig({ reads: ["symbols"], rules: { a: { ...a, reads } } })),
-      );
-      expect(refused._tag).toBe("ConfigUnavailable");
-      expect(refused.message).toContain("reads");
-      expect(refused.message).toMatch(/move/i);
-      expect(refused.message).toMatch(/config/i);
-    }
-  });
-
-  it("reads reference and avoid, the names before 0.7, as must and never", async () => {
-    const config = await Effect.runPromise(
-      decodeConfig({ rules: { old: { description: "d", reference: "a()", avoid: "b()" } } }),
-    );
-    expect(config.rules).toEqual({ old: { description: "d", must: "a()", never: "b()" } });
-  });
 });
