@@ -983,129 +983,91 @@ from each project that uses it (see [Rule options](#rule-options)).
 
 ### What Jev reads
 
-By default, Jev reads the file's code and the workspace packages it imports.
-Neither needs the compiler. Two config keys change what every rule reads:
+The state sent for one file, `packages/orders/src/total.ts`, with every map
+on and each map's `__comment` cut short:
 
-- `reads` chooses workspace context. Its default is `["workspacePackages"]`.
-  `[]` omits that map, and `["workspacePackages", "dependents"]` adds
-  `dependents`.
-- `typeAware: true`, or `adhere lint --type-aware`, adds both `symbols` and
-  `references`, whatever `reads` says. It is off by default.
+````json
+{
+  "code": {
+    "1": "import { formatCents } from \"money\";\nimport { sum } from \"./sum\";\n\nexport const total = (prices: number[]): string => formatCents(sum(prices));\n"
+  },
+  "workspacePackages": {
+    "__comment": "Workspace packages imported by `code`; …",
+    "money": "packages/money"
+  },
+  "dependents": {
+    "__comment": "What depends on the file `code` holds. …",
+    "packages": { "web": "packages/web" },
+    "files": ["packages/orders/src/index.ts"]
+  },
+  "symbols": {
+    "__comment": "Compiler-rendered types and documentation for symbols used in `code`; …",
+    "formatCents": "```typescript\n(cents: number) => string\n```\n\nFormats cents as dollars, as in `$12.50`.",
+    "prices": "```typescript\nnumber[]\n```",
+    "sum": "```typescript\n(values: number[]) => number\n```",
+    "total": "```typescript\n(prices: number[]) => string\n```"
+  },
+  "references": {
+    "__comment": "Declarations of symbols used in `code`. …",
+    "formatCents:packages/money/src/index.ts": "export const formatCents = (cents: number): string => `$${(cents / 100).toFixed(2)}`;",
+    "sum:packages/orders/src/sum.ts": "export const sum = (values: number[]): number => values.reduce((a, b) => a + b, 0);"
+  },
+  "__comment": "Only `code` is the audit target; it is split into numbered sections. All other state entries provide context, not additional code to audit."
+}
+````
+
+- **`code`** is always sent: the file's [sections](#how-a-file-is-judged),
+  numbered from 1, without [comments](#comments) unless `includeComments` is
+  on.
+- **`workspacePackages`**, on by default: the repo's own packages the file
+  imports, each with its directory. A package the file imports that is not
+  listed is an installed one.
+- **`dependents`**, off by default: the workspace packages whose
+  `package.json` depends on the file's package, and up to 50 files that import
+  the file by a relative path, with `omittedFiles` counting the rest. Imports
+  by package name or `tsconfig` path alias do not count, nor do files that
+  `--filter` or `exclude` leaves out. To find them, lint reads every file once
+  more before it plans.
+- **`symbols`**, with type awareness: the compiler's type of each name the
+  code uses, with its documentation and JSDoc tags, leaving out
+  standard-library and runtime built-ins. `maxSymbolLength` and
+  `maxSymbolDocumentationLength` cap each one (see [Config](#config)).
+- **`references`**, with type awareness: the whole declaration of each symbol
+  the code uses from another file of the repo, keyed by the name the code uses
+  and the declaring file's path. A function comes with its body, a method
+  without the rest of its class.
+- **`__comment`**, in each map and a rule's [`options`](#rule-options), tells
+  Jev what the map holds. The top-level one says only `code` is judged. adhere
+  adds them before a [state hook](#state-hooks) runs, and again to any map the
+  hook returns without one.
+
+`reads` in the config chooses the workspace maps, and `typeAware` adds the
+compiler's:
 
 ```ts
 // .adhere/config.ts
 import { defineConfig } from "@drkmttr/adhere";
 
 export default defineConfig({
-  typeAware: true, // opt in to both symbols and references
-  reads: [], // omit workspacePackages, not compiler context
+  reads: ["workspacePackages", "dependents"], // default: ["workspacePackages"]
+  typeAware: true, // or --type-aware; off by default
 });
 ```
 
-For code alone, set `reads: []` and leave type awareness off.
-
-| Name                | What Jev reads                                                                                                                                                                              |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workspacePackages` | The repo's own packages the file imports, each name with its directory, as in `{ "orders-core": "packages/orders" }`. A package it imports that is not listed is an installed one.          |
-| `dependents`        | Off by default. What depends on the file: `packages`, the workspace packages whose `package.json` depends on the file's package, and `files`, the files that import it by a relative path.  |
-| `symbols`           | The compiler's type blocks for each name, plus compiler documentation and JSDoc tags; not literal editor hover text.                                                                        |
-| `references`        | Whole declarations of symbols the code uses from other files of the repo, keyed by `symbol:repository-relative pathname`: a function with its body, a method without the rest of its class. |
-
-`symbols` and `references` come from the TypeScript compiler. It uses each
-file's `tsconfig.json`, and works without one.
-
-**`symbols`** omits standard-library and Node/Bun runtime built-ins, including
-their methods. Project and third-party symbols remain, even when they share a
-built-in name. Built-in type names can still appear inside those symbols' type
-signatures.
-
-- Distinct binding or narrowing types get distinct blocks.
-- Documentation and JSDoc tags appear once per canonical symbol per file.
-- It has no IDE labels, and does not present the overload a call selects.
-- `maxSymbolLength` caps each symbol's whole string, at 256 characters by
-  default.
-- `maxSymbolDocumentationLength` caps its documentation and JSDoc tags first,
-  also at 256 by default. `0` omits them.
-- Smaller limits make requests smaller, but can cut off type signatures,
-  overloads, details, or examples.
-
-**`references`** is a flat map from string to string. Each key keeps the
-symbol's name as the target code uses it, import aliases included, and the
-pathname's original casing. Each value is a complete declaration excerpt, not a
-place that calls the symbol. Overlapping declarations under one key are merged,
-and disjoint excerpts are joined with `…`. For example, code importing
-`twice as scale` can receive:
-
-```json
-{
-  "references": {
-    "__comment": "Declarations of symbols used by the target code, provided only as context. Keys are symbol:repository-relative pathname; values are source excerpts, not incoming call sites.",
-    "scale:src/Math.ts": "export function twice(value: number): number {\n  return value * 2;\n}"
-  }
-}
-```
-
-**`dependents`** is read without the compiler, as `workspacePackages` is:
-
-```json
-{
-  "dependents": {
-    "packages": { "web": "packages/web" },
-    "files": ["packages/core/src/index.ts"],
-    "omittedFiles": 2
-  }
-}
-```
-
-- `packages` names the workspace packages whose `dependencies`,
-  `devDependencies`, `peerDependencies`, or `optionalDependencies` name the
-  package the file is in. It is the same for every file of a package.
-- `files` lists, sorted, at most 50 of the files lint reads that import the
-  file by a relative path, such as `./order`, `./order.js`, or `./lib` for
-  `./lib/index.ts`. `omittedFiles` counts the rest, when there are more.
-- Imports by package name or `tsconfig` path alias do not count. Nor do files
-  that `--filter` or `exclude` leaves out.
-- With `dependents` on, lint reads every file once more before it plans, to
-  find its imports.
-
-**`__comment`.** Each of these maps, and a rule's [`options`](#rule-options),
-carries a reserved `__comment` that tells Jev what it holds. adhere adds it
-before an [`appendState`](#state-hooks) hook runs, and restores it after. The
-request also tells Jev that these maps are context only: it judges the target
-`code`, not the declarations or metadata beside it.
-
-Each name is the key Jev reads it under, so a rule's description can name it in
-backticks, as the questions name `code`:
-
-````md
----
-description: A function imported from one of this repository's own packages, which the file's `workspacePackages` names, must be called through the package's namespace, never imported by its own name.
----
-
-## Must
-
-```ts
-import * as Orders from "orders-core";
-```
-
-## Never
-
-```ts
-import { parse } from "orders-core";
-```
-````
-
-- An unknown name in `reads` refuses the run, so a misspelled one does not go
-  unnoticed. `reads` in a rule also refuses the run: only the config has it.
-- To give Jev something no name covers, such as another file of the repository,
-  add it with a [state hook](#state-hooks).
+- `reads: []`, with type awareness off, sends the code alone. Neither
+  workspace map needs the compiler.
+- `typeAware` adds `symbols` and `references` whatever `reads` says. The
+  compiler uses each file's `tsconfig.json`, and works without one.
+- An unknown name in `reads` refuses the run. Only the config has `reads`.
+- A rule's description can name a map in backticks, as Jev's questions name
+  `code`. To give Jev something no map covers, such as another file, add it
+  with a [state hook](#state-hooks).
+- `adhere lint --log-level debug` logs a run's first request in full.
 
 **Cost and privacy.** Type awareness sends Jev more than the file it judges:
 whole declarations from other files, and the compiler's documentation and JSDoc
 tags in `symbols`, even with `includeComments` off. It also starts the native
-compiler during the run. The plan's estimate leaves those tokens out. Keep
-`typeAware` off to avoid that extra context and compiler work. Changing `reads`
-changes only workspace context.
+compiler during the run. The plan's estimate leaves those tokens out.
 
 <details>
 <summary>Where the packages come from</summary>
