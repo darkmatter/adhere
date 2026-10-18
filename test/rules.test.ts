@@ -405,6 +405,20 @@ describe("nested .adhere rules", () => {
     );
   });
 
+  it("loads the rules beside Markdown files that are not rules, such as instructions", async () => {
+    const root = await onDisk({
+      ".adhere/rules/data/ports/RULE.md": "---\ndescription: ports\n---\nports()\n",
+      ".adhere/rules/secrets.md": "---\ndescription: secrets\n---\nsecrets()\n",
+      ".adhere/instructions/00-workflow.md": "# Workflow\n",
+    });
+
+    const entries = await Effect.runPromise(
+      loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem)),
+    );
+
+    expect(entries.map(({ id }) => id)).toEqual(["data/ports"]);
+  });
+
   it("refuses a rule's directory that holds both a RULE.md and a RULE.ts", async () => {
     const root = await onDisk({
       ".adhere/rules/ports/RULE.md": "---\ndescription: ports\n---\nports()\n",
