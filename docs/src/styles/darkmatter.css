@@ -1,0 +1,102 @@
+/* darkmatter design system tokens (darkmatter/web src/app/globals.css), mapped onto Starlight. */
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/montserrat";
+
+:root,
+::backdrop {
+  /* darkmatter :root palette */
+  --dm-background: oklch(10.724% 0.0089 284.8);
+  --dm-foreground: oklch(100% 0 0);
+  --dm-card: oklch(14.051% 0.0044 285.82);
+  --dm-sidebar: oklch(9.181% 0 0);
+  --dm-sidebar-border: oklch(18.919% 0.003 286.11);
+  --dm-border: oklch(27.412% 0.0055 286.03);
+  --dm-muted-foreground: oklch(71.186% 0.0129 286.07);
+  --dm-ring: oklch(87.091% 0.0055 286.29);
+  --dm-zinc-200: oklch(92% 0.004 286.32);
+  --dm-zinc-300: oklch(87.1% 0.006 286.286);
+  --dm-sky-glow: oklch(75.351% 0.139 232.66);
+  --dm-sky-glow-alt: oklch(68.469% 0.1479 237.32);
+  --dm-link-hover: oklch(93.183% 0.0293 236.9);
+  --dm-destructive: oklch(39.594% 0.1331 25.72);
+
+  --sl-color-white: var(--dm-foreground);
+  --sl-color-gray-1: var(--dm-zinc-200);
+  --sl-color-gray-2: var(--dm-zinc-300);
+  --sl-color-gray-3: var(--dm-muted-foreground);
+  --sl-color-gray-4: oklch(37.032% 0.0119 285.81);
+  /* --prose-quote-border */
+  --sl-color-gray-5: var(--dm-border);
+  --sl-color-gray-6: var(--dm-card);
+  --sl-color-black: var(--dm-background);
+
+  --sl-color-accent-low: color-mix(in oklch, var(--dm-sky-glow-alt) 25%, var(--dm-background));
+  --sl-color-accent: var(--dm-sky-glow-alt);
+  --sl-color-accent-high: var(--dm-sky-glow);
+  --sl-color-red-low: var(--dm-destructive);
+
+  --sl-color-text: var(--dm-zinc-300);
+  --sl-color-text-accent: var(--dm-sky-glow);
+  --sl-color-bg: var(--dm-background);
+  --sl-color-bg-nav: var(--dm-sidebar);
+  --sl-color-bg-sidebar: var(--dm-sidebar);
+  --sl-color-bg-inline-code: var(--dm-card);
+  --sl-color-hairline: var(--dm-sidebar-border);
+  --sl-color-hairline-light: var(--dm-border);
+  --sl-color-hairline-shade: var(--dm-sidebar-border);
+
+  --sl-font: "Geist Variable";
+  --sl-font-mono: "Geist Mono Variable";
+
+  color-scheme: dark;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.01em;
+}
+
+/* Brand voice: the wordmark and page titles are mono, light, and single-case. */
+.site-title {
+  font-family: var(--__sl-font-mono);
+  font-weight: 300;
+  text-transform: lowercase;
+  letter-spacing: -0.02em;
+}
+
+h1#_top,
+.hero h1 {
+  font-family: var(--__sl-font-mono);
+  font-weight: 300;
+  text-transform: lowercase;
+  letter-spacing: -0.03em;
+}
+
+.sl-markdown-content :is(h2, h3, h4, h5, h6) {
+  font-family: "Montserrat Variable", var(--__sl-font);
+  color: var(--dm-zinc-200);
+}
+
+/* Eyebrow labels: sidebar groups. */
+.sidebar-content summary .group-label .large {
+  font-family: var(--__sl-font-mono);
+  font-size: var(--sl-text-2xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--dm-muted-foreground);
+}
+
+.sl-markdown-content a:hover {
+  color: var(--dm-link-hover);
+}
+
+.sl-markdown-content :not(pre)>code {
+  color: var(--dm-sky-glow);
+  border: 1px solid var(--dm-sidebar-border);
+  border-radius: 0.375rem;
+}

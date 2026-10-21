@@ -51,6 +51,22 @@ executables are attached to each GitHub release, named for `uname -s` and
 | `bun run build` | `git describe --tags --dirty` where it was built, as `adhere v0.10.0-16-g9a41328`: 16 commits after v0.10.0, at `9a41328`, ending in `-dirty` when the tree had changes. |
 | From source     | The checkout's version, marked `(source)`.                                                                                                                               |
 
+## Docs site
+
+`docs/` is the documentation site: [Astro](https://astro.build) with
+[Starlight](https://starlight.astro.build), themed with the darkmatter design
+system's tokens and fonts in `docs/src/styles/darkmatter.css`. Its pages copy
+the README's sections, so a change to one goes in the other too.
+
+```sh
+cd docs
+bun install
+bun run dev       # http://localhost:4321/adhere/
+```
+
+`.github/workflows/docs.yaml` builds it and deploys it to GitHub Pages on every
+push to `main` that touches `docs/`.
+
 ## Release
 
 Releases are cut by CI from pushed version tags. From a clean, up-to-date
