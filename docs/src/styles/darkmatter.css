@@ -1,6 +1,6 @@
 /* darkmatter design system tokens (darkmatter/web src/app/globals.css), mapped onto Starlight. */
 @import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/source-code-pro";
 @import "@fontsource-variable/montserrat";
 
 :root,
@@ -31,13 +31,13 @@
   --sl-color-gray-6: var(--dm-card);
   --sl-color-black: var(--dm-background);
 
-  --sl-color-accent-low: color-mix(in oklch, var(--dm-sky-glow-alt) 25%, var(--dm-background));
-  --sl-color-accent: var(--dm-sky-glow-alt);
-  --sl-color-accent-high: var(--dm-sky-glow);
+  --sl-color-accent-low: color-mix(in oklch, oklch(0.88 0.15 165.84) 25%, var(--dm-background));
+  --sl-color-accent: oklch(0.88 0.15 165.84);
+  --sl-color-accent-high: oklch(0.88 0.15 165.84);
   --sl-color-red-low: var(--dm-destructive);
 
   --sl-color-text: var(--dm-zinc-300);
-  --sl-color-text-accent: var(--dm-sky-glow);
+  --sl-color-text-accent: var(--sl-color-accent);
   --sl-color-bg: var(--dm-background);
   --sl-color-bg-nav: var(--dm-sidebar);
   --sl-color-bg-sidebar: var(--dm-sidebar);
@@ -47,7 +47,7 @@
   --sl-color-hairline-shade: var(--dm-sidebar-border);
 
   --sl-font: "Geist Variable";
-  --sl-font-mono: "Geist Mono Variable";
+  --sl-font-mono: "Source Code Pro Variable";
 
   color-scheme: dark;
 }
@@ -63,7 +63,8 @@ body {
 /* Brand voice: the wordmark and page titles are mono, light, and single-case. */
 .site-title {
   font-family: var(--__sl-font-mono);
-  font-weight: 300;
+  font-weight: 400;
+  color: var(--sl-color-accent);
   text-transform: lowercase;
   letter-spacing: -0.02em;
 }
@@ -95,7 +96,7 @@ h1#_top,
   color: var(--dm-link-hover);
 }
 
-.sl-markdown-content :not(pre)>code {
+.sl-markdown-content :not(pre) > code {
   color: var(--dm-sky-glow);
   border: 1px solid var(--dm-sidebar-border);
   border-radius: 0.375rem;
