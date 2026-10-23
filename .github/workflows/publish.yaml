@@ -21,7 +21,7 @@ permissions:
 jobs:
   verify-macos:
     name: macOS native reads
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     permissions:
       contents: read
