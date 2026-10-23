@@ -2,23 +2,28 @@
 title: "Install"
 ---
 
-Add adhere to your repo's dev dependencies, and run it with `npx adhere` or
-`bunx adhere`:
-
-```sh
-npm install -D @drkmttr/adhere
-```
-
-Or install the standalone executable, which needs no Node or Bun:
+Install the standalone executable. It needs no Node or Bun, and runs in any
+directory, inside a repo or not:
 
 ```sh
 curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh
 ```
 
-- The npm package includes the TypeScript compiler that
+To pin adhere's version in a repo, so the team and CI run the same one, add it
+as a dev dependency and run it from the package:
+
+```sh
+bun add -d @drkmttr/adhere
+bun run adhere lint
+```
+
+With npm or pnpm, add it the same way and run `npm exec adhere` or
+`pnpm exec adhere`. The package is `@drkmttr/adhere`: `adhere` on npm is an
+unrelated package.
+
+- The package includes the TypeScript compiler that
   [type awareness](/adhere/state-hooks/#what-jev-reads) needs. The standalone executable does not,
-  so it runs every audit except type-aware ones. It suits a global install that
-  your agent config can always call.
+  so it runs every audit except type-aware ones.
 - The [install script](https://github.com/darkmatter/adhere/blob/main/scripts/install.sh) puts this machine's executable from
   the [latest release](https://github.com/darkmatter/adhere/releases/latest) in
   `~/.local/bin`. Run it again to update. The executable is built for macOS and

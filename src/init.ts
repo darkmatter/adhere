@@ -173,7 +173,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npx --yes @drkmttr/adhere validate
+      - run: curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh
+      - run: ~/.local/bin/adhere validate
         env:
           TYPESAFE_API_KEY: \${{ secrets.TYPESAFE_API_KEY }}
 `;

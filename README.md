@@ -93,23 +93,28 @@ other.
 
 ## Install
 
-Add adhere to your repo's dev dependencies, and run it with `npx adhere` or
-`bunx adhere`:
-
-```sh
-npm install -D @drkmttr/adhere
-```
-
-Or install the standalone executable, which needs no Node or Bun:
+Install the standalone executable. It needs no Node or Bun, and runs in any
+directory, inside a repo or not:
 
 ```sh
 curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh
 ```
 
-- The npm package includes the TypeScript compiler that
+To pin adhere's version in a repo, so the team and CI run the same one, add it
+as a dev dependency and run it from the package:
+
+```sh
+bun add -d @drkmttr/adhere
+bun run adhere lint
+```
+
+With npm or pnpm, add it the same way and run `npm exec adhere` or
+`pnpm exec adhere`. The package is `@drkmttr/adhere`: `adhere` on npm is an
+unrelated package.
+
+- The package includes the TypeScript compiler that
   [type awareness](#what-jev-reads) needs. The standalone executable does not,
-  so it runs every audit except type-aware ones. It suits a global install that
-  your agent config can always call.
+  so it runs every audit except type-aware ones.
 - The [install script](scripts/install.sh) puts this machine's executable from
   the [latest release](https://github.com/darkmatter/adhere/releases/latest) in
   `~/.local/bin`. Run it again to update. The executable is built for macOS and
@@ -141,30 +146,32 @@ adhere logout --openai   # deletes it, and only it
 
 ## Getting Started
 
-Save your TypeSafe AI API key once (see [Login](#login)), then try the built-in
-presets on your code before you write a rule of your own:
+Install the executable (see [Install](#install)) and save your TypeSafe AI API
+key once (see [Login](#login)), then try the built-in presets on your code
+before you write a rule of your own. The executable runs in any directory:
 
 ```sh
-npx @drkmttr/adhere login
-npx @drkmttr/adhere lint --preset typescript,react
+adhere login
+adhere lint --preset typescript,react
 ```
 
-Presets cover TypeScript, React, security, Effect, and alchemy. See
-[Presets](#presets).
+Without installing anything, `npx @drkmttr/adhere` or `bunx @drkmttr/adhere`
+runs the same commands. Presets cover TypeScript, React, security, Effect, and
+alchemy. See [Presets](#presets).
 
-To set up rules of your own:
+To set up rules of your own in a repo:
 
 ```sh
-npx @drkmttr/adhere init   # .adhere/config.ts, two example rules, and the dependency
-npx adhere validate        # check your rules' wording, and ask Jev whether any contradict
-npx adhere lint            # audit the working directory, with the adhere init installed
+adhere init                # .adhere/config.ts, two example rules, and the dev dependency
+bun run adhere validate    # check your rules' wording, and ask Jev whether any contradict
+bun run adhere lint        # audit the working directory
 git add .adhere            # commit the rules, and the judgments they cost
 ```
 
 ### Init
 
-`adhere init` creates a config file and some example rules, and adds adhere
-as a dev dependency.
+`adhere init` creates a config file and some example rules and, in a repo with
+a `package.json`, adds adhere as a dev dependency.
 
 It is safe to rerun: existing files are reported as skipped, and only `--force`
 overwrites them.

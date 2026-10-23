@@ -25,10 +25,10 @@ the `packageManager` field in `package.json` names it; with neither, **Ask**.
 
 | Manager | Add adhere                       | Run adhere         |
 | ------- | -------------------------------- | ------------------ |
-| bun     | `bun add -D @drkmttr/adhere`     | `bunx adhere`      |
+| bun     | `bun add -D @drkmttr/adhere`     | `bun run adhere`   |
 | pnpm    | `pnpm add -D @drkmttr/adhere`    | `pnpm exec adhere` |
 | yarn    | `yarn add -D @drkmttr/adhere`    | `yarn adhere`      |
-| npm     | `npm install -D @drkmttr/adhere` | `npx adhere`       |
+| npm     | `npm install -D @drkmttr/adhere` | `npm exec adhere`  |
 
 In a repo with a `package.json`, add adhere as a dev dependency with its
 manager, so the repo pins the version the team and CI run. From then on,

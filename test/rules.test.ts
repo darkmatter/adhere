@@ -618,7 +618,7 @@ describe("init", () => {
     });
     expect(await read("README.md")).toContain("adhere install acme/standards\n");
     expect(await read(".github/workflows/adhere.yaml")).toContain(
-      "npx --yes @drkmttr/adhere validate\n        env:\n          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}",
+      "- run: ~/.local/bin/adhere validate\n        env:\n          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}",
     );
     const stack = await read("alchemy.run.ts");
     expect(stack).toContain('const owner = "acme";');

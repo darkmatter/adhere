@@ -2,30 +2,32 @@
 title: "Getting Started"
 ---
 
-Save your TypeSafe AI API key once (see [Login](/adhere/install/#login)), then try the built-in
-presets on your code before you write a rule of your own:
+Install the executable (see [Install](/adhere/install/)) and save your TypeSafe AI API
+key once (see [Login](/adhere/install/#login)), then try the built-in presets on your code
+before you write a rule of your own. The executable runs in any directory:
 
 ```sh
-npx @drkmttr/adhere login
-npx @drkmttr/adhere lint --preset typescript,react
+adhere login
+adhere lint --preset typescript,react
 ```
 
-Presets cover TypeScript, React, security, Effect, and alchemy. See
-[Presets](/adhere/presets/).
+Without installing anything, `npx @drkmttr/adhere` or `bunx @drkmttr/adhere`
+runs the same commands. Presets cover TypeScript, React, security, Effect, and
+alchemy. See [Presets](/adhere/presets/).
 
-To set up rules of your own:
+To set up rules of your own in a repo:
 
 ```sh
-npx @drkmttr/adhere init   # .adhere/config.ts, two example rules, and the dependency
-npx adhere validate        # check your rules' wording, and ask Jev whether any contradict
-npx adhere lint            # audit the working directory, with the adhere init installed
+adhere init                # .adhere/config.ts, two example rules, and the dev dependency
+bun run adhere validate    # check your rules' wording, and ask Jev whether any contradict
+bun run adhere lint        # audit the working directory
 git add .adhere            # commit the rules, and the judgments they cost
 ```
 
 ## Init
 
-`adhere init` creates a config file and some example rules, and adds adhere
-as a dev dependency.
+`adhere init` creates a config file and some example rules and, in a repo with
+a `package.json`, adds adhere as a dev dependency.
 
 It is safe to rerun: existing files are reported as skipped, and only `--force`
 overwrites them.
