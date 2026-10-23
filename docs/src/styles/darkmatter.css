@@ -59,7 +59,7 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Brand voice: the wordmark and page titles are mono, light, and single-case. */
+/* Brand voice: the wordmark is mono, light, and single-case. */
 .site-title {
   font-family: var(--__sl-font-mono);
   font-weight: 400;
@@ -68,10 +68,10 @@ body {
   letter-spacing: -0.02em;
 }
 
-h1#_top,
-.hero h1 {
-  font-family: var(--__sl-font-mono);
-  font-weight: 300;
+/* Page titles share the headings' Montserrat, at a docs weight, not the landing's 900. */
+h1#_top {
+  font-family: "Montserrat Variable", var(--__sl-font);
+  font-weight: 600;
   text-transform: lowercase;
   letter-spacing: -0.03em;
 }

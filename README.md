@@ -1,7 +1,7 @@
 <div align="center">
 <h1>adhere</h1>
   <sup>A linter for non-deterministic rules. Powered by TypeSafe AI.</sup><br>
-  <sup><a href="https://darkmatter.github.io/adhere/">Documentation</a></sup>
+  <sup><a href="https://dm.sh/adhere/">Documentation</a></sup>
 </div>
 
 A linter for rules a normal linter cannot check, such as "business logic should

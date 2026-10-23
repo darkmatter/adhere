@@ -3,7 +3,8 @@ import { defineConfig } from "astro/config";
 import starlightLinksValidator from "starlight-links-validator";
 
 export default defineConfig({
-  site: "https://darkmatter.github.io",
+  // Canonical URL: dm.sh/adhere proxies the GitHub Pages build (darkmatter/web).
+  site: "https://dm.sh",
   base: "/adhere",
   integrations: [
     starlight({
