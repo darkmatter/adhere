@@ -100,6 +100,9 @@ directory, inside a repo or not:
 curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh
 ```
 
+It installs to `~/.local/bin`. If your shell can't find `adhere` afterwards, add
+that directory to your `PATH`.
+
 To pin adhere's version in a repo, so the team and CI run the same one, add it
 as a dev dependency and run it from the package:
 
