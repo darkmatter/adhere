@@ -1,0 +1,51 @@
+---
+// The report from reading-the-report.md, colored like a terminal.
+// A string, so the code's braces are not read as Astro expressions.
+const html = `<span class="err">  × data/brand-ports</span>: A port must be a branded, range-checked integer, never a bare number.
+    <span class="dim">confidence</span> <span class="ok">0.93</span> <span class="dim">· context</span> <span class="ok">0.88</span>
+<span class="dim">   ╭─[</span><span class="path">src/server.ts:6:3</span><span class="dim">]</span>
+<span class="dim"> 4 │</span> export const serve = Effect.gen(function* () {
+<span class="dim"> 5 │</span>   const host = process.env.HOST ?? "localhost";
+<span class="dim"> 6 │</span>   const port: number = Number(process.env.PORT ?? 3000);
+<span class="dim">   ·</span>   <span class="mark">──────────────────────────────────────────────────────</span>
+<span class="dim"> 7 │</span>   yield* listen({ host, port });
+<span class="dim">   ╰────</span>
+<span class="hint">  hint:</span> const Port = Schema.Int.pipe(
+          Schema.check(Schema.isBetween({ minimum: 1, maximum: 65535 })),
+          Schema.brand("Port"),
+        );
+
+<span class="err">Found 1 error.</span>
+<span class="dim">42 files, 3 judged, 39 cached.</span>`;
+---
+
+<pre class="finding" set:html={html} />
+
+<style>
+  .finding {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--dm-zinc-300);
+    background: var(--dm-sidebar);
+  }
+  .finding :global(.err) {
+    color: oklch(70% 0.19 25);
+  }
+  .finding :global(.ok),
+  .finding :global(.mark) {
+    color: var(--dm-mint);
+  }
+  .finding :global(.dim) {
+    color: var(--dm-muted-foreground);
+  }
+  .finding :global(.path) {
+    color: var(--dm-mint-light);
+  }
+  .finding :global(.hint) {
+    color: oklch(82% 0.13 85);
+  }
+</style>
