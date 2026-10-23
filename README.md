@@ -100,6 +100,9 @@ directory, inside a repo or not:
 curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh
 ```
 
+It installs to `~/.local/bin`. If your shell can't find `adhere` afterwards, add
+that directory to your `PATH`.
+
 To pin adhere's version in a repo, so the team and CI run the same one, add it
 as a dev dependency and run it from the package:
 
@@ -835,6 +838,49 @@ Estimates cover only code and workspace-package context; symbol/reference input,
 | `--limit <files>`, `--rpm <requests>`, `--filter <glob>` | Bound how many files a run judges, how fast it sends, and which files it judges. See [Limiting a run](#limiting-a-run). |
 | `--deny-warnings`                                        | Fail on warnings as well as errors.                                                                                     |
 | `--log-level <level>`                                    | Log the run's work on stderr. See [Logging a run](#logging-a-run).                                                      |
+| `--json`, `--md`                                         | Write one JSON or Markdown file per violated rule to `.adhere/reports/`.                                                |
+| `--stdout`                                               | Print one combined report instead of files; use with `--json` or `--md`.                                                |
+
+### JSON and Markdown reports
+
+```sh
+adhere lint --json
+adhere lint --md
+adhere lint --json --md
+adhere lint --json --stdout > report.json
+adhere lint --md --stdout > report.md
+```
+
+`--json` and `--md` write one file per violated rule under `.adhere/reports/`
+by default. Both errors and warnings are included. Filenames URL-encode the
+rule id: `data/ports` becomes `data%2Fports.json` or `data%2Fports.md`.
+Use both flags together to write both formats. File output leaves stdout
+empty and prints the destination on stderr.
+
+Add `--stdout` to print all findings together as one JSON object or one
+Markdown document, without writing or replacing report files. Choose one
+format when using `--stdout`; mixing JSON and Markdown would make the JSON
+unparseable. Without a format flag, lint keeps its usual terminal report.
+Progress, prompts, and logs stay on stderr.
+
+JSON reports include `findings`, file counts (`files`, `judged`, `cached`,
+`skipped`, `waiting`), `blocked` files, the `suppressed` finding count, and
+`threshold` and `sufficiencyThreshold`. A rule file contains only that rule's
+findings, while the file counts describe the whole run. Each finding includes
+its rule id, severity (`level`), description, file, line ranges, excerpt,
+examples, confidence (`probability`), threshold, and context score when
+available. Markdown includes locations, scores, code excerpts, examples,
+and a summary. Paths are relative to the working directory; preset rule ids
+include the preset name.
+
+The generated `.adhere/reports/` directory is replaced on each completed
+file-output run, including filtered or limited runs. A run with no findings
+leaves it empty. Keep hand-written files elsewhere, and add `.adhere/reports/`
+to `.gitignore` if reports should stay local.
+
+All output modes preserve the usual exit codes; reports are produced even
+when findings fail the run. `--limit 0` only prints the plan on stderr,
+produces no report, and leaves existing report files untouched.
 
 ### Limiting a run
 

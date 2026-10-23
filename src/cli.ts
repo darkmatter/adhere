@@ -24,6 +24,9 @@ import {
   type Progress,
   progressAfter,
   progressLine,
+  renderJson,
+  renderMarkdown,
+  renderRuleReports,
   sendQuestion,
 } from "#workflows/format.ts";
 import type { Flags } from "#config.ts";
@@ -40,6 +43,7 @@ import {
   Console,
   Effect,
   Exit,
+  FileSystem,
   Layer,
   LogLevel,
   Option,
@@ -50,8 +54,9 @@ import {
   Schema,
   Stdio,
   Stream,
+  Terminal,
 } from "effect";
-import { Argument, Command, Flag, Prompt } from "effect/cli";
+import { Argument, CliError, Command, Flag, Prompt } from "effect/cli";
 // A Bun text import (https://bun.sh/docs/bundler/loaders#text): the file's
 // contents become a string at bundle time, so the compiled binary carries the
 // skill without an --asset flag. `skills/` sits beside `src/`, outside the `#`
@@ -247,9 +252,43 @@ export const auditLayer = (flags: Flags, filter: ReadonlyArray<string> = []) =>
 /** `adhere lint`: the audit. */
 export const lintCommand = Command.make(
   "lint",
-  { preset, threshold, sufficiencyThreshold, typeAware, yes, limit, rpm, filter, denyWarnings },
+  {
+    preset,
+    threshold,
+    sufficiencyThreshold,
+    typeAware,
+    yes,
+    limit,
+    rpm,
+    filter,
+    denyWarnings,
+    json: Flag.Boolean("json").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Write one JSON file per violated rule to .adhere/reports/. Use --stdout for one combined report instead.",
+      ),
+    ),
+    md: Flag.Boolean("md").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Write one Markdown file per violated rule to .adhere/reports/. Use --stdout for one combined report instead.",
+      ),
+    ),
+    stdout: Flag.Boolean("stdout").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Print all findings together instead of writing files. Select either --json or --md for a formatted report.",
+      ),
+    ),
+  },
   (input) =>
     Effect.gen(function* () {
+      if (input.stdout && input.json && input.md) {
+        return yield* CliError.UserError.make({
+          cause:
+            "Choose either --json or --md with --stdout; both formats can be written to files together.",
+        });
+      }
       const stdio = yield* Stdio.Stdio;
       const plan = yield* planAudit({ limit: Option.getOrUndefined(input.limit) });
       const limits = { filter: input.filter, rpm: Option.getOrUndefined(input.rpm) };
@@ -259,8 +298,7 @@ export const lintCommand = Command.make(
         if (input.filter.length === 0) yield* pruneCache(plan);
         return;
       }
-      // A prompt draws on stdout, so it needs a terminal at both ends: none when
-      // the report is redirected, or in CI.
+      // Keep prompting limited to interactive runs, including when JSON is requested.
       const interactive = (yield* stdio.stdinIsTerminal) && (yield* stdio.stdoutIsTerminal);
       if (
         (plan.requests > 0 || (plan.cachedLocateRequests ?? 0) > 0) &&
@@ -269,6 +307,11 @@ export const lintCommand = Command.make(
       ) {
         const send = yield* Prompt.run(
           Prompt.Confirm({ message: sendQuestion(plan), initial: true }),
+        ).pipe(
+          Effect.updateService(Terminal.Terminal, (terminal) => ({
+            ...terminal,
+            display: toStderr,
+          })),
         );
         if (!send) {
           yield* toStderr("Nothing sent.\n");
@@ -284,16 +327,33 @@ export const lintCommand = Command.make(
       if (input.filter.length === 0) yield* pruneCache(plan);
       const color = yield* stdio.stdoutIsTerminal;
       const path = yield* Path.Path;
-      // One write: separate Console.log calls have interleaved out of order here.
-      yield* Console.log(
-        render(result, {
-          color,
-          root: path.resolve(),
-          threshold: plan.threshold,
-          sufficiencyThreshold: plan.sufficiencyThreshold,
-          ...(plan.provider === undefined ? {} : { provider: plan.provider }),
-        }).join("\n"),
-      );
+      const options = {
+        color,
+        root: path.resolve(),
+        threshold: plan.threshold,
+        sufficiencyThreshold: plan.sufficiencyThreshold,
+        ...(plan.provider === undefined ? {} : { provider: plan.provider }),
+      };
+      if (!input.stdout && (input.json || input.md)) {
+        const fs = yield* FileSystem.FileSystem;
+        const directory = path.join(options.root, ".adhere", "reports");
+        const reports = renderRuleReports(result, input, options);
+        yield* fs.remove(directory, { recursive: true, force: true });
+        yield* fs.makeDirectory(directory, { recursive: true });
+        for (const [name, report] of reports) {
+          yield* fs.writeFileString(path.join(directory, name), report);
+        }
+        yield* toStderr(`Wrote ${reports.size} report files to .adhere/reports/.\n`);
+      } else {
+        // One write: separate Console.log calls have interleaved out of order here.
+        yield* Console.log(
+          input.json
+            ? renderJson(result, options)
+            : input.md
+              ? renderMarkdown(result, options)
+              : render(result, options).join("\n"),
+        );
+      }
       // Only errors fail the run, unless --deny-warnings: a warning is for a nit or a noisy rule.
       const failed = failing(result.findings, input.denyWarnings);
       if (failed.length > 0) {
