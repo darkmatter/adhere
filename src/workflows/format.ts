@@ -398,6 +398,99 @@ export const render = (result: AuditResult, options: RenderOptions = {}): Readon
   ].map((line) => serialize(line, options.color === true));
 };
 
+/** The complete audit result, with the same rule ids and relative paths as the text report. */
+export const renderJson = (result: AuditResult, options: RenderOptions = {}): string =>
+  JSON.stringify(
+    {
+      ...result,
+      threshold: options.threshold ?? DEFAULT_THRESHOLD,
+      sufficiencyThreshold: options.sufficiencyThreshold ?? DEFAULT_SUFFICIENCY_THRESHOLD,
+      ...(options.provider === undefined ? {} : { provider: options.provider }),
+      findings: result.findings.map((finding) => ({
+        ...finding,
+        rule: shownId({ id: finding.rule, preset: finding.preset }),
+        file: displayPath(finding.file, options.root),
+      })),
+      blocked: result.blocked.map((blocked) => ({
+        ...blocked,
+        file: displayPath(blocked.file, options.root),
+      })),
+    },
+    null,
+    2,
+  );
+
+const markdownText = (text: string): string => text.replace(/[\\`*_[\]<>#]/g, "\\$&");
+
+/** A fence longer than any backtick run in the code, including template literals. */
+const fenced = (code: string): string => {
+  const fence = "`".repeat(
+    Math.max(3, ...Array.from(code.matchAll(/`+/g), ([run]) => run.length + 1)),
+  );
+  return `${fence}typescript\n${code}\n${fence}`;
+};
+
+/** All findings grouped by rule, followed by the run summary once. */
+export const renderMarkdown = (result: AuditResult, options: RenderOptions = {}): string => {
+  const sufficiencyThreshold = options.sufficiencyThreshold ?? DEFAULT_SUFFICIENCY_THRESHOLD;
+  const groups = Map.groupBy(result.findings, (finding) =>
+    shownId({ id: finding.rule, preset: finding.preset }),
+  );
+  return [
+    ...Array.from(groups, ([id, findings]) =>
+      [
+        `# ${markdownText(id)}`,
+        counted(findings.length, "finding", "findings"),
+        ...findings.flatMap((finding) => {
+          const lines = finding.lines ?? finding.section;
+          const location = `${displayPath(finding.file, options.root)}:${lines.first}${lines.last === lines.first ? "" : `–${lines.last}`}`;
+          return [
+            `## ${markdownText(location)}`,
+            finding.description,
+            `Level: **${finding.level}** · Confidence: ${finding.probability} · Threshold: ${finding.threshold}${finding.context === undefined ? "" : ` · Context: ${finding.context}`}`,
+            ...(lacksContext(finding, sufficiencyThreshold)
+              ? [
+                  `> Warning: this file may not show enough to check this rule (context below ${sufficiencyThreshold}). Add missing context with an \`@adhere\` note.`,
+                ]
+              : []),
+            `Excerpt starting at line ${finding.excerpt.start}:`,
+            fenced(finding.excerpt.lines.join("\n")),
+            ...[finding.examples.good, finding.examples.bad].flatMap((example) =>
+              example === undefined ? [] : [`### ${example.word}`, fenced(example.code.trim())],
+            ),
+          ];
+        }),
+      ].join("\n\n"),
+    ),
+    "## Run summary",
+    ...summary(result).map((line) => serialize(line, false)),
+    ...blockedFiles(result, options.root)
+      .filter((line) => line.length > 0)
+      .map((line) => serialize(line, false)),
+  ].join("\n\n");
+};
+
+/** One file per violated rule in each requested format, with run counts retained as context. */
+export const renderRuleReports = (
+  result: AuditResult,
+  formats: { readonly json: boolean; readonly md: boolean },
+  options: RenderOptions = {},
+): ReadonlyMap<string, string> => {
+  const groups = Map.groupBy(result.findings, (finding) =>
+    shownId({ id: finding.rule, preset: finding.preset }),
+  );
+  return new Map(
+    Array.from(groups).flatMap(([id, findings]): Array<[string, string]> => {
+      const name = encodeURIComponent(id);
+      const report = { ...result, findings };
+      const files: Array<[string, string]> = [];
+      if (formats.json) files.push([`${name}.json`, `${renderJson(report, options)}\n`]);
+      if (formats.md) files.push([`${name}.md`, `${renderMarkdown(report, options)}\n`]);
+      return files;
+    }),
+  );
+};
+
 /**
  * What a run will do, before it asks: the files and rules found, the checks
  * between them and how many the cache answers, then what judging the rest
