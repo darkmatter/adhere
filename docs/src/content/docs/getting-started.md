@@ -6,8 +6,8 @@ Save your TypeSafe AI API key once (see [Login](/adhere/install/#login)), then t
 presets on your code before you write a rule of your own:
 
 ```sh
-npx adhere login
-npx adhere lint --preset typescript,react
+npx @drkmttr/adhere login
+npx @drkmttr/adhere lint --preset typescript,react
 ```
 
 Presets cover TypeScript, React, security, Effect, and alchemy. See
@@ -16,10 +16,10 @@ Presets cover TypeScript, React, security, Effect, and alchemy. See
 To set up rules of your own:
 
 ```sh
-npx adhere init        # .adhere/config.ts, two example rules, and the dependency
-npx adhere validate    # check your rules' wording, and ask Jev whether any contradict
-npx adhere lint        # audit the working directory
-git add .adhere        # commit the rules, and the judgments they cost
+npx @drkmttr/adhere init   # .adhere/config.ts, two example rules, and the dependency
+npx adhere validate        # check your rules' wording, and ask Jev whether any contradict
+npx adhere lint            # audit the working directory, with the adhere init installed
+git add .adhere            # commit the rules, and the judgments they cost
 ```
 
 ## Init
