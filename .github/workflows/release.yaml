@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, darkmatter, dm-x86_64-linux]
     steps:
       - name: Derive version from tag
         id: release
