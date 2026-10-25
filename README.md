@@ -3,7 +3,10 @@
   <br/>
   <sup>A linter for non-deterministic rules. Powered by TypeSafe AI.</sup><br><br/>
   <a href="https://dm.sh/adhere/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fdm.sh%2Fadhere%2Fgetting-started%2F&up_message=healthy&logo=readme&logoColor=%23dddddd&label=docs&labelColor=%23000000" /></a>
+  &nbsp;
   <img src="https://img.shields.io/npm/dm/%40drkmttr%2Fadhere?style=flat&logo=github&labelColor=%23181926&color=%23000000" />
+  &nbsp;
+  <a href="https://www.npmjs.com/package/@drkmttr/adhere"><img src="https://img.shields.io/npm/v/%40drkmttr%2Fadhere" /></a>
 </div>
 
 <br />
