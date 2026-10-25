@@ -1,8 +1,12 @@
 <div align="center">
 <h1>adhere</h1>
-  <sup>A linter for non-deterministic rules. Powered by TypeSafe AI.</sup><br>
-  <sup><a href="https://dm.sh/adhere/">Documentation</a></sup>
+  <br/>
+  <sup>A linter for non-deterministic rules. Powered by TypeSafe AI.</sup><br><br/>
+  <a href="https://dm.sh/adhere/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fdm.sh%2Fadhere%2Fgetting-started%2F&up_message=healthy&logo=readme&logoColor=%23dddddd&label=docs&labelColor=%23000000" /></a>
+  <img src="https://img.shields.io/npm/dm/%40drkmttr%2Fadhere?style=flat&logo=github&labelColor=%23181926&color=%23000000" />
 </div>
+
+<br />
 
 A linter for rules a normal linter cannot check, such as "business logic should
 live in services" or "modules should expose lots of functionality behind a
