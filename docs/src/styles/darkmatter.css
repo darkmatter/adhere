@@ -1,23 +1,21 @@
-/* darkmatter design system tokens (darkmatter/web src/app/globals.css), mapped onto Starlight. */
+/* darkmatter brand (mint accent, Geist, mono wordmark) on a neutral palette, mapped onto Starlight.
+   Layout follows the Turborepo docs: one flat background, no chrome borders, muted text. */
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/source-code-pro";
 @import "@fontsource-variable/montserrat";
 
 :root,
 ::backdrop {
-  /* darkmatter :root palette */
-  --dm-background: oklch(10.724% 0.0089 284.8);
-  --dm-foreground: oklch(100% 0 0);
-  --dm-card: oklch(14.051% 0.0044 285.82);
-  --dm-sidebar: oklch(9.181% 0 0);
-  --dm-sidebar-border: oklch(18.919% 0.003 286.11);
-  --dm-border: oklch(27.412% 0.0055 286.03);
-  --dm-muted-foreground: oklch(71.186% 0.0129 286.07);
-  --dm-ring: oklch(87.091% 0.0055 286.29);
+  /* darkmatter :root palette, desaturated for long-form reading */
+  --dm-background: oklch(14.5% 0 0);
+  --dm-foreground: oklch(98.5% 0 0);
+  --dm-card: oklch(20.5% 0 0);
+  --dm-border: oklch(26.9% 0 0);
+  --dm-muted-foreground: oklch(70.8% 0 0);
   --dm-zinc-200: oklch(92% 0.004 286.32);
   --dm-zinc-300: oklch(87.1% 0.006 286.286);
-  --dm-mint: oklch(0.88 0.15 165.84);
-  --dm-mint-light: oklch(0.95 0.07 165.84);
+  --dm-mint: oklch(0.84 0.1 165.84);
+  --dm-mint-light: oklch(0.93 0.05 165.84);
   --dm-destructive: oklch(39.594% 0.1331 25.72);
 
   --sl-color-white: var(--dm-foreground);
@@ -30,7 +28,7 @@
   --sl-color-gray-6: var(--dm-card);
   --sl-color-black: var(--dm-background);
 
-  --sl-color-accent-low: color-mix(in oklch, var(--dm-mint) 25%, var(--dm-background));
+  --sl-color-accent-low: color-mix(in oklch, var(--dm-mint) 15%, var(--dm-background));
   --sl-color-accent: var(--dm-mint);
   --sl-color-accent-high: var(--dm-mint-light);
   --sl-color-red-low: var(--dm-destructive);
@@ -38,12 +36,15 @@
   --sl-color-text: var(--dm-zinc-300);
   --sl-color-text-accent: var(--sl-color-accent);
   --sl-color-bg: var(--dm-background);
-  --sl-color-bg-nav: var(--dm-sidebar);
-  --sl-color-bg-sidebar: var(--dm-sidebar);
+  --sl-color-bg-nav: var(--dm-background);
+  --sl-color-bg-sidebar: var(--dm-background);
   --sl-color-bg-inline-code: var(--dm-card);
-  --sl-color-hairline: var(--dm-sidebar-border);
+  --sl-color-hairline: var(--dm-border);
   --sl-color-hairline-light: var(--dm-border);
-  --sl-color-hairline-shade: var(--dm-sidebar-border);
+  --sl-color-hairline-shade: var(--dm-border);
+
+  --sl-text-h2: var(--sl-text-2xl);
+  --sl-text-h3: var(--sl-text-xl);
 
   --sl-font: "Geist Variable";
   --sl-font-mono: "Source Code Pro Variable";
@@ -56,7 +57,38 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-kerning: normal;
   text-rendering: optimizeLegibility;
-  letter-spacing: -0.01em;
+}
+
+.social-icons::after {
+  content: none;
+}
+
+/* Flat chrome: the header, sidebars, and title panel sit on the page background without dividers. */
+.header,
+.sidebar-pane,
+.right-sidebar,
+.content-panel + .content-panel,
+.sidebar-content ul ul li,
+.pagination-links a {
+  border: 0;
+}
+
+/* Search (desktop pill) and prev/next links: filled surfaces instead of outlines. */
+.pagination-links a {
+  background-color: var(--dm-card);
+  box-shadow: none;
+}
+
+@media (min-width: 50rem) {
+  button[data-open-modal] {
+    border: 0;
+    background-color: var(--dm-card);
+  }
+}
+
+/* Untitled terminal blocks drop the empty title bar, like plain code blocks. */
+.expressive-code .frame.is-terminal:not(.has-title) .header {
+  display: none;
 }
 
 /* Brand voice: the wordmark is mono, light, and single-case. */
@@ -68,27 +100,70 @@ body {
   letter-spacing: -0.02em;
 }
 
-/* Page titles share the headings' Montserrat, at a docs weight, not the landing's 900. */
 h1#_top {
-  font-family: "Montserrat Variable", var(--__sl-font);
   font-weight: 600;
   text-transform: lowercase;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
+}
+
+.sl-markdown-content {
+  color: var(--dm-zinc-300);
 }
 
 .sl-markdown-content :is(h2, h3, h4, h5, h6) {
-  font-family: "Montserrat Variable", var(--__sl-font);
-  color: var(--dm-zinc-200);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--dm-foreground);
 }
 
-/* Eyebrow labels: sidebar groups. */
+/* Sidebar: one 14px weight-500 list, active page as a quiet grey pill. */
+.sidebar-content a,
+.sidebar-content .large {
+  font-size: var(--sl-text-sm);
+  font-weight: 500;
+  color: var(--dm-zinc-300);
+}
+
+.sidebar-content a {
+  padding-block: 0.45em;
+  border-radius: 0.375rem;
+}
+
+.sidebar-content a:hover {
+  color: var(--dm-foreground);
+}
+
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="page"]:hover,
+.sidebar-content a[aria-current="page"]:focus {
+  font-weight: 500;
+  color: var(--dm-foreground);
+  background-color: var(--dm-card);
+}
+
+.sidebar-content .top-level > li + li {
+  margin-top: 0.25rem;
+}
+
+/* Group labels: muted text, no eyebrow tracking. */
 .sidebar-content summary .group-label .large {
-  font-family: var(--__sl-font-mono);
-  font-size: var(--sl-text-2xs);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
   color: var(--dm-muted-foreground);
+}
+
+/* Right-hand table of contents. */
+.right-sidebar-panel h2 {
+  font-size: var(--sl-text-sm);
+  font-weight: 500;
+  color: var(--dm-foreground);
+}
+
+.right-sidebar-panel a {
+  font-size: var(--sl-text-sm);
+  color: var(--dm-muted-foreground);
+}
+
+.right-sidebar-panel a[aria-current="true"] {
+  color: var(--dm-foreground);
 }
 
 .sl-markdown-content a:hover {
@@ -96,7 +171,6 @@ h1#_top {
 }
 
 .sl-markdown-content :not(pre) > code {
-  color: var(--sl-color-accent);
-  border: 1px solid var(--dm-sidebar-border);
+  color: var(--dm-zinc-200);
   border-radius: 0.375rem;
 }

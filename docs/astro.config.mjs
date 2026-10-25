@@ -20,7 +20,27 @@ export default defineConfig({
         ThemeProvider: "./src/components/ThemeProvider.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",
       },
-      expressiveCode: { themes: ["github-dark-default"] },
+      expressiveCode: {
+        themes: ["github-dark-default"],
+        // Flat frames to match the borderless page chrome.
+        styleOverrides: {
+          borderWidth: "0px",
+          borderRadius: "0.5rem",
+          codeBackground: "var(--dm-card)",
+          frames: {
+            frameBoxShadowCssValue: "none",
+            editorTabBarBackground: "var(--dm-card)",
+            editorActiveTabBackground: "var(--dm-card)",
+            editorActiveTabIndicatorTopColor: "transparent",
+            editorTabBarBorderBottomColor: "transparent",
+            terminalBackground: "var(--dm-card)",
+            terminalTitlebarBackground: "var(--dm-card)",
+            terminalTitlebarBorderBottomColor: "transparent",
+            terminalTitlebarDotsOpacity: "0",
+            inlineButtonBorder: "transparent",
+          },
+        },
+      },
       sidebar: [
         { label: "Introduction", link: "/" },
         { label: "Install", slug: "install" },
