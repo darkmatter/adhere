@@ -4,6 +4,7 @@
 
 ### Added
 
+- Docs Reference pages for every command and flag and every config key, generated at build time from the CLI and the config schema's `description` annotations.
 - Configurable decision-model providers, including Jev, OpenAI, Cloudflare Workers AI, and custom adapters. OpenAI credentials can be managed separately with `login --openai` and `logout --openai`.
 - Provider-aware eval reporting for latency, unanswered questions, and shared repository scoring; rule-detail and provider-comparison studies with expanded labeled datasets.
 - A semantic-read pilot with frozen cases, inputs, and results, plus digest-checked rescoring. Its historical results do not measure the current compiler-type/declaration-scope format.

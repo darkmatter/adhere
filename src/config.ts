@@ -32,7 +32,10 @@ const ProviderSchema = Schema.declare(
     Predicate.hasProperty(value, "ask") &&
     Predicate.isFunction(value.ask) &&
     (!Predicate.hasProperty(value, "savedKey") || SAVED_KEYS.some((key) => key === value.savedKey)),
-  { expected: "a provider: a model, and a function to ask it" },
+  {
+    expected: "a provider: a model, and a function to ask it",
+    toCode: () => ({ runtime: "Provider", Type: "Provider" }),
+  },
 );
 
 /**
@@ -74,73 +77,79 @@ export const Reads = Schema.Array(
  * and code that `shouldNot` be.
  */
 export const Rule = Schema.Struct({
-  description: Schema.String,
-  /**
-   * What the description leaves out, such as why the rule holds or where it
-   * does not: in a `RULE.md`, the prose around its code. Jev reads it after
-   * the description, as part of the rule; the report shows the description
-   * alone.
-   */
-  details: Schema.optionalKey(Schema.String),
-  must: Schema.optionalKey(Schema.String),
-  never: Schema.optionalKey(Schema.String),
-  should: Schema.optionalKey(Schema.String),
-  shouldNot: Schema.optionalKey(Schema.String),
-  threshold: Schema.optionalKey(Schema.Finite),
-  /**
-   * Test files, which a rule skips by default: `only` for a rule about tests,
-   * which judges nothing else, and `include` for one that holds in tests too.
-   */
-  tests: Schema.optionalKey(Schema.Literals(["only", "include"])),
-  /**
-   * How a finding under the rule is reported: an `error`, the default, which
-   * fails the run, or a `warning`, for a nit or a rule that errs toward false
-   * findings, which does not.
-   */
-  level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
-  /**
-   * Where the rule applies, each a description of code that breaks it: Jev is
-   * asked of each whether any code that breaks the rule is as it describes,
-   * and a finding stands only when it says yes to every one.
-   */
-  appliesTo: Schema.optionalKey(Schema.Array(Schema.String)),
-  /**
-   * Where the rule does not apply: Jev is asked of each whether all the code
-   * that breaks the rule is as it describes, and a yes to any drops the finding.
-   */
-  excludeIf: Schema.optionalKey(Schema.Array(Schema.String)),
-  /**
-   * A hook on the state Jev reads for the rule, in a rule written in
-   * TypeScript (see `AppendState`). The rule's questions go in requests of
-   * their own, so only they read what it adds.
-   */
+  description: Schema.String.annotate({
+    description: "What the rule says, in one sentence. The report shows it with each finding.",
+  }),
+  details: Schema.optionalKey(Schema.String).annotate({
+    description:
+      "What the description leaves out, such as why the rule holds or where it does not: in a `RULE.md`, the prose around its code. Jev reads it after the description, as part of the rule; the report shows the description alone.",
+  }),
+  must: Schema.optionalKey(Schema.String).annotate({
+    description:
+      "Code the rule requires. A rule has `must` and `never`, or, as a guideline, `should` and `shouldNot`.",
+  }),
+  never: Schema.optionalKey(Schema.String).annotate({
+    description: "Code the rule forbids.",
+  }),
+  should: Schema.optionalKey(Schema.String).annotate({
+    description: "A guideline's code to write.",
+  }),
+  shouldNot: Schema.optionalKey(Schema.String).annotate({
+    description: "A guideline's code not to write.",
+  }),
+  threshold: Schema.optionalKey(Schema.Finite).annotate({
+    description: "The rule's own confidence threshold, 0 to 1, in place of the config's.",
+  }),
+  tests: Schema.optionalKey(Schema.Literals(["only", "include"])).annotate({
+    description:
+      "Test files, which a rule skips by default: `only` for a rule about tests, which judges nothing else, and `include` for one that holds in tests too.",
+  }),
+  level: Schema.optionalKey(Schema.Literals(["error", "warning"])).annotate({
+    description:
+      "How a finding under the rule is reported: an `error`, the default, which fails the run, or a `warning`, for a nit or a rule that errs toward false findings, which does not.",
+  }),
+  appliesTo: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
+    description:
+      "Where the rule applies, each a description of code that breaks it: Jev is asked of each whether any code that breaks the rule is as it describes, and a finding stands only when it says yes to every one.",
+  }),
+  excludeIf: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
+    description:
+      "Where the rule does not apply: Jev is asked of each whether all the code that breaks the rule is as it describes, and a yes to any drops the finding.",
+  }),
   appendState: Schema.optionalKey(
     Schema.declare((value: unknown): value is AppendState => typeof value === "function", {
       expected: "a function",
+      toCode: () => ({ runtime: "AppendState", Type: "AppendState" }),
     }),
-  ),
-  /**
-   * The settings a rule written in TypeScript takes, as an Effect Schema,
-   * set under the rule's id in a config's `overrides`, as `options`. A key
-   * the schema does not make optional must be set. Jev reads the decoded
-   * settings as `options`, in requests of the rule's own.
-   */
+  ).annotate({
+    description:
+      "A hook on the state Jev reads for the rule, in a rule written in TypeScript (see `AppendState`). The rule's questions go in requests of their own, so only they read what it adds.",
+  }),
   options: Schema.optionalKey(
     Schema.declare((value: unknown): value is Schema.Decoder<unknown> => Schema.isSchema(value), {
       expected: "an Effect Schema",
+      toCode: () => ({ runtime: "Schema", Type: "Schema.Decoder<unknown>" }),
     }),
-  ),
-}).check(
-  Schema.makeFilter((rule) => {
-    const requirement = rule.must !== undefined || rule.never !== undefined;
-    const guideline = rule.should !== undefined || rule.shouldNot !== undefined;
-    return requirement && guideline
-      ? "a rule is a requirement (must, never) or a guideline (should, shouldNot), not both"
-      : requirement || guideline
-        ? undefined
-        : "a rule needs an example: must, never, should, or shouldNot";
+  ).annotate({
+    description:
+      "The settings a rule written in TypeScript takes, as an Effect Schema, set under the rule's id in a config's `overrides`, as `options`. A key the schema does not make optional must be set. Jev reads the decoded settings as `options`, in requests of the rule's own.",
   }),
-);
+})
+  .check(
+    Schema.makeFilter(
+      (rule) => {
+        const requirement = rule.must !== undefined || rule.never !== undefined;
+        const guideline = rule.should !== undefined || rule.shouldNot !== undefined;
+        return requirement && guideline
+          ? "a rule is a requirement (must, never) or a guideline (should, shouldNot), not both"
+          : requirement || guideline
+            ? undefined
+            : "a rule needs an example: must, never, should, or shouldNot";
+      },
+      { toCode: () => ({ runtime: "Schema.makeFilter(isRequirementOrGuideline)" }) },
+    ),
+  )
+  .annotate({ identifier: "Rule" });
 export interface Rule extends Schema.Schema.Type<typeof Rule> {
   /** The settings `options` decoded from the config's override, set as the config is loaded. */
   readonly optionValues?: unknown;
@@ -188,64 +197,65 @@ const Override = Schema.Union([
 ]);
 export type Override = typeof Override.Type;
 
+/** A config file's keys. Each `description` is what the docs' Config file reference shows. */
 export const AdhereConfig = Schema.Struct({
-  /**
-   * The model id sent to typesafe. Defaults to "jev-latest"
-   */
-  model: Schema.optionalKey(Schema.String),
-  /** Where the questions go in place of TypeSafe's Jev, with its own model (see `Provider`). */
-  provider: Schema.optionalKey(ProviderSchema),
-  /**
-   * The minimum confidence threshold for a positive match. Defaults to 0.8
-   */
-  threshold: Schema.optionalKey(Schema.Finite),
-  /**
-   * Below this, Jev's probability that a file shows enough to decide a
-   * finding's rule adds a warning to the finding: check what the code relies
-   * on outside the file. Defaults to 0.6
-   */
-  sufficiencyThreshold: Schema.optionalKey(Schema.Finite),
-  /**
-   * The presets to use for rule matching. Defaults to an empty array. Current presets
-   * include "effect" and "alchemy". Subcategories can be expanded by appending `/<subcategory>`.
-   */
-  presets: Schema.Array(Schema.Literals(presetNames)).pipe(
-    Schema.withDecodingDefaultKey(Effect.succeed([])),
-  ),
-  /** Workspace context shared by every rule: workspacePackages (the default) and dependents; [] disables it. Native read names do not enable type awareness. */
-  reads: Schema.optionalKey(Reads),
-  /** Include both compiler-resolved symbols and declaration excerpts. Defaults to false. */
-  typeAware: Schema.optionalKey(Schema.Boolean),
-  /** Maximum characters of each symbol's complete resolved content. Defaults to 256. */
-  maxSymbolLength: Schema.optionalKey(Schema.Natural),
-  /** Maximum characters of documentation and JSDoc tags per symbol. Defaults to 256; 0 omits them. */
-  maxSymbolDocumentationLength: Schema.optionalKey(Schema.Natural),
-  /**
-   * A record of rules, or a directory path relative to the config file,
-   * which holds its rules as `.adhere/rules/` does. Unset: the rules in
-   * `.adhere/rules/`, and in any nested `.adhere/rules/`.
-   */
-  rules: Schema.optionalKey(Schema.Union([Schema.Record(Schema.String, Rule), Schema.String])),
-  /** Instructions directory relative to the config file. Unset: .adhere/instructions, then .agents/instructions. */
-  instructions: Schema.optionalKey(Schema.NonEmptyString),
-  /**
-   * Globs, relative to the working directory, of files no rule judges: what
-   * `--filter '!<glob>'` leaves out of one run, left out of every run.
-   */
-  exclude: Schema.optionalKey(Schema.Array(Schema.String)),
-  /**
-   * Settings for rules by the id a report names them with, a preset's with
-   * its preset first, as in `alchemy/providers/idempotent-delete`: `off`, a
-   * level, or `{ level, threshold, options }`. A preset's rule changes without its text
-   * being copied into `rules`.
-   */
-  overrides: Schema.optionalKey(Schema.Record(Schema.String, Override)),
-  /**
-   * Whether Jev reads every comment, for rules about comments. By default
-   * comments are taken out, since a comment changes nothing a file does, but
-   * for the notes that say `@adhere`.
-   */
-  includeComments: Schema.optionalKey(Schema.Boolean),
+  model: Schema.optionalKey(Schema.String).annotate({
+    description: `The model id sent to TypeSafe AI. Defaults to "jev-latest".`,
+  }),
+  provider: Schema.optionalKey(ProviderSchema).annotate({
+    description:
+      "Where the questions go in place of TypeSafe's Jev, with its own model (see `Provider`).",
+  }),
+  threshold: Schema.optionalKey(Schema.Finite).annotate({
+    description: "The minimum confidence threshold for a positive match. Defaults to 0.8.",
+  }),
+  sufficiencyThreshold: Schema.optionalKey(Schema.Finite).annotate({
+    description:
+      "Below this, Jev's probability that a file shows enough to decide a finding's rule adds a warning to the finding: check what the code relies on outside the file. Defaults to 0.6.",
+  }),
+  presets: Schema.Array(Schema.Literals(presetNames))
+    .pipe(Schema.withDecodingDefaultKey(Effect.succeed([])))
+    .annotate({
+      description:
+        "The built-in rule sets to use, such as `effect` or `alchemy`. Append `/<topic>` for one topic, as in `effect/basics`. Defaults to none.",
+    }),
+  reads: Schema.optionalKey(Reads).annotate({
+    description:
+      "Workspace context shared by every rule: `workspacePackages` (the default) and `dependents`; `[]` disables it. Native read names do not enable type awareness.",
+  }),
+  typeAware: Schema.optionalKey(Schema.Boolean).annotate({
+    description:
+      "Include both compiler-resolved symbols and declaration excerpts. Defaults to false.",
+  }),
+  maxSymbolLength: Schema.optionalKey(Schema.Natural).annotate({
+    description: "Maximum characters of each symbol's complete resolved content. Defaults to 256.",
+  }),
+  maxSymbolDocumentationLength: Schema.optionalKey(Schema.Natural).annotate({
+    description:
+      "Maximum characters of documentation and JSDoc tags per symbol. Defaults to 256; 0 omits them.",
+  }),
+  rules: Schema.optionalKey(
+    Schema.Union([Schema.Record(Schema.String, Rule), Schema.String]),
+  ).annotate({
+    description:
+      "A record of rules (see Rule keys), or a directory path relative to the config file, which holds its rules as `.adhere/rules/` does. Unset: the rules in `.adhere/rules/`, and in any nested `.adhere/rules/`.",
+  }),
+  instructions: Schema.optionalKey(Schema.NonEmptyString).annotate({
+    description:
+      "Instructions directory relative to the config file. Unset: `.adhere/instructions`, then `.agents/instructions`.",
+  }),
+  exclude: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
+    description:
+      "Globs, relative to the working directory, of files no rule judges: what `--filter '!<glob>'` leaves out of one run, left out of every run.",
+  }),
+  overrides: Schema.optionalKey(Schema.Record(Schema.String, Override)).annotate({
+    description:
+      "Settings for rules by the id a report names them with, a preset's with its preset first, as in `alchemy/providers/idempotent-delete`: `off`, a level, or `{ level, threshold, options }`. A preset's rule changes without its text being copied into `rules`.",
+  }),
+  includeComments: Schema.optionalKey(Schema.Boolean).annotate({
+    description:
+      "Whether Jev reads every comment, for rules about comments. By default comments are taken out, since a comment changes nothing a file does, but for the notes that say `@adhere`.",
+  }),
 });
 
 /** Where a repo keeps what adhere reads and writes: its config, its rules, and the cache. */
