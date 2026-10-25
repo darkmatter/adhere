@@ -31,8 +31,8 @@ import {
 } from "#workflows/format.ts";
 import type { Flags } from "#config.ts";
 import { findContradictions, formatContradictions } from "#contradictions.ts";
-import { createRule } from "#create.ts";
-import { AGENTS } from "#agents.ts";
+import { createRule } from "#create/wizard.ts";
+import { AGENTS } from "#create/agents.ts";
 import { type Install, initProject } from "#init.ts";
 import { installRules, listRules, parseSource } from "#install.ts";
 import { renderInstructions } from "#instructions.ts";
@@ -642,10 +642,10 @@ const rulesCreateCommand = Command.make(
       ),
     ),
   },
-  (input) => createRule(input.idea, input.agent, input.setup),
+  (input) => createRule(input.idea, input.agent, input.setup).pipe(Effect.provide(statusLayer)),
 ).pipe(
   Command.withDescription(
-    "Write a rule with a coding agent's help: it suggests whether the rule belongs to this project or the organization's shared rules repo, names it, finds examples in the repo, and drafts the RULE.md, which is checked as adhere validate checks wording. A project rule is written to .adhere/rules/; an organization rule is pushed to the shared repo on a branch for a pull request.",
+    "Write a rule with a coding agent's help: it suggests whether the rule belongs to this project or the organization's shared rules repo, names it, chooses a RULE.md or, when Jev needs state the file cannot show, a RULE.ts, and says which config context (typeAware, reads) it needs. It finds code in the repo for you to judge, with the lines around it, and drafts the rule from your answers; the draft is checked as adhere validate checks wording. A project rule is written to .adhere/rules/; an organization rule is pushed to the shared repo on a branch for a pull request.",
   ),
 );
 

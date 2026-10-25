@@ -23,7 +23,7 @@ adhere init [--force]            # .adhere/config.ts, two example rules, and the
 adhere init --shared org/repo    # a repo of rules other repos install, with CI and an alchemy stack
 adhere login                     # save a TypeSafe AI API key; TYPESAFE_API_KEY takes precedence
 adhere validate                  # rule wording, rules a linter could check, contradictions
-adhere rules create [idea]       # wizard: claude, codex, or omp drafts a rule; org rules pushed for a PR
+adhere rules create [idea]       # wizard: claude, codex, or omp drafts a RULE.md or RULE.ts from excerpts you judge; org rules pushed for a PR
 adhere lint                      # judge the working directory; exit 1 on an error finding
 adhere lint --limit 0            # compiler-free counts/cache plan; no budgeting
 adhere lint --limit 100          # first 100 files needing requests; all pending rules per file

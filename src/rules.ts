@@ -136,7 +136,7 @@ const moreSpecific = (a: RuleEntry, b: RuleEntry): RuleEntry =>
  * config's inline rule is, so a hook such as `appendState` comes with it.
  * Like a config, the file is imported, so its code runs.
  */
-const importRule = Effect.fn("importRule")(function* (file: string) {
+export const importRule = Effect.fn("importRule")(function* (file: string) {
   const path = yield* Path.Path;
   const url = yield* path.toFileUrl(file).pipe(Effect.orDie);
   const loaded = yield* Effect.tryPromise({

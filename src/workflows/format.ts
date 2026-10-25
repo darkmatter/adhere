@@ -89,6 +89,10 @@ const hanging = (label: Span, lines: ReadonlyArray<Line>): ReadonlyArray<Line> =
 const highlighted = (code: string): ReadonlyArray<Line> =>
   tokenize(code).map((tokens) => tokens.map(({ text, kind }) => span(text, kind)));
 
+/** Code as lines of text, highlighted as a report highlights it when `color`. */
+export const highlightedLines = (code: string, color: boolean): ReadonlyArray<string> =>
+  highlighted(code).map((line) => serialize(line, color));
+
 /** Code as highlighted lines, without the blank lines at either end. */
 const codeLines = (code: string): ReadonlyArray<Line> => {
   const lines = highlighted(code);
