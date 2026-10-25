@@ -11,6 +11,8 @@ working directory of the repo being audited, at one of these paths (keep one):
 - `adhere.config.ts`
 - `.adhere.config.ts`
 
+[Config file](/adhere/reference/config-file/) lists every key.
+
 ```ts
 import { defineConfig } from "@drkmttr/adhere";
 

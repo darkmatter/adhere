@@ -3,7 +3,8 @@ name: Docs
 on:
   push:
     branches: [main]
-    paths: [docs/**, .github/workflows/docs.yaml]
+    # The Reference pages are generated from src/ at build time.
+    paths: [docs/**, src/**, .github/workflows/docs.yaml]
   workflow_dispatch:
 
 permissions:
@@ -26,6 +27,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.3"
+      # The generator imports the CLI and config schema from the root package.
+      - run: bun install --frozen-lockfile
+        working-directory: .
       - run: bun install --frozen-lockfile
       # The arc image can't run setup-node's Node build; run Astro on Bun.
       - run: bun --bun run build
