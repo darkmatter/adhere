@@ -34,7 +34,7 @@ const failed = (what: string) => (cause: unknown) =>
  * credentials git already has, and `url.<base>.insteadOf` can point
  * github.com elsewhere, such as at SSH.
  */
-const cloned = (source: Source) =>
+export const cloned = (source: Source) =>
   Effect.acquireRelease(
     Effect.tryPromise({
       try: () => mkdtemp(join(tmpdir(), "adhere-install-")),

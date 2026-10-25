@@ -60,7 +60,7 @@ export const straysAmong = (entries: ReadonlyArray<RuleEntry>): ReadonlyArray<St
   });
 
 /** One way a rule strays, as a sentence. */
-const sentenceOf = (straying: Straying): string => {
+export const sentenceOf = (straying: Straying): string => {
   switch (straying._tag) {
     case "Unsaid":
       return `The description does not say "${straying.word}", though the rule has a ${straying.word} example.`;

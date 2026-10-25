@@ -31,6 +31,8 @@ import {
 } from "#workflows/format.ts";
 import type { Flags } from "#config.ts";
 import { findContradictions, formatContradictions } from "#contradictions.ts";
+import { createRule } from "#create.ts";
+import { AGENTS } from "#agents.ts";
 import { type Install, initProject } from "#init.ts";
 import { installRules, listRules, parseSource } from "#install.ts";
 import { renderInstructions } from "#instructions.ts";
@@ -617,6 +619,41 @@ export const skillCommand = Command.make("skill", { name: skillName }, ({ name }
   ),
 );
 
+const agent = Flag.Literals("agent", AGENTS).pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "The coding agent to ask this time: claude, codex, or omp, in place of the one setup saved.",
+  ),
+);
+
+/** `adhere rules create [idea]`: a wizard that writes one rule, with a coding agent's help. */
+const rulesCreateCommand = Command.make(
+  "create",
+  {
+    idea: Argument.String("idea").pipe(
+      Argument.optional,
+      Argument.withDescription("What the rule should enforce. Asked for when left out."),
+    ),
+    agent,
+    setup: Flag.Boolean("setup").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Choose again which agent to ask and which GitHub repo, as org/repo, holds the organization's shared rules. The first run asks without it.",
+      ),
+    ),
+  },
+  (input) => createRule(input.idea, input.agent, input.setup),
+).pipe(
+  Command.withDescription(
+    "Write a rule with a coding agent's help: it suggests whether the rule belongs to this project or the organization's shared rules repo, names it, finds examples in the repo, and drafts the RULE.md, which is checked as adhere validate checks wording. A project rule is written to .adhere/rules/; an organization rule is pushed to the shared repo on a branch for a pull request.",
+  ),
+);
+
+export const rulesCommand = Command.make("rules").pipe(
+  Command.withDescription("Work on this repo's rules."),
+  Command.withSubcommands([rulesCreateCommand]),
+);
+
 export const postinstallCommand = Command.make("postinstall", {}, () =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
@@ -654,5 +691,6 @@ export const cli = Command.make("adhere").pipe(
     loginCommand,
     logoutCommand,
     skillCommand,
+    rulesCommand,
   ]),
 );

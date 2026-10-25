@@ -66,6 +66,18 @@ export class Credentials extends Context.Service<
 
 const refused = (message: string) => CredentialsUnavailable.make({ message });
 
+/** `$XDG_CONFIG_HOME/adhere`, or `~/.config/adhere` without it, on every platform: where adhere keeps a user's own files. */
+export const adhereConfigDirectory = (path: Path.Path) =>
+  Config.NonEmptyString("XDG_CONFIG_HOME").pipe(
+    Config.orElse(() =>
+      Config.NonEmptyString("HOME").pipe(
+        Config.orElse(() => Config.NonEmptyString("USERPROFILE")),
+        Config.map((home) => path.join(home, ".config")),
+      ),
+    ),
+    Config.map((configHome) => path.join(configHome, "adhere")),
+  );
+
 /**
  * The keys live in `$XDG_CONFIG_HOME/adhere/credentials.json`, or under
  * `~/.config` without it, on every platform. The file is written whole to a
@@ -77,14 +89,8 @@ export const CredentialsLive = Layer.effect(Credentials)(
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
 
-    const file = Config.NonEmptyString("XDG_CONFIG_HOME").pipe(
-      Config.orElse(() =>
-        Config.NonEmptyString("HOME").pipe(
-          Config.orElse(() => Config.NonEmptyString("USERPROFILE")),
-          Config.map((home) => path.join(home, ".config")),
-        ),
-      ),
-      Config.map((configHome) => path.join(configHome, "adhere", "credentials.json")),
+    const file = adhereConfigDirectory(path).pipe(
+      Config.map((directory) => path.join(directory, "credentials.json")),
       Effect.mapError(() =>
         refused("No home directory to keep the API key in: set HOME or XDG_CONFIG_HOME."),
       ),
