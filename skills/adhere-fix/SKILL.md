@@ -163,7 +163,7 @@ rules, and in the report give the user the counts and suggest one of:
   `{ threshold: 0.9 }`;
 - for a project rule, rewording it to say what code it is about and what is
   out of scope, following the rule writing tips:
-  https://github.com/darkmatter/adhere#rule-writing-tips.
+  https://dm.sh/adhere/writing-good-rules/#rule-writing-tips.
 
 ## 7. Report
 
