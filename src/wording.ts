@@ -4,7 +4,7 @@ import { type RuleEntry, shownId } from "#rules.ts";
 type Word = Example["word"];
 
 /**
- * A way a rule's wording differs from the README's rule writing tips, which
+ * A way a rule's wording differs from the docs' rule writing tips, which
  * the eval measured: the rule shows code of both kinds, and its description
  * says the words its code is under.
  */
@@ -22,7 +22,7 @@ export interface Stray {
   readonly straying: ReadonlyArray<Straying>;
 }
 
-export const TIPS_URL = "https://github.com/darkmatter/adhere#rule-writing-tips";
+export const TIPS_URL = "https://dm.sh/adhere/writing-good-rules/#rule-writing-tips";
 
 /** Whether a description says a word, whole and in any case: "Must" does, "mustard" does not. */
 const says = (description: string, word: Word): boolean =>
@@ -30,7 +30,7 @@ const says = (description: string, word: Word): boolean =>
 
 /**
  * How one rule strays from the tips. A rule with only code that breaks it
- * lacks no example: the README keeps that for a rule with no single correct
+ * lacks no example: the docs keep that for a rule with no single correct
  * form to show.
  */
 export const strayingOf = (rule: Rule): ReadonlyArray<Straying> => {

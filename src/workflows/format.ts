@@ -214,7 +214,7 @@ const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line
 /**
  * The warning on a finding whose file may not show enough to check its rule,
  * which its context score in the header says how far, and help: how to add
- * what the code relies on as a note Jev reads, in the form the README asks for.
+ * what the code relies on as a note Jev reads, in the form the docs ask for.
  */
 const insufficient = (finding: Finding, sufficiencyThreshold: number): ReadonlyArray<Line> =>
   !lacksContext(finding, sufficiencyThreshold)

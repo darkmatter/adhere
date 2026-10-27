@@ -2,7 +2,7 @@
 
 Every rule in adhere's built-in presets is listed below, with a one-line
 summary. Each id links to the full rule, and is the id that reports,
-`overrides`, and `adhere-ignore` comments use. [Presets](../README.md#presets)
+`overrides`, and `adhere-ignore` comments use. [Presets](https://dm.sh/adhere/presets/)
 says how to name a preset or one of its topics.
 
 ## typescript

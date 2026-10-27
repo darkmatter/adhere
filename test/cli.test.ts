@@ -86,7 +86,7 @@ describe("cli", () => {
         "  ports (.adhere/rules/ports/RULE.md)",
         '    The description does not say "must", though the rule has a must example.',
         "    The rule has no never example. Rules with one example of each kind judge best.",
-        "Rule writing tips: https://github.com/darkmatter/adhere#rule-writing-tips",
+        "Rule writing tips: https://dm.sh/adhere/writing-good-rules/#rule-writing-tips",
         "1 rule has fewer than 10 answers from lint yet, which asks as it judges files.",
         "No contradictions found among configured rules.",
         "",
