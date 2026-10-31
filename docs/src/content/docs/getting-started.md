@@ -18,7 +18,7 @@ alchemy. See [Presets](/adhere/presets/).
 To set up rules of your own in a repo:
 
 ```sh
-adhere init                # .adhere/config.ts, two example rules, and the dev dependency
+adhere init                # config, tsconfig, two example rules, and the dev dependency
 bun run adhere validate    # check your rules' wording, and ask Jev whether any contradict
 bun run adhere lint        # audit the working directory
 git add .adhere            # commit the rules, and the judgments they cost
@@ -26,8 +26,9 @@ git add .adhere            # commit the rules, and the judgments they cost
 
 ## Init
 
-`adhere init` creates a config file and some example rules and, in a repo with
-a `package.json`, adds adhere as a dev dependency.
+`adhere init` creates a config file, `.adhere/tsconfig.json` for it and any
+TypeScript rules, and some example rules, and in a repo with a `package.json`,
+adds adhere as a dev dependency.
 
 It is safe to rerun: existing files are reported as skipped, and only `--force`
 overwrites them.

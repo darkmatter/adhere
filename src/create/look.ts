@@ -8,22 +8,44 @@ import { Status, clearingStatus } from "#services/Status.ts";
 import { Console, Duration, Effect, Fiber } from "effect";
 import { Prompt } from "effect/cli";
 
+const rgbColor = (r: number, g: number, b: number) => `\x1B[38;2;${r};${g};${b}m`;
+const colorCode = (n: number) => `\x1B[38;5;${n}m`;
+const COLORS = {
+  PURPLE: colorCode(99),
+  KIWI: colorCode(156),
+  PINK: colorCode(212),
+  FG: rgbColor(220, 220, 240),
+  MUTED: rgbColor(180, 180, 190),
+  RED: colorCode(197),
+  ACCENT: rgbColor(242, 205, 205),
+};
+
 /**
  * The prompts' theme. Every row's text starts in the fourth column: after the
  * prompt's symbol and two spaces, a select's pointer and its two-wide paging
  * arrow, or the paging arrow and a space before a multi-select's checkbox.
  */
 export const look: Partial<Prompt.Theme> = {
-  prefix: "◆ ",
-  tick: "◇ ",
-  pointer: "●",
+  // primaryColor: `\x1B[0;37m`,
+  // mutedColor: COLORS.MUTED,
+  successColor: COLORS.KIWI,
+  submittedColor: COLORS.PURPLE,
+  errorColor: COLORS.RED,
+  // toggleSeparator: " / ",
+  // passwordMask: `${COLORS.MUTED}*${ESC}`,
+  // prefix: `│\n│${COLORS.PINK} ◇${ESC}`,
+  // prefix: `\n ◇`,
+  // tick: `\n ✓`,
+  // tick: `│\n│${COLORS.KIWI} ✓${ESC}`,
+  // pointer: `${COLORS.PURPLE}‣${ESC}`,
   arrowUp: "↑ ",
   arrowDown: "↓ ",
-  pointerSmall: "",
-  ellipsis: "",
-  descriptionSeparator: "\n   ",
-  checkboxOn: "◼",
-  checkboxOff: "◻",
+  pointerSmall: "›",
+  ellipsis: "…",
+  descriptionSeparator: "\n\n - ",
+  checkboxOn: "󰄲",
+  checkboxOff: "",
+  colors: true,
 };
 
 const columns = () => process.stderr.columns ?? 80;
@@ -35,6 +57,7 @@ export const indented = (text: string) =>
 type Color = (theme: Prompt.Theme) => string;
 const muted: Color = (theme) => theme.mutedColor;
 const primary: Color = (theme) => theme.primaryColor;
+const accent: Color = (_theme) => COLORS.PINK;
 
 const paint = (theme: Prompt.Theme, text: string, color?: Color) =>
   theme.colors && color !== undefined ? `${color(theme)}${text}\x1b[0m` : text;
@@ -127,7 +150,7 @@ export const spinning = <A, E, R>(text: string, effect: Effect.Effect<A, E, R>) 
     const spinner = yield* Effect.forkChild(
       Effect.suspend(() =>
         status.show(
-          `${paint(theme, frames[frame++ % frames.length] ?? "", primary)}  ${paint(theme, `${text}…`, muted)}`,
+          `${paint(theme, frames[frame++ % frames.length] ?? "", accent)}  ${paint(theme, `${text}…`, muted)}`,
         ),
       ).pipe(Effect.andThen(Effect.sleep("110 millis")), Effect.forever),
     );

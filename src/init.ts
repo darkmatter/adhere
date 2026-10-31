@@ -2,6 +2,17 @@ import { spawn } from "node:child_process";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { CONFIG_FILES } from "#config.ts";
+import {
+  SHARED_LINT_DIRECTORY,
+  SHARED_LINT_INDEX,
+  SHARED_LINT_RULES,
+  SHARED_LINT_RULES_JSON,
+  SHARED_LINT_TYPES,
+  SHARED_LINT_TYPES_SOURCE,
+  sharedPackageJson,
+  sharedPackageName,
+} from "#oxlint/shared.ts";
+import { README_END, README_START, refreshReadme } from "#readme.ts";
 import { Effect, Schema } from "effect";
 
 export interface InitResult {
@@ -87,6 +98,16 @@ export const renderInvoice = (invoice: Invoice) => Html.table(invoice.lines);
 \`\`\`
 `;
 
+const INSTRUCTIONS = `# Working with adhere
+
+- Run \`adhere lint\` before you commit, and fix what it reports.
+- A rule belongs in \`.adhere/rules/\`: one sentence saying what code must be,
+  with code that shows it.
+- Run \`adhere validate\` after changing a rule. When a finding is wrong for
+  this code alone, say why in a suppression comment instead of weakening the
+  rule.
+`;
+
 const NAME_EFFECTS = `---
 description: A function must be named after the domain action it performs, never after a generic verb like handle.
 threshold: 0.8
@@ -116,25 +137,123 @@ export const handle = (id: string) =>
 
 const sharedReadme = (org: string, repo: string) => `# ${repo}
 
-Shared [adhere](https://github.com/darkmatter/adhere) rules for ${org}'s
-repositories. Each rule is a directory in \`.adhere/rules/\` that holds a
-\`RULE.md\`, or a \`RULE.ts\`, and a repo that copies it in has Jev judge its
-files against it when it runs \`adhere lint\`.
+Shared [adhere](https://github.com/darkmatter/adhere) rules and lint settings
+for ${org}'s repositories. \`.adhere/rules/\` holds the rules Jev judges files
+against, \`.adhere/instructions/\` holds instruction files for \`AGENTS.md\`, and
+\`lint/\` is a plain ESM Oxlint config package for rules a linter can check
+exactly.
+
+## Rules and lint settings
+
+The list below is generated from \`.adhere/rules/\` and \`lint/rules.json\` by
+\`adhere rules readme\`. Run it after adding, renaming, or deleting a rule, or
+after changing a lint setting; it replaces only the block between its markers.
+
+${README_START}
+${README_END}
 
 ## Use these rules
 
-List the rules, then copy them into a repo, all of them or one topic or rule:
+List the rules, then copy them into a repo: every one, one topic, or one rule.
 
 \`\`\`sh
 adhere list ${org}/${repo}
-adhere install ${org}/${repo}
+adhere install ${org}/${repo}                        # choose at a terminal
+adhere install ${org}/${repo} --all                  # everything, without a prompt
 adhere install ${org}/${repo}/style
 adhere install ${org}/${repo}/style/prefer-small-files
 \`\`\`
 
-The copies land in \`.adhere/rules/${org}/${repo}/\` and are that repo's own from then
-on, to edit or to start other rules from. To take a later version of a rule,
-install it again with \`--force\`, which overwrites local edits.
+At a terminal, a bare install lists what it can copy: instruction files
+first, then rules grouped by topic. \`--all\` copies every instruction file and
+rule the source names without asking and needs no terminal. Without either, a
+run without a terminal fails and names the matches. A topic is the same list
+filtered to that topic, and an exact rule's path copies just that rule;
+neither copies instructions.
+
+Rules land in \`.adhere/rules/${org}/${repo}/\` and instructions in
+\`.adhere/instructions/${org}/${repo}/\`, and are that repo's own from then on,
+to edit or to start other rules from. To take a later version, install again
+with \`--force\`, which overwrites local edits; deselecting a file never
+deletes it.
+
+## Use its lint settings
+
+The lint package is not published. Pin this repo as a git dependency, at a
+tag: tags are repo-wide, covering the rules, the instructions, and \`lint/\`
+together.
+
+\`\`\`sh
+bun add -D "github:${org}/${repo}#v1.0.0"
+\`\`\`
+
+Then spread it into Vite+'s config, or plain Oxlint's:
+
+\`\`\`ts
+import sharedLint from "${sharedPackageName(org, repo)}/lint";
+import { defineConfig } from "vite-plus";
+
+export default defineConfig({
+  lint: {
+    ...sharedLint,
+    jsPlugins: [...sharedLint.jsPlugins, "./.adhere/oxlint/local.mjs"],
+    rules: {
+      ...sharedLint.rules,
+      "local/my-rule": "error",
+    },
+  },
+});
+\`\`\`
+
+\`\`\`ts
+// oxlint.config.ts, with plain Oxlint: oxlint -c oxlint.config.ts
+import sharedLint from "${sharedPackageName(org, repo)}/lint";
+
+export default { ...sharedLint };
+\`\`\`
+
+\`lint/index.js\` reads \`lint/rules.json\` and resolves the shared package's
+plugin paths, so spreading its export works from any directory. Paths you add
+stay relative to your config. Your project's own JS plugins live in
+\`.adhere/oxlint/\` as \`.mjs\` files.
+
+## Add a lint setting or plugin
+
+\`lint/rules.json\` starts \`{}\` and takes \`rules\`, \`jsPlugins\`, \`plugins\`, and
+\`options\`. \`options\` is Oxlint's own options object; Vite+ uses the same
+\`lint.options\` shape, and type-aware rules need \`oxlint-tsgolint\`, which Vite+
+includes. Turn on a built-in rule by naming it:
+
+\`\`\`json
+{ "rules": { "typescript/no-explicit-any": "error" } }
+\`\`\`
+
+A rule from a built-in plugin that Oxlint leaves off by default (\`react\`,
+\`import\`, \`jsdoc\`, \`jest\`, \`vitest\`, \`jsx-a11y\`, \`nextjs\`, \`react-perf\`,
+\`promise\`, \`node\`, \`vue\`) also needs that plugin in \`plugins\`. The list
+replaces Oxlint's default set (\`eslint\`, \`typescript\`, \`unicorn\`, \`oxc\`), so
+name every plugin you still want:
+
+\`\`\`json
+{
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "react"],
+  "rules": { "react/jsx-no-target-blank": "error" }
+}
+\`\`\`
+
+A custom plugin is a plain ESM file in \`lint/plugins/\`; register it by a path
+relative to \`lint/\`, and enable one of its rules by the plugin's name:
+
+\`\`\`json
+{
+  "jsPlugins": ["./plugins/${repo}.js"],
+  "rules": { "${repo}/no-foo": "error" }
+}
+\`\`\`
+
+Keep the keys you are not changing. A project writes its own \`.mjs\` plugins to
+\`.adhere/oxlint/\` and registers them in its \`vite.config.ts\` or
+\`oxlint.config.ts\` instead; see the lint settings above.
 
 ## Add a rule
 
@@ -159,6 +278,17 @@ git remote add origin git@github.com:${org}/${repo}.git && git push -u origin ma
 \`\`\`
 
 Deploying again updates the secret, as after rotating the key.
+
+## Tag a release
+
+Tag the whole repo after committing rules, instructions, or lint changes. One
+tag covers all of them, and consumers pin that tag; there are no per-rule
+tags.
+
+\`\`\`sh
+git tag v1.0.0
+git push origin v1.0.0
+\`\`\`
 `;
 
 const SHARED_WORKFLOW = `name: adhere
@@ -214,29 +344,6 @@ export default Alchemy.Stack(
 );
 `;
 
-/**
- * alchemy's CLI runs on effect and its Node platform. They are pinned, as is
- * the platform's own dependency, since a range of prereleases takes the newest:
- * effect 4.0.0-rc.118 moved modules alchemy 2.0.0-beta.79 imports (checked
- * 2026-09-28).
- */
-const sharedPackage = (repo: string) =>
-  `${JSON.stringify(
-    {
-      name: repo,
-      private: true,
-      type: "module",
-      devDependencies: {
-        "@effect/platform-node": "4.0.0-rc.117",
-        alchemy: "2.0.0-beta.79",
-        effect: "4.0.0-rc.117",
-      },
-      overrides: { "@effect/platform-node-shared": "4.0.0-rc.117" },
-    },
-    null,
-    2,
-  )}\n`;
-
 const SHARED_GITIGNORE = `node_modules/
 .alchemy/
 `;
@@ -246,30 +353,38 @@ const CONFIG_PATH = CONFIG_FILES[0];
 /** The project of the config at `.adhere/config.ts`, and of the rules written in TypeScript beside it. */
 const CONFIG_PROJECT = ".adhere/tsconfig.json";
 
-const EXAMPLES = [
+const RULE_EXAMPLES = [
   [".adhere/rules/style/prefer-small-files/RULE.md", SMALL_FILES],
   [".adhere/rules/style/name-domain-actions/RULE.md", NAME_EFFECTS],
 ] as const;
 
+const SHARED_EXAMPLES = [
+  [".adhere/instructions/00-workflow.md", INSTRUCTIONS],
+  ...RULE_EXAMPLES,
+] as const;
+
 /**
- * A shared repo has no config: \`adhere install\` copies only rules, and
- * \`validate\` reads \`.adhere/rules/\` without one.
+ * A shared repo has no config: \`adhere install\` copies its rules and
+ * instructions, and \`validate\` reads \`.adhere/rules/\` without one.
  */
 const filesFor = (
   shared: string | undefined,
   visibility: Visibility,
 ): ReadonlyArray<readonly [string, string]> => {
   if (shared === undefined) {
-    return [[CONFIG_PATH, CONFIG], [CONFIG_PROJECT, TSCONFIG], ...EXAMPLES];
+    return [[CONFIG_PATH, CONFIG], [CONFIG_PROJECT, TSCONFIG], ...RULE_EXAMPLES];
   }
   const [org = "", repo = ""] = shared.split("/");
   return [
     ["README.md", sharedReadme(org, repo)],
     [".github/workflows/adhere.yaml", SHARED_WORKFLOW],
     ["alchemy.run.ts", sharedStack(org, repo, visibility)],
-    ["package.json", sharedPackage(repo)],
+    ["package.json", sharedPackageJson(org, repo)],
+    [`${SHARED_LINT_DIRECTORY}/index.js`, SHARED_LINT_INDEX],
+    [SHARED_LINT_TYPES, SHARED_LINT_TYPES_SOURCE],
+    [SHARED_LINT_RULES, SHARED_LINT_RULES_JSON],
     [".gitignore", SHARED_GITIGNORE],
-    ...EXAMPLES,
+    ...SHARED_EXAMPLES,
   ];
 };
 
@@ -406,12 +521,24 @@ export const initProject = (
       }
       // A config at another path is in the project's own tsconfig, or not ours to place.
       if (path === CONFIG_PROJECT && existing !== undefined) continue;
+      // A shared README holds the author's prose; refresh its managed block instead.
+      if (
+        options.shared !== undefined &&
+        path === "README.md" &&
+        (yield* Effect.promise(() => exists(join(root, path))))
+      ) {
+        skipped.push(relative(root, join(root, path)));
+        continue;
+      }
       const status = yield* writeScaffoldFile(root, path, contents, options);
       if (status === "created") {
         created.push(relative(root, join(root, path)));
       } else {
         skipped.push(relative(root, join(root, path)));
       }
+    }
+    if (options.shared !== undefined) {
+      yield* refreshReadme(root).pipe(Effect.mapError((cause) => new Error(cause.message)));
     }
     const install = yield* installPackages(root, options.shared !== undefined);
     return { created, skipped, install };

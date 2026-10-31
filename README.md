@@ -44,7 +44,7 @@ export async function findRestaurants(zipCode: string) {
 ````
 
 adhere asks [Jev](https://typesafe.ai), TypeSafe AI's System One model, whether
-each file breaks each rule. Jev answers with a calibrated probability. adhere
+each file breaks each rule which returns a calibrated probability. adhere
 reports each rule whose probability is above a threshold, and shows the part of
 the file Jev points at. The report looks like Oxlint's:
 

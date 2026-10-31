@@ -6,8 +6,8 @@ Three skills teach an agent to work with adhere:
 
 - **[`adhere`](https://github.com/darkmatter/adhere/blob/main/skills/adhere/SKILL.md)**, printed by `adhere skill`, is the
   reference: the commands, how to write and word a rule, the config, presets,
-  shared rules, comments and suppressions, the cache, reading a report, and
-  tuning a rule.
+  shared repos and lint packages, Oxlint rules and plugins, comments and
+  suppressions, the cache, reading a report, and tuning a rule.
 - **[`adhere-setup`](https://github.com/darkmatter/adhere/blob/main/skills/adhere-setup/SKILL.md)**, printed by
   `adhere skill setup`, sets adhere up in a repo with you. See
   [Generate rules from your repo](/adhere/generate-rules/).

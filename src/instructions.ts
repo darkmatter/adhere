@@ -1,3 +1,4 @@
+import { INSTRUCTIONS_DIRECTORY } from "#config.ts";
 import { findConfigFile, loadConfigFile } from "#services/AdhereConfig.ts";
 import { Effect, FileSystem, Path, Schema } from "effect";
 
@@ -9,6 +10,21 @@ class InstructionsUnavailable extends Schema.TaggedError<InstructionsUnavailable
   { message: Schema.String },
 ) {}
 
+/**
+ * The order instruction files render in: a file more than one directory deep,
+ * as a repo copied from another repo installs them under
+ * `.adhere/instructions/<org>/<repo>/`, comes first; then a file chosen
+ * locally, directly in the instructions directory; then any other locally
+ * nested file. Depth is the only test, so a local file nested two levels deep
+ * is ordered with copied repos too. Each group sorts by path, so a run writes
+ * the same block every time.
+ */
+const groupOf = (relative: string): number => {
+  const depth = relative.split("/").length;
+  if (depth >= 3) return 0;
+  return depth === 1 ? 1 : 2;
+};
+
 /** Update only adhere's marked block; leave all other AGENTS.md content untouched. */
 export const renderInstructions = Effect.fn("renderInstructions")(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
@@ -18,7 +34,7 @@ export const renderInstructions = Effect.fn("renderInstructions")(function* (roo
     configFile === undefined ? undefined : yield* loadConfigFile(path.join(root, configFile));
   const candidates =
     config?.instructions === undefined
-      ? [path.join(root, ".adhere/instructions"), path.join(root, ".agents/instructions")]
+      ? [path.join(root, INSTRUCTIONS_DIRECTORY), path.join(root, ".agents/instructions")]
       : [path.resolve(root, path.dirname(configFile ?? ""), config.instructions)];
   let directory: string | undefined;
   for (const candidate of candidates) {
@@ -31,19 +47,25 @@ export const renderInstructions = Effect.fn("renderInstructions")(function* (roo
     return `Skipped AGENTS.md: no instructions directory (${candidates.map((candidate) => path.relative(root, candidate)).join(", ")}).`;
   }
 
-  const names = (yield* fs.readDirectory(directory)).filter((name) => name.endsWith(".md")).sort();
+  const entries = yield* fs.readDirectory(directory, { recursive: true });
+  const files: Array<string> = [];
+  for (const entry of entries) {
+    const relative = entry.split(path.sep).join("/");
+    if (!relative.endsWith(".md")) continue;
+    if ((yield* fs.stat(path.join(directory, entry))).type === "File") files.push(relative);
+  }
+  files.sort((a, b) => groupOf(a) - groupOf(b) || a.localeCompare(b));
+
   const contents: string[] = [];
-  for (const name of names) {
-    const file = path.join(directory, name);
-    if ((yield* fs.stat(file)).type === "File") {
-      const text = (yield* fs.readFileString(file)).trim();
-      if (text.includes(START) || text.includes(END)) {
-        return yield* InstructionsUnavailable.make({
-          message: `${file} contains reserved adhere instruction markers.`,
-        });
-      }
-      if (text !== "") contents.push(text);
+  for (const relative of files) {
+    const file = path.join(directory, relative);
+    const text = (yield* fs.readFileString(file)).trim();
+    if (text.includes(START) || text.includes(END)) {
+      return yield* InstructionsUnavailable.make({
+        message: `${file} contains reserved adhere instruction markers.`,
+      });
     }
+    if (text !== "") contents.push(text);
   }
   const target = path.join(root, "AGENTS.md");
   const previous = yield* fs

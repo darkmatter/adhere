@@ -34,11 +34,25 @@ import { findContradictions, formatContradictions } from "#contradictions.ts";
 import { createRule } from "#create/wizard.ts";
 import { AGENTS } from "#create/agents.ts";
 import { type Install, initProject } from "#init.ts";
-import { installRules, listRules, parseSource } from "#install.ts";
+import {
+  type CatalogMatch,
+  type InstallPicks,
+  type Source,
+  catalogOf,
+  cloned,
+  describeRules,
+  installSelected,
+  instructionPath,
+  listRules,
+  matchOf,
+  parseSource,
+  rulePath,
+} from "#install.ts";
 import { renderInstructions } from "#instructions.ts";
 import { formatLinterCheck, tallyProjectRules } from "#mechanical.ts";
 import { type PresetName, presetNames } from "#presets.ts";
 import type { SavedKey } from "#providers/provider.ts";
+import { refreshSharedReadme } from "#readme.ts";
 import { globalRuleSet } from "#rules.ts";
 import { formatStrays, straysAmong } from "#wording.ts";
 import {
@@ -442,7 +456,7 @@ const shared = Flag.String("shared").pipe(
   ),
   Flag.optional,
   Flag.withDescription(
-    "Scaffold a repo of rules other repos copy with adhere install, named org/repo on GitHub: example rules, a README, a CI workflow that runs adhere validate, and an alchemy.run.ts that creates the repo, public unless you make it private when asked, and its TYPESAFE_API_KEY secret.",
+    "Scaffold a repo of instructions, rules, and a lint package other repos use, named org/repo on GitHub: example instructions and rules, a README, a CI workflow that runs adhere validate, and an alchemy.run.ts that creates the repo, public unless you make it private when asked, and its TYPESAFE_API_KEY secret.",
   ),
 );
 
@@ -471,7 +485,7 @@ export const initCommand = Command.make("init", { force, shared }, (input) =>
   }),
 ).pipe(
   Command.withDescription(
-    "Scaffold .adhere/config.ts and example Markdown rules, and add @drkmttr/adhere to devDependencies with the project's package manager.",
+    "Scaffold .adhere/config.ts, .adhere/tsconfig.json, and example Markdown rules, and add @drkmttr/adhere to devDependencies with the project's package manager.",
   ),
 );
 
@@ -481,7 +495,7 @@ const source = Argument.String("source").pipe(
     (spec) => `org/repo, then optionally a topic or rule and #ref, not ${spec}`,
   ),
   Argument.withDescription(
-    "A GitHub repo with rules in .adhere/rules/, as org/repo, optionally followed by a topic or a rule, as in org/repo/data/brand-ports, and by #branch or #tag.",
+    "A GitHub repo with instructions in .adhere/instructions/ and rules in .adhere/rules/, as org/repo, optionally followed by a topic or a rule, as in org/repo/data/brand-ports, and by #branch or #tag.",
   ),
 );
 
@@ -500,30 +514,136 @@ export const listCommand = Command.make("list", { source }, (input) =>
   ),
 );
 
-/** `adhere install org/repo`: another repo's rules, copied into this one's `.adhere/rules/`. */
+class InstallUnavailable extends Schema.TaggedError<InstallUnavailable>()("InstallUnavailable", {
+  message: Schema.String,
+}) {}
+
+/**
+ * What `adhere install` copies: one exact rule without asking, everything
+ * when `--all` is given, or what the user picks at a terminal. Without a
+ * terminal, a choice refuses and says what `--all` would copy and which exact
+ * rule can be named instead. A choice already installed is preselected, so
+ * running install again offers to bring it up to date, and deselecting it
+ * leaves it as it is.
+ */
+const choosePicks = Effect.fn("install.choosePicks")(function* (
+  source: Source,
+  match: CatalogMatch,
+  options: { readonly all: boolean; readonly root: string; readonly clone: string },
+) {
+  if (match.kind === "direct") {
+    return { instructions: [], rules: [match.rule.id] } satisfies InstallPicks;
+  }
+  if (options.all) {
+    return {
+      instructions: match.instructions,
+      rules: match.rules.map(({ id }) => id),
+    } satisfies InstallPicks;
+  }
+  const pinned = source.ref === undefined ? "" : `#${source.ref}`;
+  const stdio = yield* Stdio.Stdio;
+  if (!(yield* stdio.stdinIsTerminal) || !(yield* stdio.stdoutIsTerminal)) {
+    const [first] = match.rules;
+    const ids = [
+      ...match.instructions.map((file) => `instructions/${file}`),
+      ...match.rules.map(({ id }) => id),
+    ];
+    const spec = `${source.repo}${source.rule === "" ? "" : `/${source.rule}`}${pinned}`;
+    const exact =
+      first === undefined
+        ? ""
+        : `, or name one rule exactly, as in ${source.repo}/${first.id}${pinned}`;
+    return yield* new InstallUnavailable({
+      message: `adhere install ${spec}: no terminal to choose from. Pass --all to copy every match (${ids.join(", ")})${exact}.`,
+    });
+  }
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  type Pick =
+    | { readonly kind: "instruction"; readonly path: string }
+    | { readonly kind: "rule"; readonly id: string };
+  const instructionChoices = yield* Effect.forEach(match.instructions, (file) =>
+    fs.exists(path.join(options.root, instructionPath(source, file))).pipe(
+      Effect.orElseSucceed(() => false),
+      Effect.map((selected) => ({
+        title: `instructions/${file}`,
+        value: { kind: "instruction", path: file } as const,
+        selected,
+      })),
+    ),
+  );
+  const described = yield* describeRules(source, options.clone, match.rules);
+  const ruleChoices = yield* Effect.forEach(described, (rule) =>
+    fs.exists(path.join(options.root, rulePath(source, rule.id))).pipe(
+      Effect.orElseSucceed(() => false),
+      Effect.map((selected) => ({
+        title: rule.id,
+        description: rule.description,
+        value: { kind: "rule", id: rule.id } as const,
+        selected,
+      })),
+    ),
+  );
+  const picks: ReadonlyArray<Pick> = yield* Prompt.run(
+    Prompt.MultiSelect<Pick>({
+      message:
+        source.rule === ""
+          ? `What should adhere copy from ${source.repo}${pinned}?`
+          : `Which rules under ${source.repo}/${source.rule}${pinned} should adhere copy?`,
+      choices: [...instructionChoices, ...ruleChoices],
+    }),
+  );
+  return {
+    instructions: picks.flatMap((pick) => (pick.kind === "instruction" ? [pick.path] : [])),
+    rules: picks.flatMap((pick) => (pick.kind === "rule" ? [pick.id] : [])),
+  } satisfies InstallPicks;
+});
+
+/** `adhere install org/repo`: another repo's instructions and rules, copied into this one's `.adhere/`. */
 export const installCommand = Command.make(
   "install",
   {
     source,
     force: Flag.Boolean("force").pipe(
       Flag.withDefault(false),
-      Flag.withDescription("Replace rules already in .adhere/rules/, directory and all."),
+      Flag.withDescription(
+        "Replace instruction files and rules already in .adhere/, file by file and directory by directory.",
+      ),
+    ),
+    all: Flag.Boolean("all").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Copy every instruction file and rule the source names, without asking. Needs no terminal.",
+      ),
     ),
   },
   (input) =>
-    Effect.gen(function* () {
-      const path = yield* Path.Path;
-      const result = yield* installRules(path.resolve(), input.source, { force: input.force });
-      yield* Console.log(
-        [
-          result.created.length > 0 ? `created: ${result.created.join(", ")}` : "created: none",
-          result.skipped.length > 0 ? `skipped: ${result.skipped.join(", ")}` : "skipped: none",
-        ].join("\n"),
-      );
-    }),
+    Effect.scoped(
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const root = path.resolve();
+        const clone = yield* cloned(input.source);
+        const catalog = yield* catalogOf(input.source, clone);
+        const match = yield* matchOf(input.source, catalog);
+        const picks = yield* choosePicks(input.source, match, {
+          all: input.all,
+          root,
+          clone,
+        });
+        const result = yield* installSelected(root, input.source, clone, picks, {
+          force: input.force,
+        });
+        yield* Console.log(
+          [
+            result.created.length > 0 ? `created: ${result.created.join(", ")}` : "created: none",
+            result.skipped.length > 0 ? `skipped: ${result.skipped.join(", ")}` : "skipped: none",
+          ].join("\n"),
+        );
+      }),
+    ),
 ).pipe(
   Command.withDescription(
-    "Copy the rules in a GitHub repo's .adhere/rules/, or one topic or rule of them, each its whole directory, into this repo's .adhere/rules/<org>/<repo>/. They are this repo's own rules from then on, to edit or keep in step by hand, and a copied RULE.ts runs whenever lint does. A rule already there is skipped unless --force.",
+    "Copy instruction files and rules from a GitHub repo's .adhere/ into this repo's .adhere/instructions/<org>/<repo>/ and .adhere/rules/<org>/<repo>/. At a terminal, choose which instruction files and rules to copy; name a topic for its rules, or name one rule exactly to copy it without asking. --all copies everything. Existing files are skipped unless --force.",
   ),
 );
 
@@ -645,13 +765,29 @@ const rulesCreateCommand = Command.make(
   (input) => createRule(input.idea, input.agent, input.setup).pipe(Effect.provide(statusLayer)),
 ).pipe(
   Command.withDescription(
-    "Write a rule with a coding agent's help: it suggests whether the rule belongs to this project or the organization's shared rules repo, names it, chooses a RULE.md or, when Jev needs state the file cannot show, a RULE.ts, and says which config context (typeAware, reads) it needs. It finds code in the repo for you to judge, with the lines around it, and drafts the rule from your answers; the draft is checked as adhere validate checks wording. A project rule is written to .adhere/rules/; an organization rule is pushed to the shared repo on a branch for a pull request.",
+    "Write a rule with a coding agent's help: it suggests whether the convention is a native oxlint rule (an id from adhere's catalog; unknown ids are rejected, with its exact option values and the config to print or enable in the shared repo), a mechanical rule (an oxlint JS plugin, approved before it runs and tested on Node 22 or newer; a failed test gets one repair and reapproval), or one adhere must judge. It then suggests whether the rule belongs to this project or the organization's shared rules repo, names it, chooses a RULE.md or, when Jev needs state the file cannot show, a RULE.ts, and says which config context (typeAware, reads) it needs. It finds code in the repo for you to judge, with the lines around it, and drafts the rule from your answers; the draft is checked as adhere validate checks wording. A project rule is written to .adhere/rules/ or .adhere/oxlint/; an organization rule is pushed to the shared repo on a branch for a pull request.",
+  ),
+);
+
+/**
+ * `adhere rules readme`: refresh the managed index in a shared rules repo's
+ * README from the rules and lint config checked out there.
+ */
+const rulesReadmeCommand = Command.make("readme", {}, () =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    const refreshed = yield* refreshSharedReadme(path.resolve());
+    yield* Console.log(refreshed.message);
+  }).pipe(Effect.provide(statusLayer)),
+).pipe(
+  Command.withDescription(
+    "Refresh the managed index in a shared rules repo's README from .adhere/rules/ and lint/rules.json: each rule's link and description, each enabled native Oxlint setting, and each custom plugin's enabled rules. Run it in the shared repo after adding, renaming, or deleting a rule, or changing a lint setting; it preserves the rest of the README and refuses malformed markers.",
   ),
 );
 
 export const rulesCommand = Command.make("rules").pipe(
   Command.withDescription("Work on this repo's rules."),
-  Command.withSubcommands([rulesCreateCommand]),
+  Command.withSubcommands([rulesCreateCommand, rulesReadmeCommand]),
 );
 
 export const postinstallCommand = Command.make("postinstall", {}, () =>
@@ -659,13 +795,20 @@ export const postinstallCommand = Command.make("postinstall", {}, () =>
     const path = yield* Path.Path;
     yield* Console.log(yield* renderInstructions(path.resolve()));
   }),
-).pipe(Command.withDescription("Render instruction files into a managed block in AGENTS.md."));
+).pipe(
+  Command.withDescription(
+    "Render instruction files recursively into a managed block in AGENTS.md.",
+  ),
+);
 
 /** The whole CLI. Bare `adhere` prints its help. */
 export const cli = Command.make("adhere").pipe(
   Command.withDescription("Lint a repository against the rules in .adhere/rules/, judged by Jev."),
   Command.withExamples([
-    { command: "adhere init", description: "Scaffold .adhere/config.ts and two example rules" },
+    {
+      command: "adhere init",
+      description: "Scaffold config, tsconfig, and two example rules",
+    },
     {
       command: "adhere validate",
       description: "Check the rules' wording, and ask Jev whether any contradict",
@@ -674,7 +817,7 @@ export const cli = Command.make("adhere").pipe(
     { command: "adhere lint", description: "Audit the working directory" },
     {
       command: "adhere install org/repo",
-      description: "Copy another repo's .adhere/rules/ into this one",
+      description: "Copy another repo's instructions and rules into this one",
     },
     {
       command: "adhere lint --preset effect",

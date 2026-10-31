@@ -34,6 +34,8 @@
     "typecheck": "tsc --noEmit && bun run lint",
     "build": "bun build --compile --minify --sourcemap --define ADHERE_BUILD=\"\\\"$(git describe --tags --dirty --always)\\\"\" src/main.ts --asset ./presets --outfile dist/adhere",
     "build:npm": "bun scripts/npm-packages.ts build",
+    "oxlint:catalog": "bun scripts/oxlint-catalog.ts",
+    "oxlint:catalog:check": "bun scripts/oxlint-catalog.ts --check",
     "release": "release-it",
     "prepare": "vp config"
   },

@@ -17,6 +17,8 @@ jobs:
         with:
           node-version: "26"
       - run: bun install --frozen-lockfile
+      - name: Verify the bundled oxlint rule catalog is current
+        run: bun run oxlint:catalog:check
       - run: bun run typecheck
       - run: bun run test
       - run: bun run build:npm

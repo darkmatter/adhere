@@ -25,7 +25,7 @@ afterEach(async () => {
 });
 
 describe("postinstall", () => {
-  it("uses .agents as a fallback, sorts direct Markdown files, and preserves handwritten content across updates", async () => {
+  it("uses .agents as a fallback, renders Markdown files recursively, and preserves handwritten content across updates", async () => {
     const root = await project();
     await writeFile(join(root, "AGENTS.md"), "# Handwritten\n");
     await put(root, ".agents/instructions", "20-style.md", "Style\n");
@@ -33,13 +33,13 @@ describe("postinstall", () => {
     await put(root, ".agents/instructions", "ignored.txt", "Ignored");
     await put(root, ".agents/instructions/nested", "hidden.md", "Nested");
     expect((await run(root)).stdout).toBe(
-      "Updated AGENTS.md: 2 instruction files from .agents/instructions.\n",
+      "Updated AGENTS.md: 3 instruction files from .agents/instructions.\n",
     );
     const target = join(root, "AGENTS.md");
-    const expected = `# Handwritten\n\n${start}\n\nRules\n\nStyle\n\n${end}\n`;
+    const expected = `# Handwritten\n\n${start}\n\nRules\n\nStyle\n\nNested\n\n${end}\n`;
     expect(await readFile(target, "utf8")).toBe(expected);
     expect((await run(root)).stdout).toBe(
-      "Unchanged AGENTS.md: 2 instruction files from .agents/instructions.\n",
+      "Unchanged AGENTS.md: 3 instruction files from .agents/instructions.\n",
     );
     expect(await readFile(target, "utf8")).toBe(expected);
     await writeFile(target, `${expected}\nFooter\n`);
@@ -47,6 +47,20 @@ describe("postinstall", () => {
     await run(root);
     expect(await readFile(target, "utf8")).toBe(
       `${expected.replace("Rules", "Updated")}\nFooter\n`,
+    );
+  });
+
+  it("renders a shared repo's instructions before local fragments, then nested local files", async () => {
+    const root = await project();
+    await put(root, ".adhere/instructions", "00-workflow.md", "Workflow");
+    await put(root, ".adhere/instructions/nested", "fine-print.md", "Fine print");
+    await put(root, ".adhere/instructions/acme/rules", "security.md", "Shared security");
+    await put(root, ".adhere/instructions/acme/rules/deep", "extra.md", "Shared extra");
+    expect((await run(root)).stdout).toBe(
+      "Updated AGENTS.md: 4 instruction files from .adhere/instructions.\n",
+    );
+    expect(await readFile(join(root, "AGENTS.md"), "utf8")).toBe(
+      `${start}\n\nShared extra\n\nShared security\n\nWorkflow\n\nFine print\n\n${end}\n`,
     );
   });
 

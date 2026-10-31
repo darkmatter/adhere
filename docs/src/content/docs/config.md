@@ -50,8 +50,9 @@ Every key, grouped by what it changes:
 - `exclude` — default: none. Globs, relative to the working directory, for
   files no rule judges.
 - `instructions` — default: `.adhere/instructions/`, then
-  `.agents/instructions/`. Instructions directory relative to the config file,
-  used by `adhere postinstall`.
+  `.agents/instructions/`. Instructions directory relative to the config file;
+  `adhere postinstall` renders its Markdown files recursively into `AGENTS.md`.
+  See [Compose your AGENTS.md](/adhere/compose-agents-md/).
 
 **Thresholds**
 
