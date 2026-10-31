@@ -259,8 +259,8 @@ Keep the keys you are not changing. A project writes its own \`.mjs\` plugins to
 
 Add a directory under \`.adhere/rules/<topic>/\` with the rule in a \`RULE.md\`;
 its path is the rule's id. See
-[Rules as Markdown files](https://github.com/darkmatter/adhere#rules-as-markdown-files)
-and the [rule writing tips](https://github.com/darkmatter/adhere#rule-writing-tips).
+[Rules as Markdown files](https://dm.sh/adhere/rule-format/#rules-as-markdown-files)
+and the [rule writing tips](https://dm.sh/adhere/writing-good-rules/#rule-writing-tips).
 \`adhere validate\` checks each rule's wording and asks Jev whether any two
 contradict. CI runs it on every push to main and every pull request.
 

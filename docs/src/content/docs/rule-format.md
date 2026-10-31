@@ -76,6 +76,49 @@ const port: number = Number(process.env.PORT);
   description, so use it to say why the rule holds or where it does not apply.
   The report shows the description alone.
 
+A guideline about architecture, which a normal linter cannot check, with code
+under `## Should` and `## Should not`:
+
+````md
+---
+description: A third-party API going offline should not also take our app down.
+---
+
+Our APIs should not depend on a third-party API on a critical path. The
+user-facing side should be unaffected if it goes offline, and ingestion should
+happen in a separate, asynchronous process.
+
+## Should
+
+```ts
+import db from "./lib/db";
+import googleMaps from "./lib/maps";
+
+// GET /api/restaurants/:zipCode reads only our own database.
+export async function findRestaurants(zipCode: string) {
+  return db.restaurants.find({ where: { zipCode } });
+}
+
+// A scheduled job copies new restaurants in, off the request path.
+export async function syncRestaurants(since: Date) {
+  const restaurants = await googleMaps.findAll({ updatedSince: since });
+  await Promise.all(restaurants.map((restaurant) => db.restaurants.upsert(restaurant)));
+}
+```
+
+## Should not
+
+```ts
+import googleMaps from "./lib/maps";
+
+// GET /api/restaurants/:zipCode
+export async function findRestaurants(zipCode: string) {
+  // When Google Maps is down, slow, or over quota, so is this endpoint.
+  return googleMaps.findAll({ where: { zipCode } });
+}
+```
+````
+
 <details>
 <summary>More on headings, fences, and loading</summary>
 

@@ -403,7 +403,7 @@ export const validateLayer = (flags: Flags) =>
 
 /**
  * `adhere validate`: everything `lint` loads, then how each rule's wording
- * differs from the README's rule writing tips, then the linter check's tallies
+ * differs from the docs' rule writing tips, then the linter check's tallies
  * from lint, then Jev on whether any two rules that apply to the same files
  * contradict. Only a contradiction fails the run: the tips and the linter
  * check are advice. A config, rule file, or preset that does not decode
@@ -433,7 +433,7 @@ export const validateCommand = Command.make("validate", { preset }, () =>
   }),
 ).pipe(
   Command.withDescription(
-    "Load the config, rule files, and presets the way lint does, check each rule's wording against the README's rule writing tips, report the rules lint's linter check flags, then ask Jev whether any two rules that apply to the same files contradict each other.",
+    "Load the config, rule files, and presets the way lint does, check each rule's wording against the docs' rule writing tips, report the rules lint's linter check flags, then ask Jev whether any two rules that apply to the same files contradict each other.",
   ),
   Command.provide((input) => validateLayer({ presets: input.preset })),
 );
