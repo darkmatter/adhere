@@ -64,9 +64,10 @@ runs:
 ![adhere lint demo](https://github.com/darkmatter/adhere/raw/main/eval/demo.gif)
 
 Rules a normal linter can check exactly, such as a banned import or a type
-error, belong in that linter. [`adhere validate`](#validating-rules) lists the
-rules Jev thinks a linter could check, and finds rules that contradict each
-other.
+error, belong in that linter. `adhere rules create` turns a native Oxlint rule
+into the config to enable, and a mechanical convention into a tested Oxlint JS
+plugin; [`adhere validate`](#validating-rules) lists the remaining rules Jev
+thinks a linter could check, and finds rules that contradict each other.
 
 ## Contents
 
@@ -76,6 +77,7 @@ other.
   - [Rule format](#rule-format)
   - [Writing good rules](#writing-good-rules)
   - [Generate rules from your repo](#generate-rules-from-your-repo)
+  - [Oxlint rules and plugins](#oxlint-rules-and-plugins)
   - [Install rules from other repos](#install-rules-from-other-repos)
   - [Presets](#presets)
 - **Usage**
@@ -172,7 +174,7 @@ alchemy. See [Presets](#presets).
 To set up rules of your own in a repo:
 
 ```sh
-adhere init                # .adhere/config.ts, two example rules, and the dev dependency
+adhere init                # config, tsconfig, two example rules, and the dev dependency
 bun run adhere validate    # check your rules' wording, and ask Jev whether any contradict
 bun run adhere lint        # audit the working directory
 git add .adhere            # commit the rules, and the judgments they cost
@@ -180,8 +182,9 @@ git add .adhere            # commit the rules, and the judgments they cost
 
 ### Init
 
-`adhere init` creates a config file and some example rules and, in a repo with
-a `package.json`, adds adhere as a dev dependency.
+`adhere init` creates a config file, `.adhere/tsconfig.json` for it and any
+TypeScript rules, and some example rules, and in a repo with a `package.json`,
+adds adhere as a dev dependency.
 
 It is safe to rerun: existing files are reported as skipped, and only `--force`
 overwrites them.
@@ -433,8 +436,9 @@ setting adhere up in your repo:
    from.
 2. It drafts the conventions a normal linter cannot check as rules, each with
    real code from your repo, and sets aside the ones a linter could check.
-3. It adds the presets that fit your stack, and rules from your organization's
-   [shared repo](#install-rules-from-other-repos), if you have one.
+3. It adds the presets that fit your stack, and instructions and rules from
+   your organization's [shared repo](#install-rules-from-other-repos), if you
+   have one.
 4. It shows every candidate in one list, with its evidence, and imports the ones
    you choose.
 5. It validates them, walks you through the first lint and what it costs, and
@@ -448,62 +452,205 @@ skills add darkmatter/adhere   # install adhere's skills for your agent
 
 Then ask your agent to set adhere up.
 
+## Oxlint rules and plugins
+
+`adhere rules create` asks a coding agent whether a convention is something
+Oxlint already checks, something a small Oxlint JS plugin can check exactly, or
+something that needs Jev. A native rule is never copied into `.adhere/`: the
+wizard prints the exact config to add, or, for an organization rule, enables it
+in the shared repo's `lint/rules.json` on a branch for a pull request.
+
+```json
+{
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "no-restricted-imports": ["error", { "paths": [{ "name": "lodash" }] }]
+  }
+}
+```
+
+The printed config carries the rule's own option values when it has them. It
+prints `"error"` only when the rule's defaults enforce the idea; an
+option-dependent rule is printed as `["error", ...options]`, because bare
+`"error"` would enforce nothing. Banning lodash through
+`no-restricted-imports`, for example, prints
+`["error", { "paths": [{ "name": "lodash" }] }]`.
+
+A rule from a plugin Oxlint leaves off by default also adds that plugin to
+`plugins`; the list replaces Oxlint's default set (`eslint`, `typescript`,
+`unicorn`, `oxc`), so it names every plugin you still want. A type-aware native
+rule also sets `options.typeAware` and needs `oxlint-tsgolint`, which Vite+
+includes.
+
+A custom plugin is for a convention visible in the syntax tree and scopes
+alone. The wizard asks for plain ESM that imports nothing, default-exports its
+object, and reports each diagnostic's message literally so the fixtures match
+exactly. It shows the plugin and its valid and invalid examples, and runs
+nothing until you approve them. It then runs them with **your project's** Oxlint
+RuleTester, reached through `oxlint/plugins-dev` or
+`vite-plus/lint/plugins-dev`. The project needs its own Oxlint or Vite+, and
+Node 22 or newer on `PATH`: Oxlint's RuleTester refuses Bun and older Node, so
+there is no Bun fallback. Without one, nothing is written and no repair is
+attempted. adhere bundles no Oxlint. A failure goes back to the agent once for
+repair; you approve the repaired plugin, then the examples run again. Nothing
+is written unless they pass.
+
+A project plugin and its checked-in test land in `.adhere/oxlint/` as `.mjs`
+files, since a `type: commonjs` package would treat `.js` as CommonJS; adhere
+does not edit your lint config, and prints what to add:
+
+```json
+{
+  "jsPlugins": ["./.adhere/oxlint/no-foo.mjs"],
+  "rules": {
+    "no-foo/no-foo": "error"
+  }
+}
+```
+
+Run the test with `node .adhere/oxlint/no-foo.test.mjs` (Node 22 or newer). A
+shared repo's plugin stays in `lint/plugins/` as `.js`, with its
+`<plugin>.test.js` beside it, because the shared package is `type: module`; it
+is registered in `lint/rules.json`. A plugin sees only the syntax tree: types,
+other files' contents, or another parser's AST make the convention an adhere
+rule instead.
+
+A shared repo's `lint/` directory is a plain ESM package, not something
+`adhere install` copies. Consume it as a git dependency pinned to a
+[repo-wide tag](#creating-a-shared-repo):
+
+```sh
+bun add -D "github:acme/standards#v1.0.0"
+```
+
+Spread it into Vite+'s lint config, or plain Oxlint's:
+
+```ts
+// vite.config.ts
+import sharedLint from "@acme/standards/lint";
+import { defineConfig } from "vite-plus";
+
+export default defineConfig({
+  lint: {
+    ...sharedLint,
+    jsPlugins: [...sharedLint.jsPlugins, "./.adhere/oxlint/local.mjs"],
+    rules: { ...sharedLint.rules, "local/my-rule": "error" },
+  },
+});
+```
+
+```ts
+// oxlint.config.ts, with plain Oxlint: oxlint -c oxlint.config.ts
+import sharedLint from "@acme/standards/lint";
+
+export default { ...sharedLint };
+```
+
+`lint/index.js` reads `lint/rules.json` and resolves its plugin paths, so the
+export works from any directory; paths you add stay relative to your own config
+and your project's plugins live in `.adhere/oxlint/`.
+
+The native rule suggestions come from `src/oxlint/catalog.json`, a snapshot of
+the Oxlint version adhere's development toolchain installs; the catalog records
+that version, and the wizard accepts only ids in it. An unknown id is rejected.
+`bun run oxlint:catalog` regenerates it from that Oxlint and fetches each
+rule's documentation summary; `bun run oxlint:catalog:check` verifies the
+snapshot offline, and CI runs the check. The snapshot follows adhere's
+toolchain, not yours: a project on an older or newer Oxlint may not have a
+suggested rule, or may have newer rules the wizard cannot suggest. Plugin tests
+always use the Oxlint the project installed.
+
 ## Install rules from other repos
 
-An organization's rules can live in one repo's `.adhere/rules/`, and other repos
-copy them in with `adhere install`:
+An organization's rules and instructions can live in one repo's `.adhere/`, and
+other repos copy them in with `adhere install`:
 
 ```sh
 adhere list darkmatter/standards                        # each rule there, with its description
-adhere install darkmatter/standards                     # every rule
-adhere install darkmatter/standards/data                # the data topic
-adhere install darkmatter/standards/data/brand-ports    # one rule
-adhere install darkmatter/standards#v3                  # every rule, as tagged v3
+adhere install darkmatter/standards                     # choose instruction files and rules
+adhere install darkmatter/standards --all               # everything, without a prompt
+adhere install darkmatter/standards/data                # choose among the data topic's rules
+adhere install darkmatter/standards/data/brand-ports    # just that rule
+adhere install darkmatter/standards#v3 --all            # everything, as tagged v3
 ```
 
-- Copies land in this repo's `.adhere/rules/org/repo/`, so `data/brand-ports`
+At a terminal, a bare repo shows a multiselect of what it can copy: its
+instruction files first, then its rules. Something already installed is
+preselected, so a rerun shows what is already there; it is skipped, and
+`--force` replaces it. Deselecting it leaves it as it is. `--all` copies every
+match without asking and needs no terminal; without it, a run without a
+terminal fails, and names the matches and an exact rule to use instead.
+
+- A topic copies the rules under it, and never instruction files, even for a
+  topic named `instructions`. An exact rule id, with no rule deeper under it,
+  copies that rule alone, without asking.
+- Instruction files land in
+  `.adhere/instructions/org/repo/<path>`, so a source's
+  `security/hardening.md` becomes `.adhere/instructions/darkmatter/standards/security/hardening.md`.
+- Rules land in this repo's `.adhere/rules/org/repo/`, so `data/brand-ports`
   from darkmatter/standards lands in
   `.adhere/rules/darkmatter/standards/data/brand-ports/` as the rule
-  `darkmatter/standards/data/brand-ports`, and two repos' rules never collide.
-- The copies are the repo's own rules from then on: commit them, edit them, or
-  start new rules from them. Nothing tracks where they came from.
-- A later install skips a rule already there, just as init does. `--force`
-  replaces its directory, edits and all.
-- A rule's whole directory is copied. The source's config, its inline rules, and
-  its cache are not.
+  `darkmatter/standards/data/brand-ports`. Two sources' files never collide.
+- The copies are the repo's own from then on: commit them, edit them, or start
+  new rules from them. Nothing tracks where they came from, and a later install
+  skips what is already there. `--force` replaces those files and rule
+  directories, local edits and all; deselecting something never deletes it.
+- A rule's whole directory is copied. The source's config, its inline rules,
+  its cache, and its `lint/` package are not.
 
 > **Read what you install.** A `RULE.ts` is copied with the helpers beside it,
 > and runs whenever lint does, in CI too. `adhere list` names a `RULE.ts`
 > without its description, since reading the description would run the file.
 
-The source is cloned with `git` from `https://github.com/org/repo.git`, so a
-private repo needs git's credentials for GitHub, which `gh auth setup-git` sets
-up. To clone over SSH instead, let git rewrite the URL:
-`git config --global url.git@github.com:.insteadOf https://github.com/`.
+The source is cloned with `git` from `https://github.com/org/repo.git` at the
+branch or tag after `#`, so a private repo needs git's credentials for GitHub,
+which `gh auth setup-git` sets up. To clone over SSH instead, let git rewrite
+the URL: `git config --global url.git@github.com:.insteadOf https://github.com/`.
 
 ### Creating a shared repo
 
-`adhere init --shared org/repo` scaffolds a repo whose rules other repos copy in
-with `adhere install`, instead of one that lints itself. It writes the two
-example rules and no config, since install copies only rule files, and with
-them:
+`adhere init --shared org/repo` scaffolds a repo whose rules and instructions
+other repos copy in with `adhere install`, and whose lint settings they import,
+instead of one that lints itself. It writes no config, since install copies
+files and lint is consumed as a package, and with the examples:
 
-- **`README.md`** says what the repo is for, how to install its rules, and how
-  to add one.
+- **`README.md`** says what the repo is for, how to install its instructions and
+  rules, how to import its lint package, how to add a rule, and how to tag a
+  release.
+- **`.adhere/instructions/00-workflow.md`** and two rules under
+  `.adhere/rules/style/` are examples to replace. adhere renders the
+  instruction file into a consumer's `AGENTS.md` through
+  [postinstall](#compose-your-agentsmd).
 - **`.github/workflows/adhere.yaml`** runs `adhere validate` on every push to
   main and every pull request, with the `TYPESAFE_API_KEY` secret. A pull
   request from a fork gets no secrets, so validate refuses there.
 - **`alchemy.run.ts`** is an [alchemy](https://alchemy.run) stack that creates
   the GitHub repo, or adopts it, and sets that secret from `TYPESAFE_API_KEY`
   when deployed with `npx alchemy deploy`.
-- **`package.json`** pins alchemy and effect, which init installs, to versions
-  that work together.
+- **`package.json`** names the package `@org/repo`, exports only `./lint`, and
+  pins alchemy and effect, which init installs, to versions that work together.
+- **`lint/index.js`**, **`lint/index.d.ts`**, and **`lint/rules.json`** are the
+  plain ESM Oxlint config consumers spread into Vite+ or plain Oxlint.
+  `rules.json` starts empty; native rules and custom plugins are added there.
+  See [Oxlint rules and plugins](#oxlint-rules-and-plugins).
 - **`.gitignore`** keeps the installed packages and alchemy's state out of git.
 
 The repo is public unless you answer yes when init asks, at a terminal, whether
 to make it private. Other repos then need git's credentials for it to list and
-install its rules. Without a terminal it is public: change `visibility` in the
+install its files. Without a terminal it is public: change `visibility` in the
 stack to make it private.
+
+Tag the repository as a whole after changing its rules, instructions, or lint
+settings: one tag covers all three, and there are no per-rule or per-package
+tags. Consumers pin that tag for copied files and for the lint package.
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+These choices, and their tradeoffs, are recorded in
+[`docs/decisions.md`](./docs/decisions.md).
 
 ## Presets
 
@@ -664,7 +811,9 @@ Every key, grouped by what it changes:
   files no rule judges.
 - `instructions` — default: `.adhere/instructions/`, then
   `.agents/instructions/`. Instructions directory relative to the config file,
-  used by `adhere postinstall`.
+  whose Markdown files `adhere postinstall` renders recursively into
+  `AGENTS.md`. See
+  [Compose your AGENTS.md](#compose-your-agentsmd).
 
 **Thresholds**
 
@@ -936,18 +1085,18 @@ adhere lint --log-level debug 2> adhere.log
 
 ## Commands
 
-| Command                           | What it does                                                                                                                                                                                                       |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `adhere lint`                     | Audit the working directory. See [Running lint](#running-lint).                                                                                                                                                    |
-| `adhere validate`                 | Check the rules' wording, list rules a linter could check, and ask Jev whether any contradict. See [Validating rules](#validating-rules).                                                                          |
-| `adhere postinstall`              | Render instruction files into a managed block in `AGENTS.md`. See [Compose your AGENTS.md](#compose-your-agentsmd).                                                                                                |
-| `adhere rules create [idea]`      | Write a rule with a local coding agent's help (`claude`, `codex`, or `omp`): judge excerpts it finds, get a `RULE.md` or `RULE.ts`; org rules are pushed to the shared repo for a PR. `--setup` re-picks defaults. |
-| `adhere init [--force]`           | Scaffold `.adhere/config.ts` and two example rules. See [Init](#init).                                                                                                                                             |
-| `adhere init --shared org/repo`   | Scaffold a repo of rules other repos install. See [Creating a shared repo](#creating-a-shared-repo).                                                                                                               |
-| `adhere list org/repo`            | List the rules in another repo's `.adhere/rules/`. See [Install rules from other repos](#install-rules-from-other-repos).                                                                                          |
-| `adhere install org/repo`         | Copy those rules into this repo's `.adhere/rules/org/repo/`.                                                                                                                                                       |
-| `adhere login`, `adhere logout`   | Save or delete a TypeSafe AI API key, or with `--openai`, an OpenAI one. See [Login](#login).                                                                                                                      |
-| `adhere skill [docs\|setup\|fix]` | Print an agent skill. See [Agent skills](#agent-skills).                                                                                                                                                           |
+| Command                           | What it does                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `adhere lint`                     | Audit the working directory. See [Running lint](#running-lint).                                                                                                                                                                                                                                                                                                                                              |
+| `adhere validate`                 | Check the rules' wording, list rules a linter could check, and ask Jev whether any contradict. See [Validating rules](#validating-rules).                                                                                                                                                                                                                                                                    |
+| `adhere postinstall`              | Render instruction files recursively into a managed block in `AGENTS.md`. See [Compose your AGENTS.md](#compose-your-agentsmd).                                                                                                                                                                                                                                                                              |
+| `adhere rules create [idea]`      | Write a rule with a local coding agent's help (`claude`, `codex`, or `omp`): a native oxlint rule from adhere's catalog is enabled or printed with its exact options, a mechanical convention becomes an approved oxlint JS plugin tested on Node 22 or newer, and the rest are judged excerpts and a `RULE.md` or `RULE.ts`; org rules are pushed to the shared repo for a PR. `--setup` re-picks defaults. |
+| `adhere init [--force]`           | Scaffold `.adhere/config.ts`, `.adhere/tsconfig.json`, and two example rules. See [Init](#init).                                                                                                                                                                                                                                                                                                             |
+| `adhere init --shared org/repo`   | Scaffold a repo of instructions, rules, and a `lint/` package other repos use. See [Creating a shared repo](#creating-a-shared-repo).                                                                                                                                                                                                                                                                        |
+| `adhere list org/repo`            | List the rules in another repo's `.adhere/rules/`, with their descriptions. See [Install rules from other repos](#install-rules-from-other-repos).                                                                                                                                                                                                                                                           |
+| `adhere install org/repo`         | Choose instruction files and rules from another repo, or name one exact rule; `--all` copies every match. See [Install rules from other repos](#install-rules-from-other-repos).                                                                                                                                                                                                                             |
+| `adhere login`, `adhere logout`   | Save or delete a TypeSafe AI API key, or with `--openai`, an OpenAI one. See [Login](#login).                                                                                                                                                                                                                                                                                                                |
+| `adhere skill [docs\|setup\|fix]` | Print an agent skill. See [Agent skills](#agent-skills).                                                                                                                                                                                                                                                                                                                                                     |
 
 Bare `adhere` prints the help. `adhere <command> --help` lists a command's
 flags, and `adhere --completions <shell>` prints a completion script.
@@ -1378,8 +1527,8 @@ Three skills teach an agent to work with adhere:
 
 - **[`adhere`](./skills/adhere/SKILL.md)**, printed by `adhere skill`, is the
   reference: the commands, how to write and word a rule, the config, presets,
-  shared rules, comments and suppressions, the cache, reading a report, and
-  tuning a rule.
+  shared repos and lint packages, Oxlint rules and plugins, comments and
+  suppressions, the cache, reading a report, and tuning a rule.
 - **[`adhere-setup`](./skills/adhere-setup/SKILL.md)**, printed by
   `adhere skill setup`, sets adhere up in a repo with you. See
   [Generate rules from your repo](#generate-rules-from-your-repo).
@@ -1569,10 +1718,18 @@ about three bytes a token, and leaves 1k of room for what Jev wraps around it.
 
 ## Compose your AGENTS.md
 
-`adhere postinstall` renders the Markdown files in an instructions directory,
-in name order, into a managed block in `AGENTS.md`. Set the directory with the
-config's `instructions` key, relative to the config file. Without it, adhere
-looks in `.adhere/instructions/`, then `.agents/instructions/`.
+`adhere postinstall` renders every Markdown file under an instructions
+directory, recursively, into a managed block in `AGENTS.md`. Set the directory
+with the config's `instructions` key, relative to the config file. Without it,
+adhere looks in `.adhere/instructions/`, then `.agents/instructions/`.
+
+The order is deterministic. Files whose path from the instructions directory
+has at least three segments come first, which is where files copied from
+another repo land (under `.adhere/instructions/org/repo/`); a local file two
+directories deep sorts there too. Then come files directly in the instructions
+directory, then files one directory deep. Each group sorts by path. So a shared
+repo's instructions lead a local `00-workflow.md`, and both lead local notes in
+a single subdirectory.
 
 To run it after installing dependencies, add it to your package scripts, or
 append it to your existing `postinstall` script:

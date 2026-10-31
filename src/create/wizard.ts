@@ -11,31 +11,18 @@
 import { CONFIG_FILES, DEFAULT_READS } from "#config.ts";
 import { AGENTS, type Agent, installedAgents, run } from "#create/agents.ts";
 import {
-  type Candidate,
-  Candidates,
-  type Reviewed,
   RuleNotCreated,
   Shape,
   asking,
   askingFor,
-  examplesPrompt,
   shapePrompt,
   unfenced,
   writePrompt,
 } from "#create/ask.ts";
-import {
-  decided,
-  excerpt,
-  indented,
-  intro,
-  line,
-  look,
-  note,
-  outro,
-  said,
-  spinning,
-  warn,
-} from "#create/look.ts";
+import { reviewedInRepository } from "#create/examples.ts";
+import { createOxlintRule } from "#create/oxlint.ts";
+import { oxlintRule } from "#oxlint/catalog.ts";
+import { decided, indented, intro, line, look, note, outro, spinning, warn } from "#create/look.ts";
 import { cloned } from "#install.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { importRule } from "#rules.ts";
@@ -111,58 +98,6 @@ const failed = (cause: unknown) =>
 
 const git = (cwd: string, args: ReadonlyArray<string>) =>
   Effect.tryPromise({ try: () => run("git", args, cwd, ""), catch: failed });
-
-/**
- * Shows the user each excerpt the agent found, read from the file itself with
- * three lines either side, and asks whether it breaks the rule. An excerpt
- * that does not match the repo is left out.
- */
-const review = (agent: Agent, root: string, candidates: ReadonlyArray<Candidate>) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const reviewed: Array<Reviewed> = [];
-    let missing = 0;
-    for (const [index, candidate] of candidates.entries()) {
-      const file = path.resolve(root, candidate.file);
-      const where = path.relative(root, file);
-      const text = where.startsWith("..")
-        ? Option.none()
-        : yield* fs.readFileString(file).pipe(Effect.option);
-      const lines = Option.getOrElse(text, () => "").split("\n");
-      const start = candidate.startLine;
-      if (Option.isNone(text) || start < 1 || start > lines.length) {
-        missing++;
-        continue;
-      }
-      const end = Math.min(Math.max(candidate.endLine, start), start + 14, lines.length);
-      const at = `${where}:${start === end ? start : `${start}-${end}`}`;
-      yield* line("");
-      yield* line(`${at} (${index + 1} of ${candidates.length})`);
-      yield* excerpt(lines, {
-        from: Math.max(1, start - 3),
-        to: Math.min(lines.length, end + 3),
-        start,
-        end,
-      });
-      yield* said(
-        `${agent}: ${candidate.violation ? "breaks it" : "follows it"}. ${candidate.reason}`,
-      );
-      const violation = yield* Prompt.run(
-        Prompt.Confirm({ message: "Is this a violation?", initial: candidate.violation }),
-      );
-      reviewed.push({
-        where: at,
-        code: lines.slice(start - 1, end).join("\n"),
-        violation,
-        agreed: violation === candidate.violation,
-      });
-    }
-    if (missing > 0) {
-      yield* note(`Left out ${missing} excerpt${missing === 1 ? "" : "s"} not found in the repo.`);
-    }
-    return reviewed;
-  });
 
 /**
  * What adhere can say of a draft without running it: for a RULE.md, what
@@ -249,14 +184,23 @@ export const createRule = Effect.fn("createRule")(
       : yield* Prompt.run(Prompt.String({ message: "What should the rule enforce?" }));
 
     const shape = yield* askingFor(agent, "how to shape it", root, shapePrompt(idea), Shape);
-    if (shape.linter !== null) {
-      const anyway = yield* Prompt.run(
-        Prompt.Confirm({
-          message: `A linter could check this: ${shape.linter}. Write an adhere rule anyway?`,
-          initial: false,
+    const native = shape.linter === null ? undefined : oxlintRule(shape.linter);
+    if (native !== undefined) {
+      return yield* createOxlintRule({ agent, idea, shape, root, shared });
+    }
+    if (shape.mechanical && !shape.typeAware) {
+      const approach = yield* Prompt.run(
+        Prompt.Select({
+          message: "A custom oxlint JS plugin can check this. Which do you want?",
+          choices: [
+            { title: "Write an oxlint plugin", value: "plugin" as const },
+            { title: "Write an adhere rule", value: "adhere" as const },
+          ],
         }),
       );
-      if (!anyway) return yield* outro("Nothing written.");
+      if (approach === "plugin") {
+        return yield* createOxlintRule({ agent, idea, shape, root, shared });
+      }
     }
     const ruleFile = shape.format === "typescript" ? "RULE.ts" : "RULE.md";
     yield* decided(`A ${ruleFile}`, shape.formatReason);
@@ -327,20 +271,7 @@ export const createRule = Effect.fn("createRule")(
           }),
         );
 
-    // Excerpts are optional: an agent that cannot search the repo, such as codex
-    // without its sandbox, leaves the rule's examples to the draft.
-    const found = yield* askingFor(
-      agent,
-      "for code to judge",
-      root,
-      examplesPrompt(idea, id),
-      Candidates,
-    ).pipe(
-      Effect.catch(({ message }) =>
-        warn(`No code from the repo: ${message}`).pipe(Effect.as({ candidates: [] })),
-      ),
-    );
-    const reviewed = yield* review(agent, root, found.candidates);
+    const reviewed = yield* reviewedInRepository(agent, root, idea, id);
 
     const file = path.join(rules, id, ruleFile);
     const branch = `adhere/${id}`;

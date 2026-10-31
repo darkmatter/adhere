@@ -1,6 +1,6 @@
 ---
 name: adhere
-description: Reference for adhere, the linter for coding conventions a normal linter cannot check, judged by TypeSafe AI's Jev. Covers its commands, the Markdown rule format and how to word a rule, the config, presets, shared rules, comments and suppressions, the cache, reading a report, and tuning a noisy rule. Use when writing or editing adhere rules, configuring adhere, reading its findings, or answering questions about it. To set adhere up in a repo, use adhere-setup; to fix findings, adhere-fix.
+description: Reference for adhere, the linter for coding conventions a normal linter cannot check, judged by TypeSafe AI's Jev. Covers its commands, the Markdown rule format and how to word a rule, the config, presets, shared repos and lint packages, comments and suppressions, the cache, reading a report, and tuning a noisy rule. Use when writing or editing adhere rules, configuring adhere, reading its findings, or answering questions about it. To set adhere up in a repo, use adhere-setup; to fix findings, adhere-fix.
 ---
 
 # adhere
@@ -19,11 +19,12 @@ first rules, first lint, and CI, and adhere-fix verifies and fixes findings.
 ## Commands
 
 ```sh
-adhere init [--force]            # .adhere/config.ts, two example rules, and the dev dependency
-adhere init --shared org/repo    # a repo of rules other repos install, with CI and an alchemy stack
+adhere init [--force]            # config, tsconfig, two example rules, and the dev dependency
+adhere init --shared org/repo    # rules, instructions, lint package, CI, and an alchemy stack
+adhere postinstall               # render .adhere/instructions/**/*.md into AGENTS.md
 adhere login                     # save a TypeSafe AI API key; TYPESAFE_API_KEY takes precedence
 adhere validate                  # rule wording, rules a linter could check, contradictions
-adhere rules create [idea]       # wizard: claude, codex, or omp drafts a RULE.md or RULE.ts from excerpts you judge; org rules pushed for a PR
+adhere rules create [idea]       # native rule, approved plugin, or rule file; org PR
 adhere lint                      # judge the working directory; exit 1 on an error finding
 adhere lint --limit 0            # compiler-free counts/cache plan; no budgeting
 adhere lint --limit 100          # first 100 files needing requests; all pending rules per file
@@ -33,8 +34,8 @@ adhere lint --preset effect      # add a built-in rule set; the config becomes o
 adhere lint --filter 'src/**'    # read only matching files; repeat, and ! to leave out
 adhere lint --threshold 0.9      # report at another threshold from the cache; judges nothing again
 adhere lint --deny-warnings      # fail on warnings too
-adhere list org/repo             # the rules in a GitHub repo's .adhere/rules/
-adhere install org/repo[/topic[/rule]][#ref]   # copy them into .adhere/rules/org/repo/
+adhere list org/repo             # the rules in a GitHub repo's .adhere/rules/, with descriptions
+adhere install org/repo[/topic[/rule]][#ref] [--all]  # copy instructions and rules into .adhere/
 adhere skill [docs|setup|fix]    # print a skill
 ```
 
@@ -59,11 +60,11 @@ native-context caveat before execution.
 A repo's rules live in `.adhere/rules/`, a directory per rule holding a
 `RULE.md`, or a `RULE.ts` (below). The directory's path is the rule id:
 `.adhere/rules/data/brand-ports/RULE.md` is `data/brand-ports`. Other files in
-a rule's directory are not rules. A `*.md` rule elsewhere in `.adhere/`, as
-rules were once written, refuses the run with where it goes to keep its id.
-A `.adhere/rules/` in a subdirectory holds rules for that
-subtree only, and the most specific rule with an id wins. `cache/` and the
-config in `.adhere/` are not rules.
+a rule's directory are not rules, and only `RULE.md` or `RULE.ts` in a rule's
+directory defines one: other Markdown in `.adhere/`, such as
+`.adhere/instructions/`, is ignored. A `.adhere/rules/` in a subdirectory holds
+rules for that subtree only, and the most specific rule with an id wins.
+`cache/` and the config in `.adhere/` are not rules.
 
 ````md
 ---
@@ -302,17 +303,123 @@ https://github.com/darkmatter/adhere/tree/main/presets. A preset leaves out
 what that ecosystem's linters check exactly. Quiet a preset rule with
 `overrides` rather than copying it.
 
-## Shared rules
+## Linter-checkable rules
 
-An organization keeps rules in one repo's `.adhere/rules/`, scaffolded by
-`adhere init --shared org/repo`, and other repos copy them in with
-`adhere install org/repo`, or one topic or rule with
-`adhere install org/repo/<topic>[/<rule>]`. Each rule's whole directory lands
-in `.adhere/rules/org/repo/`, so `data/brand-ports` becomes the rule
-`org/repo/data/brand-ports`, and a copied `RULE.ts` runs whenever lint does.
-They are the repo's own rules from then on; a second install skips existing
-rules unless `--force`, which replaces their directories, local edits and all. The source is cloned with git,
-so a private repo needs git's credentials for GitHub.
+A convention a linter can decide exactly does not belong in a `RULE.md`.
+`adhere rules create` asks the coding agent for one of three routes:
+
+- **A native Oxlint rule.** The agent answers `linter` as a plain rule-id
+  string, or null, and adhere checks it against its bundled Oxlint catalog at
+  decode time; unknown ids are rejected. It also supplies the rule's exact
+  option values, which the config puts after the severity: a rule whose
+  defaults enforce the idea prints `"error"`, while an option-dependent rule
+  prints `["error", ...options]`, because bare `"error"` would enforce
+  nothing. Banning lodash with `no-restricted-imports` becomes
+  `["error", { "paths": [{ "name": "lodash" }] }]`. A project rule prints the
+  exact config; an organization rule enables it in the shared `lint/rules.json`
+  and pushes a branch for a pull request. A rule from a plugin Oxlint leaves off
+  by default also needs that plugin in `plugins`, whose list replaces Oxlint's
+  default set. A type-aware rule needs
+  `options.typeAware` and `oxlint-tsgolint`, which Vite+ includes.
+- **A custom Oxlint JS plugin.** Only when the convention is visible in the
+  syntax tree and scopes: a JS plugin cannot see TypeScript types, other
+  files, or another parser's AST. The plugin must be plain ESM, default-export
+  its object, and import nothing; the agent reports each diagnostic's message
+  literally, so its valid and invalid fixtures can match exact diagnostics.
+  adhere shows the plugin and fixtures, and runs nothing until the user
+  approves. It then runs the fixtures with the project's own Oxlint RuleTester,
+  through `oxlint/plugins-dev` or `vite-plus/lint/plugins-dev`, so the project
+  needs its own Oxlint or Vite+ and Node 22 or newer on `PATH`; Oxlint's
+  RuleTester refuses Bun and older Node, there is no Bun fallback, and without
+  it nothing is written and no repair is attempted. adhere bundles no Oxlint.
+  One failure goes back to the agent to repair; the user approves the repaired
+  plugin, then it runs again. Nothing is written unless the tests pass.
+- **An adhere rule**, for judgment, facts outside the file, or types.
+
+A project plugin and its checked-in test go to
+`.adhere/oxlint/<plugin>.mjs` and `.adhere/oxlint/<plugin>.test.mjs`; the
+`.mjs` keeps ESM in a `type: commonjs` package. adhere prints the config to add
+to `oxlint.config.ts` or Vite+'s lint block:
+
+```json
+{
+  "jsPlugins": ["./.adhere/oxlint/no-foo.mjs"],
+  "rules": { "no-foo/no-foo": "error" }
+}
+```
+
+Run the test with Node 22 or newer: `node .adhere/oxlint/no-foo.test.mjs`.
+
+A native project rule without options prints only its id:
+
+```json
+{ "rules": { "typescript/no-explicit-any": "error" } }
+```
+
+A shared repo keeps plugins in `lint/plugins/` as `.js`, with `.test.js` beside
+them, because the shared package is `type: module`; it registers them in
+`lint/rules.json`. The catalog follows adhere's toolchain, not the project's
+installed Oxlint, so a suggestion may be missing on an older Oxlint or a newer
+rule may be absent from the catalog; the plugin tests always use the project's
+Oxlint. `adhere validate` reports rules left over that a linter could check.
+
+## Shared repos
+
+An organization keeps its instructions, rules, and lint settings in one repo,
+scaffolded by `adhere init --shared org/repo`. Other repos copy the first two
+with `adhere install`:
+
+```sh
+adhere list org/repo                  # rules and descriptions; instructions are not listed
+adhere install org/repo               # choose instruction files, then rules, at a terminal
+adhere install org/repo --all         # everything, without a terminal (CI)
+adhere install org/repo/data          # choose among the data topic's rules
+adhere install org/repo/data/ports    # exactly that rule, without asking
+adhere install org/repo#v1.0.0 --all  # everything at tag v1.0.0
+```
+
+A bare repo chooses from instruction files and rules. A topic chooses only the
+rules under it, never instructions, even a topic named `instructions`. An exact
+rule id with no rule deeper under it is copied directly. Already-installed
+items are preselected. A rerun skips what exists; `--force` replaces existing
+files and rule directories, and deselecting never deletes them.
+
+Instruction files land in `.adhere/instructions/org/repo/<path>`. Rules keep
+their whole directory in `.adhere/rules/org/repo/`, so `data/brand-ports`
+becomes the rule `org/repo/data/brand-ports`, and a copied `RULE.ts` runs
+whenever lint does. Copies are the repo's own from then on. `adhere postinstall`
+renders the instruction files into `AGENTS.md`; files whose path has at least
+three segments come first (copied files, and local files two directories deep),
+then files directly in the instructions directory, then files one directory
+deep, each group sorted by path.
+
+The shared `lint/` package is not copied. Pin it as a git dependency at a
+repo-wide tag (there are no per-rule or per-package tags; one tag covers rules,
+instructions, and lint together), then spread it into Vite+ or plain Oxlint:
+
+```ts
+// vite.config.ts
+import sharedLint from "@org/repo/lint";
+import { defineConfig } from "vite-plus";
+
+export default defineConfig({
+  lint: { ...sharedLint, jsPlugins: [...sharedLint.jsPlugins, "./.adhere/oxlint/local.mjs"] },
+});
+```
+
+```ts
+// oxlint.config.ts: oxlint -c oxlint.config.ts
+import sharedLint from "@org/repo/lint";
+
+export default { ...sharedLint };
+```
+
+`lint/index.js` reads `lint/rules.json` and resolves plugin paths relative to
+the package. Paths a project adds stay relative to its own config; project
+plugins live in `.adhere/oxlint/`.
+
+The source is cloned with git, so a private repo needs git's credentials for
+GitHub.
 
 ## Comments and suppressions
 

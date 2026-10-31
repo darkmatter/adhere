@@ -175,16 +175,20 @@ describe("cli", () => {
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("TYPESAFE_API_KEY");
   });
 
-  it("lists another repo's rules, and copies one topic, then the rest, under its org and repo, skipping what is there", async () => {
+  it("lists another repo's rules, and copies the instructions and rules a source names, skipping what is there", async () => {
     const source = join(tmpdir(), `adhere-install-source-${Date.now()}`);
     const root = join(tmpdir(), `adhere-install-${Date.now()}`);
     const rules = join(source, ".adhere", "rules");
-    for (const directory of ["data/ports", "data/columns", "style/small"]) {
+    const instructions = join(source, ".adhere", "instructions");
+    for (const directory of ["data/ports", "data/columns", "style/small", "instructions/known"]) {
       await mkdir(join(rules, directory), { recursive: true });
     }
+    await mkdir(join(instructions, "security"), { recursive: true });
     await mkdir(join(source, ".adhere", "cache"), { recursive: true });
     await mkdir(root, { recursive: true });
     const ports = "---\ndescription: A port must be branded.\n---\n\nconst Port = 1\n";
+    const workflow = "Start with a plan.\n";
+    const hardening = "Do not trust input.\n";
     await writeFile(join(rules, "data", "ports", "RULE.md"), ports, "utf8");
     // Listing a RULE.ts would run it, so list names it without a description.
     await writeFile(
@@ -202,11 +206,20 @@ describe("cli", () => {
       "---\ndescription: A file should be small.\n---\n\nx\n",
       "utf8",
     );
+    // A rule topic named instructions stays a rule topic, never the instruction files.
+    await writeFile(
+      join(rules, "instructions", "known", "RULE.md"),
+      "---\ndescription: A rule under a topic named instructions.\n---\n\nx\n",
+      "utf8",
+    );
+    await writeFile(join(instructions, "00-workflow.md"), workflow, "utf8");
+    await writeFile(join(instructions, "security", "hardening.md"), hardening, "utf8");
     await writeFile(join(source, ".adhere", "cache", "stale.md"), "not a rule\n", "utf8");
     const git = (...args: ReadonlyArray<string>) => execFileAsync("git", args, { cwd: source });
     await git("init", "--quiet");
     await git("add", "-A");
     await git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "rules");
+    await git("branch", "pinned");
     // Bash can read .bashrc when these are set, writing shell startup output
     // into the local upload-pack's Git protocol.
     const { SSH_CLIENT: _sshClient, SSH2_CLIENT: _ssh2Client, ...localEnv } = process.env;
@@ -217,31 +230,98 @@ describe("cli", () => {
       GIT_CONFIG_KEY_0: `url.file://${source}.insteadOf`,
       GIT_CONFIG_VALUE_0: "https://github.com/acme/rules.git",
     };
-    const adhere = async (...args: ReadonlyArray<string>) =>
-      (await execFileAsync("bun", [main, ...args], { cwd: root, env })).stdout;
+    const adhereRaw = (...args: ReadonlyArray<string>) =>
+      execFileAsync("bun", [main, ...args], { cwd: root, env });
+    const adhere = async (...args: ReadonlyArray<string>) => (await adhereRaw(...args)).stdout;
+    const refused = (...args: ReadonlyArray<string>) =>
+      adhereRaw(...args).then(
+        () => undefined,
+        (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) =>
+          error,
+      );
+    const listed = (entries: ReadonlyArray<readonly [string, string]>) => {
+      const width = Math.max(...entries.map(([id]) => id.length));
+      return `${entries.map(([id, description]) => `${id.padEnd(width)}  ${description}`).join("\n")}\n`;
+    };
 
     expect(await adhere("list", "acme/rules")).toBe(
-      [
-        "data/columns  (TypeScript, which list does not run)",
-        "data/ports    A port must be branded.",
-        "style/small   A file should be small.",
-        "",
-      ].join("\n"),
+      listed([
+        ["data/columns", "(TypeScript, which list does not run)"],
+        ["data/ports", "A port must be branded."],
+        ["instructions/known", "A rule under a topic named instructions."],
+        ["style/small", "A file should be small."],
+      ]),
     );
-    const installed = ".adhere/rules/acme/rules";
-    expect(await adhere("install", "acme/rules/data")).toBe(
-      `created: ${installed}/data/columns/, ${installed}/data/ports/\nskipped: none\n`,
+    const rulesInstalled = ".adhere/rules/acme/rules";
+    const instructionsInstalled = ".adhere/instructions/acme/rules";
+
+    // A bare repo or a topic needs a choice, and says what --all would copy without a terminal.
+    const bare = await refused("install", "acme/rules");
+    expect(bare?.code).toBe(1);
+    expect(`${bare?.stdout}${bare?.stderr}`).toContain("no terminal to choose from");
+    expect(`${bare?.stdout}${bare?.stderr}`).toContain("instructions/00-workflow.md");
+    expect(`${bare?.stdout}${bare?.stderr}`).toContain("--all");
+    const topic = await refused("install", "acme/rules/data");
+    expect(topic?.code).toBe(1);
+    expect(`${topic?.stdout}${topic?.stderr}`).toContain(
+      "Pass --all to copy every match (data/columns, data/ports), or name one rule exactly",
     );
-    expect(await adhere("install", "acme/rules")).toBe(
-      `created: ${installed}/style/small/\nskipped: ${installed}/data/columns/, ${installed}/data/ports/\n`,
+    // A pin stays in the suggested exact install, so it is not lost by copy-paste.
+    const pinned = await refused("install", "acme/rules#pinned");
+    expect(pinned?.code).toBe(1);
+    expect(`${pinned?.stdout}${pinned?.stderr}`).toContain(
+      "adhere install acme/rules#pinned: no terminal to choose from",
     );
-    expect(await readFile(join(root, installed, "data", "ports", "RULE.md"), "utf8")).toBe(ports);
+    expect(`${pinned?.stdout}${pinned?.stderr}`).toContain("as in acme/rules/data/columns#pinned");
+
+    // An exact rule copies without a terminal, and without instruction files.
+    expect(await adhere("install", "acme/rules/data/ports")).toBe(
+      `created: ${rulesInstalled}/data/ports/\nskipped: none\n`,
+    );
+    // A topic with --all copies its rules, and only them.
+    expect(await adhere("install", "--all", "acme/rules/data")).toBe(
+      `created: ${rulesInstalled}/data/columns/\nskipped: ${rulesInstalled}/data/ports/\n`,
+    );
+    expect(await adhere("install", "--all", "acme/rules/instructions")).toBe(
+      `created: ${rulesInstalled}/instructions/known/\nskipped: none\n`,
+    );
+    // A bare repo with --all copies instruction files first, then the rules left.
+    expect(await adhere("install", "--all", "acme/rules")).toBe(
+      `${[
+        `created: ${instructionsInstalled}/00-workflow.md, ${instructionsInstalled}/security/hardening.md, ${rulesInstalled}/style/small/`,
+        `skipped: ${rulesInstalled}/data/columns/, ${rulesInstalled}/data/ports/, ${rulesInstalled}/instructions/known/`,
+      ].join("\n")}\n`,
+    );
+    expect(await readFile(join(root, rulesInstalled, "data", "ports", "RULE.md"), "utf8")).toBe(
+      ports,
+    );
+    expect(await readFile(join(root, instructionsInstalled, "00-workflow.md"), "utf8")).toBe(
+      workflow,
+    );
+    expect(
+      await readFile(join(root, instructionsInstalled, "security", "hardening.md"), "utf8"),
+    ).toBe(hardening);
     // A rule's directory comes whole, with the helpers its RULE.ts imports.
-    expect((await readdir(join(root, installed, "data", "columns"))).sort()).toEqual([
+    expect((await readdir(join(root, rulesInstalled, "data", "columns"))).sort()).toEqual([
       "RULE.ts",
       "schema.ts",
     ]);
-    expect((await readdir(join(root, installed))).sort()).toEqual(["data", "style"]);
+    expect((await readdir(join(root, rulesInstalled))).sort()).toEqual([
+      "data",
+      "instructions",
+      "style",
+    ]);
+    // What is there is skipped, until --force replaces it.
+    const copiedPorts = join(root, rulesInstalled, "data", "ports", "RULE.md");
+    await writeFile(copiedPorts, "Local edit\n", "utf8");
+    expect(await adhere("install", "--all", "acme/rules/data/ports")).toBe(
+      `created: none\nskipped: ${rulesInstalled}/data/ports/\n`,
+    );
+    expect(await readFile(copiedPorts, "utf8")).toBe("Local edit\n");
+    expect(await adhere("install", "--all", "--force", "acme/rules/data/ports")).toBe(
+      `created: ${rulesInstalled}/data/ports/\nskipped: none\n`,
+    );
+    expect(await readFile(copiedPorts, "utf8")).toBe(ports);
   });
 
   it("removes the temporary clone directory when cloning fails", async () => {

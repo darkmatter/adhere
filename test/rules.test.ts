@@ -2,12 +2,13 @@ import { access, mkdir, readdir, readFile, symlink, writeFile } from "node:fs/pr
 import { tmpdir } from "node:os";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Effect, FileSystem, Layer, Path, Record } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { presetsOf } from "../src/config.ts";
 import { initProject } from "../src/init.ts";
 import { parseRuleMarkdown } from "../src/markdown.ts";
+import { sharedPackageJson } from "../src/oxlint/shared.ts";
 import { presetOf, presets, topicsOf, wholePresetOf } from "../src/presets.ts";
 import { applicableRules, loadAdhereRuleSet, loadRules, shownId } from "../src/rules.ts";
 
@@ -606,7 +607,11 @@ describe("init", () => {
       "README.md",
       ".github/workflows/adhere.yaml",
       "alchemy.run.ts",
+      "lint/index.js",
+      "lint/index.d.ts",
+      "lint/rules.json",
       ".gitignore",
+      ".adhere/instructions/00-workflow.md",
       ".adhere/rules/style/prefer-small-files/RULE.md",
       ".adhere/rules/style/name-domain-actions/RULE.md",
     ]);
@@ -616,7 +621,17 @@ describe("init", () => {
       what: "package.json",
       packageManager: "npm",
     });
-    expect(await read("README.md")).toContain("adhere install acme/standards\n");
+    const readme = await read("README.md");
+    expect(readme).toContain("adhere install acme/standards --all");
+    expect(readme).toContain("instruction files\nfirst, then rules grouped by topic");
+    expect(readme).toContain("needs no terminal");
+    expect(readme).toContain("github:acme/standards#v1.0.0");
+    expect(readme).toContain('from "@acme/standards/lint"');
+    expect(readme).toContain(".adhere/instructions/acme/standards/");
+    expect(readme).toContain("there are no per-rule");
+    expect(await read("lint/rules.json")).toBe("{}\n");
+    expect(await read("lint/index.d.ts")).toContain("export default config;");
+    expect(await read("lint/index.js")).not.toContain("vite-plus");
     expect(await read(".github/workflows/adhere.yaml")).toContain(
       "- run: ~/.local/bin/adhere validate\n        env:\n          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}",
     );
@@ -626,6 +641,91 @@ describe("init", () => {
     expect(stack).toContain('name: "TYPESAFE_API_KEY",');
     expect(stack).toContain('visibility: "public",');
     await expect(access(join(root, ".adhere", "config.ts"))).rejects.toThrow();
+  });
+
+  it("scaffolds a lint export that reads rules.json and resolves shared plugin paths", async () => {
+    const root = join(tmpdir(), `adhere-init-lint-${Date.now()}`);
+    await mkdir(root, { recursive: true });
+    // An existing manifest with no dependencies keeps init's install off the network.
+    await writeFile(join(root, "package.json"), '{ "name": "standards", "type": "module" }\n');
+    const result = await Effect.runPromise(initProject(root, { shared: "Acme/Standards" }));
+    const read = (path: string) => readFile(join(root, path), "utf8");
+
+    expect(result.skipped).toEqual(["package.json"]);
+    expect(JSON.parse(sharedPackageJson("Acme", "Standards"))).toMatchObject({
+      name: "@acme/standards",
+      private: true,
+      type: "module",
+      files: ["lint"],
+      exports: { "./lint": "./lint/index.js" },
+    });
+    expect(await read("lint/rules.json")).toBe("{}\n");
+    const types = await read("lint/index.d.ts");
+    expect(types).toContain("plugins?: SharedPluginName[];");
+    expect(types).toContain("rules: Record<string, SharedRuleLevel>;");
+    expect(types).not.toContain("[setting: string]");
+    const readme = await read("README.md");
+    expect(readme).toContain('from "@acme/standards/lint"');
+    expect(readme).toContain("github:Acme/Standards#v1.0.0");
+    const source = await read("lint/index.js");
+    expect(source).not.toContain("vite-plus");
+    expect(source).not.toContain('from "alchemy');
+    // With no plugins configured the export must omit the key; [] would replace oxlint's defaults.
+    const emptyRoot = join(root, "lint-empty");
+    await mkdir(emptyRoot, { recursive: true });
+    await writeFile(join(emptyRoot, "index.js"), source);
+    await writeFile(join(emptyRoot, "rules.json"), "{}\n");
+    const empty = (await import(pathToFileURL(join(emptyRoot, "index.js")).href)) as {
+      readonly default: Readonly<Record<string, unknown>>;
+    };
+    expect(empty.default).not.toHaveProperty("plugins");
+
+    const plugin = join(root, "lint", "plugins", "acme.js");
+    await mkdir(join(root, "lint", "plugins"), { recursive: true });
+    await writeFile(plugin, 'export default { meta: { name: "acme" }, rules: {} };\n', "utf8");
+    await writeFile(
+      join(root, "lint", "rules.json"),
+      JSON.stringify({
+        plugins: ["react"],
+        options: { typeAware: true },
+        jsPlugins: [
+          "./plugins/acme.js",
+          "some-package",
+          { name: "aliased", specifier: "./plugins/acme.js" },
+        ],
+        rules: { "acme/no-foo": "error" },
+      }),
+      "utf8",
+    );
+
+    // The scaffold writes this module at a temporary path only the test knows, so a static import cannot reach it.
+    const shared = (await import(pathToFileURL(join(root, "lint", "index.js")).href)) as {
+      readonly default: {
+        readonly plugins: ReadonlyArray<string>;
+        readonly jsPlugins: ReadonlyArray<
+          string | { readonly name: string; readonly specifier: string }
+        >;
+        readonly rules: Readonly<Record<string, string>>;
+        readonly options: Readonly<Record<string, unknown>>;
+      };
+      readonly plugins: ReadonlyArray<string>;
+      readonly jsPlugins: ReadonlyArray<
+        string | { readonly name: string; readonly specifier: string }
+      >;
+      readonly rules: Readonly<Record<string, string>>;
+      readonly options: Readonly<Record<string, unknown>>;
+    };
+
+    expect(shared.default).toEqual({
+      plugins: ["react"],
+      options: { typeAware: true },
+      jsPlugins: [plugin, "some-package", { name: "aliased", specifier: plugin }],
+      rules: { "acme/no-foo": "error" },
+    });
+    expect(shared.plugins).toEqual(["react"]);
+    expect(shared.jsPlugins).toEqual(shared.default.jsPlugins);
+    expect(shared.rules).toEqual({ "acme/no-foo": "error" });
+    expect(shared.options).toEqual({ typeAware: true });
   });
 
   it("makes a shared repo private when asked", async () => {

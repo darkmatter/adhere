@@ -262,6 +262,8 @@ export const AdhereConfig = Schema.Struct({
 export const ADHERE_DIRECTORY = ".adhere";
 /** Where a repo keeps its rules by default, one to a directory: `<id>/RULE.md` or `<id>/RULE.ts`. */
 export const RULES_DIRECTORY = `${ADHERE_DIRECTORY}/rules`;
+/** Where a repo keeps the Markdown instruction files postinstall renders into AGENTS.md. */
+export const INSTRUCTIONS_DIRECTORY = `${ADHERE_DIRECTORY}/instructions`;
 export const CACHE_DIRECTORY = `${ADHERE_DIRECTORY}/cache`;
 /** Where a config may live, relative to the working directory. Exactly one may exist. */
 export const CONFIG_FILES = [

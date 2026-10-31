@@ -45,9 +45,10 @@ const flagName = (flag: FlagDoc) =>
 const describe = (description: Option.Option<string>) =>
   Option.match(description, { onNone: () => "", onSome: (text) => ` ${text}` });
 
-const commandSection = (command: Documented) => {
-  const doc = command.buildHelpDoc(["adhere", command.name]);
-  const lines = [`## ${command.name}`, "", doc.description, "", "```sh", doc.usage, "```"];
+const commandSection = (command: Documented, trail: ReadonlyArray<string>): string => {
+  const path = [...trail, command.name];
+  const doc = command.buildHelpDoc(["adhere", ...path]);
+  const lines = [`## ${path.join(" ")}`, "", doc.description, "", "```sh", doc.usage, "```"];
   if (doc.args?.length) {
     lines.push("", "### Arguments", "");
     for (const arg of doc.args)
@@ -60,7 +61,10 @@ const commandSection = (command: Documented) => {
     for (const flag of doc.flags)
       lines.push(`- **${flagName(flag)}.**${describe(flag.description)}`);
   }
-  return lines.join("\n");
+  const children = command.subcommands.flatMap((group) =>
+    group.commands.map((child) => commandSection(child, [...trail, command.name])),
+  );
+  return [lines.join("\n"), ...children].join("\n\n");
 };
 
 const root = cli as unknown as Documented;
@@ -89,8 +93,7 @@ const commands = [
       ]
     : []),
   root.subcommands
-    .flatMap((group) => group.commands)
-    .map(commandSection)
+    .flatMap((group) => group.commands.map((command) => commandSection(command, [])))
     .join("\n\n"),
   "",
 ].join("\n");
