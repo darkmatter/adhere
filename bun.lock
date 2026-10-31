@@ -20,7 +20,7 @@
     },
   },
   "overrides": {
-    "@effect/platform-node-shared": "4.0.3",
+    "@effect/platform-node-shared": "4.1.1",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
     "vitest": "5.0.5",
   },
@@ -35,7 +35,7 @@
 
     "@effect/platform-bun": ["@effect/platform-bun@4.0.3", "", { "dependencies": { "@effect/platform-node-shared": "^4.0.3" }, "peerDependencies": { "effect": "^4.0.3" } }, "sha512-Pl2TXjRTRRvGxtGfYWW8L+B1qkZo8mEx7Itvo2lUd15OQPZGDE111S6JDm9EgGfDK3BUz3sbyNeQD687GQm2iQ=="],
 
-    "@effect/platform-node-shared": ["@effect/platform-node-shared@4.0.3", "", { "dependencies": { "@types/ws": "^8.18.2", "ws": "^8.22.0" }, "peerDependencies": { "effect": "^4.0.3" } }, "sha512-5srkJfmWklWSgwZwlkMeTXobfNtxuwuTCvY9JWdPXRv/PBXAe5kKSptzRxT778oFFsaE9IMI8X61pvkifT9Eug=="],
+    "@effect/platform-node-shared": ["@effect/platform-node-shared@4.1.1", "", { "dependencies": { "@types/ws": "^8.18.2", "ws": "^8.22.0" }, "peerDependencies": { "effect": "^4.1.1" } }, "sha512-29zdEDs3i5W+t92+mWTFNSfzSHsTpZMcFZ9k4lkkz4tETlC1m4lRwjdjieJtvQ/bKHMnYrCtZwizsBFSf3L5Yg=="],
 
     "@inquirer/ansi": ["@inquirer/ansi@2.0.8", "", {}, "sha512-WpQM+Ti6Z40EFwwt+uL2p4UabT+W179zHp6HhLVOzfbwnVn05IPO/eXIZXGNqcT1jbQ15SujNLzQ39k4QPPxBQ=="],
 
