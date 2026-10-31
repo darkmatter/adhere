@@ -67,20 +67,6 @@ const commandSection = (command: Documented, trail: ReadonlyArray<string>): stri
   return [lines.join("\n"), ...children].join("\n\n");
 };
 
-// A command's section, then one for each of its subcommands, as `rules create`.
-const commandSections = (
-  command: Documented,
-  parent: ReadonlyArray<string> = [],
-): ReadonlyArray<string> => {
-  const path = [...parent, command.name];
-  return [
-    commandSection(command, path),
-    ...command.subcommands
-      .flatMap((group) => group.commands)
-      .flatMap((sub) => commandSections(sub, path)),
-  ];
-};
-
 const root = cli as unknown as Documented;
 const rootDoc = root.buildHelpDoc(["adhere"]);
 const commands = [
