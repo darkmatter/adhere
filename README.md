@@ -458,7 +458,9 @@ Then ask your agent to set adhere up.
 Oxlint already checks, something a small Oxlint JS plugin can check exactly, or
 something that needs Jev. A native rule is never copied into `.adhere/`: the
 wizard prints the exact config to add, or, for an organization rule, enables it
-in the shared repo's `lint/rules.json` on a branch for a pull request.
+in the shared repo's `lint/rules.json` on a branch for a pull request and
+refreshes the README index in the same commit. In a shared repo, choosing this
+project writes `lint/rules.json` locally instead of printing a snippet.
 
 ```json
 {
@@ -511,7 +513,8 @@ does not edit your lint config, and prints what to add:
 Run the test with `node .adhere/oxlint/no-foo.test.mjs` (Node 22 or newer). A
 shared repo's plugin stays in `lint/plugins/` as `.js`, with its
 `<plugin>.test.js` beside it, because the shared package is `type: module`; it
-is registered in `lint/rules.json`. A plugin sees only the syntax tree: types,
+is registered in `lint/rules.json`, and the shared repo's README index links
+its enabled rules to the plugin file. A plugin sees only the syntax tree: types,
 other files' contents, or another parser's AST make the convention an adhere
 rule instead.
 
@@ -616,7 +619,9 @@ files and lint is consumed as a package, and with the examples:
 
 - **`README.md`** says what the repo is for, how to install its instructions and
   rules, how to import its lint package, how to add a rule, and how to tag a
-  release.
+  release. It also carries a managed index of the repo's rules and lint
+  settings, generated between `<!-- adhere:rules:start -->` and
+  `<!-- adhere:rules:end -->`.
 - **`.adhere/instructions/00-workflow.md`** and two rules under
   `.adhere/rules/style/` are examples to replace. adhere renders the
   instruction file into a consumer's `AGENTS.md` through
@@ -634,6 +639,18 @@ files and lint is consumed as a package, and with the examples:
   `rules.json` starts empty; native rules and custom plugins are added there.
   See [Oxlint rules and plugins](#oxlint-rules-and-plugins).
 - **`.gitignore`** keeps the installed packages and alchemy's state out of git.
+
+`adhere rules readme` refreshes that index in place: every rule under
+`.adhere/rules/` with the description `adhere list` shows (a `RULE.ts` is named,
+never run), every enabled native setting from `lint/rules.json`, and each
+custom plugin's enabled rules, linked to the plugin. Running `adhere rules
+create` in the shared repo refreshes it after a local write, and a rule or
+plugin pushed for a pull request carries the refreshed block in the same
+commit. A legacy rules-only repo without the `./lint` export keeps its old
+create flow and gets no index or scaffold. The block is deterministic and
+idempotent, prose outside it is untouched, and missing or duplicated markers
+refuse the refresh without a write. Rename or delete a rule by hand, then run
+the command to drop the stale entry.
 
 The repo is public unless you answer yes when init asks, at a terminal, whether
 to make it private. Other repos then need git's credentials for it to list and
@@ -1091,6 +1108,7 @@ adhere lint --log-level debug 2> adhere.log
 | `adhere validate`                 | Check the rules' wording, list rules a linter could check, and ask Jev whether any contradict. See [Validating rules](#validating-rules).                                                                                                                                                                                                                                                                    |
 | `adhere postinstall`              | Render instruction files recursively into a managed block in `AGENTS.md`. See [Compose your AGENTS.md](#compose-your-agentsmd).                                                                                                                                                                                                                                                                              |
 | `adhere rules create [idea]`      | Write a rule with a local coding agent's help (`claude`, `codex`, or `omp`): a native oxlint rule from adhere's catalog is enabled or printed with its exact options, a mechanical convention becomes an approved oxlint JS plugin tested on Node 22 or newer, and the rest are judged excerpts and a `RULE.md` or `RULE.ts`; org rules are pushed to the shared repo for a PR. `--setup` re-picks defaults. |
+| `adhere rules readme`             | Refresh the managed index in a shared repo's README from `.adhere/rules/` and `lint/rules.json`: links and descriptions for rules, enabled native Oxlint settings, and custom plugins with their enabled rules. See [Creating a shared repo](#creating-a-shared-repo).                                                                                                                                       |
 | `adhere init [--force]`           | Scaffold `.adhere/config.ts`, `.adhere/tsconfig.json`, and two example rules. See [Init](#init).                                                                                                                                                                                                                                                                                                             |
 | `adhere init --shared org/repo`   | Scaffold a repo of instructions, rules, and a `lint/` package other repos use. See [Creating a shared repo](#creating-a-shared-repo).                                                                                                                                                                                                                                                                        |
 | `adhere list org/repo`            | List the rules in another repo's `.adhere/rules/`, with their descriptions. See [Install rules from other repos](#install-rules-from-other-repos).                                                                                                                                                                                                                                                           |

@@ -25,6 +25,7 @@ adhere postinstall               # render .adhere/instructions/**/*.md into AGEN
 adhere login                     # save a TypeSafe AI API key; TYPESAFE_API_KEY takes precedence
 adhere validate                  # rule wording, rules a linter could check, contradictions
 adhere rules create [idea]       # native rule, approved plugin, or rule file; org PR
+adhere rules readme              # refresh a shared repo README's managed index
 adhere lint                      # judge the working directory; exit 1 on an error finding
 adhere lint --limit 0            # compiler-free counts/cache plan; no budgeting
 adhere lint --limit 100          # first 100 files needing requests; all pending rules per file
@@ -317,7 +318,9 @@ A convention a linter can decide exactly does not belong in a `RULE.md`.
   nothing. Banning lodash with `no-restricted-imports` becomes
   `["error", { "paths": [{ "name": "lodash" }] }]`. A project rule prints the
   exact config; an organization rule enables it in the shared `lint/rules.json`
-  and pushes a branch for a pull request. A rule from a plugin Oxlint leaves off
+  and pushes a branch for a pull request with the README index refreshed. In a
+  shared repo itself, "this project" writes `lint/rules.json` locally instead
+  of printing the config. A rule from a plugin Oxlint leaves off
   by default also needs that plugin in `plugins`, whose list replaces Oxlint's
   default set. A type-aware rule needs
   `options.typeAware` and `oxlint-tsgolint`, which Vite+ includes.
@@ -366,8 +369,17 @@ Oxlint. `adhere validate` reports rules left over that a linter could check.
 ## Shared repos
 
 An organization keeps its instructions, rules, and lint settings in one repo,
-scaffolded by `adhere init --shared org/repo`. Other repos copy the first two
-with `adhere install`:
+scaffolded by `adhere init --shared org/repo`. Its `README.md` carries a
+managed index between `<!-- adhere:rules:start -->` and
+`<!-- adhere:rules:end -->`: every rule with its description and `RULE.md`
+link, every enabled native setting in `lint/rules.json` with its severity, and
+each custom plugin's enabled rules linked to `lint/plugins/<name>.js`. Refresh
+it locally with `adhere rules readme` after renaming or deleting a rule; it
+preserves prose outside the block, omits off settings, never runs a `RULE.ts`
+or plugin, and refuses malformed markers without writing. `adhere rules create`
+refreshes it for local writes and stages it with shared-repo branches.
+
+Other repos copy the first two with `adhere install`:
 
 ```sh
 adhere list org/repo                  # rules and descriptions; instructions are not listed

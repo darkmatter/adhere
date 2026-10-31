@@ -39,7 +39,10 @@ attempted. One failed test gets one agent repair, you approve the repaired
 plugin, and it runs again. Nothing is written unless the tests pass. A project
 plugin and its test land in `.adhere/oxlint/` as `.mjs` files; add the printed
 `jsPlugins` entry to your lint config. A shared plugin goes in `lint/plugins/`
-as `.js` and is registered in `lint/rules.json`.
+as `.js` and is registered in `lint/rules.json`. A shared repo's README index
+is refreshed in the same commit as the rule or plugin; when you run the wizard
+inside the shared repo itself, choosing this project writes its
+`lint/rules.json` or `lint/plugins/` locally.
 
 ```sh
 skills add darkmatter/adhere   # install adhere's skills for your agent

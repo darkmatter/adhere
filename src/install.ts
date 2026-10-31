@@ -199,6 +199,16 @@ export const describeRules = (source: Source, clone: string, rules: ReadonlyArra
     }),
   );
 
+/**
+ * Every rule under `root`'s `.adhere/rules/`, with the description `adhere
+ * list` shows. Reads a RULE.md only; a RULE.ts is named, never run.
+ */
+export const describeRulesAt = (root: string) =>
+  Effect.gen(function* () {
+    const rules = yield* rulesIn(root);
+    return yield* describeRules({ repo: "this repo", rule: "" }, root, rules);
+  });
+
 /** The rules a source's topic or id names, in catalog order. */
 const rulesNamed = (source: Source, catalog: Catalog): ReadonlyArray<CatalogRule> =>
   source.rule === ""

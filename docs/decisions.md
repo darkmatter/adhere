@@ -73,6 +73,40 @@ so a local file two directories deep is also grouped with copied files. The
 rule is deterministic, so an unchanged set of files always produces the same
 `AGENTS.md` block.
 
+## The shared README index is managed, not generated wholesale
+
+A shared repo's README lists what it offers, and that list is generated from
+the checkout between `<!-- adhere:rules:start -->` and
+`<!-- adhere:rules:end -->`: each rule under `.adhere/rules/` with the
+description `adhere list` shows, each enabled setting in `lint/rules.json` with
+its severity, and each custom plugin's enabled rules linked to its file. Rules
+sort by id and entries render one per line, so the same checkout always writes
+the same block. Descriptions come from `RULE.md` frontmatter through the same
+discovery `adhere list` uses; a `RULE.ts` is named but never imported, and a
+plugin's code is never loaded. A rule with an `off` setting is omitted.
+
+Only the block is replaced. The README also carries setup, install, and release
+prose written by hand, so regenerating the whole file would destroy it, and
+appending a fresh list on every change would accumulate stale entries. Markers
+make the managed region explicit and idempotent, and a missing, duplicated, or
+out-of-order marker refuses the refresh before any write rather than guessing
+at a repair. `adhere init --shared` writes the block into its scaffold and
+refreshes it after the example rules land; re-running it over an existing
+README updates only the block.
+
+`adhere rules readme` is the local refresh, for edits, renames, and deletions
+made by hand. Shared-repo create flows also refresh before committing: a rule
+or plugin pushed for a pull request carries the index in the same commit, and a
+local write refreshes it afterward. When the working directory is itself the
+shared repo, "this project" means its `lint/` package: native settings are
+written to `lint/rules.json` and plugins to `lint/plugins/` locally instead of
+printing a consumer snippet. The shared repo is recognized by the metadata
+`init --shared` writes, a `package.json` exporting `./lint`, not by the
+presence of `.adhere/rules/`, which every project with rules has. A legacy
+rules-only org repo without that export keeps its previous create flow and
+gets no index or scaffold. Malformed markers fail the refresh before any push,
+rather than suppressing the error and publishing a stale index.
+
 ## A versioned native catalog, and syntax-only custom plugins
 
 `adhere rules create` may route a convention to one of two linter paths, and

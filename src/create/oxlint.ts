@@ -17,6 +17,8 @@ import { reviewedInRepository } from "#create/examples.ts";
 import { decided, line, note, outro, spinning, warn } from "#create/look.ts";
 import { cloned } from "#install.ts";
 import { oxlintCatalog, oxlintRule, type OxlintRule } from "#oxlint/catalog.ts";
+import { SHARED_LINT_RULES } from "#oxlint/shared.ts";
+import { isSharedRepo, refreshIndexIfShared, refreshReadme, validateReadme } from "#readme.ts";
 import { Effect, FileSystem, Option, Path } from "effect";
 import { Prompt } from "effect/cli";
 import { spawn, spawnSync } from "node:child_process";
@@ -631,8 +633,40 @@ const readSharedConfig = (file: string) =>
       : ({ _tag: "Invalid" } as const);
   });
 
+/**
+ * The shared config with a native rule on, or why it cannot be merged or is
+ * already on. Writes nothing.
+ */
+const nativeSettingsFor = (file: string, id: string, options: ReadonlyArray<unknown>) =>
+  Effect.gen(function* () {
+    const read = yield* readSharedConfig(file);
+    if (read._tag === "Invalid") {
+      yield* warn(file + " is not valid JSON; left it unchanged.");
+      return undefined;
+    }
+    const plugins = pluginsProblem(read.config);
+    if (plugins !== undefined) {
+      yield* warn(file + ": " + plugins + "; left it unchanged.");
+      return undefined;
+    }
+    const next = enabledNative(read.config, id, options);
+    if (next === read.config) return { _tag: "Already" } as const;
+    const before = isRecord(read.config.rules) ? read.config.rules[id] : undefined;
+    const after = isRecord(next.rules) ? next.rules[id] : undefined;
+    if (before !== undefined && !isDeepStrictEqual(before, after)) {
+      yield* warn(
+        "Replacing the existing setting " +
+          JSON.stringify(before) +
+          " with " +
+          JSON.stringify(after) +
+          ".",
+      );
+    }
+    return { _tag: "Ready", config: next } as const;
+  });
+
 /** A native oxlint rule already checks this: print its settings, or enable it in the shared repo. */
-const createBuiltin = (rule: OxlintRule, shape: Shape, shared: string | undefined) =>
+const createBuiltin = (rule: OxlintRule, shape: Shape, root: string, shared: string | undefined) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -654,7 +688,32 @@ const createBuiltin = (rule: OxlintRule, shape: Shape, shared: string | undefine
     yield* note("Docs: " + rule.docsUrl);
     yield* note("Setting: " + JSON.stringify(nativeSetting(shape.linterOptions)));
 
-    const scope = yield* chooseWhere(shared, shape.scope, "Print the config snippet");
+    const sharedHere = yield* isSharedRepo(root);
+    const scope = yield* chooseWhere(
+      shared,
+      shape.scope,
+      sharedHere ? "Write this shared repo's lint/rules.json" : "Print the config snippet",
+    );
+    if (scope === "project" && sharedHere) {
+      const write = yield* Prompt.run(
+        Prompt.Confirm({
+          message: "Enable " + rule.id + " in this repo's " + SHARED_LINT_RULES + "?",
+          initial: true,
+        }),
+      );
+      if (!write) return yield* outro("Nothing written.");
+      yield* validateReadme(root);
+      const file = path.join(root, SHARED_LINT_RULES);
+      const settings = yield* nativeSettingsFor(file, rule.id, shape.linterOptions);
+      if (settings === undefined) return yield* outro("Nothing written.");
+      if (settings._tag === "Already") {
+        return yield* outro(rule.id + " is already enabled in this repo.");
+      }
+      yield* fs.makeDirectory(path.dirname(file), { recursive: true });
+      yield* fs.writeFileString(file, JSON.stringify(settings.config, null, 2) + "\n");
+      const refreshed = yield* refreshReadme(root);
+      return yield* outro("Updated " + SHARED_LINT_RULES + " in this repo.\n" + refreshed.message);
+    }
     if (scope === "project") {
       yield* line("");
       yield* line("Add this to the project's oxlint config:");
@@ -674,37 +733,20 @@ const createBuiltin = (rule: OxlintRule, shape: Shape, shared: string | undefine
     );
     if (!write) return yield* outro("Nothing written.");
     const repo = yield* spinning("Cloning " + shared, cloned({ repo: shared, rule: "" }));
-    const file = path.join(repo, "lint", "rules.json");
-    const read = yield* readSharedConfig(file);
-    if (read._tag === "Invalid") {
-      yield* warn(file + " is not valid JSON; left it unchanged.");
-      return yield* outro("Nothing written.");
-    }
-    const plugins = pluginsProblem(read.config);
-    if (plugins !== undefined) {
-      yield* warn(file + ": " + plugins + "; left it unchanged.");
-      return yield* outro("Nothing written.");
-    }
-    const next = enabledNative(read.config, rule.id, shape.linterOptions);
-    if (next === read.config) {
+    const file = path.join(repo, SHARED_LINT_RULES);
+    const settings = yield* nativeSettingsFor(file, rule.id, shape.linterOptions);
+    if (settings === undefined) return yield* outro("Nothing written.");
+    if (settings._tag === "Already") {
       return yield* outro(rule.id + " is already enabled in " + shared + ".");
     }
-    const before = isRecord(read.config.rules) ? read.config.rules[rule.id] : undefined;
-    const after = isRecord(next.rules) ? next.rules[rule.id] : undefined;
-    if (before !== undefined && !isDeepStrictEqual(before, after)) {
-      yield* warn(
-        "Replacing the existing setting " +
-          JSON.stringify(before) +
-          " with " +
-          JSON.stringify(after) +
-          ".",
-      );
-    }
     yield* fs.makeDirectory(path.dirname(file), { recursive: true });
-    yield* fs.writeFileString(file, JSON.stringify(next, null, 2) + "\n");
+    yield* fs.writeFileString(file, JSON.stringify(settings.config, null, 2) + "\n");
+    const indexed = yield* refreshIndexIfShared(repo);
     const branch = "adhere/oxlint-" + rule.id.replaceAll("/", "-");
     yield* git(repo, ["switch", "--quiet", "--create", branch]);
-    yield* git(repo, ["add", "--", path.relative(repo, file)]);
+    const staged = [path.relative(repo, file)];
+    if (indexed) staged.push("README.md");
+    yield* git(repo, ["add", "--", ...staged]);
     yield* git(repo, ["commit", "--quiet", "--message", "Enable oxlint rule " + rule.id]);
     yield* git(repo, ["push", "--quiet", "origin", branch]);
     yield* outro(
@@ -727,7 +769,12 @@ const createPlugin = (
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const id = shape.names.find((name) => RULE_ID.test(name)) ?? "oxlint/plugin";
-    const scope = yield* chooseWhere(shared, shape.scope, ".adhere/oxlint/");
+    const sharedHere = yield* isSharedRepo(root);
+    const scope = yield* chooseWhere(
+      shared,
+      shape.scope,
+      sharedHere ? "Write this shared repo's lint/plugins/" : ".adhere/oxlint/",
+    );
 
     // Examples come from the project the user is in, not from the shared clone.
     const reviewed = yield* reviewedInRepository(agent, root, idea, id);
@@ -746,7 +793,7 @@ const createPlugin = (
     if (tester === undefined) {
       return yield* outro("Nothing written: this project has no oxlint to run the test with.");
     }
-    const extension = scope === "org" ? ".js" : ".mjs";
+    const extension = scope === "org" || sharedHere ? ".js" : ".mjs";
     const test = checkInTestSource({
       tester: tester.specifier,
       pluginFile: draft.pluginName + extension,
@@ -755,6 +802,41 @@ const createPlugin = (
       invalid: draft.invalid,
     });
 
+    if (scope === "project" && sharedHere) {
+      const files = sharedFiles(root, draft.pluginName);
+      const write = yield* Prompt.run(
+        Prompt.Confirm({
+          message:
+            "Write " +
+            path.relative(root, files.plugin) +
+            " and " +
+            path.relative(root, files.test) +
+            ", and enable it in " +
+            SHARED_LINT_RULES +
+            "?",
+          initial: true,
+        }),
+      );
+      if (!write) return yield* outro("Nothing written.");
+      yield* validateReadme(root);
+      const config = yield* readSharedConfig(files.config);
+      if (config._tag === "Invalid") {
+        yield* warn(files.config + " is not valid JSON; left it unchanged.");
+        return yield* outro("Nothing written.");
+      }
+      yield* fs.makeDirectory(path.dirname(files.plugin), { recursive: true });
+      yield* fs.writeFileString(files.plugin, draft.plugin + "\n");
+      yield* fs.writeFileString(files.test, test);
+      yield* fs.writeFileString(
+        files.config,
+        JSON.stringify(enabledPlugin(config.config, draft.pluginName, draft.ruleName), null, 2) +
+          "\n",
+      );
+      const refreshed = yield* refreshReadme(root);
+      return yield* outro(
+        "Wrote " + path.relative(root, files.plugin) + " and its test.\n" + refreshed.message,
+      );
+    }
     if (scope === "project") {
       const files = projectFiles(root, draft.pluginName);
       const write = yield* Prompt.run(
@@ -805,10 +887,12 @@ const createPlugin = (
       JSON.stringify(enabledPlugin(config.config, draft.pluginName, draft.ruleName), null, 2) +
         "\n",
     );
+    const indexed = yield* refreshIndexIfShared(repo);
     const branch = "adhere/oxlint-" + draft.pluginName + "-" + draft.ruleName;
     const changed = [files.plugin, files.test, files.config].map((file) =>
       path.relative(repo, file),
     );
+    if (indexed) changed.push("README.md");
     yield* git(repo, ["switch", "--quiet", "--create", branch]);
     yield* git(repo, ["add", "--", ...changed]);
     yield* git(repo, [
@@ -838,6 +922,6 @@ export const createOxlintRule = (work: OxlintWork) =>
   Effect.gen(function* () {
     const native = work.shape.linter === null ? undefined : oxlintRule(work.shape.linter);
     return native !== undefined
-      ? yield* createBuiltin(native, work.shape, work.shared)
+      ? yield* createBuiltin(native, work.shape, work.root, work.shared)
       : yield* createPlugin(work.agent, work.idea, work.shape, work.root, work.shared);
   });

@@ -52,6 +52,7 @@ import { renderInstructions } from "#instructions.ts";
 import { formatLinterCheck, tallyProjectRules } from "#mechanical.ts";
 import { type PresetName, presetNames } from "#presets.ts";
 import type { SavedKey } from "#providers/provider.ts";
+import { refreshSharedReadme } from "#readme.ts";
 import { globalRuleSet } from "#rules.ts";
 import { formatStrays, straysAmong } from "#wording.ts";
 import {
@@ -768,9 +769,25 @@ const rulesCreateCommand = Command.make(
   ),
 );
 
+/**
+ * `adhere rules readme`: refresh the managed index in a shared rules repo's
+ * README from the rules and lint config checked out there.
+ */
+const rulesReadmeCommand = Command.make("readme", {}, () =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    const refreshed = yield* refreshSharedReadme(path.resolve());
+    yield* Console.log(refreshed.message);
+  }).pipe(Effect.provide(statusLayer)),
+).pipe(
+  Command.withDescription(
+    "Refresh the managed index in a shared rules repo's README from .adhere/rules/ and lint/rules.json: each rule's link and description, each enabled native Oxlint setting, and each custom plugin's enabled rules. Run it in the shared repo after adding, renaming, or deleting a rule, or changing a lint setting; it preserves the rest of the README and refuses malformed markers.",
+  ),
+);
+
 export const rulesCommand = Command.make("rules").pipe(
   Command.withDescription("Work on this repo's rules."),
-  Command.withSubcommands([rulesCreateCommand]),
+  Command.withSubcommands([rulesCreateCommand, rulesReadmeCommand]),
 );
 
 export const postinstallCommand = Command.make("postinstall", {}, () =>

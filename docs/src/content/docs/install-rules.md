@@ -101,7 +101,9 @@ files and lint is consumed as a package, and with the examples:
 
 - **`README.md`** says what the repo is for, how to install its instructions and
   rules, how to import its lint package, how to add a rule, and how to tag a
-  release.
+  release. It also carries a managed index, between
+  `<!-- adhere:rules:start -->` and `<!-- adhere:rules:end -->`, of its rules,
+  enabled native Oxlint settings, and custom plugins.
 - **`.adhere/instructions/00-workflow.md`** and two rules under
   `.adhere/rules/style/` are examples to replace. adhere renders the
   instruction file into a consumer's `AGENTS.md` through
@@ -118,6 +120,17 @@ files and lint is consumed as a package, and with the examples:
   plain ESM Oxlint config consumers spread into Vite+ or plain Oxlint.
   `rules.json` starts empty; native rules and custom plugins are added there.
 - **`.gitignore`** keeps the installed packages and alchemy's state out of git.
+
+`adhere rules readme` refreshes that index from the checkout: each rule under
+`.adhere/rules/` with its description, each enabled setting in `lint/rules.json`
+with its severity, and each custom plugin's enabled rules, linked to the plugin
+file. It reads a `RULE.ts` by name only, never runs it, and touches nothing
+outside the markers. `adhere rules create` refreshes the index after writing
+locally in the shared repo, and a rule or plugin pushed to a shared repo for a
+pull request carries the refreshed block in the same commit. Rename or delete a
+rule by hand, then run the command to remove the stale entry. Missing,
+duplicated, or out-of-order markers refuse the refresh and leave the README
+unchanged.
 
 The repo is public unless you answer yes when init asks, at a terminal, whether
 to make it private. Other repos then need git's credentials for it to list and

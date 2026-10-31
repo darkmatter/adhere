@@ -25,6 +25,7 @@ import { oxlintRule } from "#oxlint/catalog.ts";
 import { decided, indented, intro, line, look, note, outro, spinning, warn } from "#create/look.ts";
 import { cloned } from "#install.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
+import { isSharedRepo, refreshIndexIfShared, refreshReadme, validateReadme } from "#readme.ts";
 import { importRule } from "#rules.ts";
 import { findConfigFile, loadConfigFile } from "#services/AdhereConfig.ts";
 import { adhereConfigDirectory } from "#services/Credentials.ts";
@@ -314,6 +315,8 @@ export const createRule = Effect.fn("createRule")(
         return yield* outro("Nothing written.");
       }
     }
+    const sharedHere = scope === "project" ? yield* isSharedRepo(root) : false;
+    if (sharedHere) yield* validateReadme(root);
     yield* fs.makeDirectory(path.dirname(file), { recursive: true });
     yield* fs.writeFileString(file, `${text}\n`);
 
@@ -331,8 +334,9 @@ export const createRule = Effect.fn("createRule")(
           `${id} needs ${needed.join(" and ")} in ${configFile ?? CONFIG_FILES[0]}${shape.typeAware ? " (or lint --type-aware)" : ""}. Until then, lint judges it without that context.`,
         );
       }
+      const refreshed = sharedHere ? yield* refreshReadme(root) : undefined;
       return yield* outro(
-        `Wrote ${path.relative(root, file)}.\nRun adhere validate to check it against your other rules.`,
+        `Wrote ${path.relative(root, file)}.\n${refreshed === undefined ? "" : `${refreshed.message}\n`}Run adhere validate to check it against your other rules.`,
       );
     }
     const needed = settingsFor(shape, {});
@@ -340,8 +344,13 @@ export const createRule = Effect.fn("createRule")(
       needed.length === 0
         ? []
         : [`Repos that install it need ${needed.join(" and ")} in their adhere config.`];
+    // A shared repo's index joins the rule in one commit and one pull request;
+    // a legacy rules-only repo has no index to refresh.
+    const indexed = yield* refreshIndexIfShared(repo);
     yield* git(repo, ["switch", "--quiet", "--create", branch]);
-    yield* git(repo, ["add", "--", path.relative(repo, file)]);
+    const staged = [path.relative(repo, file)];
+    if (indexed) staged.push("README.md");
+    yield* git(repo, ["add", "--", ...staged]);
     yield* git(repo, [
       "commit",
       "--quiet",

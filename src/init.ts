@@ -12,6 +12,7 @@ import {
   sharedPackageJson,
   sharedPackageName,
 } from "#oxlint/shared.ts";
+import { README_END, README_START, refreshReadme } from "#readme.ts";
 import { Effect, Schema } from "effect";
 
 export interface InitResult {
@@ -141,6 +142,15 @@ for ${org}'s repositories. \`.adhere/rules/\` holds the rules Jev judges files
 against, \`.adhere/instructions/\` holds instruction files for \`AGENTS.md\`, and
 \`lint/\` is a plain ESM Oxlint config package for rules a linter can check
 exactly.
+
+## Rules and lint settings
+
+The list below is generated from \`.adhere/rules/\` and \`lint/rules.json\` by
+\`adhere rules readme\`. Run it after adding, renaming, or deleting a rule, or
+after changing a lint setting; it replaces only the block between its markers.
+
+${README_START}
+${README_END}
 
 ## Use these rules
 
@@ -511,12 +521,24 @@ export const initProject = (
       }
       // A config at another path is in the project's own tsconfig, or not ours to place.
       if (path === CONFIG_PROJECT && existing !== undefined) continue;
+      // A shared README holds the author's prose; refresh its managed block instead.
+      if (
+        options.shared !== undefined &&
+        path === "README.md" &&
+        (yield* Effect.promise(() => exists(join(root, path))))
+      ) {
+        skipped.push(relative(root, join(root, path)));
+        continue;
+      }
       const status = yield* writeScaffoldFile(root, path, contents, options);
       if (status === "created") {
         created.push(relative(root, join(root, path)));
       } else {
         skipped.push(relative(root, join(root, path)));
       }
+    }
+    if (options.shared !== undefined) {
+      yield* refreshReadme(root).pipe(Effect.mapError((cause) => new Error(cause.message)));
     }
     const install = yield* installPackages(root, options.shared !== undefined);
     return { created, skipped, install };
