@@ -10,7 +10,6 @@ import { Prompt } from "effect/cli";
 
 const rgbColor = (r: number, g: number, b: number) => `\x1B[38;2;${r};${g};${b}m`;
 const colorCode = (n: number) => `\x1B[38;5;${n}m`;
-const ESC = `\x1B[0m`;
 const COLORS = {
   PURPLE: colorCode(99),
   KIWI: colorCode(156),
