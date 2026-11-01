@@ -351,6 +351,18 @@ A convention a linter can decide exactly does not belong in a `RULE.md`.
   plugin, then it runs again. Nothing is written unless the tests pass.
 - **An adhere rule**, for judgment, facts outside the file, or types.
 
+Whichever route it takes, the draft is trialled on real files before anything
+is written: the first 100 applicable files by default, the entire repo, or a
+number the user types, with the plan's known cost shown first. The authoring
+agent reads the saved report in `.adhere/trial/` and the source it names, then
+the user accepts the findings, reviews each as correct, a false positive, or
+unsure, or asks for a revision. Findings and examples take optional notes for
+the agent; a revision is re-approved and reruns the same files, so the new
+evidence is comparable. Skipping is allowed, but the write prompt then says
+`(not trialled)` and the closing line says `Not trialled: …`; nothing is called
+validated on a skipped, partial, or stale run. The trial runs for native
+settings and approved plugins too.
+
 A project plugin and its checked-in test go to
 `.adhere/oxlint/<plugin>.mjs` and `.adhere/oxlint/<plugin>.test.mjs`; the
 `.mjs` keeps ESM in a `type: commonjs` package. adhere prints the config to add
