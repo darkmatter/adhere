@@ -1,6 +1,6 @@
 {
   "name": "@drkmttr/adhere",
-  "version": "0.21.2",
+  "version": "0.22.0",
   "private": false,
   "description": "Lints a repository against the rules in .adhere/, judged by Jev.",
   "license": "MIT",
