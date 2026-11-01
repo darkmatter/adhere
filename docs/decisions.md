@@ -147,3 +147,31 @@ newer Oxlint may have rules the catalog does not suggest. Plugin tests always
 use the consumer's Oxlint. `bun run oxlint:catalog` regenerates the snapshot
 and its documentation summaries; `bun run oxlint:catalog:check` verifies it
 offline, and CI enforces the check.
+
+## Trial before write, then review the evidence
+
+A rule the wizard has only checked for wording or syntax is not evidence that
+it judges real code the way its author meant. `adhere rules create` therefore
+runs the draft on real files before writing or pushing anything, for all three
+routes: an adhere rule, a native Oxlint setting, and a custom plugin. The
+default is the first 100 applicable files, cached files included; the user may
+choose the entire repo or type a positive whole number, or skip. The plan is
+shown before it runs, with requests, tokens, and a price only when the provider
+actually knows one; adhere never invents a cost or substitutes another judge
+when the provider is unavailable.
+
+After every actual run the authoring agent reads the saved report under
+`.adhere/trial/` and the source it names. The user then accepts the findings,
+reviews each as correct, a false positive, or unsure, or asks for a revision.
+Hundreds of per-finding prompts are not forced: accepting the batch takes one
+optional note, and drilling into individual findings is a choice. Every
+finding and every example verdict accepts an optional note, and the revision
+prompt carries those notes plus the report path and counts.
+
+A revision is executable code or settings again, so it is re-approved before it
+runs. The rerun judges the same pinned files as the first run, not a fresh
+selection, so the new evidence is comparable; if a pinned file is no longer
+eligible the trial fails rather than quietly choosing another. A skipped,
+failed, or cancelled trial leaves the draft explicitly untested: the write
+prompt says `(not trialled)`, the closing line says `Not trialled: …`, and
+nothing claims validation from stale, partial, or skipped data.

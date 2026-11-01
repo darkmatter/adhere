@@ -47,7 +47,10 @@ export const loadConfigFile = Effect.fn("AdhereConfig.load")(function* (file: st
   );
 });
 
-const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (name: PresetName, base: string) {
+export const loadPreset = Effect.fn("AdhereConfig.loadPreset")(function* (
+  name: PresetName,
+  base: string,
+) {
   const { topic, ...preset } = presetOf(name);
   const all = yield* materializeRules(preset.rules, base);
   const rules =

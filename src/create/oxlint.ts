@@ -7,14 +7,18 @@
 import { type Agent, run } from "#create/agents.ts";
 import {
   type Shape,
+  NativeRevision,
   PluginDraft,
   RuleNotCreated,
   askingFor,
+  nativeRevisionPrompt,
   pluginFixPrompt,
   pluginPrompt,
+  pluginRevisionPrompt,
 } from "#create/ask.ts";
 import { reviewedInRepository } from "#create/examples.ts";
 import { decided, line, note, outro, spinning, warn } from "#create/look.ts";
+import { trialAndReview, trialStatus } from "#create/trial-review.ts";
 import { cloned } from "#install.ts";
 import { oxlintCatalog, oxlintRule, type OxlintRule } from "#oxlint/catalog.ts";
 import { SHARED_LINT_RULES } from "#oxlint/shared.ts";
@@ -666,7 +670,14 @@ const nativeSettingsFor = (file: string, id: string, options: ReadonlyArray<unkn
   });
 
 /** A native oxlint rule already checks this: print its settings, or enable it in the shared repo. */
-const createBuiltin = (rule: OxlintRule, shape: Shape, root: string, shared: string | undefined) =>
+const createBuiltin = (
+  agent: Agent,
+  idea: string,
+  rule: OxlintRule,
+  shape: Shape,
+  root: string,
+  shared: string | undefined,
+) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -688,6 +699,34 @@ const createBuiltin = (rule: OxlintRule, shape: Shape, root: string, shared: str
     yield* note("Docs: " + rule.docsUrl);
     yield* note("Setting: " + JSON.stringify(nativeSetting(shape.linterOptions)));
 
+    const outcome = yield* trialAndReview({
+      agent,
+      root,
+      id: rule.id,
+      draft: shape.linterOptions,
+      toDraft: (options) => ({
+        kind: "native",
+        id: rule.id,
+        options,
+        config: enabledNative({}, rule.id, options),
+      }),
+      approve: (options) => Effect.succeed({ _tag: "Approved", draft: options } as const),
+      revise: (options, evidence) =>
+        Effect.gen(function* () {
+          const revised = yield* askingFor(
+            agent,
+            "to revise the oxlint settings",
+            root,
+            nativeRevisionPrompt(idea, rule.id, options, evidence),
+            NativeRevision,
+          );
+          return revised.options;
+        }),
+      show: (options) => note("Setting: " + JSON.stringify(nativeSetting(options))),
+    });
+    if (outcome._tag === "Cancelled") return yield* outro("Nothing written.");
+    const options = outcome.draft;
+
     const sharedHere = yield* isSharedRepo(root);
     const scope = yield* chooseWhere(
       shared,
@@ -704,7 +743,7 @@ const createBuiltin = (rule: OxlintRule, shape: Shape, root: string, shared: str
       if (!write) return yield* outro("Nothing written.");
       yield* validateReadme(root);
       const file = path.join(root, SHARED_LINT_RULES);
-      const settings = yield* nativeSettingsFor(file, rule.id, shape.linterOptions);
+      const settings = yield* nativeSettingsFor(file, rule.id, options);
       if (settings === undefined) return yield* outro("Nothing written.");
       if (settings._tag === "Already") {
         return yield* outro(rule.id + " is already enabled in this repo.");
@@ -712,16 +751,24 @@ const createBuiltin = (rule: OxlintRule, shape: Shape, root: string, shared: str
       yield* fs.makeDirectory(path.dirname(file), { recursive: true });
       yield* fs.writeFileString(file, JSON.stringify(settings.config, null, 2) + "\n");
       const refreshed = yield* refreshReadme(root);
-      return yield* outro("Updated " + SHARED_LINT_RULES + " in this repo.\n" + refreshed.message);
+      return yield* outro(
+        "Updated " +
+          SHARED_LINT_RULES +
+          " in this repo.\n" +
+          trialStatus(outcome) +
+          "\n" +
+          refreshed.message,
+      );
     }
     if (scope === "project") {
       yield* line("");
       yield* line("Add this to the project's oxlint config:");
-      yield* line(nativeSnippet(rule.id, shape.linterOptions));
+      yield* line(nativeSnippet(rule.id, options));
       return yield* outro(
         "oxlint " +
           oxlintCatalog.version +
-          " provides this rule. Apply the snippet with a compatible oxlint version; no adhere rule was created.",
+          " provides this rule. Apply the snippet with a compatible oxlint version; no adhere rule was created.\n" +
+          trialStatus(outcome),
       );
     }
     if (shared === undefined) return yield* outro("Nothing written.");
@@ -734,7 +781,7 @@ const createBuiltin = (rule: OxlintRule, shape: Shape, root: string, shared: str
     if (!write) return yield* outro("Nothing written.");
     const repo = yield* spinning("Cloning " + shared, cloned({ repo: shared, rule: "" }));
     const file = path.join(repo, SHARED_LINT_RULES);
-    const settings = yield* nativeSettingsFor(file, rule.id, shape.linterOptions);
+    const settings = yield* nativeSettingsFor(file, rule.id, options);
     if (settings === undefined) return yield* outro("Nothing written.");
     if (settings._tag === "Already") {
       return yield* outro(rule.id + " is already enabled in " + shared + ".");
@@ -752,6 +799,7 @@ const createBuiltin = (rule: OxlintRule, shape: Shape, root: string, shared: str
     yield* outro(
       [
         "Pushed " + branch + " to " + shared + ".",
+        trialStatus(outcome),
         "Open the pull request: https://github.com/" + shared + "/compare/" + branch + "?expand=1",
       ].join("\n"),
     );
@@ -780,15 +828,42 @@ const createPlugin = (
     const reviewed = yield* reviewedInRepository(agent, root, idea, id);
     const prompt = pluginPrompt(idea, id, reviewed);
     const first = yield* askingFor(agent, "to write the oxlint plugin", root, prompt, PluginDraft);
-    const decision = yield* approvedPlugin(agent, root, prompt, first);
-    if (decision._tag === "Declined") return yield* outro("Nothing written.");
-    if (decision._tag === "Unavailable") {
-      return yield* outro("Nothing written: oxlint's RuleTester could not run here.");
-    }
-    if (decision._tag === "Failed") {
-      return yield* outro("Nothing written: the plugin did not pass its examples.");
-    }
-    const draft = decision.draft;
+    const outcome = yield* trialAndReview({
+      agent,
+      root,
+      id: first.pluginName + "/" + first.ruleName,
+      draft: first,
+      toDraft: (draft) => ({
+        kind: "plugin",
+        pluginName: draft.pluginName,
+        ruleName: draft.ruleName,
+        plugin: draft.plugin,
+        config: enabledPlugin({}, draft.pluginName, draft.ruleName),
+      }),
+      approve: (draft) =>
+        approvedPlugin(agent, root, prompt, draft).pipe(
+          Effect.map((approval) =>
+            approval._tag === "Unavailable"
+              ? ({
+                  _tag: "Failed",
+                  problems: approval.problems,
+                  reason: "oxlint's RuleTester could not run here.",
+                } as const)
+              : approval,
+          ),
+        ),
+      revise: (draft, evidence) =>
+        askingFor(
+          agent,
+          "to revise the oxlint plugin",
+          root,
+          pluginRevisionPrompt(idea, draft.pluginName + "/" + draft.ruleName, draft, evidence),
+          PluginDraft,
+        ),
+      show: showPlugin,
+    });
+    if (outcome._tag === "Cancelled") return yield* outro("Nothing written.");
+    const draft = outcome.draft;
     const tester = ruleTesterOf(root);
     if (tester === undefined) {
       return yield* outro("Nothing written: this project has no oxlint to run the test with.");
@@ -834,7 +909,12 @@ const createPlugin = (
       );
       const refreshed = yield* refreshReadme(root);
       return yield* outro(
-        "Wrote " + path.relative(root, files.plugin) + " and its test.\n" + refreshed.message,
+        "Wrote " +
+          path.relative(root, files.plugin) +
+          " and its test.\n" +
+          trialStatus(outcome) +
+          "\n" +
+          refreshed.message,
       );
     }
     if (scope === "project") {
@@ -862,7 +942,9 @@ const createPlugin = (
       return yield* outro(
         "Wrote " +
           path.relative(root, files.plugin) +
-          " and its test. Run it with Node 22 or newer: node " +
+          " and its test.\n" +
+          trialStatus(outcome) +
+          "\nRun it with Node 22 or newer: node " +
           path.relative(root, files.test) +
           ".",
       );
@@ -908,6 +990,7 @@ const createPlugin = (
     yield* outro(
       [
         "Pushed " + branch + " to " + shared + ".",
+        trialStatus(outcome),
         "Open the pull request: https://github.com/" + shared + "/compare/" + branch + "?expand=1",
       ].join("\n"),
     );
@@ -922,6 +1005,6 @@ export const createOxlintRule = (work: OxlintWork) =>
   Effect.gen(function* () {
     const native = work.shape.linter === null ? undefined : oxlintRule(work.shape.linter);
     return native !== undefined
-      ? yield* createBuiltin(native, work.shape, work.root, work.shared)
+      ? yield* createBuiltin(work.agent, work.idea, native, work.shape, work.root, work.shared)
       : yield* createPlugin(work.agent, work.idea, work.shape, work.root, work.shared);
   });

@@ -13,6 +13,7 @@ import { AGENTS, type Agent, installedAgents, run } from "#create/agents.ts";
 import {
   RuleNotCreated,
   Shape,
+  adhereRevisionPrompt,
   asking,
   askingFor,
   shapePrompt,
@@ -21,6 +22,7 @@ import {
 } from "#create/ask.ts";
 import { reviewedInRepository } from "#create/examples.ts";
 import { createOxlintRule } from "#create/oxlint.ts";
+import { trialAndReview, trialStatus, trialWriteSuffix } from "#create/trial-review.ts";
 import { oxlintRule } from "#oxlint/catalog.ts";
 import { decided, indented, intro, line, look, note, outro, spinning, warn } from "#create/look.ts";
 import { cloned } from "#install.ts";
@@ -120,11 +122,17 @@ const problemsOf = (text: string, file: string, format: Shape["format"]) =>
         Effect.catch((message) => Effect.succeed([`It does not parse: ${message}`])),
       );
 
+/** A RULE.ts that imported, with its wording strays, or one that did not import. */
+export type LoadedDraft =
+  | { readonly _tag: "Loaded"; readonly warnings: ReadonlyArray<string> }
+  | { readonly _tag: "Unavailable"; readonly problems: ReadonlyArray<string> };
+
 /**
  * What `validate` would say of a RULE.ts the user has approved: imported from
- * a temporary directory, so its code runs.
+ * a temporary directory, so its code runs. A wording stray is a warning about
+ * a rule that still runs; only a failure to import makes it untriallable.
  */
-const loadedProblems = (text: string, shown: string) =>
+export const loadedDraft = (text: string, shown: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -134,11 +142,39 @@ const loadedProblems = (text: string, shown: string) =>
     );
     yield* fs.writeFileString(file, text);
     return yield* importRule(file).pipe(
-      Effect.map((rule) => strayingOf(rule).map(sentenceOf)),
-      Effect.catchTag("ConfigUnavailable", ({ message }) =>
-        Effect.succeed([message.replaceAll(file, shown)]),
+      Effect.map((rule): LoadedDraft => ({
+        _tag: "Loaded",
+        warnings: strayingOf(rule).map(sentenceOf),
+      })),
+      Effect.catchTag("ConfigUnavailable", ({ message }): Effect.Effect<LoadedDraft> =>
+        Effect.succeed({
+          _tag: "Unavailable",
+          problems: [message.replaceAll(file, shown)],
+        }),
       ),
     );
+  });
+
+/**
+ * Whether the trial may import and run the draft: a RULE.md has no code, while
+ * a RULE.ts is imported only after the user approves it.
+ */
+const approveDraft = (text: string, format: Shape["format"], shown: string) =>
+  Effect.gen(function* () {
+    if (format === "markdown") return { _tag: "Approved", draft: text } as const;
+    const run = yield* Prompt.run(
+      Prompt.Confirm({
+        message: "adhere will import this RULE.ts and run its code to trial it. Run it?",
+        initial: true,
+      }),
+    );
+    if (!run) return { _tag: "Declined" } as const;
+    const loaded = yield* loadedDraft(text, shown);
+    if (loaded._tag === "Unavailable") {
+      return { _tag: "Unavailable", problems: loaded.problems } as const;
+    }
+    for (const warning of loaded.warnings) yield* warn(warning);
+    return { _tag: "Approved", draft: text } as const;
   });
 
 /**
@@ -295,22 +331,55 @@ export const createRule = Effect.fn("createRule")(
 
     yield* line(`\n${text}\n`);
     for (const problem of problems) yield* warn(problem);
+    const shown = path.relative(root, file);
+    const outcome = yield* trialAndReview({
+      agent,
+      root,
+      id,
+      draft: text,
+      toDraft: (source) => ({ kind: "adhere", id, format: shape.format, source }),
+      approve: (source) => approveDraft(source, shape.format, shown),
+      revise: (source, evidence) =>
+        Effect.gen(function* () {
+          const revised = unfenced(
+            yield* asking(
+              agent,
+              "to revise the rule",
+              root,
+              adhereRevisionPrompt(idea, id, shape, source, evidence),
+            ),
+          );
+          for (const problem of yield* problemsOf(revised, file, shape.format)) {
+            yield* warn(problem);
+          }
+          return revised;
+        }),
+      show: (source) => line(`\n${source}\n`),
+    });
+    if (outcome._tag === "Cancelled") return yield* outro("Nothing written.");
+    const finalText = outcome.draft;
+    const finalProblems = yield* problemsOf(finalText, file, shape.format);
+    if (finalText !== text) {
+      yield* line(`\n${finalText}\n`);
+      for (const problem of finalProblems) yield* warn(problem);
+    }
     const write = yield* Prompt.run(
       Prompt.Confirm({
         message:
-          scope === "project"
+          (scope === "project"
             ? `Write ${path.relative(root, file)}?`
-            : `Push it to ${shared} on the branch ${branch}?`,
-        initial: problems.length === 0,
+            : `Push it to ${shared} on the branch ${branch}?`) + trialWriteSuffix(outcome),
+        initial: finalProblems.length === 0 && outcome._tag === "Accepted",
       }),
     );
     if (!write) return yield* outro("Nothing written.");
     // A RULE.ts is only imported, and its code run, once the user has read it.
     if (shape.format === "typescript") {
-      const loaded = yield* loadedProblems(text, path.relative(root, file));
-      for (const problem of loaded) yield* warn(problem);
+      const loaded = yield* loadedDraft(finalText, path.relative(root, file));
+      const problems = loaded._tag === "Loaded" ? loaded.warnings : loaded.problems;
+      for (const problem of problems) yield* warn(problem);
       if (
-        loaded.length > 0 &&
+        problems.length > 0 &&
         !(yield* Prompt.run(Prompt.Confirm({ message: "Write it anyway?", initial: false })))
       ) {
         return yield* outro("Nothing written.");
@@ -319,7 +388,7 @@ export const createRule = Effect.fn("createRule")(
     const sharedHere = scope === "project" ? yield* isSharedRepo(root) : false;
     if (sharedHere) yield* validateReadme(root);
     yield* fs.makeDirectory(path.dirname(file), { recursive: true });
-    yield* fs.writeFileString(file, `${text}\n`);
+    yield* fs.writeFileString(file, `${finalText}\n`);
 
     if (scope === "project") {
       const configFile = yield* findConfigFile(root).pipe(Effect.orElseSucceed(() => undefined));
@@ -337,7 +406,7 @@ export const createRule = Effect.fn("createRule")(
       }
       const refreshed = sharedHere ? yield* refreshReadme(root) : undefined;
       return yield* outro(
-        `Wrote ${path.relative(root, file)}.\n${refreshed === undefined ? "" : `${refreshed.message}\n`}Run adhere validate to check it against your other rules.`,
+        `Wrote ${path.relative(root, file)}.\n${trialStatus(outcome)}\n${refreshed === undefined ? "" : `${refreshed.message}\n`}Run adhere validate to check it against your other rules.`,
       );
     }
     const needed = settingsFor(shape, {});
@@ -363,6 +432,7 @@ export const createRule = Effect.fn("createRule")(
     yield* outro(
       [
         `Pushed ${branch} to ${shared}.`,
+        trialStatus(outcome),
         ...needs,
         `Open the pull request: https://github.com/${shared}/compare/${branch}?expand=1`,
       ].join("\n"),

@@ -385,6 +385,8 @@ const MAX_DEPENDENT_FILES = 50;
 export interface PlanOptions {
   /** Select at most this many files needing judge or cached-locate requests; zero plans only. */
   readonly limit?: number | undefined;
+  /** The checkout Jev's paths are relative to. Defaults to the working directory. */
+  readonly root?: string | undefined;
 }
 
 export const planAudit = (
@@ -410,9 +412,10 @@ export const planAudit = (
     };
     const walker = yield* SourceWalker;
     const files = yield* walker.files;
-    // Each file's path from the working directory, `/`-separated, as Jev reads it.
+    // Each file's path from the checkout, `/`-separated, as Jev reads it.
+    const root = options.root ?? process.cwd();
     const fromRoot = new Map(
-      files.map((file) => [file.path, relative(process.cwd(), file.path).split(sep).join("/")]),
+      files.map((file) => [file.path, relative(root, file.path).split(sep).join("/")]),
     );
     // Only the specifiers stay in memory: each file is read again when it is planned.
     const dependentFiles = config.reads.includes("dependents")

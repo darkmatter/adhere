@@ -31,7 +31,9 @@ an option-dependent rule gets `["error", ...options]`, because bare `"error"`
 would enforce nothing. Banning lodash through `no-restricted-imports`, for
 example, prints `["error", { "paths": [{ "name": "lodash" }] }]`. The wizard
 prints the exact config, or enables the same setting in a shared repo's
-`lint/rules.json` for a pull request. A plugin is shown with its valid and
+`lint/rules.json` for a pull request. Whichever route it takes, the draft is
+trialled on real files before it is written, and a revision runs the same files
+again; the trial is described below. A plugin is shown with its valid and
 invalid examples and runs nothing until you approve it; its tests use the
 project's own Oxlint or Vite+ and Node 22 or newer. Oxlint's RuleTester
 refuses Bun and older Node, so without one nothing is written and no repair is
@@ -83,7 +85,19 @@ adhere rules create "business logic should live in services"
    for whether it parses and has a default export. A `RULE.ts` is imported, its
    code run and its wording checked, only after you approve it, and adhere asks
    whether to write it anyway when that finds problems.
-5. A project rule is written to `.adhere/rules/`, carrying its `reads`
+5. Before anything is written, adhere runs the draft on real files: the first
+   100 applicable files by default, the entire repo, or a number you type.
+   Adhere shows the plan's cost first, and never invents a price. The authoring
+   agent reads the saved report in `.adhere/trial/` and the source it names,
+   then you review the findings. Accept them as correct, review each one as
+   correct, a false positive, or unsure, or ask the agent to revise the draft
+   with the evidence. Every finding, and every example verdict, takes an
+   optional note for the agent. A revision is re-approved before it runs, and
+   the rerun judges the same files as the first run, so the new evidence is
+   comparable. Skipping the trial is allowed; the write prompt then says
+   `(not trialled)` and the closing line says `Not trialled: …`. Nothing is
+   called validated on a skipped, partial, or stale run.
+6. A project rule is written to `.adhere/rules/`, carrying its `reads`
    declaration, with a warning when the config does not enable that context.
    An organization rule is committed to a fresh clone
    of the shared repo on the branch `adhere/<rule-id>`, pushed, and linked for a
