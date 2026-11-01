@@ -624,17 +624,24 @@ describe("cli", () => {
     // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
     const plan = (...presets: ReadonlyArray<string>) =>
       execFileAsync("bun", [main, "lint", ...presets, "--limit", "0"], { cwd: root }).then(
-        ({ stderr }) => stderr.split("\n")[0],
-        ({ stderr }: { readonly stderr: string }) => stderr.split("\n")[0],
+        ({ stderr }) => stderr,
+        ({ stderr }: { readonly stderr: string }) => stderr,
       );
+    // Built-in rules may warn about declared reads before the plan summary, so read the summary itself.
+    const count = (stderr: string) => {
+      const summary = stderr.split("\n").find((line) => /^\d+ files? and \d+ rules?:/.test(line));
+      return Number(/(\d+) rules?/.exec(summary ?? "")?.[1]);
+    };
 
-    const effect = await plan("--preset", "effect");
-    const alchemy = await plan("--preset", "alchemy");
-    const both = await plan("--preset", "effect,alchemy");
-    const count = (line: string | undefined) => Number(/(\d+) rules/.exec(line ?? "")?.[1]);
-    expect(count(both)).toBe(count(effect) + count(alchemy));
-    expect(await plan("--preset", "effect", "--preset", "alchemy")).toBe(both);
-    expect(await plan("--preset", "alchemy, effect")).toBe(both);
+    const effect = count(await plan("--preset", "effect"));
+    const alchemy = count(await plan("--preset", "alchemy"));
+    const both = count(await plan("--preset", "effect,alchemy"));
+    expect(effect).toBeGreaterThan(0);
+    expect(alchemy).toBeGreaterThan(0);
+    expect(Number.isNaN(both)).toBe(false);
+    expect(count(await plan("--preset", "effect", "--preset", "alchemy"))).toBe(both);
+    expect(count(await plan("--preset", "alchemy, effect"))).toBe(both);
+    expect(both).toBe(effect + alchemy);
 
     const refused = await execFileAsync("bun", [main, "lint", "--preset", "effect,vue"], {
       cwd: root,
@@ -646,6 +653,53 @@ describe("cli", () => {
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("(not vue)");
   });
 
+  it("leaves bundled rules that need type awareness out of a run without it, and takes them back on opt-in", async () => {
+    const root = join(tmpdir(), `adhere-bundled-type-aware-${Date.now()}`);
+    await mkdir(root, { recursive: true });
+    await writeFile(join(root, "index.ts"), "export const x = 1;\n", "utf8");
+    const config = (text: string) => writeFile(join(root, "adhere.config.ts"), text, "utf8");
+    await config("export default {};\n");
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    const plan = async (preset: string, flags: ReadonlyArray<string> = []) => {
+      const { stderr } = await execFileAsync(
+        "bun",
+        [main, "lint", "--preset", preset, "--limit", "0", ...flags],
+        { cwd: root },
+      );
+      const summary = stderr.split("\n").find((line) => /^\d+ files? and \d+ rules?:/.test(line));
+      return { stderr, rules: Number(/(\d+) rules?/.exec(summary ?? "")?.[1]) };
+    };
+
+    const effectOff = await plan("effect");
+    const effectOn = await plan("effect", ["--type-aware"]);
+    // effect/data/brand-meaningful-primitives and effect/data/variants-are-tagged-unions.
+    expect(effectOn.rules - effectOff.rules).toBe(2);
+    // alchemy/runtime/bind-tag-not-implementation and typescript/types/derive-dont-restate.
+    expect((await plan("alchemy", ["--type-aware"])).rules - (await plan("alchemy")).rules).toBe(1);
+    expect(
+      (await plan("typescript", ["--type-aware"])).rules - (await plan("typescript")).rules,
+    ).toBe(1);
+    // A bundled rule is skipped quietly; a project's own rule is what warns.
+    expect(effectOff.stderr).not.toContain("may be less accurate");
+    expect(effectOn.stderr).not.toContain("may be less accurate");
+
+    // The config's opt-in enables them, and the command-line flag replaces the config's false.
+    await config("export default { typeAware: true };\n");
+    expect((await plan("effect")).rules).toBe(effectOn.rules);
+    await config("export default { typeAware: false };\n");
+    expect((await plan("effect")).rules).toBe(effectOff.rules);
+    expect((await plan("effect", ["--type-aware"])).rules).toBe(effectOn.rules);
+
+    // Naming a skipped bundled rule in overrides is still the name of a preset rule.
+    await config(
+      `export default { overrides: {
+        "effect/data/brand-meaningful-primitives": "off",
+        "typescript/types/derive-dont-restate": "error",
+      } };\n`,
+    );
+    expect((await plan("effect")).rules).toBe(effectOff.rules);
+  }, 30_000);
+
   it("turns a preset rule off by its id, takes a rule of a preset the run leaves out, and refuses one no rule has", async () => {
     const root = join(tmpdir(), `adhere-overrides-${Date.now()}`);
     await mkdir(root, { recursive: true });
@@ -654,8 +708,11 @@ describe("cli", () => {
     // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
     const lint = () =>
       execFileAsync("bun", [main, "lint", "--preset", "effect", "--limit", "0"], { cwd: root });
-    const rules = async () =>
-      Number(/(\d+) rules?/.exec((await lint()).stderr.split("\n")[0] ?? "")?.[1]);
+    const rules = async () => {
+      const { stderr } = await lint();
+      const summary = stderr.split("\n").find((line) => /^\d+ files? and \d+ rules?:/.test(line));
+      return Number(/(\d+) rules?/.exec(summary ?? "")?.[1]);
+    };
     const config = (overrides: string) =>
       writeFile(
         join(root, "adhere.config.ts"),
@@ -664,6 +721,7 @@ describe("cli", () => {
       );
 
     const all = await rules();
+    expect(Number.isNaN(all)).toBe(false);
     await config(
       '{ "effect/basics/gen-for-sequencing": "off", "alchemy/providers/idempotent-delete": "warning" }',
     );
@@ -699,6 +757,42 @@ describe("cli", () => {
     const { stderr } = await execFileAsync("bun", [main, "lint", "--limit", "0"], { cwd: root });
     expect(stderr.split("\n")[0]).toBe("1 file and 1 rule: 1 check.");
   });
+
+  it("warns once when a rule declares reads the run does not enable, and stays quiet when they are enabled or off", async () => {
+    const root = join(tmpdir(), `adhere-declared-reads-${Date.now()}`);
+    const ruleFile = join(root, ".adhere", "rules", "demo", "RULE.md");
+    const configFile = join(root, "adhere.config.ts");
+    const config = (text: string) => writeFile(configFile, text, "utf8");
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    const lint = (flags: ReadonlyArray<string> = []) =>
+      execFileAsync("bun", [main, "lint", "--limit", "0", ...flags], { cwd: root });
+    try {
+      await mkdir(join(root, ".adhere", "rules", "demo"), { recursive: true });
+      await writeFile(join(root, "src.ts"), "export const demo = 1;\n", "utf8");
+      await writeFile(ruleFile, '---\ndescription: demo\nreads: ["dependents"]\n---\n\ndemo()\n');
+
+      await config("export default { reads: [] };\n");
+      const missing = await lint();
+      expect(missing.stderr).toContain(
+        'demo declares reads dependents, which this run does not enable; the rule may be less accurate until enabled. add "dependents" to the config\'s reads.',
+      );
+      expect(missing.stderr.match(/may be less accurate until enabled/g)).toHaveLength(1);
+
+      await config('export default { reads: ["dependents"] };\n');
+      expect((await lint()).stderr).not.toContain("may be less accurate");
+
+      await config('export default { reads: [], overrides: { demo: "off" } };\n');
+      expect((await lint()).stderr).not.toContain("may be less accurate");
+
+      // Naming a native read in the config does not enable type awareness; only typeAware does.
+      await writeFile(ruleFile, '---\ndescription: demo\nreads: ["symbols"]\n---\n\ndemo()\n');
+      await config('export default { reads: ["symbols"] };\n');
+      expect((await lint()).stderr).toContain("enable typeAware: true (or pass --type-aware)");
+      expect((await lint(["--type-aware"])).stderr).not.toContain("may be less accurate");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("reads a rule written in TypeScript with the package's defineRule, and not the config beside it", async () => {
     const root = join(tmpdir(), `adhere-ts-rule-${Date.now()}`);

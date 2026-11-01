@@ -13,10 +13,16 @@ and a pull request changes the judgments of only the files it changes.
 | A file's comments alone                                                                                                         | Nothing.                                                                         |
 | A file is moved or copied                                                                                                       | Nothing. Identical files share their judgments.                                  |
 | A rule's text, a matcher, the source of its `appendState`, or its options                                                       | That rule, for every file.                                                       |
+| A rule's declared `reads` alone                                                                                                 | Nothing. Only the config's `reads` and `typeAware` change the cache.             |
 | The config's `reads`, `typeAware`, `maxSymbolLength`, or `maxSymbolDocumentationLength`, and `includeComments` with `typeAware` | Every rule, once.                                                                |
 | What the reads find: a file it imports, the workspace's packages, the file's `dependents`                                       | Nothing, so a judgment can go stale. Delete the cache to judge every file again. |
 | The threshold is lowered                                                                                                        | Nothing. Cached judgments newly above it are located.                            |
 | adhere asks its questions differently, after an upgrade                                                                         | Every rule, once.                                                                |
+
+A rule's declared reads are advisory, so they are not in the fingerprint; only
+the config's settings that enable them affect the cache. Enabling `typeAware`
+adds the bundled rules that declare `symbols` or `references` to the run, and
+their cached judgments return with them.
 
 To keep the cache out of diffs, mark it as generated in `.gitattributes`:
 

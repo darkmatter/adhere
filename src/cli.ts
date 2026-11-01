@@ -143,7 +143,7 @@ const sufficiencyThreshold = Flag.Finite("sufficiency-threshold").pipe(
 const typeAware = Flag.Boolean("type-aware").pipe(
   Flag.optional,
   Flag.withDescription(
-    "Include compiler-resolved symbols and declaration excerpts. Off by default.",
+    "Include compiler-resolved symbols and declaration excerpts, and the bundled rules that declare them. Off by default.",
   ),
 );
 

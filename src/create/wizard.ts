@@ -143,7 +143,8 @@ const loadedProblems = (text: string, shown: string) =>
 
 /**
  * The config settings the rule needs that `config` lacks, as they would be
- * written in it. Reads and type awareness are config-wide, not per rule.
+ * written in it. The rule declares its reads, but the config still enables
+ * them and type awareness.
  */
 const settingsFor = (
   shape: Shape,

@@ -76,18 +76,18 @@ Estimates cover only code and workspace-package context; symbol/reference input,
 
 ## Flags
 
-| Flag                                                     | What it does                                                                                                            |
-| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `--preset <names>`                                       | Add built-in rule sets, or their topics. The config becomes optional. See [Presets](/adhere/presets/).                  |
-| `--threshold <0 to 1>`                                   | Replace the config's threshold. Per-rule thresholds still apply.                                                        |
-| `--sufficiency-threshold <0 to 1>`                       | Replace the config's `sufficiencyThreshold`: a finding warns when its `context` is below it.                            |
-| `--type-aware`                                           | Add the compiler's `symbols` and `references`. See [What Jev reads](/adhere/state-hooks/#what-jev-reads).               |
-| `--yes`, `-y`                                            | Send the requests without asking first.                                                                                 |
-| `--limit <files>`, `--rpm <requests>`, `--filter <glob>` | Bound how many files a run judges, how fast it sends, and which files it judges. See [Limiting a run](#limiting-a-run). |
-| `--deny-warnings`                                        | Fail on warnings as well as errors.                                                                                     |
-| `--log-level <level>`                                    | Log the run's work on stderr. See [Logging a run](#logging-a-run).                                                      |
-| `--json`, `--md`                                         | Write one JSON or Markdown file per violated rule to `.adhere/reports/`.                                                |
-| `--stdout`                                               | Print one combined report instead of files; use with `--json` or `--md`.                                                |
+| Flag                                                     | What it does                                                                                                                                         |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--preset <names>`                                       | Add built-in rule sets, or their topics. The config becomes optional. See [Presets](/adhere/presets/).                                               |
+| `--threshold <0 to 1>`                                   | Replace the config's threshold. Per-rule thresholds still apply.                                                                                     |
+| `--sufficiency-threshold <0 to 1>`                       | Replace the config's `sufficiencyThreshold`: a finding warns when its `context` is below it.                                                         |
+| `--type-aware`                                           | Add the compiler's `symbols` and `references`, including bundled rules that declare them. See [What Jev reads](/adhere/state-hooks/#what-jev-reads). |
+| `--yes`, `-y`                                            | Send the requests without asking first.                                                                                                              |
+| `--limit <files>`, `--rpm <requests>`, `--filter <glob>` | Bound how many files a run judges, how fast it sends, and which files it judges. See [Limiting a run](#limiting-a-run).                              |
+| `--deny-warnings`                                        | Fail on warnings as well as errors.                                                                                                                  |
+| `--log-level <level>`                                    | Log the run's work on stderr. See [Logging a run](#logging-a-run).                                                                                   |
+| `--json`, `--md`                                         | Write one JSON or Markdown file per violated rule to `.adhere/reports/`.                                                                             |
+| `--stdout`                                               | Print one combined report instead of files; use with `--json` or `--md`.                                                                             |
 
 ## JSON and Markdown reports
 

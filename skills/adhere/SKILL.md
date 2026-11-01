@@ -42,9 +42,10 @@ adhere skill [docs|setup|fix]    # print a skill
 
 `adhere <command> --help` lists every flag. Version, help, skills, `validate`,
 and planning with `--limit 0` do not start the native compiler. Default `lint`
-is compiler-free. With `typeAware: true` or `--type-aware`, it starts the compiler
-only during execution, after confirmation, for pending judgments or cached
-findings still needing location.
+is compiler-free, and leaves out bundled preset rules that declare native
+reads. With `typeAware: true` or `--type-aware`, it includes them and starts the
+compiler only during execution, after confirmation, for pending judgments or
+cached findings still needing location.
 
 `--limit` now counts files, not rule checks; use the same flag without an extra
 unit selector. Each request-bearing file consumes one slot for all its pending
@@ -126,6 +127,13 @@ Front matter besides `description`, all optional:
   only when Jev says the code that breaks the rule is as every `appliesTo`
   describes and as no `excludeIf` does.
 
+- `reads: ["symbols", "references"]` declares the context the rule needs, a
+  JSON array on one line. It enables nothing: the config's `reads` and
+  `typeAware` still choose what this run sends. A project's own rule still
+  runs and lint warns that it may be less accurate until a declared read is
+  enabled; a bundled preset rule that declares either native read is left out
+  unless `typeAware` is on.
+
 A rule's directory can hold a `RULE.ts` instead, which default-exports
 `defineRule({...})` from `@drkmttr/adhere`, with the fields a config's inline
 rule takes:
@@ -176,9 +184,13 @@ Opting in with `typeAware: true` or `--type-aware` enables both `symbols` and
 `references`, regardless of `reads`. Legacy native-reader entries in `reads`
 alone do not enable the compiler; leaving them out does not disable it when
 type awareness is on. Code alone requires `reads: []` and type awareness off.
-Presets do not own or override this selection. A rule-level `reads`, in
-Markdown front matter, `defineRule`, or an inline rule, has no effect. The
-context maps are:
+Presets do not own or override this selection. A rule may declare what it
+needs with `reads`, in Markdown front matter, `defineRule`, or an inline rule;
+the declaration enables nothing. A bundled preset rule that declares `symbols`
+or `references` is left out unless `typeAware` is on, so it is never judged
+with less than it declares. A project's own rule still runs, and a declared
+read the run does not enable is a warning that it may be less accurate until
+enabled. The context maps are:
 
 - `workspacePackages`: only packages matched by this file's literal imports,
   as `{ canonicalPackageName: directory }`. Subpaths match the owning package;
@@ -466,9 +478,10 @@ re-judges that rule; a threshold change re-judges nothing.
 
 Dependencies, related source, reader selection, shared read-context contents,
 and hook-owned external data are deliberately not fingerprinted. If `A.ts` imports
-`B.ts`, changing `B.ts` does not invalidate `A.ts`. Changing config `reads` or
-`typeAware` does not refresh its cached answers either. This keeps planning cheap but accepts
-stale dependency/context judgments.
+`B.ts`, changing `B.ts` does not invalidate `A.ts`. Changing the config's
+`reads` or `typeAware` re-judges every rule once; changing what those reads
+find does not. This keeps planning cheap but accepts stale dependency/context
+judgments.
 
 `planAudit` reads/counts/hashes code, checks the cache, and makes code plus cheap
 workspace estimates without compiler or `SourceReads` calls. It applies `--limit`

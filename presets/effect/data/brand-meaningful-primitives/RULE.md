@@ -1,5 +1,6 @@
 ---
 description: A primitive with semantic meaning in a domain type, such as an id, email, URL, or port in a service's contract, an event, or a stored record, must be declared as a branded schema, never as a bare string or number.
+reads: ["symbols", "references"]
 ---
 
 Two ids of different things are both strings, so nothing stops one being

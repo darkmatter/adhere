@@ -240,6 +240,26 @@ describe("markdown rules", () => {
     expect(refused.message).toContain("rules/a.md");
   });
 
+  it("front matter's reads declares the context a rule needs, as a JSON array", async () => {
+    expect(
+      await parse('---\ndescription: d\nreads: ["workspacePackages", "symbols"]\n---\na()\n'),
+    ).toEqual({
+      description: "d",
+      reads: ["workspacePackages", "symbols"],
+      must: "a()",
+    });
+    // A bare word is not JSON, and a name the reads do not have is refused: only unknown names
+    // fail, while a known one the config leaves off merely warns at run time.
+    for (const reads of ["dependents", '["comments"]']) {
+      const refused = await Effect.runPromise(
+        Effect.flip(
+          parseRuleMarkdown(`---\ndescription: d\nreads: ${reads}\n---\na()\n`, "rules/a.md"),
+        ),
+      );
+      expect(refused.message).toContain("rules/a.md");
+    }
+  });
+
   it("front matter's level makes a rule's findings warnings", async () => {
     expect(await parse("---\ndescription: d\nlevel: warning\n---\na()\n")).toEqual({
       description: "d",
@@ -356,6 +376,24 @@ describe("nested .adhere rules", () => {
         scope: `${root}/packages/api`,
         rule: { description: "api", must: "api()" },
       },
+    ]);
+  });
+
+  it("loads declared reads from a Markdown rule and a TypeScript one", async () => {
+    const root = await onDisk({
+      ".adhere/rules/markdown/RULE.md":
+        '---\ndescription: markdown\nreads: ["dependents"]\n---\nmarkdown()\n',
+      ".adhere/rules/typescript/RULE.ts":
+        'export default { description: "typescript", must: "typescript()", reads: ["symbols"] };\n',
+    });
+
+    const entries = await Effect.runPromise(
+      loadAdhereRuleSet(root).pipe(Effect.provide(realFileSystem)),
+    );
+
+    expect(entries.map(({ id, rule }) => [id, rule.reads])).toEqual([
+      ["markdown", ["dependents"]],
+      ["typescript", ["symbols"]],
     ]);
   });
 

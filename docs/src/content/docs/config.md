@@ -65,8 +65,13 @@ Every key, grouped by what it changes:
 
 - `reads` — default: `["workspacePackages"]`. The workspace context Jev
   reads. See [What Jev reads](/adhere/state-hooks/#what-jev-reads).
+  A project's own rule may declare the context it needs; that declaration
+  does not enable anything, and lint warns when the config does not enable
+  it.
 - `typeAware` — default: `false`. Add the compiler's `symbols` and
-  `references`, as `--type-aware` does.
+  `references`, as `--type-aware` does. Without it, a bundled rule that
+  declares either is left out of the run rather than judged with less
+  context; a project's own rule still runs and warns.
 - `includeComments` — default: `false`. Send every comment to Jev. See
   [Comments](/adhere/comments-and-suppressions/#comments).
 - `maxSymbolDocumentationLength` — default: `256`. Maximum characters of each

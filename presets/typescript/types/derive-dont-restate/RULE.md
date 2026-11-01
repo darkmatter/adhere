@@ -1,6 +1,7 @@
 ---
 description: A type that describes the same data as another type, a schema, a function, or a constant should be derived from it, with a utility type such as `Pick`, with `typeof` or `keyof`, or as a schema's inferred type, and should not restate its fields or values by hand.
 level: warning
+reads: ["symbols", "references"]
 ---
 
 ## Should
