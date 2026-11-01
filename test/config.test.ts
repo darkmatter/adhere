@@ -252,6 +252,30 @@ describe("config", () => {
     );
   });
 
+  it("keeps a rule's declared reads without letting them change what the config enables", async () => {
+    const declared = {
+      "data/brand": { ...a, reads: ["dependents", "symbols"] },
+    } as const;
+    const decoded = await Effect.runPromise(decodeConfig({ rules: declared }));
+    const decodedRules = decoded.rules;
+    if (typeof decodedRules === "string" || decodedRules === undefined) {
+      throw new Error("inline rules decode to a record");
+    }
+    expect(decodedRules["data/brand"]?.reads).toEqual(["dependents", "symbols"]);
+    expect(resolveConfig({ ...decoded, rules: declared }).reads).toEqual(["workspacePackages"]);
+    expect(resolveConfig({ ...decoded, rules: declared, typeAware: true }).reads).toEqual([
+      "workspacePackages",
+      "symbols",
+      "references",
+    ]);
+    const refused = await Effect.runPromise(
+      Effect.flip(decodeConfig({ rules: { a: { ...a, reads: ["comments"] } } })),
+    );
+    expect(refused.message).toContain(
+      'Expected "workspacePackages" | "dependents" | "symbols" | "references"',
+    );
+  });
+
   it("replaces default reads with explicit empty or subset lists rather than merging them", async () => {
     for (const reads of [
       [],

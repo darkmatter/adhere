@@ -68,8 +68,12 @@ adhere rules create "business logic should live in services"
 2. The agent names a linter that already checks the idea, if one does, and says
    whether the rule belongs to this project or the shared repo. It suggests three
    names, a `RULE.md` or, when Jev needs state the file cannot show, a
-   [`RULE.ts`](/adhere/rule-format/#rules-as-typescript-files), and the config
-   context the rule needs: `typeAware` or `reads`.
+   [`RULE.ts`](/adhere/rule-format/#rules-as-typescript-files), and the
+   context the rule needs, declared on the rule as `reads`; the config still
+   enables it with `reads` for workspace context, and `typeAware` for
+   `symbols` and `references`. A bundled preset rule that declares either
+   native read is left out without `typeAware`; the rule this wizard writes
+   is the project's own, so it still runs and warns instead.
 3. It finds code in the repo for you to judge. Each excerpt shows three lines
    either side, with the agent's call and its reason, and you say whether it
    breaks the rule. The agent picks the draft's examples from the code you
@@ -79,7 +83,8 @@ adhere rules create "business logic should live in services"
    for whether it parses and has a default export. A `RULE.ts` is imported, its
    code run and its wording checked, only after you approve it, and adhere asks
    whether to write it anyway when that finds problems.
-5. A project rule is written to `.adhere/rules/`, with a warning when the config
-   lacks the context it needs. An organization rule is committed to a fresh clone
+5. A project rule is written to `.adhere/rules/`, carrying its `reads`
+   declaration, with a warning when the config does not enable that context.
+   An organization rule is committed to a fresh clone
    of the shared repo on the branch `adhere/<rule-id>`, pushed, and linked for a
    pull request.

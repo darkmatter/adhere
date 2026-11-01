@@ -147,8 +147,14 @@ const contextOf = (shape: Shape) =>
     ...(shape.typeAware ? ["`symbols`", "`references`"] : []),
   ].join(", ");
 
+const readsInstruction = (shape: Shape) => {
+  const reads = [...shape.reads, ...(shape.typeAware ? ["symbols", "references"] : [])];
+  if (reads.length === 0) return "Declare no `reads`: the code alone is enough.";
+  return `Declare the context Jev needs beside the code as \`reads: [${reads.map((read) => `"${read}"`).join(", ")}]\` ${shape.format === "typescript" ? "in `defineRule({...})`" : "in its front matter"}. A rule's \`reads\` is a declaration, not an enablement: the project's config still decides what Jev reads, and lint warns that the rule may be less accurate until a declared read is enabled.`;
+};
+
 const typescriptFormat = (shape: Shape) =>
-  `Write it as a RULE.ts, because ${shape.formatReason} It imports defineRule from "@drkmttr/adhere" and default-exports defineRule({ description, details, must, never, appendState }). appendState(state, file, Bun) runs before each request for the rule: file is { path, contents }, its path absolute, and Bun is Bun's API, as in Bun.file(path).text() or new Bun.Glob(pattern). What it returns is spread over the request's state; name each key it adds in the description, in backticks. Helpers go in the same file.`;
+  `Write it as a RULE.ts, because ${shape.formatReason} It imports defineRule from "@drkmttr/adhere" and default-exports defineRule({ description, details, must, never, reads, appendState }). appendState(state, file, Bun) runs before each request for the rule: file is { path, contents }, its path absolute, and Bun is Bun's API, as in Bun.file(path).text() or new Bun.Glob(pattern). What it returns is spread over the request's state; name each key it adds in the description, in backticks. Helpers go in the same file.`;
 
 const reviewedOf = (reviewed: ReadonlyArray<Reviewed>) =>
   reviewed.length === 0
@@ -174,6 +180,7 @@ Using the reference above, write the rule file for this adhere rule.
 Rule id: ${id}
 What it enforces: ${idea}
 What Jev reads beside the rule: ${contextOf(shape)}
+${readsInstruction(shape)}
 ${shape.format === "typescript" ? typescriptFormat(shape) : "Write it as a RULE.md."}
 
 ${reviewedOf(reviewed)}

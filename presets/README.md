@@ -5,6 +5,14 @@ summary. Each id links to the full rule, and is the id that reports,
 `overrides`, and `adhere-ignore` comments use. [Presets](https://dm.sh/adhere/presets/)
 says how to name a preset or one of its topics.
 
+Some rules declare the context they need with `reads`, such as
+`["symbols", "references"]` for a rule that compares declarations across
+files. Enable `typeAware: true` or `--type-aware` for the compiler's
+`symbols` and `references`. Without it, a bundled rule that declares either is
+left out of the run, so a preset never judges with less context than its rules
+declare. A project's own rule is different: it still runs, and lint warns that
+it may be less accurate until a declared read is enabled.
+
 ## typescript
 
 - **Source.** The TypeScript Handbook and the Google TypeScript Style Guide.

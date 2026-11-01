@@ -25,13 +25,16 @@
 - Rule options: a `RULE.ts` declares settings as an Effect Schema in `options`, and a config sets them as `overrides[id].options`. Unset required or invalid options refuse the run. Jev, and the rule's `appendState`, read the decoded settings as state `options`, in requests of the rule's own; preflight counts them, and changing them re-judges only that rule. adhere re-exports `Schema` for rule files.
 - An install script for the standalone executable: `curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh` puts this machine's executable from the latest release in `~/.local/bin`.
 
+- Rule-level `reads`: a `RULE.md` front matter, a `RULE.ts`/`defineRule`, an inline rule, or a built-in preset rule may declare `workspacePackages`, `dependents`, `symbols`, or `references`. The config still chooses what is enabled. A project's own rule that declares a read the run does not enable warns that it may be less accurate until enabled, and an unknown name refuses decoding. `adhere rules create` writes the declaration, including `symbols` and `references` when it suggests type awareness.
+
 ### Changed
 
 - `adhere install org/repo` now offers its instruction files and rules as a multiselect at a terminal, preselecting what is already installed; `--all` copies every match without a prompt; an exact rule id with nothing deeper under it copies directly; a topic copies only its rules and never instructions; `--force` replaces existing files and directories, and deselecting never deletes. Without a terminal and without `--all`, it fails and names the matches and an exact rule to use.
 - `adhere postinstall` renders instruction files whose path has at least three segments first (copied shared files, and local files two directories deep), then files directly in the instructions directory, then files one directory deep, each group sorted by path.
 - A shared repo's tags are repo-wide: one tag covers its rules, instructions, and `lint/` package, and there are no per-rule or per-package tags.
 - Adopt Vite+ `1.1.0` and Vitest `5.0.3`, with project formatting hooks, shared editor settings, and pinned development runtimes.
-- Configure `reads` at the top level instead of per rule. `workspacePackages`, `symbols`, and `references` are enabled by default; use `reads: []` for code-only requests.
+- Configure the context every rule reads at the top level. `workspacePackages` is on by default; `typeAware: true` or `--type-aware` adds `symbols` and `references`; use `reads: []` with type awareness off for code-only requests.
+- Bundled preset rules that declare `symbols` or `references` are left out of a run without `typeAware`, rather than judged with less context than they declare and a warning that they may be less accurate. `typeAware: true` or `--type-aware` includes them again, and overriding one by id while it is left out is still a valid preset rule name. A project's own rule with a native read still runs and warns.
 - `--limit` counts files needing requests, including all pending rules for each selected file, rather than individual rule checks.
 - Rules share file context and batch their questions, splitting requests when necessary. Rules with `appendState` retain separate request groups.
 - Planning does not resolve native context. Source loading and execution are bounded, with native context prepared on demand for the current file.
@@ -42,7 +45,7 @@
 
 ### Removed
 
-- The `reference` and `avoid` keys of a config rule, `avoid` as a fence tag or heading in a `RULE.md`, and the refusal of a rule-level `reads`. A config rule whose only example is under `reference` or `avoid` fails for lack of an example, a fence tagged `avoid` or under an `Avoid` heading is code to write, and a rule-level `reads` is ignored.
+- The `reference` and `avoid` keys of a config rule and `avoid` as a fence tag or heading in a `RULE.md`, and the refusal of a rule-level `reads`. A config rule whose only example is under `reference` or `avoid` fails for lack of an example, and a fence tagged `avoid` or under an `Avoid` heading is code to write.
 
 ### Fixed
 

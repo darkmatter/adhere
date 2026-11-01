@@ -4,7 +4,8 @@ title: "State Hooks and Type-Awareness"
 
 Jev judges a file from its state: the file's `code`, and maps of context beside
 it. The config chooses the maps every rule reads (see
-[What Jev reads](#what-jev-reads)). A rule written in TypeScript can add state
+[What Jev reads](#what-jev-reads)); a rule may declare which maps it needs,
+without enabling them. A rule written in TypeScript can add state
 of its own with a hook (see [State hooks](#state-hooks)), and take settings
 from each project that uses it (see [Rule options](#rule-options)).
 
@@ -85,7 +86,14 @@ export default defineConfig({
   workspace map needs the compiler.
 - `typeAware` adds `symbols` and `references` whatever `reads` says. The
   compiler uses each file's `tsconfig.json`, and works without one.
-- An unknown name in `reads` refuses the run. Only the config has `reads`.
+- An unknown name in the config's `reads` refuses the run. A rule may declare
+  the context it needs as `reads` in Markdown front matter, `defineRule`, or
+  an inline rule; an unknown name there refuses the run too. The config still
+  chooses what every rule reads. A bundled preset rule that declares
+  `symbols` or `references` is left out unless `typeAware` is on, so it is
+  never judged with less than it declares. A project's own rule still runs,
+  and lint warns that it may be less accurate until a declared read is
+  enabled.
 - A rule's description can name a map in backticks, as Jev's questions name
   `code`. To give Jev something no map covers, such as another file, add it
   with a [state hook](#state-hooks).

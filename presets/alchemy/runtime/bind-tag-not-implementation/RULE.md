@@ -1,5 +1,6 @@
 ---
 description: When a runtime is split into a Tag class and a make Layer, other runtimes must import and bind only the Tag, and only the Stack provides the Layer; another Worker or Function must never import or provide that implementation Layer.
+reads: ["symbols", "references"]
 ---
 
 ## Must

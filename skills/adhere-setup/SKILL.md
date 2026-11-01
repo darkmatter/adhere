@@ -37,12 +37,14 @@ wherever this skill says `adhere`, run it the manager's way, as in
 
 With pnpm, at a workspace root, add `--ignore-workspace-root-check`.
 
-Default lint reads code and `workspacePackages` without starting a compiler.
+Default lint reads code and `workspacePackages` without starting a compiler,
+and leaves out bundled preset rules that declare `symbols` or `references`.
 `typeAware` defaults to `false`; `typeAware: true` or `--type-aware` opts into
-both `symbols` and `references`, regardless of `reads`. `reads` now controls
-workspace context only, defaulting to `["workspacePackages"]`; legacy native
-reader entries alone do not opt in. Code alone uses `reads: []` with type
-awareness off. Explain the extra context/cost and **Ask** before opting in.
+both `symbols` and `references`, regardless of `reads`, and includes those
+rules. `reads` now controls workspace context only, defaulting to
+`["workspacePackages"]`; legacy native reader entries alone do not opt in.
+Code alone uses `reads: []` with type awareness off. Explain the extra
+context/cost and **Ask** before opting in.
 
 With type awareness enabled, native TypeScript starts only during execution,
 after confirmation, when pending judgments or cached findings needing location

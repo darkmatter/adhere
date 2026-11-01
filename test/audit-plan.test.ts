@@ -108,6 +108,22 @@ describe("plan", () => {
     expect(planned).toMatchObject({ checks: 128, deferred: 64, requests: 0, tokens: 0 });
   });
 
+  it("does not enable the context a rule declares", async () => {
+    const files = [source];
+    const plain = await planOf({ rules: { a }, files, cache: memoryCache() });
+    const declared = await planOf({
+      rules: { a: { ...a, reads: ["dependents", "symbols"] } },
+      files,
+      cache: memoryCache(),
+    });
+    expect(declared.files[0]?.readState).toEqual({});
+    expect(declared.checks).toBe(plain.checks);
+    expect(declared.requests).toBe(plain.requests);
+    expect(declared.files[0]?.prepared.a?.fingerprint).toBe(
+      plain.files[0]?.prepared.a?.fingerprint,
+    );
+  });
+
   it("refuses the whole audit without pruning when a later prefetched source read fails", async () => {
     const paths = Array.from({ length: 64 }, (_, index) => ({
       path: `/repo/src/f${String(index).padStart(2, "0")}.ts`,

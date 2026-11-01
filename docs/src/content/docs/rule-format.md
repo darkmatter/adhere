@@ -51,13 +51,14 @@ const port: number = Number(process.env.PORT);
 ```
 ````
 
-| Front matter             | Meaning                                                                                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `description`            | Required. One sentence that says what code must be and what it must never be.                                                                  |
-| `threshold`              | The rule's own cutoff, in place of the config's.                                                                                               |
-| `level`                  | `warning` reports the rule's findings as warnings, which do not fail the run. Use it for a nit, or for a rule that tends to flag code wrongly. |
-| `tests`                  | Rules skip tests by default. `only` is for a rule about tests, which judges nothing else. `include` is for one that holds in tests as well.    |
-| `appliesTo`, `excludeIf` | Where the rule applies. See [Scoping a rule](#scoping-a-rule).                                                                                 |
+| Front matter             | Meaning                                                                                                                                                                                                                                                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `description`            | Required. One sentence that says what code must be and what it must never be.                                                                                                                                                                                                                                  |
+| `threshold`              | The rule's own cutoff, in place of the config's.                                                                                                                                                                                                                                                               |
+| `level`                  | `warning` reports the rule's findings as warnings, which do not fail the run. Use it for a nit, or for a rule that tends to flag code wrongly.                                                                                                                                                                 |
+| `tests`                  | Rules skip tests by default. `only` is for a rule about tests, which judges nothing else. `include` is for one that holds in tests as well.                                                                                                                                                                    |
+| `reads`                  | Optional. Context the rule needs, as `["symbols", "references"]`, a JSON array on one line. It declares what would help; the config still enables reads and type awareness. A bundled rule that declares `symbols` or `references` is left out without `typeAware`; a project's own rule still runs and warns. |
+| `appliesTo`, `excludeIf` | Where the rule applies. See [Scoping a rule](#scoping-a-rule).                                                                                                                                                                                                                                                 |
 
 | Heading in the body          | The code under it                                           |
 | ---------------------------- | ----------------------------------------------------------- |
@@ -174,6 +175,11 @@ default-exports `defineRule({...})`, which takes the same fields as a config's
 inline rule. TypeScript adds what a `RULE.md` cannot have: a
 [state hook](/adhere/state-hooks/#state-hooks), which adds to what Jev reads for the rule, and
 [rule options](/adhere/state-hooks/#rule-options), which each project that uses the rule sets.
+
+A `RULE.ts` or an inline rule declares the same context with `reads`. The
+config still enables reads and type awareness. A bundled rule that declares
+`symbols` or `references` is left out without `typeAware`; a project's own
+rule still runs, and lint warns when a declared read is disabled.
 
 - adhere imports a `RULE.ts`, as it imports a config, so its code runs on
   every lint.

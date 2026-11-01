@@ -2,6 +2,7 @@ import {
   AdhereConfig as AdhereConfigSchema,
   CONFIG_FILES,
   ConfigUnavailable,
+  declaresNativeReads,
   decodeConfig,
   type Loaded,
   type Flags,
@@ -10,6 +11,7 @@ import {
   type ResolvedConfig,
   resolveConfig,
   RULES_DIRECTORY,
+  typeAwareOf,
 } from "#config.ts";
 import { type PresetName, presetOf, presets, wholePresetOf } from "#presets.ts";
 import {
@@ -109,9 +111,17 @@ export const AdhereConfigLive = (flags: Flags) =>
           ? discoveredEntries
           : globalRuleSet(yield* materializeRules(config.rules ?? {}, cwd), cwd);
       const rules = applicableRules(cwd, projectEntries);
-      const registry = yield* Effect.forEach(presetsOf(config, flags), (name) =>
+      const loadedPresets = yield* Effect.forEach(presetsOf(config, flags), (name) =>
         loadPreset(name, cwd),
       ).pipe(Effect.map(Record.fromEntries));
+      // A bundled rule that declares the compiler's native reads is left out
+      // unless this run enables them; a project's own rule stays and warns.
+      const registry = typeAwareOf(config, flags)
+        ? loadedPresets
+        : Record.map(loadedPresets, (preset) => ({
+            ...preset,
+            rules: Record.filter(preset.rules, (rule) => !declaresNativeReads(rule)),
+          }));
       const resolved = resolveConfig({ ...config, rules }, flags, registry);
       const presetEntries = Object.entries(registry).flatMap(([name, preset]) =>
         globalRuleSet(preset.rules, cwd).map((entry) => ({
@@ -127,7 +137,8 @@ export const AdhereConfigLive = (flags: Flags) =>
       const loaded = new Set(entries.map(shownId));
       const elsewhere = Object.keys(overrides).filter((id) => !loaded.has(id));
       if (elsewhere.length > 0) {
-        // A rule of a preset this run leaves out may be overridden; one no rule has is a typo.
+        // A rule of a preset this run leaves out, or skips without type awareness,
+        // may be overridden; one no rule has is a typo.
         const every = yield* everyPresetRule(cwd);
         const unknown = elsewhere.filter((id) => !every.has(id));
         if (unknown.length > 0) {
@@ -137,6 +148,25 @@ export const AdhereConfigLive = (flags: Flags) =>
         }
       }
       const scopedRules = yield* withOverrides(entries, overrides);
+      for (const entry of scopedRules) {
+        const missing = (entry.rule.reads ?? []).filter((read) => !resolved.reads.includes(read));
+        if (missing.length === 0) continue;
+        const workspaceMissing = missing.filter(
+          (read) => read === "workspacePackages" || read === "dependents",
+        );
+        const nativeMissing = missing.filter((read) => read === "symbols" || read === "references");
+        const enable = [
+          ...(workspaceMissing.length === 0
+            ? []
+            : [
+                `add ${workspaceMissing.map((read) => `"${read}"`).join(", ")} to the config's reads`,
+              ]),
+          ...(nativeMissing.length === 0 ? [] : ["enable typeAware: true (or pass --type-aware)"]),
+        ].join(" and ");
+        yield* Effect.logWarning(
+          `${shownId(entry)} declares reads ${missing.join(", ")}, which this run does not enable; the rule may be less accurate until enabled. ${enable}.`,
+        );
+      }
       // Read on every run so workspace edits are seen, but only when the config enables this context.
       const dependents = resolved.reads.includes("dependents");
       const workspacePackages =

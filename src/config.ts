@@ -57,8 +57,9 @@ export type AppendState = (
 
 /**
  * What the config can have Jev read beside each file's code, shared by all
- * its rules. Each name is the key the state carries it under, which a rule's
- * description can name in backticks. `workspacePackages` maps only workspace
+ * its rules. A rule may also declare the reads it needs, which tells the run
+ * what would help without enabling any of it. Each name is the key the state
+ * carries it under, which a rule's description can name in backticks. `workspacePackages` maps only workspace
  * packages imported by this file to their directories. `dependents` lists what
  * depends on this file: workspace packages whose package.json names its package,
  * and files that import it by a relative path. `symbols` maps names
@@ -115,6 +116,10 @@ export const Rule = Schema.Struct({
   excludeIf: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
     description:
       "Where the rule does not apply: Jev is asked of each whether all the code that breaks the rule is as it describes, and a yes to any drops the finding.",
+  }),
+  reads: Schema.optionalKey(Reads).annotate({
+    description:
+      "Context the rule needs, such as `dependents` or `symbols`. This declares what would help; the config's `reads` and `typeAware` still decide what this run enables. A project's rule that declares a read they do not enable warns that it may be less accurate until enabled; a bundled preset rule that declares `symbols` or `references` is left out unless `typeAware` is on.",
   }),
   appendState: Schema.optionalKey(
     Schema.declare((value: unknown): value is AppendState => typeof value === "function", {
@@ -225,7 +230,7 @@ export const AdhereConfig = Schema.Struct({
   }),
   typeAware: Schema.optionalKey(Schema.Boolean).annotate({
     description:
-      "Include both compiler-resolved symbols and declaration excerpts. Defaults to false.",
+      "Include both compiler-resolved symbols and declaration excerpts. Defaults to false. Bundled preset rules that declare either run only with it on; a project's own rule still runs and warns.",
   }),
   maxSymbolLength: Schema.optionalKey(Schema.Natural).annotate({
     description: "Maximum characters of each symbol's complete resolved content. Defaults to 256.",
@@ -409,6 +414,22 @@ export const presetsOf = (
 };
 
 /**
+ * Whether the run enables the compiler's native reads: the command line
+ * replaces the config's opt-in, which defaults to off.
+ */
+export const typeAwareOf = (
+  config: Pick<typeof AdhereConfig.Type, "typeAware">,
+  flags: Flags,
+): boolean => flags.typeAware ?? config.typeAware ?? false;
+
+/**
+ * Whether a rule declares a read only `typeAware` enables, so a run without
+ * it cannot judge the rule as it was written.
+ */
+export const declaresNativeReads = (rule: Pick<Rule, "reads">): boolean =>
+  (rule.reads ?? []).some((read) => read === "symbols" || read === "references");
+
+/**
  * Precedence, highest first: command line, config file, presets in order
  * (a later preset wins), then the defaults. A config rule replaces a preset
  * rule with the same id.
@@ -424,7 +445,7 @@ export const resolveConfig = (
   });
   const last = <K extends "model" | "threshold">(key: K) =>
     applied.map((preset) => preset[key]).findLast((value) => value !== undefined);
-  const typeAware = flags.typeAware ?? config.typeAware ?? false;
+  const typeAware = typeAwareOf(config, flags);
   return {
     model: config.provider?.model ?? config.model ?? last("model") ?? DEFAULT_MODEL,
     ...(config.provider === undefined ? {} : { provider: config.provider }),
