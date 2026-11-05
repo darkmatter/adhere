@@ -57,6 +57,7 @@
 
 ### Fixed
 
+- Restore the Markdown renderer import used by trial findings, fixing the rule-creation CLI's CI type-check failure.
 - Avoid opening every eligible document before sending the first request; each native read owns and releases its document and snapshot.
 - Replace per-symbol IDE hover calls with compiler API queries, bounded parallel formatting, and deduplicated types and documentation.
 - Detect changed source or ignore directives before sending or caching results under a planned content key.

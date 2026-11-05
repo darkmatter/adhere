@@ -9,7 +9,7 @@
  */
 import { type Agent } from "#create/agents.ts";
 import { RuleNotCreated, asking, filterAdvicePrompt, inspectionPrompt } from "#create/ask.ts";
-import { line, note, said, spinning, warn } from "#create/look.ts";
+import { line, note, renderMarkdown, said, spinning, warn } from "#create/look.ts";
 import {
   type TrialDraft,
   type TrialFinding,
