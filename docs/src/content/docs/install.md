@@ -6,7 +6,7 @@ Install the standalone executable. It needs no Node or Bun, and runs in any
 directory, inside a repo or not:
 
 ```sh
-curl -fsSL http://raw.githubusercontent.com/darkmatter/adhere/raw/main/scripts/install.sh | sh
+curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh
 ```
 
 It installs to `~/.local/bin`. If your shell can't find `adhere` afterwards, add
