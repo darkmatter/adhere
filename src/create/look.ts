@@ -4,7 +4,6 @@
  * rail, and a spinner, as `gum spin` draws one, while an agent works.
  */
 import { highlightedLines } from "#workflows/format.ts";
-import { ruleBodyOf } from "#markdown.ts";
 import { Status, clearingStatus } from "#services/Status.ts";
 import { Console, Duration, Effect, Fiber } from "effect";
 import { Prompt } from "effect/cli";
@@ -61,23 +60,16 @@ const columns = () => process.stderr.columns ?? 80;
 export const indented = (text: string) =>
   Bun.wrapAnsi(text, Math.max(columns() - 5, 20)).replaceAll("\n", "\n    ");
 
-/**
- * Renders the body of a rule for preview, preserving its YAML frontmatter.
- * The frontmatter is shown as-is so its metadata stays visible; the body is
- * rendered with Bun's native Markdown-to-ANSI renderer.
- */
+/** Renders Markdown for preview with Bun's native Markdown-to-ANSI renderer. */
 export const renderMarkdown = (text: string) =>
   Effect.gen(function* () {
     const theme = yield* Prompt.Theme;
-    const body = ruleBodyOf(text);
-    const prefix = text.slice(0, text.length - body.length);
-    const rendered = Bun.markdown
-      .ansi(body, {
+    return Bun.markdown
+      .ansi(text, {
         colors: theme.colors,
         columns: Math.max(columns() - 4, 20),
       })
       .trimEnd();
-    return prefix + rendered;
   });
 
 type Color = (theme: Prompt.Theme) => string;

@@ -44,7 +44,7 @@ jobs:
   publish:
     needs: verify-macos
     # npm rejects --provenance from self-hosted runners such as arc.
-    runs-on: ubuntu-latest
+    runs-on: public-x64-linux
     steps:
       - uses: actions/checkout@v7
         with:

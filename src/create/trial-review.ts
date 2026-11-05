@@ -559,7 +559,9 @@ export const trialAndReview = <D, R>(subject: TrialSubject<D, R>) =>
       yield* showRun(run);
       const inspection = yield* inspect(subject, run);
       if (inspection._tag === "Text") {
-        if (inspection.text.trim() !== "") yield* line(inspection.text.trim());
+        if (inspection.text.trim() !== "") {
+          yield* line(yield* renderMarkdown(inspection.text.trim()));
+        }
       } else {
         yield* warn(`The agent could not read the report: ${inspection.message}`);
       }

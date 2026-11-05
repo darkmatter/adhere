@@ -62,3 +62,4 @@
 - Detect changed source or ignore directives before sending or caching results under a planned content key.
 - Fix the native API panic when reading const-asserted empty tuple properties by pinning the SDK and compiler to `7.1.0-dev.20261009.1`, which includes [TypeScript #64080](https://github.com/microsoft/TypeScript/pull/64080).
 - Stop refusing to run when `.adhere/` holds a Markdown file outside every rule's directory, such as an instructions file in `.adhere/instructions/`, the default for `adhere postinstall`. Like any file not named `RULE.md` or `RULE.ts`, it is ignored.
+- Render the authoring agent's findings after a trial in `adhere rules create` as Markdown, so headings, emphasis, and fenced code show rendered instead of as their source. A leading `---` in those findings is Markdown, not a rule's front matter; a `RULE.md` draft still previews its own front matter as written.
