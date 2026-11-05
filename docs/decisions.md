@@ -268,9 +268,32 @@ finding and every example verdict accepts an optional note, and the revision
 prompt carries those notes plus the report path and counts.
 
 A revision is executable code or settings again, so it is re-approved before it
-runs. The rerun judges the same pinned files as the first run, not a fresh
-selection, so the new evidence is comparable; if a pinned file is no longer
-eligible the trial fails rather than quietly choosing another. A skipped,
+runs. The rerun keeps the same pinned sample, not a fresh selection, so the new
+evidence is comparable. A file newly excluded by a rule's local filters is
+reported as skipped without replacement; a missing file or one no longer
+eligible under the other selection settings still fails the trial. A skipped,
 failed, or cancelled trial leaves the draft explicitly untested: the write
 prompt says `(not trialled)`, the closing line says `Not trialled: …`, and
 nothing claims validation from stale, partial, or skipped data.
+
+## Local rule filters before model judgment
+
+Rules can target files with `include` and `exclude` objects, each containing
+optional `paths` glob lists and `content` regular-expression source lists.
+Paths are repository-root-relative, including for nested rules. Content
+matches original file text, including comments. Alternatives within a list
+are OR; nonempty inclusion categories are AND; any exclusion match vetoes the
+file. Empty lists impose no restriction. Both Markdown JSON front matter
+and TypeScript rules use this contract.
+
+These filters run locally before judgment or cached findings are used.
+Unlike `appliesTo` and `excludeIf`, they do not ask the model a question.
+Regex avoids parser-specific APIs and executable predicates in Markdown, but
+cannot distinguish an actual import from matching text in a comment or
+resolve re-exports. Narrow filters can silently hide genuine violations.
+
+After the first completed adhere trial, the authoring agent is explicitly
+asked whether filters would help, using the report and source files. It must
+recommend concrete entries or explain why none are needed. The user chooses
+whether to revise; the recommendation accompanies the next revision's
+evidence. Oxlint settings and plugins do not receive adhere-only fields.

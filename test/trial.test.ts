@@ -264,6 +264,109 @@ describe("trial", () => {
     }
   });
 
+  it("applies the draft's own filters before the file cap", async () => {
+    const root = await onDisk(tree());
+    try {
+      const filtered = (filter: string) =>
+        draft(
+          `---\ndescription: A port is a branded integer.\n${filter}\n---\n\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\n`,
+        );
+      const { layers } = fakes({ judge: { ports: 0.9 }, locate: { ports: 3 } });
+      const byContent = await run(
+        previewTrial(
+          filtered('include: {"content": ["3000"]}'),
+          { kind: "files", limit: 2 },
+          { root, services: { cache: layers.cache } },
+        ),
+      );
+      expect(byContent).toMatchObject({ eligible: 1, selected: 1, requests: 1 });
+
+      const result = await run(
+        runTrial(
+          filtered('include: {"content": ["3000"]}'),
+          { kind: "files", limit: 2 },
+          { root, services: layers },
+        ),
+      );
+      expect(result.selectedFiles).toEqual(["src/a.ts"]);
+      expect(result.files).toBe(1);
+
+      const byPath = await run(
+        previewTrial(
+          filtered('include: {"paths": ["src/b.ts"]}'),
+          { kind: "files", limit: 2 },
+          { root, services: { cache: layers.cache } },
+        ),
+      );
+      expect(byPath).toMatchObject({ eligible: 1, selected: 1 });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a pinned sample on a rerun and skips files its new filters leave out", async () => {
+    const root = await onDisk(tree());
+    try {
+      const { layers } = fakes({ judge: { ports: 0.9 }, locate: { ports: 3 } });
+      const first = await run(
+        runTrial(draft(), { kind: "files", limit: 2 }, { root, services: layers }),
+      );
+      expect(first.selectedFiles).toEqual(["src/a.ts", "src/b.ts"]);
+
+      const narrowed = draft(
+        '---\ndescription: A port is a branded integer.\ninclude: {"content": ["3000"]}\n---\n\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\n',
+      );
+      const preview = await run(
+        previewTrial(
+          narrowed,
+          { kind: "files", limit: 2 },
+          { root, services: { cache: layers.cache }, files: first.selectedFiles },
+        ),
+      );
+      expect(preview).toMatchObject({ eligible: 1, selected: 2, skipped: 1 });
+
+      const rerun = await run(
+        runTrial(
+          narrowed,
+          { kind: "files", limit: 2 },
+          { root, services: layers, files: first.selectedFiles },
+        ),
+      );
+      expect(rerun.selectedFiles).toEqual(first.selectedFiles);
+      expect(rerun.files).toBe(2);
+      expect(rerun.skipped).toBe(1);
+      expect(rerun.findings.map((finding) => finding.rule)).toEqual(["ports"]);
+
+      const report = await reportOf(root);
+      expect(report.excludedFiles).toEqual(["src/b.ts"]);
+      expect((report.notes as ReadonlyArray<string>).join("\n")).toContain("src/b.ts");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses an invalid filter regular expression in the draft before sending", async () => {
+    const root = await onDisk(tree());
+    try {
+      const { layers, jev, cache } = fakes({ judge: { ports: 0.9 }, locate: { ports: 3 } });
+      const bad = draft(
+        '---\ndescription: A port is a branded integer.\ninclude: {"content": ["("]}\n---\n\nconst Port = Schema.Int.pipe(Schema.brand("Port"))\n',
+      );
+      const refused = await run(
+        Effect.flip(
+          previewTrial(bad, { kind: "all" }, { root, services: { cache: layers.cache } }),
+        ),
+      );
+      expect(refused).toBeInstanceOf(TrialUnavailable);
+      expect(refused.reason).toBe("draft");
+      expect(refused.message).toContain("regular expression");
+      expect(jev.sent).toEqual([]);
+      expect(cache.writes).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("previews without sending, writing, or caching", async () => {
     const root = await onDisk(tree());
     try {

@@ -72,6 +72,44 @@ export const Reads = Schema.Array(
 );
 
 /**
+ * A JavaScript regular expression's source, checked here so a rule with a bad
+ * pattern fails to load rather than at the first file it would filter.
+ */
+const isValidRegexSource = (source: string): string | undefined => {
+  try {
+    new RegExp(source);
+    return undefined;
+  } catch (problem) {
+    return `is not a valid JavaScript regular expression: ${
+      problem instanceof Error ? problem.message : String(problem)
+    }`;
+  }
+};
+
+const RegexSource = Schema.String.check(
+  Schema.makeFilter(isValidRegexSource, {
+    toCode: () => ({ runtime: "Schema.makeFilter(isValidRegexSource)" }),
+  }),
+);
+
+/**
+ * One side of a rule's file filter: repository-relative globs for paths, and
+ * regular expression sources for the file's text as written. A rule's
+ * `include` and `exclude` each take this shape.
+ */
+export const RuleFilter = Schema.Struct({
+  paths: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
+    description:
+      "Repository-root-relative glob patterns, `/`-separated, as in `src/**` or `**/*.test.ts`.",
+  }),
+  content: Schema.optionalKey(Schema.Array(RegexSource)).annotate({
+    description:
+      "JavaScript regular expression sources, without `/` delimiters or flags, matched against the file's text as written, comments included.",
+  }),
+}).annotate({ identifier: "RuleFilter" });
+export interface RuleFilter extends Schema.Schema.Type<typeof RuleFilter> {}
+
+/**
  * A rule's examples, named in RFC 2119's words, which Jev reads as written. A
  * requirement shows code that `must` be written and code that must `never`
  * be. A guideline, which asks for less, shows code that `should` be written
@@ -108,6 +146,14 @@ export const Rule = Schema.Struct({
   level: Schema.optionalKey(Schema.Literals(["error", "warning"])).annotate({
     description:
       "How a finding under the rule is reported: an `error`, the default, which fails the run, or a `warning`, for a nit or a rule that errs toward false findings, which does not.",
+  }),
+  include: Schema.optionalKey(RuleFilter).annotate({
+    description:
+      "Where the rule applies, beside its scope and `tests`: a file must match every configured category, and within `paths` or `content` any entry is enough. An omitted or empty list puts no condition on that category.",
+  }),
+  exclude: Schema.optionalKey(RuleFilter).annotate({
+    description:
+      "Where the rule does not apply: the same shape as `include`. Any matching path or content entry drops the file before it is judged, so no cached finding for it is read or reported.",
   }),
   appliesTo: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
     description:

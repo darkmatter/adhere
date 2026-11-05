@@ -121,6 +121,18 @@ Front matter besides `description`, all optional:
 - `tests: only` for a rule about tests, `tests: include` for one that holds in
   tests too. Otherwise rules skip `.test` and `.spec` files and files under
   `test/`, `tests/`, `__tests__/`, and `fixtures/`.
+- `include: {"paths":["src/**"],"content":["from\\s+[\"']effect[\"']"]}`
+  and `exclude: {"paths":["**/generated/**"],"content":["@generated"]}`,
+  JSON objects on one line, filter files locally before requests or cached
+  findings. TypeScript rules use ordinary objects with the same fields.
+  Paths are repository-root-relative globs, even for nested rules. Content
+  patterns are JavaScript regex source strings without delimiters or flags,
+  matched against original text including comments. Invalid regex refuses
+  loading. Entries within each list are alternatives; every nonempty include
+  list must match, and any exclude match vetoes the file. Empty lists impose
+  no restriction. Existing scope, test settings, and ignores still apply.
+  An import regex is not import resolution: check comments, alternative import
+  forms, and re-exports before narrowing a rule and silently missing violations.
 - `appliesTo: ["a declared union type or schema"]` and
   `excludeIf: ["a type that mirrors a third-party format"]`, JSON arrays on
   one line, scope a rule without widening its description: a finding stands
@@ -354,14 +366,18 @@ A convention a linter can decide exactly does not belong in a `RULE.md`.
 Whichever route it takes, the draft is trialled on real files before anything
 is written: the first 100 applicable files by default, the entire repo, or a
 number the user types, with the plan's known cost shown first. The authoring
-agent reads the saved report in `.adhere/trial/` and the source it names, then
-the user accepts the findings, reviews each as correct, a false positive, or
-unsure, or asks for a revision. Findings and examples take optional notes for
-the agent; a revision is re-approved and reruns the same files, so the new
-evidence is comparable. Skipping is allowed, but the write prompt then says
-`(not trialled)` and the closing line says `Not trialled: …`; nothing is called
-validated on a skipped, partial, or stale run. The trial runs for native
-settings and approved plugins too.
+agent reads the saved report in `.adhere/trial/` and the source it names. After
+the first completed adhere trial, it is explicitly asked whether path/content
+filters would help: recommend exact entries or explain why none are needed,
+including the risk of hiding real violations. The user accepts the draft,
+reviews findings, or asks for a revision. Findings and examples take optional
+notes; revisions receive those notes and the filter recommendation, are
+re-approved, and rerun the same sample. Newly filtered files are reported as
+skipped, not replaced. The initial cap counts files that pass filters.
+Skipping is allowed, but the write prompt then says `(not trialled)` and the
+closing line says `Not trialled: …`; nothing is called validated on a skipped,
+partial, or stale run. Native settings and approved plugins are trialled too,
+without adhere-only filter recommendations.
 
 A project plugin and its checked-in test go to
 `.adhere/oxlint/<plugin>.mjs` and `.adhere/oxlint/<plugin>.test.mjs`; the
@@ -586,6 +602,10 @@ Per rule, read its findings and decide:
 - Many hits at 0.80 to 0.90, mostly not violations: the description is too
   broad. Narrow it, or scope it with `appliesTo` or `excludeIf`, before
   raising its `threshold`: a threshold hides, a sentence explains.
+- Hits in irrelevant files: consider local `include`/`exclude` path or content
+  filters before paying to judge them. Verify the boundary against real
+  violations and unflagged files; an absent import does not prove the library
+  is unused when the project uses wrappers or re-exports.
 - Hits on code that follows the pattern through another API: the `must`
   block is too specific. Use the repo's most general correct example.
 - Right less than half the time and not fixable by wording: `level: warning`,

@@ -29,7 +29,9 @@ import {
   type TrialRun,
   type TrialScope,
 } from "#create/oxlint-trial.ts";
+import { filtersNeedText, hasFilters, ruleAppliesTo } from "#filters.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
+import { WalkUnavailable } from "#models/Audit.ts";
 import { importRule, judgesFile } from "#rules.ts";
 import {
   AdhereConfig,
@@ -176,27 +178,70 @@ const eligibleFiles = (root: string, config: ResolvedConfig) =>
   });
 
 interface Selection {
+  /** The files planning may judge: the selected sample, less those filters leave out. */
   readonly files: ReadonlyArray<SourceFile>;
   /** Sorted repo-relative paths, exactly as run and as the report names them. */
   readonly paths: ReadonlyArray<string>;
   /** Applicable files before the cap. */
   readonly eligible: number;
+  /** Pinned paths the draft's filters now leave out: kept in the sample, never planned. */
+  readonly excluded: ReadonlyArray<string>;
 }
 
-/** The cap is on files, cached ones included; a pinned rerun keeps its exact set. */
+/**
+ * Which candidate files the draft's own include/exclude filters allow. Only a
+ * content filter reads the file; a path-only filter is decided from its path,
+ * and an unfiltered rule allows every file.
+ */
+const allowedFiles = (
+  rule: Rule,
+  walker: SourceWalker["Service"],
+  candidates: ReadonlyArray<SourceFile>,
+  root: string,
+): Effect.Effect<ReadonlyMap<SourceFile, boolean>, WalkUnavailable> => {
+  if (!hasFilters(rule)) return Effect.succeed(new Map());
+  if (!filtersNeedText(rule)) {
+    return Effect.succeed(
+      new Map(
+        candidates.map(
+          (file) => [file, ruleAppliesTo(rule, display(root, file.path), "")] as const,
+        ),
+      ),
+    );
+  }
+  return Effect.forEach(
+    candidates,
+    (file) =>
+      Effect.map(walker.read(file), ({ lines }) => {
+        const allowed = ruleAppliesTo(rule, display(root, file.path), lines.join("\n"));
+        return [file, allowed] as const;
+      }),
+    { concurrency: 8 },
+  ).pipe(Effect.map((verdicts) => new Map(verdicts)));
+};
+
+/**
+ * The cap is on files, cached ones included, and filters apply before it on a
+ * first run. A pinned rerun keeps its exact set: files the draft's filters now
+ * leave out stay in the sample but are not planned, so before and after remain
+ * comparable. A file that is missing, or ineligible for any other reason, is
+ * still an error rather than a skip.
+ */
 const selectionOf = (
   root: string,
   eligible: ReadonlyArray<SourceFile>,
   applies: (file: SourceFile) => boolean,
   scope: TrialScope,
   pinned: ReadonlyArray<string> | undefined,
+  allowed: ReadonlyMap<SourceFile, boolean> = new Map(),
 ): Effect.Effect<Selection, TrialUnavailable> =>
   Effect.gen(function* () {
-    const sorted = [...eligible].filter(applies).sort((a, b) => a.path.localeCompare(b.path));
-    const paths = sorted.map((file) => display(root, file.path));
+    const candidates = [...eligible].filter(applies).sort((a, b) => a.path.localeCompare(b.path));
+    const allowedByPath = (file: SourceFile) => allowed.get(file) !== false;
+    const sorted = candidates.filter(allowedByPath);
     if (pinned !== undefined) {
       const wanted = [...new Set(pinned.map(normalized))];
-      const known = new Map(sorted.map((file, index) => [paths[index]!, file]));
+      const known = new Map(candidates.map((file) => [display(root, file.path), file] as const));
       const missing = wanted.filter((file) => !known.has(file));
       if (missing.length > 0) {
         return yield* trialError(
@@ -204,10 +249,13 @@ const selectionOf = (
           `The pinned trial files are no longer eligible: ${missing.join(", ")}. Run the trial again without pinned files.`,
         );
       }
+      const files = wanted.map((file) => known.get(file)!);
+      const excluded = files.filter((file) => !allowedByPath(file));
       return {
-        files: wanted.map((file) => known.get(file)!),
+        files: files.filter(allowedByPath),
         paths: wanted,
         eligible: sorted.length,
+        excluded: excluded.map((file) => display(root, file.path)),
       };
     }
     const limit = scope.kind === "files" ? scope.limit : undefined;
@@ -222,6 +270,7 @@ const selectionOf = (
       files: chosen,
       paths: chosen.map((file) => display(root, file.path)),
       eligible: sorted.length,
+      excluded: [],
     };
   });
 
@@ -245,7 +294,12 @@ const planTrial = (
 
 const requestsOf = (plan: AuditPlan): number => plan.requests + (plan.cachedLocateRequests ?? 0);
 
-const previewOf = (plan: AuditPlan, eligible: number, selected: number): TrialPreview => ({
+const previewOf = (
+  plan: AuditPlan,
+  eligible: number,
+  selected: number,
+  filteredOut = 0,
+): TrialPreview => ({
   eligible,
   selected,
   requests: requestsOf(plan),
@@ -253,7 +307,7 @@ const previewOf = (plan: AuditPlan, eligible: number, selected: number): TrialPr
   ...(plan.price === undefined ? {} : { price: plan.price }),
   cached: plan.cached,
   deferred: plan.deferred,
-  skipped: plan.skipped,
+  skipped: plan.skipped + filteredOut,
   model: plan.model,
   ...(plan.provider === undefined ? {} : { provider: plan.provider }),
 });
@@ -346,19 +400,15 @@ export const previewTrial = (draft: TrialDraft, scope: TrialScope, options: Tria
       const rule = yield* draftRule(draft);
       const config = yield* draftConfig(root, raw, draft.id, rule);
       const { walker, files } = yield* eligibleFiles(root, config);
-      const selected = yield* selectionOf(
-        root,
-        files,
-        (file) => judgesFile(rule, file.test === true),
-        scope,
-        options.files,
-      );
+      const applies = (file: SourceFile) => judgesFile(rule, file.test === true);
+      const allowed = yield* allowedFiles(rule, walker, files.filter(applies), root);
+      const selected = yield* selectionOf(root, files, applies, scope, options.files, allowed);
       const cache = options.services?.cache ?? AuditCacheAt(root);
       const context = yield* Layer.build(
         Layer.mergeAll(Layer.succeed(AdhereConfig, config), cache),
       );
       const plan = yield* planTrial(selected, walker, context, root);
-      return previewOf(plan, selected.eligible, selected.paths.length);
+      return previewOf(plan, selected.eligible, selected.paths.length, selected.excluded.length);
     }),
   ).pipe(
     Effect.catchTag("ConfigUnavailable", (problem) =>
@@ -454,13 +504,9 @@ export const runTrial = (draft: TrialDraft, scope: TrialScope, options: TrialRun
       const rule = yield* draftRule(draft);
       const config = yield* draftConfig(root, raw, draft.id, rule);
       const { walker, files } = yield* eligibleFiles(root, config);
-      const selected = yield* selectionOf(
-        root,
-        files,
-        (file) => judgesFile(rule, file.test === true),
-        scope,
-        options.files,
-      );
+      const applies = (file: SourceFile) => judgesFile(rule, file.test === true);
+      const allowed = yield* allowedFiles(rule, walker, files.filter(applies), root);
+      const selected = yield* selectionOf(root, files, applies, scope, options.files, allowed);
       const cache = options.services?.cache ?? AuditCacheAt(root);
       const jev =
         options.services?.jev ??
@@ -523,6 +569,11 @@ export const runTrial = (draft: TrialDraft, scope: TrialScope, options: TrialRun
               `${result.skipped} selected files were too long to judge with this rule and its context.`,
             ]
           : []),
+        ...(selected.excluded.length > 0
+          ? [
+              `${selected.excluded.length} pinned files are no longer in the draft's include/exclude filters and were skipped: ${selected.excluded.join(", ")}.`,
+            ]
+          : []),
         ...(config.typeAware
           ? [
               "Type-aware reads were requested; symbols and references came from the installed TypeScript compiler.",
@@ -540,6 +591,7 @@ export const runTrial = (draft: TrialDraft, scope: TrialScope, options: TrialRun
           scope,
           eligible: selected.eligible,
           selectedFiles: selected.paths,
+          ...(selected.excluded.length === 0 ? {} : { excludedFiles: selected.excluded }),
           plan: {
             model: plan.model,
             ...(plan.provider === undefined ? {} : { provider: plan.provider }),
@@ -570,10 +622,10 @@ export const runTrial = (draft: TrialDraft, scope: TrialScope, options: TrialRun
         scope,
         revision,
         selectedFiles: selected.paths,
-        files: result.files,
+        files: result.files + selected.excluded.length,
         judged: result.judged,
         cached: result.cached,
-        skipped: result.skipped,
+        skipped: result.skipped + selected.excluded.length,
         waiting: result.waiting,
         findings: result.findings.map((finding) => trialFinding(root, finding)),
         reportPath,

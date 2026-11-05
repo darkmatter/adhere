@@ -58,6 +58,7 @@ const port: number = Number(process.env.PORT);
 | `level`                  | `warning` reports the rule's findings as warnings, which do not fail the run. Use it for a nit, or for a rule that tends to flag code wrongly.                                                                                                                                                                 |
 | `tests`                  | Rules skip tests by default. `only` is for a rule about tests, which judges nothing else. `include` is for one that holds in tests as well.                                                                                                                                                                    |
 | `reads`                  | Optional. Context the rule needs, as `["symbols", "references"]`, a JSON array on one line. It declares what would help; the config still enables reads and type awareness. A bundled rule that declares `symbols` or `references` is left out without `typeAware`; a project's own rule still runs and warns. |
+| `include`, `exclude`     | Local file filters: repository-relative path globs and content regular expressions. See [Filtering files](#filtering-files).                                                                                                                                                                                   |
 | `appliesTo`, `excludeIf` | Where the rule applies. See [Scoping a rule](#scoping-a-rule).                                                                                                                                                                                                                                                 |
 
 | Heading in the body          | The code under it                                           |
@@ -136,6 +137,39 @@ export async function findRestaurants(zipCode: string) {
   tooling.
 
 </details>
+
+## Filtering files
+
+Use `include` and `exclude` to select files **before** a rule sends requests.
+They work in Markdown front matter as JSON objects on one line, and in
+`defineRule` or inline rules as ordinary objects:
+
+```md
+include: {"paths":["src/**"],"content":["from\\s+[\"']effect[\"']"]}
+exclude: {"paths":["**/generated/**"],"content":["@generated"]}
+```
+
+This rule judges only files under `src/` whose text matches the `effect`
+import pattern, unless their path is under `generated/` or their text contains
+`@generated`.
+
+- `paths` uses the same glob matching as `--filter`, relative to the repository
+  root even for a nested rule. Use `/` separators.
+- `content` holds JavaScript regular expression **source strings**, without
+  `/` delimiters or flags. Escape backslashes as JSON or TypeScript strings
+  require. Invalid expressions refuse loading the rule.
+- Content matches the original whole file, including comments, regardless of
+  `includeComments`. This is text matching, not import resolution: a commented
+  import can match, and a library accessed through a re-export can be missed.
+- Patterns within each list are alternatives. Every nonempty `include` list
+  must match; a match in either `exclude` list excludes the file.
+- Missing or empty lists add no restriction. Existing directory scope, test
+  settings, global exclusions, and ignore directives still apply.
+
+A file excluded by these filters gets no judgment for that rule, including
+cached findings. Filters do not replace the model-based scoping below: use
+them for reliable file-level boundaries, not to hide individual violations
+inside an otherwise relevant file.
 
 ## Scoping a rule
 

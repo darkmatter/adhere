@@ -155,6 +155,17 @@ const readsInstruction = (shape: Shape) => {
   return `Declare the context Jev needs beside the code as \`reads: [${reads.map((read) => `"${read}"`).join(", ")}]\` ${shape.format === "typescript" ? "in `defineRule({...})`" : "in its front matter"}. A rule's \`reads\` is a declaration, not an enablement: the project's config still decides what Jev reads, and lint warns that the rule may be less accurate until a declared read is enabled.`;
 };
 
+/**
+ * What a rule may do to narrow the files it judges at all: a mechanical
+ * filter, taught when a rule is written or revised, never to an oxlint rule.
+ */
+const filtersInstruction = (shape: Shape) =>
+  `A rule may also narrow the files it judges before Jev sees them, with optional \`include\` and \`exclude\` objects. Each holds \`paths\`, globs relative to the repository root with forward slashes, matched as \`--filter\` matches them, and \`content\`, JavaScript regular expression sources without / delimiters or flags, tested against each file's original text, comments included. Any entry in a list suffices; \`include\` applies only when every list it sets matches, while a match in either \`exclude\` list drops the file. An absent object or an empty list restricts nothing. A filter is silent: a file it drops is never judged, so a wrong one is a false negative. Use \`paths\` for where the rule applies and \`content\` for what a file says; a filter is not a substitute for \`appliesTo\` or \`excludeIf\`, which ask Jev about the code. \`content\` can match a named package's import specifier, such as from "effect", or a directive, but a regular expression cannot resolve aliases or re-exports, know whether a name is a type or a value, or reliably tell code from comments and other strings; use \`paths\`, \`appliesTo\`, or a TypeScript rule for that. Because \`content\` entries are strings, escape a regex's backslashes: a regex ^\\s*import is written "^\\\\s*import" in both front matter JSON and a RULE.ts string. ${
+    shape.format === "typescript"
+      ? 'Set them in defineRule({...}) as object literals, such as include: { paths: ["src/**"] }.'
+      : 'Set them in the front matter as one-line JSON objects, such as include: {"paths": ["src/**"]}.'
+  }`;
+
 const typescriptFormat = (shape: Shape) =>
   `Write it as a RULE.ts, because ${shape.formatReason} It imports defineRule from "@drkmttr/adhere" and default-exports defineRule({ description, details, must, never, reads, appendState }). appendState(state, file, Bun) runs before each request for the rule: file is { path, contents }, its path absolute, and Bun is Bun's API, as in Bun.file(path).text() or new Bun.Glob(pattern). What it returns is spread over the request's state; name each key it adds in the description, in backticks. Helpers go in the same file.`;
 
@@ -183,6 +194,8 @@ Rule id: ${id}
 What it enforces: ${idea}
 What Jev reads beside the rule: ${contextOf(shape)}
 ${readsInstruction(shape)}
+${filtersInstruction(shape)}
+Leave them out unless the idea itself names a kind of file, such as API routes or React components; the trial will settle whether they are needed.
 ${shape.format === "typescript" ? typescriptFormat(shape) : "Write it as a RULE.md."}
 
 ${reviewedOf(reviewed)}
@@ -255,6 +268,21 @@ export const inspectionPrompt = (report: string, id: string) =>
 - Concrete changes to the rule's wording or examples, if any.
 Do not edit files. Keep it short.`;
 
+/**
+ * The first trial of an adhere rule asks the authoring agent, explicitly,
+ * whether the rule should narrow which files it judges. A filter is a silent
+ * false negative, so the agent names exact entries or says why none fit.
+ */
+export const filterAdvicePrompt = (report: string, id: string) =>
+  `adhere trialled the adhere rule ${id} on real files without installing it. The full report is at ${report}, and it holds the rule's source. Read the report, the rule, and the files it names, then answer in plain text:
+- Whether the rule should carry \`include\` or \`exclude\` filters at all.
+- If it should, the exact entries, as the rule's file writes them: in a RULE.md's front matter, one-line JSON objects such as include: {"paths": ["src/**"]}; in a RULE.ts, object literals such as include: { paths: ["src/**"] }. Say which list each entry belongs to and what it leaves out or keeps.
+- If it should not, one sentence saying why the rule is better judging every file Jev reads.
+
+Filters are mechanical and silent: a file one leaves out is never judged, so a wrong filter hides real violations. \`paths\` are repository-root-relative globs with forward slashes, matched as \`--filter\` matches them. \`content\` entries are JavaScript regex source strings without / delimiters or flags, tested against original text including comments. Content filters may match a named package's import specifier, for example from "effect". They cannot resolve aliases or re-exports, and matching text in comments or strings does not prove the file imports the package. Escape regex backslashes in JSON and TypeScript strings: the regex ^\\s*import is written "^\\\\s*import". Within each list, any entry may match; all nonempty inclusion lists must match, and a match in either exclusion list vetoes the file. Empty lists impose no restriction. Recommend a filter only when the evidence supports that boundary.
+
+Do not suggest filters for an oxlint rule: those have no such fields. Do not edit files. Keep it short.`;
+
 /** Asks for the adhere rule again, with what the trial found and what the user made of it. */
 export const adhereRevisionPrompt = (
   idea: string,
@@ -269,6 +297,8 @@ export const adhereRevisionPrompt = (
 Revise the adhere rule ${id}. It enforces: ${idea}
 What Jev reads beside the rule: ${contextOf(shape)}
 ${readsInstruction(shape)}
+${filtersInstruction(shape)}
+Apply, change, or remove \`include\` and \`exclude\` as the trial, the recommendation, and the user's verdicts support; keep a filter only while the evidence supports it.
 ${shape.format === "typescript" ? typescriptFormat(shape) : "Write it as a RULE.md."}
 
 A trial judged real files against the current rule. What it found, and what the user made of it:
@@ -279,7 +309,7 @@ The current file:
 
 ${draft}
 
-Keep what the evidence supports and change what it contradicts. Reply with only the corrected file, starting with its ${shape.format === "typescript" ? "imports" : "front matter"}.`;
+Keep what the evidence supports and change what it contradicts, including its filter recommendation. Reply with only the corrected file, starting with its ${shape.format === "typescript" ? "imports" : "front matter"}.`;
 
 /** Asks for the oxlint plugin again, with what the trial found and what the user made of it. */
 export const pluginRevisionPrompt = (
