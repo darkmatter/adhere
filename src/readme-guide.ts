@@ -356,15 +356,15 @@ const ruleEntry = (rule: ReadmeRule, anchor: string, used: Set<string>): Readonl
     `<a id="${anchor}"></a>`,
     "",
     "<details>",
-    rule.name === "RULE.ts"
-      ? `<summary><strong>TypeScript rule</strong> ${label}</summary>`
-      : `<summary><strong>${statement}</strong> ${label}</summary>`,
+    `<summary><h3>${label}</h3></summary>`,
     "",
     ...(rule.name === "RULE.ts"
       ? [
           `This rule is TypeScript, so the guide does not read or run it: [\`${rule.id}\`](${source}).`,
         ]
       : [
+          statement,
+          "",
           ...(body === "" ? [] : [embedBody(source, anchor, body, used), ""]),
           `Source: [\`${rule.id}\`](${source}).`,
         ]),
@@ -374,32 +374,25 @@ const ruleEntry = (rule: ReadmeRule, anchor: string, used: Set<string>): Readonl
 };
 
 /**
- * The managed block's body: a contents list naming every rule, each topic's
- * rules as expandable entries, then the lint settings and plugins. Rules sort
- * by id and topics by name, so the same checkout always writes the same text.
+ * The managed block's body: section links, rules as expandable entries, then
+ * the lint settings and plugins. Rules sort by id and topics by name, so the
+ * same checkout always writes the same text.
  */
 export const renderReadmeIndex = (rules: ReadonlyArray<ReadmeRule>, config: LintConfig): string => {
   const entries = lintEntries(config);
   const { topics, used } = topicsOf(rules);
   const contents = [
     `- [Rules](#${RULES_ANCHOR})`,
-    ...topics.flatMap(({ name, anchor, rules: group }) => [
-      `  - [\`${name}\`](#${anchor})`,
-      ...group.map(({ rule, anchor: at }) => `    - [\`${rule.id}\`](#${at})`),
-    ]),
     `- [Lint settings](#${LINT_SETTINGS_ANCHOR})`,
     `- [Custom lint plugins](#${PLUGINS_ANCHOR})`,
   ];
   const body =
     topics.length === 0
       ? ["- None.", ""]
-      : topics.flatMap(({ name, anchor, rules: group }) => [
+      : topics.flatMap(({ anchor, rules: group }) => [
           `<a id="${anchor}"></a>`,
           "",
-          `#### ${name}`,
-          "",
           ...group.flatMap(({ rule, anchor: at }) => [...ruleEntry(rule, at, used), ""]),
-          backToContents,
           "",
         ]);
   return [
@@ -411,7 +404,7 @@ export const renderReadmeIndex = (rules: ReadonlyArray<ReadmeRule>, config: Lint
     "",
     `<a id="${RULES_ANCHOR}"></a>`,
     "",
-    "### Rules",
+    "## Rules",
     "",
     ...body,
     `<a id="${LINT_SETTINGS_ANCHOR}"></a>`,

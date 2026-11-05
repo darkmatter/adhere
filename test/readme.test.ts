@@ -63,16 +63,11 @@ describe("shared README index", () => {
     const readme = await readFile(join(root, "README.md"), "utf8");
     expect(readme).toContain("# Standards\n\nHandwritten setup notes.");
     expect(readme).toContain(`${README_START}\n<a id="adhere-contents"></a>`);
-    expect(readme).toContain("### Contents");
     expect(readme).toContain("- [Rules](#adhere-rules)");
-    expect(readme).toContain("  - [`style`](#adhere-topic-style)");
-    expect(readme).toContain("    - [`style/names`](#adhere-rule-style-names)");
     expect(readme).toContain("- [Lint settings](#adhere-lint-settings)");
-    expect(readme).toContain('<a id="adhere-rules"></a>\n\n### Rules\n');
-    expect(readme).toContain('<a id="adhere-topic-style"></a>\n\n#### style\n');
     expect(readme).toContain('<a id="adhere-rule-style-names"></a>');
     expect(readme).toContain(
-      "<summary><strong>Names say what happens.</strong> <code>style/names</code></summary>",
+      "<summary><h3><code>style/names</code></h3></summary>\n\nNames say what happens.",
     );
     expect(readme).toContain("Source: [`style/names`](./.adhere/rules/style/names/RULE.md).");
     expect(readme).toContain(
@@ -187,7 +182,7 @@ describe("shared README index", () => {
     }
   });
 
-  it("groups rules by topic in a contents list, with a general topic for bare ids", async () => {
+  it("orders rules by topic and id, including bare ids, without nesting the contents", async () => {
     const root = await project();
     await shared(root);
     await put(root, "README.md", "# Standards\n");
@@ -197,11 +192,18 @@ describe("shared README index", () => {
 
     await refresh(root);
     const readme = await readFile(join(root, "README.md"), "utf8");
-    expect(readme).toContain("- [Rules](#adhere-rules)\n  - [`alpha`](#adhere-topic-alpha)");
-    expect(readme).toContain("  - [`beta`](#adhere-topic-beta)");
-    expect(readme).toContain("  - [`Other`](#adhere-topic-other)");
-    expect(readme.indexOf("#### alpha")).toBeLessThan(readme.indexOf("#### beta"));
-    expect(readme).toContain('<a id="adhere-topic-beta"></a>\n\n#### beta\n');
+    const contents = readme.slice(readme.indexOf("### Contents"), readme.indexOf("## Rules"));
+    expect([...contents.matchAll(/^- \[([^\]]+)\]/gm)].map((match) => match[1])).toEqual([
+      "Rules",
+      "Lint settings",
+      "Custom lint plugins",
+    ]);
+    expect(contents).not.toMatch(/^ +- /m);
+    expect(
+      [...readme.matchAll(/<summary><h3><code>([^<]+)<\/code><\/h3><\/summary>/g)].map(
+        (match) => match[1],
+      ),
+    ).toEqual(["alpha/first", "beta/second", "legacy"]);
     expect(readme).toContain('<a id="adhere-rule-legacy"></a>');
     expect(readme).toContain("Source: [`legacy`](./.adhere/rules/legacy/RULE.md).");
     expect((await refresh(root)).changed).toBe(false);
@@ -216,14 +218,9 @@ describe("shared README index", () => {
 
     await refresh(root);
     const readme = await readFile(join(root, "README.md"), "utf8");
-    expect(readme).toContain(
-      '<a id="adhere-rule-style-a-b"></a>\n\n<details>\n<summary><strong>Hyphenated.</strong> <code>style/a-b</code></summary>',
-    );
-    expect(readme).toContain(
-      '<a id="adhere-rule-style-a-b-2"></a>\n\n<details>\n<summary><strong>Dotted.</strong> <code>style/a.b</code></summary>',
-    );
-    expect(readme).toContain("    - [`style/a-b`](#adhere-rule-style-a-b)");
-    expect(readme).toContain("    - [`style/a.b`](#adhere-rule-style-a-b-2)");
+    expect(
+      [...readme.matchAll(/<a id="(adhere-rule-[^"]+)"><\/a>/g)].map((match) => match[1]),
+    ).toEqual(["adhere-rule-style-a-b", "adhere-rule-style-a-b-2"]);
   });
 
   it("embeds a Markdown rule's body, keeping its examples and rebasing its links", async () => {
@@ -552,10 +549,8 @@ describe("shared README index", () => {
     await refresh(root);
     const readme = await readFile(join(root, "README.md"), "utf8");
     expect(readme).toContain('<a id="adhere-rule-effect-typed"></a>');
-    expect(readme).toContain(
-      "<summary><strong>TypeScript rule</strong> <code>effect/typed</code></summary>",
-    );
     expect(readme).toContain("This rule is TypeScript");
+    expect(readme).not.toContain("(TypeScript, which list does not run)");
     expect(readme).toContain("[`effect/typed`](./.adhere/rules/effect/typed/RULE.ts).");
     expect(readme).not.toContain("must not run a rule");
     expect(readme).not.toContain("throw new Error");
@@ -584,15 +579,9 @@ describe("shared README index", () => {
     expect(readme).toContain("## Use these rules");
     expect(readme).toContain(README_START);
     expect(readme).toContain(
-      "<summary><strong>A function must be named after the domain action it performs, never after a generic verb like handle.</strong> <code>style/name-domain-actions</code></summary>",
-    );
-    expect(readme).toContain(
-      "<summary><strong>A file should be small and focused, with one primary responsibility, and should not mix unrelated concerns.</strong> <code>style/prefer-small-files</code></summary>",
-    );
-    expect(readme).toContain(
       "Source: [`style/name-domain-actions`](./.adhere/rules/style/name-domain-actions/RULE.md).",
     );
-    // The rules' own examples are embedded, with their headings nested under the topic.
+    // The rules' own examples are embedded, with their headings demoted.
     expect(readme).toContain("##### Should");
     expect(readme).toContain("##### Should not");
     expect(readme).toContain("export const parsePort = (value: string) =>");
