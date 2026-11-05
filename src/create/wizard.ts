@@ -37,7 +37,7 @@ import {
   warn,
 } from "#create/look.ts";
 import { cloned } from "#install.ts";
-import { parseRuleMarkdown } from "#markdown.ts";
+import { parseRuleMarkdown, ruleBodyOf } from "#markdown.ts";
 import { isSharedRepo, refreshIndexIfShared, refreshReadme, validateReadme } from "#readme.ts";
 import { importRule } from "#rules.ts";
 import { findConfigFile, loadConfigFile } from "#services/AdhereConfig.ts";
@@ -141,8 +141,10 @@ const problemsOf = (text: string, file: string, format: Shape["format"]) =>
  */
 const showDraft = (text: string, format: Shape["format"]) =>
   Effect.gen(function* () {
-    const shown = format === "markdown" ? yield* renderMarkdown(text) : text;
-    yield* line(`\n${shown}\n`);
+    if (format !== "markdown") return yield* line(`\n${text}\n`);
+    const body = ruleBodyOf(text);
+    const frontmatter = text.slice(0, text.length - body.length);
+    yield* line(`\n${frontmatter}${yield* renderMarkdown(body)}\n`);
   });
 
 /** A RULE.ts that imported, with its wording strays, or one that did not import. */

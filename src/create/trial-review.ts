@@ -9,7 +9,7 @@
  */
 import { type Agent } from "#create/agents.ts";
 import { RuleNotCreated, asking, inspectionPrompt } from "#create/ask.ts";
-import { line, note, said, spinning, warn } from "#create/look.ts";
+import { line, note, renderMarkdown, said, spinning, warn } from "#create/look.ts";
 import {
   type TrialDraft,
   type TrialFinding,
@@ -510,7 +510,9 @@ export const trialAndReview = <D, R>(subject: TrialSubject<D, R>) =>
       yield* showRun(run);
       const inspection = yield* inspect(subject, run);
       if (inspection._tag === "Text") {
-        if (inspection.text.trim() !== "") yield* line(inspection.text.trim());
+        if (inspection.text.trim() !== "") {
+          yield* line(yield* renderMarkdown(inspection.text.trim()));
+        }
       } else {
         yield* warn(`The agent could not read the report: ${inspection.message}`);
       }
