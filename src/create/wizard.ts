@@ -24,7 +24,18 @@ import { reviewedInRepository } from "#create/examples.ts";
 import { createOxlintRule } from "#create/oxlint.ts";
 import { trialAndReview, trialStatus, trialWriteSuffix } from "#create/trial-review.ts";
 import { oxlintRule } from "#oxlint/catalog.ts";
-import { decided, indented, intro, line, look, note, outro, spinning, warn } from "#create/look.ts";
+import {
+  decided,
+  indented,
+  intro,
+  line,
+  look,
+  note,
+  outro,
+  renderMarkdown,
+  spinning,
+  warn,
+} from "#create/look.ts";
 import { cloned } from "#install.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { isSharedRepo, refreshIndexIfShared, refreshReadme, validateReadme } from "#readme.ts";
@@ -121,6 +132,18 @@ const problemsOf = (text: string, file: string, format: Shape["format"]) =>
         ),
         Effect.catch((message) => Effect.succeed([`It does not parse: ${message}`])),
       );
+
+/**
+ * Shows a draft as the user reads it: a RULE.md rendered from Markdown with
+ * its frontmatter and source intact, a RULE.ts as written, either on the rail.
+ * Only the preview is rendered; the draft itself stays raw for the agent, the
+ * trial, and the file.
+ */
+const showDraft = (text: string, format: Shape["format"]) =>
+  Effect.gen(function* () {
+    const shown = format === "markdown" ? yield* renderMarkdown(text) : text;
+    yield* line(`\n${shown}\n`);
+  });
 
 /** A RULE.ts that imported, with its wording strays, or one that did not import. */
 export type LoadedDraft =
@@ -329,7 +352,7 @@ export const createRule = Effect.fn("createRule")(
           );
     const problems = yield* problemsOf(text, file, shape.format);
 
-    yield* line(`\n${text}\n`);
+    yield* showDraft(text, shape.format);
     for (const problem of problems) yield* warn(problem);
     const shown = path.relative(root, file);
     const outcome = yield* trialAndReview({
@@ -354,13 +377,13 @@ export const createRule = Effect.fn("createRule")(
           }
           return revised;
         }),
-      show: (source) => line(`\n${source}\n`),
+      show: (source) => showDraft(source, shape.format),
     });
     if (outcome._tag === "Cancelled") return yield* outro("Nothing written.");
     const finalText = outcome.draft;
     const finalProblems = yield* problemsOf(finalText, file, shape.format);
     if (finalText !== text) {
-      yield* line(`\n${finalText}\n`);
+      yield* showDraft(finalText, shape.format);
       for (const problem of finalProblems) yield* warn(problem);
     }
     const write = yield* Prompt.run(

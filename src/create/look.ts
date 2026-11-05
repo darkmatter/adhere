@@ -4,6 +4,7 @@
  * rail, and a spinner, as `gum spin` draws one, while an agent works.
  */
 import { highlightedLines } from "#workflows/format.ts";
+import { ruleBodyOf } from "#markdown.ts";
 import { Status, clearingStatus } from "#services/Status.ts";
 import { Console, Duration, Effect, Fiber } from "effect";
 import { Prompt } from "effect/cli";
@@ -20,10 +21,13 @@ const COLORS = {
   ACCENT: rgbColor(242, 205, 205),
 };
 
+/** One column of left padding, so the whole wizard sits clear of the terminal's edge. */
+const PAD = " ";
+
 /**
- * The prompts' theme. Every row's text starts in the fourth column: after the
- * prompt's symbol and two spaces, a select's pointer and its two-wide paging
- * arrow, or the paging arrow and a space before a multi-select's checkbox.
+ * The prompts' theme. Every symbol carries `PAD`, so each prompt's rows start
+ * where the rail's do; `pointerSmall` also pads a validation error and adds
+ * one space before the `›` that ends an active row.
  */
 export const look: Partial<Prompt.Theme> = {
   // primaryColor: `\x1B[0;37m`,
@@ -40,9 +44,12 @@ export const look: Partial<Prompt.Theme> = {
   // pointer: `${COLORS.PURPLE}‣${ESC}`,
   arrowUp: "↑ ",
   arrowDown: "↓ ",
-  pointerSmall: "›",
+  prefix: `${PAD}?`,
+  pointer: `${PAD}❯`,
+  pointerSmall: `${PAD}›`,
   ellipsis: "…",
-  descriptionSeparator: "\n\n - ",
+  tick: `${PAD}✔`,
+  descriptionSeparator: "\n\n  - ",
   checkboxOn: "󰄲",
   checkboxOff: "",
   colors: true,
@@ -50,9 +57,28 @@ export const look: Partial<Prompt.Theme> = {
 
 const columns = () => process.stderr.columns ?? 80;
 
-/** `text` wrapped to the terminal, each further line indented under a choice's title as the first is. */
+/** `text` wrapped to the terminal, each further line indented under the separator as the first is. */
 export const indented = (text: string) =>
-  Bun.wrapAnsi(text, Math.max(columns() - 4, 20)).replaceAll("\n", "\n   ");
+  Bun.wrapAnsi(text, Math.max(columns() - 5, 20)).replaceAll("\n", "\n    ");
+
+/**
+ * Renders the body of a rule for preview, preserving its YAML frontmatter.
+ * The frontmatter is shown as-is so its metadata stays visible; the body is
+ * rendered with Bun's native Markdown-to-ANSI renderer.
+ */
+export const renderMarkdown = (text: string) =>
+  Effect.gen(function* () {
+    const theme = yield* Prompt.Theme;
+    const body = ruleBodyOf(text);
+    const prefix = text.slice(0, text.length - body.length);
+    const rendered = Bun.markdown
+      .ansi(body, {
+        colors: theme.colors,
+        columns: Math.max(columns() - 4, 20),
+      })
+      .trimEnd();
+    return prefix + rendered;
+  });
 
 type Color = (theme: Prompt.Theme) => string;
 const muted: Color = (theme) => theme.mutedColor;
@@ -69,14 +95,16 @@ const paint = (theme: Prompt.Theme, text: string, color?: Color) =>
 const rail = (symbol: string, symbolColor: Color, text: string, textColor?: Color, bar = "│") =>
   Effect.gen(function* () {
     const theme = yield* Prompt.Theme;
-    const [first = "", ...rest] = Bun.wrapAnsi(text, Math.max(columns() - 3, 20), {
+    const [first = "", ...rest] = Bun.wrapAnsi(text, Math.max(columns() - 4, 20), {
       hard: true,
       trim: false,
     }).split("\n");
     yield* Console.error(
       [
-        `${paint(theme, symbol, symbolColor)}  ${paint(theme, first, textColor)}`,
-        ...rest.map((line) => `${paint(theme, bar, muted)}  ${paint(theme, line, textColor)}`),
+        `${PAD}${paint(theme, symbol, symbolColor)}  ${paint(theme, first, textColor)}`,
+        ...rest.map(
+          (line) => `${PAD}${paint(theme, bar, muted)}  ${paint(theme, line, textColor)}`,
+        ),
       ].join("\n"),
     );
   });
@@ -114,7 +142,7 @@ export const excerpt = (
   Effect.gen(function* () {
     const theme = yield* Prompt.Theme;
     const width = String(range.to).length;
-    const room = Math.max(columns() - width - 8, 20);
+    const room = Math.max(columns() - width - 9, 20);
     const cut = lines.slice(range.from - 1, range.to).map((text) => {
       const flat = text.replaceAll("\t", "  ");
       return flat.length > room ? `${flat.slice(0, room - 1)}…` : flat;
@@ -128,7 +156,7 @@ export const excerpt = (
       const body = inside
         ? `${paint(theme, number, muted)}  ${colored[index] ?? text}`
         : paint(theme, `${number}  ${text}`, muted);
-      return `${paint(theme, "│", muted)}  ${marker} ${body}`;
+      return `${PAD}${paint(theme, "│", muted)}  ${marker} ${body}`;
     });
     yield* Console.error(rows.join("\n"));
   });
@@ -150,7 +178,7 @@ export const spinning = <A, E, R>(text: string, effect: Effect.Effect<A, E, R>) 
     const spinner = yield* Effect.forkChild(
       Effect.suspend(() =>
         status.show(
-          `${paint(theme, frames[frame++ % frames.length] ?? "", accent)}  ${paint(theme, `${text}…`, muted)}`,
+          `${PAD}${paint(theme, frames[frame++ % frames.length] ?? "", accent)}  ${paint(theme, `${text}…`, muted)}`,
         ),
       ).pipe(Effect.andThen(Effect.sleep("110 millis")), Effect.forever),
     );
