@@ -107,7 +107,7 @@ to avoid drafting duplicates.
 
 **A shared repo.** **Ask** whether the organization keeps adhere instructions,
 rules, or lint settings in a repo. If it does, `adhere list org/repo` prints
-its rules with their descriptions; its instruction files and `lint/` package
+its rules with their descriptions; its instruction files and `oxlint/` package
 are separate, and `adhere install` offers the instruction files too.
 
 ## 3. Draft the repo's rules
@@ -166,7 +166,7 @@ the wording of any. Revise drafts the user wants changed and show them again.
   in `.adhere/rules/org/repo/`; `adhere postinstall` renders the instructions,
   copied files first.
 - **Ask** before adding the shared repo's lint package: pin it as a git
-  dependency at the repo-wide tag, then spread `@org/repo/lint` into the
+  dependency at the repo-wide tag, then spread `@org/repo/oxlint` into the
   project's Vite+ lint block or `oxlint.config.ts`. It is a package, not an
   `adhere install` copy. Project plugins live in `.adhere/oxlint/`.
 - For a chosen linter candidate, run `adhere rules create "<convention>"` and
@@ -182,7 +182,7 @@ the wording of any. Revise drafts the user wants changed and show them again.
   without it nothing is written and no repair is attempted. One failed run goes
   back to the agent for repair; the user approves the repaired plugin, and it
   runs again. Project files go to `.adhere/oxlint/` as `.mjs`; shared files go
-  to `lint/plugins/` as `.js` on a branch for a pull request.
+  to `oxlint/plugins/` as `.js` on a branch for a pull request.
 - Add `exclude` globs for generated or vendored code the default skips miss.
 
 ## 6. Validate
@@ -434,7 +434,7 @@ This needs the cache committed on the base branch first.
 Tell the user:
 
 - the rules imported, by source, and where they are, plus any shared
-  instruction files copied and the `lint/` package pinned;
+  instruction files copied and the `oxlint/` package pinned;
 - the presets and shared repo named in the config or installed;
 - the candidates routed to native Oxlint, an approved plugin, or an adhere
   rule, and which config registers each;

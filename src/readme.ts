@@ -1,15 +1,18 @@
 /**
- * The managed index in a shared repo's README: its `.adhere/rules/` with each
- * rule's description, the native Oxlint rules its `lint/rules.json` enables,
- * and the rules its custom Oxlint plugins add. Only a marked block is written,
- * so the rest of the README stays the author's.
+ * Writes the managed guide into a shared repo's README: only a marked block,
+ * so the rest of the README stays the author's. The block itself, its rules
+ * grouped by topic and its lint settings, is rendered by `#readme-guide.ts`.
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { describeRulesAt } from "#install.ts";
-import { oxlintRule } from "#oxlint/catalog.ts";
-import { SHARED_LINT_DIRECTORY, SHARED_LINT_EXPORT, SHARED_LINT_RULES } from "#oxlint/shared.ts";
+import { run } from "#create/agents.ts";
+import { cloned, describeRulesAt } from "#install.ts";
+import { lintEntries, renderReadmeIndex, type LintConfig } from "#readme-guide.ts";
+import { SHARED_LINT_EXPORT, SHARED_LINT_RULES } from "#oxlint/shared.ts";
 import { Effect, Option, Schema } from "effect";
+
+export type { LintConfig, ReadmeRule } from "#readme-guide.ts";
+export { renderReadmeIndex };
 
 export const README_START = "<!-- adhere:rules:start -->";
 export const README_END = "<!-- adhere:rules:end -->";
@@ -19,20 +22,7 @@ export class ReadmeUnavailable extends Schema.TaggedError<ReadmeUnavailable>()(
   { message: Schema.String },
 ) {}
 
-/** A rule's description as `adhere list` shows it: never by running a RULE.ts. */
-export interface ReadmeRule {
-  readonly id: string;
-  readonly name: "RULE.md" | "RULE.ts";
-  readonly description: string;
-}
-
-/** The lint settings an index reads: enabled rules and configured plugin entries. */
-export interface LintConfig {
-  readonly rules?: Readonly<Record<string, unknown>>;
-  readonly jsPlugins?: ReadonlyArray<unknown>;
-}
-
-const LintConfig = Schema.Struct({
+const LintConfigShape = Schema.Struct({
   rules: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
   jsPlugins: Schema.optionalKey(Schema.Array(Schema.Unknown)),
 });
@@ -46,111 +36,6 @@ export interface ReadmeRefresh {
   readonly changed: boolean;
   readonly message: string;
 }
-
-const OFF = new Set<unknown>(["off", "allow", "0", 0]);
-
-/** The severity a rule setting turns on, or undefined when it is off. */
-const levelOf = (setting: unknown): "error" | "warn" | "on" | undefined => {
-  const level = Array.isArray(setting) ? setting[0] : setting;
-  if (OFF.has(level)) return undefined;
-  if (level === "error" || level === 2) return "error";
-  if (level === "warn" || level === 1) return "warn";
-  return "on";
-};
-
-const enabledAs = (setting: unknown): string => {
-  const level = levelOf(setting);
-  return level === "on" || level === undefined ? "enabled" : `enabled as \`${level}\``;
-};
-
-/** A plugin entry's name and specifier: `{ name, specifier }` or a bare specifier. */
-const pluginsIn = (config: LintConfig): ReadonlyMap<string, string | undefined> => {
-  const plugins = new Map<string, string | undefined>();
-  for (const entry of config.jsPlugins ?? []) {
-    if (typeof entry === "string") {
-      const base = entry.split("/").at(-1) ?? entry;
-      plugins.set(base.replace(/\.(?:mjs|cjs|js)$/, ""), entry);
-    } else if (
-      typeof entry === "object" &&
-      entry !== null &&
-      "name" in entry &&
-      typeof entry.name === "string"
-    ) {
-      plugins.set(
-        entry.name,
-        "specifier" in entry && typeof entry.specifier === "string" ? entry.specifier : undefined,
-      );
-    }
-  }
-  return plugins;
-};
-
-/** A `lint/rules.json` plugin path as a link from the README, or undefined when it is a package. */
-const pluginLink = (specifier: string | undefined): string | undefined => {
-  if (specifier === undefined || !specifier.startsWith("./") || specifier.includes("..")) {
-    return undefined;
-  }
-  return `./${SHARED_LINT_DIRECTORY}/${specifier.slice(2)}`;
-};
-
-const link = (label: string, target: string | undefined) =>
-  target === undefined ? `\`${label}\`` : `[\`${label}\`](${target})`;
-
-/** One line per enabled lint setting; a rule with an off setting does nothing. */
-const lintEntries = (config: LintConfig) => {
-  const plugins = pluginsIn(config);
-  const native: Array<string> = [];
-  const custom: Array<string> = [];
-  for (const id of Object.keys(config.rules ?? {}).sort()) {
-    const setting = config.rules?.[id];
-    const level = levelOf(setting);
-    if (level === undefined) continue;
-    const plugin = id.includes("/") ? id.slice(0, id.indexOf("/")) : undefined;
-    const specifier = plugin === undefined ? undefined : plugins.get(plugin);
-    if (plugin !== undefined && specifier !== undefined) {
-      custom.push(
-        `- ${link(id, pluginLink(specifier))}: custom plugin \`${plugin}\`, ${enabledAs(setting)}.`,
-      );
-      continue;
-    }
-    const summary = (oxlintRule(id)?.summary ?? "").replace(/\s+/g, " ").trim();
-    native.push(
-      summary === ""
-        ? `- ${link(id, `./${SHARED_LINT_RULES}`)}: ${enabledAs(setting)}.`
-        : `- ${link(id, `./${SHARED_LINT_RULES}`)}: ${summary} (${enabledAs(setting)}).`,
-    );
-  }
-  return { native, custom };
-};
-
-/**
- * The managed block's body. Sorted by id, one bullet per entry, so the same
- * rules and settings always render the same text.
- */
-export const renderReadmeIndex = (rules: ReadonlyArray<ReadmeRule>, config: LintConfig): string => {
-  const entries = lintEntries(config);
-  const rulesList =
-    rules.length === 0
-      ? ["- None."]
-      : rules.map(({ id, name, description }) => {
-          const text = description.replace(/\s+/g, " ").trim();
-          const target = `./.adhere/rules/${id}/${name}`;
-          return text === "" ? `- ${link(id, target)}` : `- ${link(id, target)}: ${text}`;
-        });
-  return [
-    "**Rules**",
-    "",
-    ...rulesList,
-    "",
-    "**Lint settings**",
-    "",
-    ...(entries.native.length === 0 ? ["- None."] : entries.native),
-    "",
-    "**Custom lint plugins**",
-    "",
-    ...(entries.custom.length === 0 ? ["- None."] : entries.custom),
-  ].join("\n");
-};
 
 const readOptional = (file: string): Effect.Effect<string | undefined, ReadmeUnavailable> =>
   Effect.tryPromise({
@@ -188,7 +73,7 @@ const lintConfigAt = (root: string): Effect.Effect<LintConfig, ReadmeUnavailable
           message: `${file} is not valid JSON; left the README unchanged.`,
         }),
     });
-    const decoded = Schema.decodeUnknownOption(LintConfig)(parsed);
+    const decoded = Schema.decodeUnknownOption(LintConfigShape)(parsed);
     return Option.isSome(decoded)
       ? decoded.value
       : yield* ReadmeUnavailable.make({
@@ -198,7 +83,7 @@ const lintConfigAt = (root: string): Effect.Effect<LintConfig, ReadmeUnavailable
 
 /**
  * Whether `root` is a shared rules repo, by the metadata `init --shared`
- * writes: a package.json whose exports name `./lint`. Its rules directory
+ * writes: a package.json whose exports name `./oxlint`. Its rules directory
  * alone is every project's, so this is what tells a shared repo from one that
  * merely has rules.
  */
@@ -269,9 +154,10 @@ export const refreshReadme = (root: string): Effect.Effect<ReadmeRefresh, Readme
       ),
     );
     for (const rule of rules) {
-      if (rule.description.includes(README_START) || rule.description.includes(README_END)) {
+      const text = `${rule.description}\n${rule.body ?? ""}`;
+      if (text.includes(README_START) || text.includes(README_END)) {
         return yield* ReadmeUnavailable.make({
-          message: `${rule.id} has an adhere rules marker in its description; left the README unchanged.`,
+          message: `${rule.id} has an adhere rules marker in its description or body; left the README unchanged.`,
         });
       }
     }
@@ -323,3 +209,83 @@ export const refreshSharedReadme = (
     }
     return yield* refreshReadme(root);
   });
+
+const GITHUB_URL = /^(?:[^@/\s]+@)?github\.com(?::\d+)?[:/]([^/\s]+)\/([^/\s]+)$/;
+
+/**
+ * The shared rules repo a GitHub origin implies, as `owner/standards`, from the
+ * forms an origin takes: `https://github.com/owner/repo.git`,
+ * `git@github.com:owner/repo.git`, and `ssh://git@github.com/owner/repo.git`.
+ * An origin on another host, or one that names no owner and repo, implies
+ * none. The origin's repo is read for its owner alone: an org's shared rules
+ * live in that org's `standards`, never in the consumer repo the origin names.
+ */
+export const standardsRepoOf = (url: string): string | undefined => {
+  const path = url
+    .trim()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//i, "")
+    .replace(/\/+$/, "");
+  const [, owner, named] = GITHUB_URL.exec(path) ?? [];
+  const repo = named?.replace(/\.git$/, "");
+  if (owner === undefined || repo === undefined) return undefined;
+  return /^[\w.-]+$/.test(owner) && /^[\w.-]+$/.test(repo) ? `${owner}/standards` : undefined;
+};
+
+/**
+ * This checkout's `origin` URL, trimmed, or undefined when git names none: no
+ * origin, or a directory git does not see as a repo. Read from the config, not
+ * `git remote get-url`, which applies `url.<base>.insteadOf` rewrites and so
+ * would not say which GitHub repo the origin names.
+ */
+export const originUrlAt = (root: string): Effect.Effect<string | undefined> =>
+  Effect.promise(() =>
+    run("git", ["config", "--get", "remote.origin.url"], root, "").then(
+      (url) => url.trim(),
+      () => undefined,
+    ),
+  );
+
+const git = (cwd: string, args: ReadonlyArray<string>) =>
+  Effect.tryPromise({
+    try: () => run("git", args, cwd, ""),
+    catch: (cause) =>
+      new ReadmeUnavailable({ message: cause instanceof Error ? cause.message : String(cause) }),
+  });
+
+/** What a remote refresh did: its README result, the repo, and the branch it pushed. */
+export interface RemoteReadmeRefresh extends ReadmeRefresh {
+  readonly repo: string;
+  /** The review branch pushed with the new index, or undefined when it was unchanged. */
+  readonly branch?: string;
+}
+
+/**
+ * Refresh the README of `repo` from a clone of its default branch, and push the
+ * change on a review branch for a pull request. Only README.md is committed,
+ * nothing is pushed when the index is already current, and the clone is
+ * temporary, so the checkout this was asked from is untouched. No `./oxlint`
+ * export is needed: a rules-only repo has a README index too.
+ */
+export const refreshRemoteReadme = (
+  repo: string,
+): Effect.Effect<RemoteReadmeRefresh, ReadmeUnavailable> =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const clone = yield* cloned({ repo, rule: "" }).pipe(
+        Effect.mapError(
+          (cause) =>
+            new ReadmeUnavailable({
+              message: `${cause instanceof Error ? cause.message : String(cause)}. Check that ${repo} exists and git can read it, or name another repo: adhere rules readme org/repo.`,
+            }),
+        ),
+      );
+      const refreshed = yield* refreshReadme(clone);
+      if (!refreshed.changed) return { ...refreshed, repo };
+      const branch = `adhere/readme-${Date.now()}`;
+      yield* git(clone, ["switch", "--quiet", "--create", branch]);
+      yield* git(clone, ["add", "--", "README.md"]);
+      yield* git(clone, ["commit", "--quiet", "--message", "Refresh the shared README index"]);
+      yield* git(clone, ["push", "--quiet", "origin", branch]);
+      return { ...refreshed, repo, branch };
+    }),
+  );

@@ -52,7 +52,14 @@ import { renderInstructions } from "#instructions.ts";
 import { formatLinterCheck, tallyProjectRules } from "#mechanical.ts";
 import { type PresetName, presetNames } from "#presets.ts";
 import type { SavedKey } from "#providers/provider.ts";
-import { refreshSharedReadme } from "#readme.ts";
+import {
+  ReadmeUnavailable,
+  standardsRepoOf,
+  isSharedRepo,
+  originUrlAt,
+  refreshRemoteReadme,
+  refreshSharedReadme,
+} from "#readme.ts";
 import { globalRuleSet } from "#rules.ts";
 import { formatStrays, straysAmong } from "#wording.ts";
 import {
@@ -769,19 +776,60 @@ const rulesCreateCommand = Command.make(
   ),
 );
 
+/** The shared rules repo to refresh instead of this checkout's, as `org/repo`. */
+const sharedRepo = Argument.String("repo").pipe(
+  Argument.filterMap(
+    (spec) => Option.fromNullishOr(/^[\w.-]+\/[\w.-]+$/.test(spec) ? spec : undefined),
+    (spec) => `org/repo, as on GitHub, not ${spec}`,
+  ),
+  Argument.optional,
+  Argument.withDescription(
+    "The shared rules repo to refresh, as org/repo, instead of this checkout or the org's standards repo this checkout's origin names.",
+  ),
+);
+
 /**
- * `adhere rules readme`: refresh the managed index in a shared rules repo's
- * README from the rules and lint config checked out there.
+ * `adhere rules readme [org/repo]`: refresh the managed index in a shared
+ * rules repo's README from the rules and lint config checked out there. In a
+ * shared repo it writes that README; otherwise it clones the GitHub repo named
+ * here, or the org's standards repo this checkout's origin names, and pushes the refreshed
+ * README on a review branch for a pull request.
  */
-const rulesReadmeCommand = Command.make("readme", {}, () =>
+const rulesReadmeCommand = Command.make("readme", { repo: sharedRepo }, ({ repo }) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
-    const refreshed = yield* refreshSharedReadme(path.resolve());
-    yield* Console.log(refreshed.message);
+    const root = path.resolve();
+    const named = Option.isSome(repo) ? repo.value : undefined;
+    if (named === undefined && (yield* isSharedRepo(root))) {
+      const refreshed = yield* refreshSharedReadme(root);
+      yield* Console.log(refreshed.message);
+      return;
+    }
+    const origin = named === undefined ? yield* originUrlAt(root) : undefined;
+    // A consumer repo's shared rules live in its org's standards repo, never in the repo itself.
+    const target = named ?? (origin === undefined ? undefined : standardsRepoOf(origin));
+    if (target === undefined) {
+      return yield* ReadmeUnavailable.make({
+        message:
+          origin === undefined
+            ? `${root} is not a shared rules repo, and git names no origin here, so there is no README to refresh. Run this in the shared repo, name it as adhere rules readme org/repo, or add a GitHub origin.`
+            : `${root} is not a shared rules repo, and its origin ${origin} is not a GitHub repo. Run this in the shared repo, or name one: adhere rules readme org/repo.`,
+      });
+    }
+    const refreshed = yield* refreshRemoteReadme(target);
+    yield* Console.log(
+      refreshed.branch === undefined
+        ? `${refreshed.message}\nNo change, so nothing was pushed.`
+        : [
+            refreshed.message,
+            `Pushed ${refreshed.branch} to ${refreshed.repo}.`,
+            `Open the pull request: https://github.com/${refreshed.repo}/compare/${refreshed.branch}?expand=1`,
+          ].join("\n"),
+    );
   }).pipe(Effect.provide(statusLayer)),
 ).pipe(
   Command.withDescription(
-    "Refresh the managed index in a shared rules repo's README from .adhere/rules/ and lint/rules.json: each rule's link and description, each enabled native Oxlint setting, and each custom plugin's enabled rules. Run it in the shared repo after adding, renaming, or deleting a rule, or changing a lint setting; it preserves the rest of the README and refuses malformed markers.",
+    "Refresh the managed index in a shared rules repo's README from .adhere/rules/ and oxlint/rules.json: each rule's link and description, each enabled native Oxlint setting, and each custom plugin's enabled rules. In the shared repo it writes that README. Elsewhere it refreshes the GitHub repo named as org/repo, or the org's standards repo this checkout's origin names, from a clone, pushes README.md alone on a review branch, and prints the pull request link; a current README pushes nothing. It preserves the rest of the README and refuses malformed markers.",
   ),
 );
 

@@ -140,17 +140,8 @@ const sharedReadme = (org: string, repo: string) => `# ${repo}
 Shared [adhere](https://github.com/darkmatter/adhere) rules and lint settings
 for ${org}'s repositories. \`.adhere/rules/\` holds the rules Jev judges files
 against, \`.adhere/instructions/\` holds instruction files for \`AGENTS.md\`, and
-\`lint/\` is a plain ESM Oxlint config package for rules a linter can check
+\`oxlint/\` is a plain ESM Oxlint config package for rules a linter can check
 exactly.
-
-## Rules and lint settings
-
-The list below is generated from \`.adhere/rules/\` and \`lint/rules.json\` by
-\`adhere rules readme\`. Run it after adding, renaming, or deleting a rule, or
-after changing a lint setting; it replaces only the block between its markers.
-
-${README_START}
-${README_END}
 
 ## Use these rules
 
@@ -180,7 +171,7 @@ deletes it.
 ## Use its lint settings
 
 The lint package is not published. Pin this repo as a git dependency, at a
-tag: tags are repo-wide, covering the rules, the instructions, and \`lint/\`
+tag: tags are repo-wide, covering the rules, the instructions, and \`oxlint/\`
 together.
 
 \`\`\`sh
@@ -190,7 +181,7 @@ bun add -D "github:${org}/${repo}#v1.0.0"
 Then spread it into Vite+'s config, or plain Oxlint's:
 
 \`\`\`ts
-import sharedLint from "${sharedPackageName(org, repo)}/lint";
+import sharedLint from "${sharedPackageName(org, repo)}/oxlint";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
@@ -207,19 +198,39 @@ export default defineConfig({
 
 \`\`\`ts
 // oxlint.config.ts, with plain Oxlint: oxlint -c oxlint.config.ts
-import sharedLint from "${sharedPackageName(org, repo)}/lint";
+import sharedLint from "${sharedPackageName(org, repo)}/oxlint";
 
 export default { ...sharedLint };
 \`\`\`
 
-\`lint/index.js\` reads \`lint/rules.json\` and resolves the shared package's
+\`oxlint/index.js\` reads \`oxlint/rules.json\` and resolves the shared package's
 plugin paths, so spreading its export works from any directory. Paths you add
 stay relative to your config. Your project's own JS plugins live in
 \`.adhere/oxlint/\` as \`.mjs\` files.
 
+## Rules and lint settings
+
+The guide below is generated from \`.adhere/rules/\` and \`oxlint/rules.json\` by
+\`adhere rules readme\`. Run it after adding, renaming, or deleting a rule, or
+after changing a lint setting; it replaces only the block between its markers.
+Rules are grouped by topic, and each entry opens its own statement, examples,
+and explanation, with a link to the file it came from.
+
+${README_START}
+${README_END}
+
+## Add a rule
+
+Add a directory under \`.adhere/rules/<topic>/\` with the rule in a \`RULE.md\`;
+its path is the rule's id. See
+[Rules as Markdown files](https://dm.sh/adhere/rule-format/#rules-as-markdown-files)
+and the [rule writing tips](https://dm.sh/adhere/writing-good-rules/#rule-writing-tips).
+\`adhere validate\` checks each rule's wording and asks Jev whether any two
+contradict. CI runs it on every push to main and every pull request.
+
 ## Add a lint setting or plugin
 
-\`lint/rules.json\` starts \`{}\` and takes \`rules\`, \`jsPlugins\`, \`plugins\`, and
+\`oxlint/rules.json\` starts \`{}\` and takes \`rules\`, \`jsPlugins\`, \`plugins\`, and
 \`options\`. \`options\` is Oxlint's own options object; Vite+ uses the same
 \`lint.options\` shape, and type-aware rules need \`oxlint-tsgolint\`, which Vite+
 includes. Turn on a built-in rule by naming it:
@@ -241,8 +252,8 @@ name every plugin you still want:
 }
 \`\`\`
 
-A custom plugin is a plain ESM file in \`lint/plugins/\`; register it by a path
-relative to \`lint/\`, and enable one of its rules by the plugin's name:
+A custom plugin is a plain ESM file in \`oxlint/plugins/\`; register it by a path
+relative to \`oxlint/\`, and enable one of its rules by the plugin's name:
 
 \`\`\`json
 {
@@ -254,15 +265,6 @@ relative to \`lint/\`, and enable one of its rules by the plugin's name:
 Keep the keys you are not changing. A project writes its own \`.mjs\` plugins to
 \`.adhere/oxlint/\` and registers them in its \`vite.config.ts\` or
 \`oxlint.config.ts\` instead; see the lint settings above.
-
-## Add a rule
-
-Add a directory under \`.adhere/rules/<topic>/\` with the rule in a \`RULE.md\`;
-its path is the rule's id. See
-[Rules as Markdown files](https://dm.sh/adhere/rule-format/#rules-as-markdown-files)
-and the [rule writing tips](https://dm.sh/adhere/writing-good-rules/#rule-writing-tips).
-\`adhere validate\` checks each rule's wording and asks Jev whether any two
-contradict. CI runs it on every push to main and every pull request.
 
 ## Setup
 

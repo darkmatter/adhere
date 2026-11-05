@@ -3,7 +3,7 @@ import { access, cp, mkdir, mkdtemp, readdir, readFile, rm, stat } from "node:fs
 import { tmpdir } from "node:os";
 import { dirname, join, sep } from "node:path";
 import { INSTRUCTIONS_DIRECTORY, RULES_DIRECTORY, type RuleId } from "#config.ts";
-import { parseRuleMarkdown } from "#markdown.ts";
+import { parseRuleMarkdown, ruleBodyOf } from "#markdown.ts";
 import { Effect } from "effect";
 
 /**
@@ -180,33 +180,49 @@ export const catalogOf = (source: Source, clone: string) =>
     return { instructions, rules };
   });
 
+const TYPESCRIPT_ONLY = "(TypeScript, which list does not run)";
+
+/**
+ * A rule's description and, for a RULE.md, its body: what `adhere list` shows,
+ * and the Markdown a README embeds as written. A RULE.ts is named, never run.
+ */
+const described = (source: Source, clone: string, { id, name }: CatalogRule) =>
+  Effect.gen(function* () {
+    if (name === "RULE.ts") {
+      return { id, name, description: TYPESCRIPT_ONLY };
+    }
+    const text = yield* Effect.tryPromise({
+      try: () => readFile(join(clone, RULES_DIRECTORY, id, name), "utf8"),
+      catch: failed(`Could not read ${id}`),
+    });
+    const rule = yield* parseRuleMarkdown(text, `${source.repo}/${id}/${name}`);
+    return { id, name, description: rule.description, body: ruleBodyOf(text) };
+  });
+
 /**
  * The description each rule shows: its Markdown's `description`, or a note
  * for a RULE.ts, which reading would run.
  */
 export const describeRules = (source: Source, clone: string, rules: ReadonlyArray<CatalogRule>) =>
-  Effect.forEach(rules, ({ id, name }) =>
-    Effect.gen(function* () {
-      if (name === "RULE.ts") {
-        return { id, name, description: "(TypeScript, which list does not run)" };
-      }
-      const text = yield* Effect.tryPromise({
-        try: () => readFile(join(clone, RULES_DIRECTORY, id, name), "utf8"),
-        catch: failed(`Could not read ${id}`),
-      });
-      const rule = yield* parseRuleMarkdown(text, `${source.repo}/${id}/${name}`);
-      return { id, name, description: rule.description };
-    }),
+  Effect.forEach(rules, (rule) =>
+    Effect.map(described(source, clone, rule), ({ id, name, description }) => ({
+      id,
+      name,
+      description,
+    })),
   );
 
 /**
- * Every rule under `root`'s `.adhere/rules/`, with the description `adhere
- * list` shows. Reads a RULE.md only; a RULE.ts is named, never run.
+ * Every rule under `root`'s `.adhere/rules/`, with what a README shows: the
+ * description `adhere list` shows and, for a RULE.md, its body. Reads a
+ * RULE.md only; a RULE.ts is named, never run.
  */
 export const describeRulesAt = (root: string) =>
   Effect.gen(function* () {
     const rules = yield* rulesIn(root);
-    return yield* describeRules({ repo: "this repo", rule: "" }, root, rules);
+    return yield* Effect.forEach(rules, (rule) =>
+      described({ repo: "this repo", rule: "" }, root, rule),
+    );
   });
 
 /** The rules a source's topic or id names, in catalog order. */

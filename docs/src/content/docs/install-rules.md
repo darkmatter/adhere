@@ -4,7 +4,7 @@ title: "Install instructions and rules from other repos"
 
 An organization can keep instructions and rules in one repo's `.adhere/`, and
 other repos copy them in with `adhere install`. The same repo can carry a
-`lint/` package for shared Oxlint settings, imported rather than copied.
+`oxlint/` package for shared Oxlint settings, imported rather than copied.
 
 ```sh
 adhere list darkmatter/standards                        # rules and descriptions
@@ -41,7 +41,7 @@ exact rule to use instead.
   skips what is already there. `--force` replaces those files and rule
   directories, local edits and all; deselecting something never deletes it.
 - A rule's whole directory is copied. The source's config, its inline rules,
-  its cache, and its `lint/` package are not.
+  its cache, and its `oxlint/` package are not.
 
 > **Read what you install.** A `RULE.ts` is copied with the helpers beside it,
 > and runs whenever lint does, in CI too. `adhere list` names a `RULE.ts`
@@ -55,7 +55,7 @@ the URL:
 
 ## Shared lint settings
 
-A shared repo's `lint/` directory is a plain ESM package, not something
+A shared repo's `oxlint/` directory is a plain ESM package, not something
 `adhere install` copies. Consume it as a git dependency pinned to a
 [repo-wide tag](#creating-a-shared-repo):
 
@@ -67,7 +67,7 @@ Spread it into Vite+'s lint config, or plain Oxlint's:
 
 ```ts
 // vite.config.ts
-import sharedLint from "@acme/standards/lint";
+import sharedLint from "@acme/standards/oxlint";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
@@ -81,16 +81,16 @@ export default defineConfig({
 
 ```ts
 // oxlint.config.ts, with plain Oxlint: oxlint -c oxlint.config.ts
-import sharedLint from "@acme/standards/lint";
+import sharedLint from "@acme/standards/oxlint";
 
 export default { ...sharedLint };
 ```
 
-`lint/index.js` reads `lint/rules.json` and resolves its plugin paths, so the
-export works from any directory. Paths you add stay relative to your own config.
-Shared plugins stay in `lint/plugins/` as `.js`, with tests beside them, because
-`lint/` is `type: module`; project plugins use `.mjs` in `.adhere/oxlint/`, so a
-`type: commonjs` package still loads them as ESM.
+`oxlint/index.js` reads `oxlint/rules.json` and resolves its plugin paths, so
+the export works from any directory. Paths you add stay relative to your own
+config. Shared plugins stay in `oxlint/plugins/` as `.js`, with tests beside
+them, because `oxlint/` is `type: module`; project plugins use `.mjs` in
+`.adhere/oxlint/`, so a `type: commonjs` package still loads them as ESM.
 
 ## Creating a shared repo
 
@@ -101,9 +101,12 @@ files and lint is consumed as a package, and with the examples:
 
 - **`README.md`** says what the repo is for, how to install its instructions and
   rules, how to import its lint package, how to add a rule, and how to tag a
-  release. It also carries a managed index, between
-  `<!-- adhere:rules:start -->` and `<!-- adhere:rules:end -->`, of its rules,
-  enabled native Oxlint settings, and custom plugins.
+  release. It also carries a managed guide, between
+  `<!-- adhere:rules:start -->` and `<!-- adhere:rules:end -->`: a contents
+  list nesting every rule under its topic, the rules grouped by topic with each
+  bold statement opening that rule's `RULE.md` verbatim: examples and
+  explanation, then a source link. It also lists its enabled native Oxlint
+  settings and custom plugins.
 - **`.adhere/instructions/00-workflow.md`** and two rules under
   `.adhere/rules/style/` are examples to replace. adhere renders the
   instruction file into a consumer's `AGENTS.md` through
@@ -114,23 +117,32 @@ files and lint is consumed as a package, and with the examples:
 - **`alchemy.run.ts`** is an [alchemy](https://alchemy.run) stack that creates
   the GitHub repo, or adopts it, and sets that secret from `TYPESAFE_API_KEY`
   when deployed with `npx alchemy deploy`.
-- **`package.json`** names the package `@org/repo`, exports only `./lint`, and
-  pins alchemy and effect, which init installs, to versions that work together.
-- **`lint/index.js`**, **`lint/index.d.ts`**, and **`lint/rules.json`** are the
-  plain ESM Oxlint config consumers spread into Vite+ or plain Oxlint.
+- **`package.json`** names the package `@org/repo`, exports only `./oxlint`,
+  and pins alchemy and effect, which init installs, to versions that work
+  together.
+- **`oxlint/index.js`**, **`oxlint/index.d.ts`**, and **`oxlint/rules.json`**
+  are the plain ESM Oxlint config consumers spread into Vite+ or plain Oxlint.
   `rules.json` starts empty; native rules and custom plugins are added there.
 - **`.gitignore`** keeps the installed packages and alchemy's state out of git.
 
-`adhere rules readme` refreshes that index from the checkout: each rule under
-`.adhere/rules/` with its description, each enabled setting in `lint/rules.json`
-with its severity, and each custom plugin's enabled rules, linked to the plugin
-file. It reads a `RULE.ts` by name only, never runs it, and touches nothing
-outside the markers. `adhere rules create` refreshes the index after writing
-locally in the shared repo, and a rule or plugin pushed to a shared repo for a
-pull request carries the refreshed block in the same commit. Rename or delete a
-rule by hand, then run the command to remove the stale entry. Missing,
-duplicated, or out-of-order markers refuse the refresh and leave the README
-unchanged.
+`adhere rules readme` refreshes that guide from the checkout: a contents list
+nesting each rule under its topic, each rule under `.adhere/rules/` grouped by
+its first path segment with the description `adhere list` shows in bold and
+its id, the rest of its `RULE.md` (examples and explanation) embedded
+verbatim, then a source link, expandable beneath, each enabled setting in
+`oxlint/rules.json` with its severity, and each custom plugin's enabled rules,
+linked to the plugin file when it is local. Each rule and topic has a stable
+`#adhere-...` permalink that the contents links to, and each topic section
+links back to the contents. It reads a `RULE.ts` by name only and never runs
+it, so that rule links to its source but shows no examples; plugin code is
+never loaded. It touches nothing outside the markers. `adhere rules create`
+refreshes the guide after writing locally in the shared repo, and a rule or
+plugin pushed to a shared repo for a pull request carries the refreshed block
+in the same commit. Rename or delete a rule by hand, then run the command to
+remove the stale entry. Missing, duplicated, or out-of-order markers refuse the
+refresh and leave the README unchanged. The command also runs
+[from a consumer repo](#refreshing-the-guide-from-a-consumer-repo), where it
+pushes a review branch instead of writing the checkout.
 
 The repo is public unless you answer yes when init asks, at a terminal, whether
 to make it private. Other repos then need git's credentials for it to list and
@@ -145,3 +157,51 @@ tags. Consumers pin that tag for copied files and for the lint package.
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+## Refreshing the guide from a consumer repo
+
+Copied rules carry no link back to where they came from, so a contributor who
+renames or deletes one in their own repo can still refresh the shared guide:
+
+```sh
+adhere rules readme                          # infer from this repo's GitHub origin
+adhere rules readme darkmatter/standards     # name it explicitly
+```
+
+The command chooses its target in this order:
+
+1. An explicit `org/repo` is used, from any directory.
+2. With no argument, a working directory that is itself a shared repo has its
+   `README.md` written in place: the checkout refresh described above.
+3. Otherwise the checkout's GitHub `origin` remote is read, whether it is
+   `https://`, `ssh://`, or scp-style (`git@host:owner/repo`), and its owner
+   names the repo: `acme/app` infers `acme/standards`. The origin's own
+   repository name is never used.
+
+A fork's `origin` names the fork's owner, not the upstream one, so a fork's
+guide travels with its copies until it is merged. A remote other than GitHub
+is not interpreted; name the repo explicitly instead. The same applies when
+there is no `origin`, or when the organization's repo does not follow the
+`<owner>/standards` convention: the command stops and names
+`adhere rules readme org/repo` as the fix.
+
+For an explicit or inferred remote target, adhere clones the default branch
+into a temporary directory, refreshes the managed block, and commits only a
+changed `README.md` on a new `adhere/readme-<timestamp>` branch. It pushes that
+branch and prints a compare link to open the pull request:
+
+```text
+Updated README.md: 12 rules, 4 enabled lint settings.
+Pushed adhere/readme-1767225600000 to darkmatter/standards.
+Open the pull request: https://github.com/darkmatter/standards/compare/adhere/readme-1767225600000?expand=1
+```
+
+adhere opens no pull request itself, and nothing outside the temporary clone
+changes: your checkout and the shared repo's default branch are untouched. When
+the refreshed block matches the README already there, it prints
+`No change, so nothing was pushed.` and neither commits nor pushes.
+
+The remote target does not need the `./oxlint` export that identifies a shared
+repo locally, so a rules-only repo is refreshed too. The same reading rules
+apply: a README without the markers gets the block appended, and malformed
+markers stop the push before anything is written.
