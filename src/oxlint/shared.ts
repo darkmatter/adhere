@@ -1,17 +1,18 @@
 /**
- * The files a shared rules repo checks its lintable rules with. `lint/index.js`
- * is plain ESM and reads `lint/rules.json`, so a consumer needs no Vite+ or
- * other package at runtime, only the shared repo as a git dependency.
+ * The files a shared rules repo checks its lintable rules with.
+ * `oxlint/index.js` is plain ESM and reads `oxlint/rules.json`, so a consumer
+ * needs no Vite+ or other package at runtime, only the shared repo as a git
+ * dependency.
  */
 
-/** Where a shared repo keeps its lint package. */
-export const SHARED_LINT_DIRECTORY = "lint";
+/** Where a shared repo keeps its Oxlint package. */
+export const SHARED_LINT_DIRECTORY = "oxlint";
 
-/** The package export a consumer imports: `@org/repo/lint`. */
-export const SHARED_LINT_EXPORT = "./lint";
+/** The package export a consumer imports: `@org/repo/oxlint`. */
+export const SHARED_LINT_EXPORT = "./oxlint";
 
-/** `lint/index.js`, the module behind the export. */
-export const SHARED_LINT_ENTRY = "./lint/index.js";
+/** `oxlint/index.js`, the module behind the export. */
+export const SHARED_LINT_ENTRY = "./oxlint/index.js";
 
 /** The declarations beside it, so a TypeScript config can import the export. */
 export const SHARED_LINT_TYPES = `${SHARED_LINT_DIRECTORY}/index.d.ts`;
@@ -30,7 +31,7 @@ export const sharedPackageName = (org: string, repo: string) =>
  * The shared repo's package.json. alchemy's CLI runs on effect and its Node
  * platform, which are pinned, as is the platform's own dependency, since a
  * range of prereleases takes the newest: effect 4.0.0-rc.118 moved modules
- * alchemy 2.0.0-beta.79 imports (checked 2026-09-28). Only `./lint` is
+ * alchemy 2.0.0-beta.79 imports (checked 2026-09-28). Only `./oxlint` is
  * exported; the alchemy stack is a development dependency, not a runtime one.
  */
 export const sharedPackageJson = (org: string, repo: string) =>
@@ -55,7 +56,7 @@ export const sharedPackageJson = (org: string, repo: string) =>
 /**
  * Reads `rules.json` beside itself, so a checkout, a git dependency, and a
  * consumer's config all see the same file. A plugin path that starts with `.`
- * names a file in `lint/` and becomes absolute, since Oxlint resolves a
+ * names a file in `oxlint/` and becomes absolute, since Oxlint resolves a
  * relative plugin path against the consumer's config, not this package.
  */
 export const SHARED_LINT_INDEX = `import { readFileSync } from "node:fs";

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import packageJson from "../package.json";
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 
 const execFileAsync = promisify(execFile);
 const main = join(process.cwd(), "src", "main.ts");
@@ -175,9 +175,23 @@ describe("cli", () => {
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("TYPESAFE_API_KEY");
   });
 
-  it("lists another repo's rules, and copies the instructions and rules a source names, skipping what is there", async () => {
-    const source = join(tmpdir(), `adhere-install-source-${Date.now()}`);
-    const root = join(tmpdir(), `adhere-install-${Date.now()}`);
+  /** Directories the install fixture makes, removed after each case. */
+  const installRoots: Array<string> = [];
+  afterEach(async () => {
+    await Promise.all(
+      installRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
+    );
+  });
+
+  /**
+   * A source repo whose `.adhere/` names instruction files and rules, and a
+   * root to install them into, with `adhere` run there. git reads github.com
+   * as the source, so nothing is fetched.
+   */
+  const installFixture = async () => {
+    const source = await mkdtemp(join(tmpdir(), "adhere-install-source-"));
+    const root = await mkdtemp(join(tmpdir(), "adhere-install-"));
+    installRoots.push(source, root);
     const rules = join(source, ".adhere", "rules");
     const instructions = join(source, ".adhere", "instructions");
     for (const directory of ["data/ports", "data/columns", "style/small", "instructions/known"]) {
@@ -185,7 +199,6 @@ describe("cli", () => {
     }
     await mkdir(join(instructions, "security"), { recursive: true });
     await mkdir(join(source, ".adhere", "cache"), { recursive: true });
-    await mkdir(root, { recursive: true });
     const ports = "---\ndescription: A port must be branded.\n---\n\nconst Port = 1\n";
     const workflow = "Start with a plan.\n";
     const hardening = "Do not trust input.\n";
@@ -239,6 +252,11 @@ describe("cli", () => {
         (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) =>
           error,
       );
+    return { adhere, hardening, ports, refused, root, workflow };
+  };
+
+  it("lists another repo's rules, and names a RULE.ts without running it", async () => {
+    const { adhere } = await installFixture();
     const listed = (entries: ReadonlyArray<readonly [string, string]>) => {
       const width = Math.max(...entries.map(([id]) => id.length));
       return `${entries.map(([id, description]) => `${id.padEnd(width)}  ${description}`).join("\n")}\n`;
@@ -252,8 +270,10 @@ describe("cli", () => {
         ["style/small", "A file should be small."],
       ]),
     );
-    const rulesInstalled = ".adhere/rules/acme/rules";
-    const instructionsInstalled = ".adhere/instructions/acme/rules";
+  });
+
+  it("asks for a choice when there is no terminal, saying what --all would copy", async () => {
+    const { refused } = await installFixture();
 
     // A bare repo or a topic needs a choice, and says what --all would copy without a terminal.
     const bare = await refused("install", "acme/rules");
@@ -273,6 +293,12 @@ describe("cli", () => {
       "adhere install acme/rules#pinned: no terminal to choose from",
     );
     expect(`${pinned?.stdout}${pinned?.stderr}`).toContain("as in acme/rules/data/columns#pinned");
+  });
+
+  it("copies the instructions and rules a source names, whole and with their helpers", async () => {
+    const { adhere, hardening, ports, root, workflow } = await installFixture();
+    const rulesInstalled = ".adhere/rules/acme/rules";
+    const instructionsInstalled = ".adhere/instructions/acme/rules";
 
     // An exact rule copies without a terminal, and without instruction files.
     expect(await adhere("install", "acme/rules/data/ports")).toBe(
@@ -311,6 +337,14 @@ describe("cli", () => {
       "instructions",
       "style",
     ]);
+  });
+
+  it("skips what is there until --force replaces it", async () => {
+    const { adhere, ports, root } = await installFixture();
+    const rulesInstalled = ".adhere/rules/acme/rules";
+    // An exact install, as the case above does, so the rule is there to skip.
+    await adhere("install", "acme/rules/data/ports");
+
     // What is there is skipped, until --force replaces it.
     const copiedPorts = join(root, rulesInstalled, "data", "ports", "RULE.md");
     await writeFile(copiedPorts, "Local edit\n", "utf8");

@@ -50,6 +50,14 @@ const FrontMatter = Schema.Struct({
 });
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
+
+/**
+ * A rule file's Markdown after its front matter, as written: a README embeds
+ * it whole, examples and prose alike. Without front matter there is nothing to
+ * strip, so the text is its own body; `parseRuleMarkdown` refuses that anyway.
+ */
+export const ruleBodyOf = (text: string): string => FRONT_MATTER.exec(text)?.[2] ?? text;
+
 const FENCE = /^ {0,3}(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n {0,3}\1[ \t]*$/gm;
 /** An ATX heading: its level as `#`s, then its text, without a closing run of `#`s. */
 const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/gm;

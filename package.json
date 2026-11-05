@@ -1,6 +1,6 @@
 {
   "name": "@drkmttr/adhere",
-  "version": "0.22.0",
+  "version": "0.22.3",
   "private": false,
   "description": "Lints a repository against the rules in .adhere/, judged by Jev.",
   "license": "MIT",
@@ -40,7 +40,8 @@
     "prepare": "vp config"
   },
   "dependencies": {
-    "effect": "4.0.3"
+    "effect": "4.0.3",
+    "mdast-util-from-markdown": "^2.1.0"
   },
   "devDependencies": {
     "@effect/platform-bun": "4.0.3",

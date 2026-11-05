@@ -14,7 +14,7 @@ setting adhere up in your repo:
    native Oxlint rule or a small syntax-only Oxlint JS plugin instead.
 3. It adds the presets that fit your stack, plus instructions and rules from
    your organization's [shared repo](/adhere/install-rules/), if you have one.
-   It asks before adding that repo's `lint/` package.
+   It asks before adding that repo's `oxlint/` package.
 4. It shows every candidate in one list, with its evidence, and imports the ones
    you choose.
 5. It validates them, walks you through the first lint and what it costs, and
@@ -31,7 +31,7 @@ an option-dependent rule gets `["error", ...options]`, because bare `"error"`
 would enforce nothing. Banning lodash through `no-restricted-imports`, for
 example, prints `["error", { "paths": [{ "name": "lodash" }] }]`. The wizard
 prints the exact config, or enables the same setting in a shared repo's
-`lint/rules.json` for a pull request. Whichever route it takes, the draft is
+`oxlint/rules.json` for a pull request. Whichever route it takes, the draft is
 trialled on real files before it is written, and a revision runs the same files
 again; the trial is described below. A plugin is shown with its valid and
 invalid examples and runs nothing until you approve it; its tests use the
@@ -40,11 +40,11 @@ refuses Bun and older Node, so without one nothing is written and no repair is
 attempted. One failed test gets one agent repair, you approve the repaired
 plugin, and it runs again. Nothing is written unless the tests pass. A project
 plugin and its test land in `.adhere/oxlint/` as `.mjs` files; add the printed
-`jsPlugins` entry to your lint config. A shared plugin goes in `lint/plugins/`
-as `.js` and is registered in `lint/rules.json`. A shared repo's README index
+`jsPlugins` entry to your lint config. A shared plugin goes in `oxlint/plugins/`
+as `.js` and is registered in `oxlint/rules.json`. A shared repo's README index
 is refreshed in the same commit as the rule or plugin; when you run the wizard
 inside the shared repo itself, choosing this project writes its
-`lint/rules.json` or `lint/plugins/` locally.
+`oxlint/rules.json` or `oxlint/plugins/` locally.
 
 ```sh
 skills add darkmatter/adhere   # install adhere's skills for your agent
@@ -102,3 +102,12 @@ adhere rules create "business logic should live in services"
    An organization rule is committed to a fresh clone
    of the shared repo on the branch `adhere/<rule-id>`, pushed, and linked for a
    pull request.
+
+Copied rules are the project's own after `adhere install`, so editing,
+renaming, or deleting one leaves the shared repo's README index stale. Run
+`adhere rules readme` from the project to refresh it: adhere infers the shared
+repo as `<owner>/standards` from the project's GitHub `origin`, or takes an
+explicit `org/repo`, clones the repo at its default branch, and pushes the
+refreshed block on a review branch, printing a compare link. It opens no pull
+request and pushes nothing when the index already matches. Run it in the shared
+repo itself to write that checkout instead.

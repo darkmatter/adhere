@@ -645,9 +645,9 @@ describe("init", () => {
       "README.md",
       ".github/workflows/adhere.yaml",
       "alchemy.run.ts",
-      "lint/index.js",
-      "lint/index.d.ts",
-      "lint/rules.json",
+      "oxlint/index.js",
+      "oxlint/index.d.ts",
+      "oxlint/rules.json",
       ".gitignore",
       ".adhere/instructions/00-workflow.md",
       ".adhere/rules/style/prefer-small-files/RULE.md",
@@ -664,12 +664,12 @@ describe("init", () => {
     expect(readme).toContain("instruction files\nfirst, then rules grouped by topic");
     expect(readme).toContain("needs no terminal");
     expect(readme).toContain("github:acme/standards#v1.0.0");
-    expect(readme).toContain('from "@acme/standards/lint"');
+    expect(readme).toContain('from "@acme/standards/oxlint"');
     expect(readme).toContain(".adhere/instructions/acme/standards/");
     expect(readme).toContain("there are no per-rule");
-    expect(await read("lint/rules.json")).toBe("{}\n");
-    expect(await read("lint/index.d.ts")).toContain("export default config;");
-    expect(await read("lint/index.js")).not.toContain("vite-plus");
+    expect(await read("oxlint/rules.json")).toBe("{}\n");
+    expect(await read("oxlint/index.d.ts")).toContain("export default config;");
+    expect(await read("oxlint/index.js")).not.toContain("vite-plus");
     expect(await read(".github/workflows/adhere.yaml")).toContain(
       "- run: ~/.local/bin/adhere validate\n        env:\n          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}",
     );
@@ -694,22 +694,22 @@ describe("init", () => {
       name: "@acme/standards",
       private: true,
       type: "module",
-      files: ["lint"],
-      exports: { "./lint": "./lint/index.js" },
+      files: ["oxlint"],
+      exports: { "./oxlint": "./oxlint/index.js" },
     });
-    expect(await read("lint/rules.json")).toBe("{}\n");
-    const types = await read("lint/index.d.ts");
+    expect(await read("oxlint/rules.json")).toBe("{}\n");
+    const types = await read("oxlint/index.d.ts");
     expect(types).toContain("plugins?: SharedPluginName[];");
     expect(types).toContain("rules: Record<string, SharedRuleLevel>;");
     expect(types).not.toContain("[setting: string]");
     const readme = await read("README.md");
-    expect(readme).toContain('from "@acme/standards/lint"');
+    expect(readme).toContain('from "@acme/standards/oxlint"');
     expect(readme).toContain("github:Acme/Standards#v1.0.0");
-    const source = await read("lint/index.js");
+    const source = await read("oxlint/index.js");
     expect(source).not.toContain("vite-plus");
     expect(source).not.toContain('from "alchemy');
     // With no plugins configured the export must omit the key; [] would replace oxlint's defaults.
-    const emptyRoot = join(root, "lint-empty");
+    const emptyRoot = join(root, "oxlint-empty");
     await mkdir(emptyRoot, { recursive: true });
     await writeFile(join(emptyRoot, "index.js"), source);
     await writeFile(join(emptyRoot, "rules.json"), "{}\n");
@@ -718,11 +718,11 @@ describe("init", () => {
     };
     expect(empty.default).not.toHaveProperty("plugins");
 
-    const plugin = join(root, "lint", "plugins", "acme.js");
-    await mkdir(join(root, "lint", "plugins"), { recursive: true });
+    const plugin = join(root, "oxlint", "plugins", "acme.js");
+    await mkdir(join(root, "oxlint", "plugins"), { recursive: true });
     await writeFile(plugin, 'export default { meta: { name: "acme" }, rules: {} };\n', "utf8");
     await writeFile(
-      join(root, "lint", "rules.json"),
+      join(root, "oxlint", "rules.json"),
       JSON.stringify({
         plugins: ["react"],
         options: { typeAware: true },
@@ -737,7 +737,7 @@ describe("init", () => {
     );
 
     // The scaffold writes this module at a temporary path only the test knows, so a static import cannot reach it.
-    const shared = (await import(pathToFileURL(join(root, "lint", "index.js")).href)) as {
+    const shared = (await import(pathToFileURL(join(root, "oxlint", "index.js")).href)) as {
       readonly default: {
         readonly plugins: ReadonlyArray<string>;
         readonly jsPlugins: ReadonlyArray<

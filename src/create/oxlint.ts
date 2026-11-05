@@ -21,7 +21,7 @@ import { decided, line, note, outro, spinning, warn } from "#create/look.ts";
 import { trialAndReview, trialStatus } from "#create/trial-review.ts";
 import { cloned } from "#install.ts";
 import { oxlintCatalog, oxlintRule, type OxlintRule } from "#oxlint/catalog.ts";
-import { SHARED_LINT_RULES } from "#oxlint/shared.ts";
+import { SHARED_LINT_DIRECTORY, SHARED_LINT_RULES } from "#oxlint/shared.ts";
 import { isSharedRepo, refreshIndexIfShared, refreshReadme, validateReadme } from "#readme.ts";
 import { Effect, FileSystem, Option, Path } from "effect";
 import { Prompt } from "effect/cli";
@@ -184,7 +184,7 @@ export const pluginSnippet = (pluginName: string, ruleName: string) =>
     2,
   );
 
-/** The same, as the shared repo's `lint/rules.json` holds it. */
+/** The same, as the shared repo's `oxlint/rules.json` holds it. */
 export const sharedSnippet = (pluginName: string, ruleName: string) =>
   JSON.stringify(
     {
@@ -203,9 +203,9 @@ export const projectFiles = (root: string, pluginName: string) => ({
 
 /** Where the shared repo keeps them: beside the lint config that reads them. */
 export const sharedFiles = (repo: string, pluginName: string) => ({
-  config: join(repo, "lint", "rules.json"),
-  plugin: join(repo, "lint", "plugins", pluginName + ".js"),
-  test: join(repo, "lint", "plugins", pluginName + ".test.js"),
+  config: join(repo, SHARED_LINT_RULES),
+  plugin: join(repo, SHARED_LINT_DIRECTORY, "plugins", pluginName + ".js"),
+  test: join(repo, SHARED_LINT_DIRECTORY, "plugins", pluginName + ".test.js"),
 });
 
 /** A plugin's module and examples as they are checked into a project. */
@@ -731,7 +731,7 @@ const createBuiltin = (
     const scope = yield* chooseWhere(
       shared,
       shape.scope,
-      sharedHere ? "Write this shared repo's lint/rules.json" : "Print the config snippet",
+      sharedHere ? "Write this shared repo's " + SHARED_LINT_RULES : "Print the config snippet",
     );
     if (scope === "project" && sharedHere) {
       const write = yield* Prompt.run(
@@ -774,7 +774,7 @@ const createBuiltin = (
     if (shared === undefined) return yield* outro("Nothing written.");
     const write = yield* Prompt.run(
       Prompt.Confirm({
-        message: "Enable " + rule.id + " in " + shared + "/lint/rules.json and push?",
+        message: "Enable " + rule.id + " in " + shared + "/" + SHARED_LINT_RULES + " and push?",
         initial: true,
       }),
     );
@@ -821,7 +821,9 @@ const createPlugin = (
     const scope = yield* chooseWhere(
       shared,
       shape.scope,
-      sharedHere ? "Write this shared repo's lint/plugins/" : ".adhere/oxlint/",
+      sharedHere
+        ? "Write this shared repo's " + SHARED_LINT_DIRECTORY + "/plugins/"
+        : ".adhere/oxlint/",
     );
 
     // Examples come from the project the user is in, not from the shared clone.
@@ -985,7 +987,7 @@ const createPlugin = (
     ]);
     yield* git(repo, ["push", "--quiet", "origin", branch]);
     yield* line("");
-    yield* note(shared + "/lint/rules.json now contains:");
+    yield* note(shared + "/" + SHARED_LINT_RULES + " now contains:");
     yield* line(sharedSnippet(draft.pluginName, draft.ruleName));
     yield* outro(
       [
