@@ -25,7 +25,7 @@ adhere postinstall               # render .adhere/instructions/**/*.md into AGEN
 adhere login                     # save a TypeSafe AI API key; TYPESAFE_API_KEY takes precedence
 adhere validate                  # rule wording, rules a linter could check, contradictions
 adhere rules create [idea]       # native rule, approved plugin, or rule file; org PR
-adhere rules readme              # refresh a shared repo README's managed index
+adhere rules readme [org/repo]   # refresh a shared repo README's managed guide
 adhere lint                      # judge the working directory; exit 1 on an error finding
 adhere lint --limit 0            # compiler-free counts/cache plan; no budgeting
 adhere lint --limit 100          # first 100 files needing requests; all pending rules per file
@@ -329,9 +329,9 @@ A convention a linter can decide exactly does not belong in a `RULE.md`.
   prints `["error", ...options]`, because bare `"error"` would enforce
   nothing. Banning lodash with `no-restricted-imports` becomes
   `["error", { "paths": [{ "name": "lodash" }] }]`. A project rule prints the
-  exact config; an organization rule enables it in the shared `lint/rules.json`
-  and pushes a branch for a pull request with the README index refreshed. In a
-  shared repo itself, "this project" writes `lint/rules.json` locally instead
+  exact config; an organization rule enables it in the shared `oxlint/rules.json`
+  and pushes a branch for a pull request with the README guide refreshed. In a
+  shared repo itself, "this project" writes `oxlint/rules.json` locally instead
   of printing the config. A rule from a plugin Oxlint leaves off
   by default also needs that plugin in `plugins`, whose list replaces Oxlint's
   default set. A type-aware rule needs
@@ -371,9 +371,9 @@ A native project rule without options prints only its id:
 { "rules": { "typescript/no-explicit-any": "error" } }
 ```
 
-A shared repo keeps plugins in `lint/plugins/` as `.js`, with `.test.js` beside
+A shared repo keeps plugins in `oxlint/plugins/` as `.js`, with `.test.js` beside
 them, because the shared package is `type: module`; it registers them in
-`lint/rules.json`. The catalog follows adhere's toolchain, not the project's
+`oxlint/rules.json`. The catalog follows adhere's toolchain, not the project's
 installed Oxlint, so a suggestion may be missing on an older Oxlint or a newer
 rule may be absent from the catalog; the plugin tests always use the project's
 Oxlint. `adhere validate` reports rules left over that a linter could check.
@@ -382,14 +382,34 @@ Oxlint. `adhere validate` reports rules left over that a linter could check.
 
 An organization keeps its instructions, rules, and lint settings in one repo,
 scaffolded by `adhere init --shared org/repo`. Its `README.md` carries a
-managed index between `<!-- adhere:rules:start -->` and
-`<!-- adhere:rules:end -->`: every rule with its description and `RULE.md`
-link, every enabled native setting in `lint/rules.json` with its severity, and
-each custom plugin's enabled rules linked to `lint/plugins/<name>.js`. Refresh
-it locally with `adhere rules readme` after renaming or deleting a rule; it
-preserves prose outside the block, omits off settings, never runs a `RULE.ts`
-or plugin, and refuses malformed markers without writing. `adhere rules create`
-refreshes it for local writes and stages it with shared-repo branches.
+managed guide between `<!-- adhere:rules:start -->` and
+`<!-- adhere:rules:end -->`: a contents list nesting every rule under its
+topic, the rules grouped by topic with each bold statement and rule id opening
+that rule's `RULE.md` verbatim: examples and explanation, then a source link
+under a stable permalink, every enabled native setting in `oxlint/rules.json`
+with its severity, and each custom plugin's enabled rules, linked to
+`oxlint/plugins/<name>.js` when that is a local file. A `RULE.ts` is linked as
+TypeScript source only: the guide never reads or runs it, and plugin code is
+never loaded. Refresh it with `adhere rules readme [org/repo]` after renaming
+or deleting a rule; it preserves prose outside the block, omits off lint
+settings, and refuses malformed markers without writing.
+`adhere rules create` refreshes it for local writes and stages it with
+shared-repo branches.
+
+The command chooses its target by argument, then by where it runs. A named
+`org/repo` wins. Otherwise a working directory that is itself a shared repo
+(`package.json` exporting `./oxlint`) is written in place. Anywhere else,
+adhere reads the checkout's GitHub `origin` (`https`, `ssh`, or scp form) and
+infers `<owner>/standards` (`acme/app` -> `acme/standards`, never `acme/app`);
+a fork's owner is the fork's. That remote target is cloned at its default
+branch, the changed block is committed alone on a fresh
+`adhere/readme-<timestamp>` branch, pushed, and printed with a compare link.
+No pull request is opened, the consumer checkout and the default branch stay
+untouched, and an unchanged guide prints `No change, so nothing was pushed.`
+without committing. A rules-only remote works, since the `./oxlint` export is
+only required for the local write. A missing or non-GitHub `origin` fails and
+names `adhere rules readme org/repo`; name the repo explicitly when the
+organization's repo is not `<owner>/standards`.
 
 Other repos copy the first two with `adhere install`:
 
@@ -417,13 +437,13 @@ three segments come first (copied files, and local files two directories deep),
 then files directly in the instructions directory, then files one directory
 deep, each group sorted by path.
 
-The shared `lint/` package is not copied. Pin it as a git dependency at a
+The shared `oxlint/` package is not copied. Pin it as a git dependency at a
 repo-wide tag (there are no per-rule or per-package tags; one tag covers rules,
 instructions, and lint together), then spread it into Vite+ or plain Oxlint:
 
 ```ts
 // vite.config.ts
-import sharedLint from "@org/repo/lint";
+import sharedLint from "@org/repo/oxlint";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
@@ -433,12 +453,12 @@ export default defineConfig({
 
 ```ts
 // oxlint.config.ts: oxlint -c oxlint.config.ts
-import sharedLint from "@org/repo/lint";
+import sharedLint from "@org/repo/oxlint";
 
 export default { ...sharedLint };
 ```
 
-`lint/index.js` reads `lint/rules.json` and resolves plugin paths relative to
+`oxlint/index.js` reads `oxlint/rules.json` and resolves plugin paths relative to
 the package. Paths a project adds stay relative to its own config; project
 plugins live in `.adhere/oxlint/`.
 
