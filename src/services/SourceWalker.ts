@@ -172,20 +172,27 @@ const scanDirs = Effect.fn("SourceWalker.scanDirs")(function* (
  * Tests are listed even when no rule judges them, so a prune keeps what other runs
  * know of them. Tests substitute their own tree.
  * The scan root is the current working directory, so the audit reads the
- * repository it is run in.
+ * repository it is run in. `roots` overrides the workspace trees read: `["."]`
+ * reads the whole working directory, for a trial that must not miss a file
+ * outside `agents/`, `apps/`, and `packages/`. `base` roots the walk
+ * elsewhere, for a trial of a checkout that is not the working directory.
  */
-export const SourceWalkerLive = (filter: ReadonlyArray<string> = []) =>
+export const SourceWalkerLive = (
+  filter: ReadonlyArray<string> = [],
+  roots?: ReadonlyArray<string>,
+  base?: string,
+) =>
   Layer.effect(SourceWalker)(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const config = yield* AdhereConfig;
-      // No segments: Path resolves against the working directory.
-      const root = path.resolve();
+      const root = base === undefined ? path.resolve() : path.resolve(base);
       const self = yield* path.fromFileUrl(new URL("../../", import.meta.url)).pipe(Effect.orDie);
       const patterns = [...filter, ...(config.exclude ?? []).map((glob) => `!${glob}`)];
       const walk = Effect.fn("SourceWalker.files")(function* () {
-        const dirs = yield* scanDirs(fs, root).pipe(Effect.mapError(refused));
+        const dirs =
+          roots === undefined ? yield* scanDirs(fs, root).pipe(Effect.mapError(refused)) : roots;
         const trees = yield* clearingStatus(
           Effect.forEach(dirs, (dir) =>
             listRoot(

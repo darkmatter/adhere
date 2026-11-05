@@ -155,180 +155,187 @@ const OLD_NAME = /^[0-9a-f]{64}$/;
 /**
  * `.adhere/cache/`, which is meant to be committed. `files/` holds answers by
  * the content they are about, and `tallies/` the linter check's tallies, with
- * paths from the working directory. A file is written once and never
- * rewritten: it is named for its group, a content hash or a tally key, and for
- * the hash of its own text. Two branches that add to a group add different
- * files, or the same one, so git merges them without a conflict. Reading a
- * group takes the union of its files, and pruning folds them back into one.
+ * paths from the checkout root (`base`, the working directory by default). A
+ * file is written once and never rewritten: it is named for its group, a
+ * content hash or a tally key, and for the hash of its own text. Two branches
+ * that add to a group add different files, or the same one, so git merges them
+ * without a conflict. Reading a group takes the union of its files, and pruning
+ * folds them back into one.
  *
  * A cache must never fail a run: whatever cannot be read counts as missing,
  * and whatever cannot be written is left unwritten.
  */
-export const AuditCacheLive = Layer.effect(AuditCache)(
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const crypto = yield* Crypto.Crypto;
-    const root = path.resolve();
-    const directory = path.join(root, CACHE_DIRECTORY);
-    const hash = (text: string) => sha256(text).pipe(Effect.provideService(Crypto.Crypto, crypto));
+export const AuditCacheAt = (base?: string) =>
+  Layer.effect(AuditCache)(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const crypto = yield* Crypto.Crypto;
+      const root = path.resolve(base ?? ".");
+      const directory = path.join(root, CACHE_DIRECTORY);
+      const hash = (text: string) =>
+        sha256(text).pipe(Effect.provideService(Crypto.Crypto, crypto));
 
-    /** Each group's file names in one folder, listed once and kept current as files come and go. */
-    const indexOf = (folder: string) =>
-      Effect.cached(
-        fs.readDirectory(path.join(directory, folder)).pipe(
-          Effect.orElseSucceed((): ReadonlyArray<string> => []),
-          Effect.map((names) => {
-            const groups = new Map<string, Set<string>>();
-            for (const name of names) {
-              const group = NAME.exec(name)?.[1];
-              if (group !== undefined)
-                groups.set(group, (groups.get(group) ?? new Set()).add(name));
-            }
-            return groups;
-          }),
-        ),
-      );
-    const indexes = { files: yield* indexOf("files"), tallies: yield* indexOf("tallies") };
-    type Folder = keyof typeof indexes;
-
-    const read = <A>(decode: (text: string) => Option.Option<A>, file: string) =>
-      fs.readFileString(file).pipe(
-        Effect.map((text) => Option.getOrUndefined(decode(text))),
-        Effect.orElseSucceed(() => undefined),
-      );
-
-    /** A group's files that decode, in name order. */
-    const readGroup = Effect.fn("AuditCache.readGroup")(function* <A>(
-      folder: Folder,
-      group: string,
-      decode: (text: string) => Option.Option<A>,
-    ) {
-      const names = [...((yield* indexes[folder]).get(group) ?? [])].sort();
-      const decoded = yield* Effect.forEach(names, (name) =>
-        read(decode, path.join(directory, folder, name)),
-      );
-      return decoded.filter((value): value is A => value !== undefined);
-    });
-
-    const nameOf = (group: string, text: string) =>
-      Effect.map(hash(text), (digest) => `${group}.${digest.slice(0, 16)}.json`);
-
-    /** Adds `value` to a group as a new file, unless the group has that file already. */
-    const add = Effect.fn("AuditCache.add")(function* (
-      folder: Folder,
-      group: string,
-      value: unknown,
-    ) {
-      const text = textOf(value);
-      const name = yield* nameOf(group, text);
-      const index = yield* indexes[folder];
-      const names = index.get(group) ?? new Set<string>();
-      if (names.has(name)) return;
-      const written = yield* fs
-        .makeDirectory(path.join(directory, folder), { recursive: true })
-        .pipe(
-          Effect.andThen(fs.writeFileString(path.join(directory, folder, name), text)),
-          Effect.as(true),
-          Effect.orElseSucceed(() => false),
+      /** Each group's file names in one folder, listed once and kept current as files come and go. */
+      const indexOf = (folder: string) =>
+        Effect.cached(
+          fs.readDirectory(path.join(directory, folder)).pipe(
+            Effect.orElseSucceed((): ReadonlyArray<string> => []),
+            Effect.map((names) => {
+              const groups = new Map<string, Set<string>>();
+              for (const name of names) {
+                const group = NAME.exec(name)?.[1];
+                if (group !== undefined)
+                  groups.set(group, (groups.get(group) ?? new Set()).add(name));
+              }
+              return groups;
+            }),
+          ),
         );
-      if (written) index.set(group, names.add(name));
-    });
+      const indexes = { files: yield* indexOf("files"), tallies: yield* indexOf("tallies") };
+      type Folder = keyof typeof indexes;
 
-    const remove = (file: string) =>
-      fs.remove(file).pipe(
-        Effect.as(1),
-        Effect.orElseSucceed(() => 0),
-      );
-
-    /** Replaces a group's files with one holding `value`, or with none. Succeeds with the files deleted. */
-    const fold = Effect.fn("AuditCache.fold")(function* (
-      folder: Folder,
-      group: string,
-      value: unknown,
-    ) {
-      const index = yield* indexes[folder];
-      const names = [...(index.get(group) ?? [])];
-      const keep = value === undefined ? undefined : yield* nameOf(group, textOf(value));
-      if (value !== undefined) yield* add(folder, group, value);
-      let deleted = 0;
-      for (const name of names) {
-        if (name !== keep) deleted += yield* remove(path.join(directory, folder, name));
-      }
-      if (keep === undefined) index.delete(group);
-      else index.set(group, new Set([keep]));
-      return deleted;
-    });
-
-    const relativeOf = (tally: Tally): Tally => ({
-      files: sorted(
-        Record.mapKeys(tally.files, (file) =>
-          path.isAbsolute(file) ? path.relative(root, file) : file,
-        ),
-      ),
-    });
-
-    const get = Effect.fn("AuditCache.get")(function* (contentHash: string, filePath: string) {
-      const entries = yield* readGroup("files", contentHash, decodeEntry);
-      if (entries.length > 0) return unionOf(entries.map((entry) => entry.answers));
-      // Before content keys, a file's entry sat under the hash of its absolute path.
-      const old = yield* read(decodeOldEntry, path.join(directory, yield* hash(filePath)));
-      if (old === undefined || old.hash !== contentHash) return {};
-      const answers = answersOf(old.judgments);
-      yield* add("files", contentHash, { answers: sorted(answers) });
-      return answers;
-    });
-
-    const tally = Effect.fn("AuditCache.tally")(function* (key: string) {
-      const tallies = yield* readGroup("tallies", key, decodeTally);
-      if (tallies.length > 0) {
-        const { files } = tallyUnionOf(tallies);
-        return { files: Record.mapKeys(files, (file) => path.resolve(root, file)) };
-      }
-      // Before, a tally sat under the hash of its key, with absolute paths.
-      const old = yield* read(
-        decodeTally,
-        path.join(directory, yield* hash(`\u0000tally\u0000${key}`)),
-      );
-      if (old !== undefined) yield* add("tallies", key, relativeOf(old));
-      return old;
-    });
-
-    const prune = Effect.fn("AuditCache.prune")(function* (live: Live) {
-      // Tallies still in the layout before content keys move first, so deleting what is left of it loses nothing.
-      yield* Effect.forEach(live.tallies, tally, { discard: true });
-      let deleted = 0;
-      // Folding replaces or removes the group being visited, which a Map's iteration allows.
-      for (const group of (yield* indexes.files).keys()) {
-        const entries = live.hashes.has(group) ? yield* readGroup("files", group, decodeEntry) : [];
-        const answers = unionOf(entries.map((entry) => entry.answers));
-        deleted += yield* fold(
-          "files",
-          group,
-          Object.keys(answers).length === 0 ? undefined : { answers: sorted(answers) },
+      const read = <A>(decode: (text: string) => Option.Option<A>, file: string) =>
+        fs.readFileString(file).pipe(
+          Effect.map((text) => Option.getOrUndefined(decode(text))),
+          Effect.orElseSucceed(() => undefined),
         );
-      }
-      for (const key of (yield* indexes.tallies).keys()) {
+
+      /** A group's files that decode, in name order. */
+      const readGroup = Effect.fn("AuditCache.readGroup")(function* <A>(
+        folder: Folder,
+        group: string,
+        decode: (text: string) => Option.Option<A>,
+      ) {
+        const names = [...((yield* indexes[folder]).get(group) ?? [])].sort();
+        const decoded = yield* Effect.forEach(names, (name) =>
+          read(decode, path.join(directory, folder, name)),
+        );
+        return decoded.filter((value): value is A => value !== undefined);
+      });
+
+      const nameOf = (group: string, text: string) =>
+        Effect.map(hash(text), (digest) => `${group}.${digest.slice(0, 16)}.json`);
+
+      /** Adds `value` to a group as a new file, unless the group has that file already. */
+      const add = Effect.fn("AuditCache.add")(function* (
+        folder: Folder,
+        group: string,
+        value: unknown,
+      ) {
+        const text = textOf(value);
+        const name = yield* nameOf(group, text);
+        const index = yield* indexes[folder];
+        const names = index.get(group) ?? new Set<string>();
+        if (names.has(name)) return;
+        const written = yield* fs
+          .makeDirectory(path.join(directory, folder), { recursive: true })
+          .pipe(
+            Effect.andThen(fs.writeFileString(path.join(directory, folder, name), text)),
+            Effect.as(true),
+            Effect.orElseSucceed(() => false),
+          );
+        if (written) index.set(group, names.add(name));
+      });
+
+      const remove = (file: string) =>
+        fs.remove(file).pipe(
+          Effect.as(1),
+          Effect.orElseSucceed(() => 0),
+        );
+
+      /** Replaces a group's files with one holding `value`, or with none. Succeeds with the files deleted. */
+      const fold = Effect.fn("AuditCache.fold")(function* (
+        folder: Folder,
+        group: string,
+        value: unknown,
+      ) {
+        const index = yield* indexes[folder];
+        const names = [...(index.get(group) ?? [])];
+        const keep = value === undefined ? undefined : yield* nameOf(group, textOf(value));
+        if (value !== undefined) yield* add(folder, group, value);
+        let deleted = 0;
+        for (const name of names) {
+          if (name !== keep) deleted += yield* remove(path.join(directory, folder, name));
+        }
+        if (keep === undefined) index.delete(group);
+        else index.set(group, new Set([keep]));
+        return deleted;
+      });
+
+      const relativeOf = (tally: Tally): Tally => ({
+        files: sorted(
+          Record.mapKeys(tally.files, (file) =>
+            path.isAbsolute(file) ? path.relative(root, file) : file,
+          ),
+        ),
+      });
+
+      const get = Effect.fn("AuditCache.get")(function* (contentHash: string, filePath: string) {
+        const entries = yield* readGroup("files", contentHash, decodeEntry);
+        if (entries.length > 0) return unionOf(entries.map((entry) => entry.answers));
+        // Before content keys, a file's entry sat under the hash of its absolute path.
+        const old = yield* read(decodeOldEntry, path.join(directory, yield* hash(filePath)));
+        if (old === undefined || old.hash !== contentHash) return {};
+        const answers = answersOf(old.judgments);
+        yield* add("files", contentHash, { answers: sorted(answers) });
+        return answers;
+      });
+
+      const tally = Effect.fn("AuditCache.tally")(function* (key: string) {
         const tallies = yield* readGroup("tallies", key, decodeTally);
-        deleted += yield* fold(
-          "tallies",
-          key,
-          tallies.length === 0 ? undefined : relativeOf(tallyUnionOf(tallies)),
+        if (tallies.length > 0) {
+          const { files } = tallyUnionOf(tallies);
+          return { files: Record.mapKeys(files, (file) => path.resolve(root, file)) };
+        }
+        // Before, a tally sat under the hash of its key, with absolute paths.
+        const old = yield* read(
+          decodeTally,
+          path.join(directory, yield* hash(`\u0000tally\u0000${key}`)),
         );
-      }
-      const old = yield* fs.readDirectory(directory).pipe(Effect.orElseSucceed(() => []));
-      for (const name of old) {
-        if (OLD_NAME.test(name)) deleted += yield* remove(path.join(directory, name));
-      }
-      return deleted;
-    });
+        if (old !== undefined) yield* add("tallies", key, relativeOf(old));
+        return old;
+      });
 
-    return AuditCache.of({
-      get,
-      put: (contentHash, answers) => add("files", contentHash, { answers: sorted(answers) }),
-      tally,
-      putTally: (key, value) => add("tallies", key, relativeOf(value)),
-      prune,
-    });
-  }),
-);
+      const prune = Effect.fn("AuditCache.prune")(function* (live: Live) {
+        // Tallies still in the layout before content keys move first, so deleting what is left of it loses nothing.
+        yield* Effect.forEach(live.tallies, tally, { discard: true });
+        let deleted = 0;
+        // Folding replaces or removes the group being visited, which a Map's iteration allows.
+        for (const group of (yield* indexes.files).keys()) {
+          const entries = live.hashes.has(group)
+            ? yield* readGroup("files", group, decodeEntry)
+            : [];
+          const answers = unionOf(entries.map((entry) => entry.answers));
+          deleted += yield* fold(
+            "files",
+            group,
+            Object.keys(answers).length === 0 ? undefined : { answers: sorted(answers) },
+          );
+        }
+        for (const key of (yield* indexes.tallies).keys()) {
+          const tallies = yield* readGroup("tallies", key, decodeTally);
+          deleted += yield* fold(
+            "tallies",
+            key,
+            tallies.length === 0 ? undefined : relativeOf(tallyUnionOf(tallies)),
+          );
+        }
+        const old = yield* fs.readDirectory(directory).pipe(Effect.orElseSucceed(() => []));
+        for (const name of old) {
+          if (OLD_NAME.test(name)) deleted += yield* remove(path.join(directory, name));
+        }
+        return deleted;
+      });
+
+      return AuditCache.of({
+        get,
+        put: (contentHash, answers) => add("files", contentHash, { answers: sorted(answers) }),
+        tally,
+        putTally: (key, value) => add("tallies", key, relativeOf(value)),
+        prune,
+      });
+    }),
+  );
+
+export const AuditCacheLive = AuditCacheAt();

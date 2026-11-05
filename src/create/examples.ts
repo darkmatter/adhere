@@ -53,11 +53,15 @@ export const review = (agent: Agent, root: string, candidates: ReadonlyArray<Can
       const violation = yield* Prompt.run(
         Prompt.Confirm({ message: "Is this a violation?", initial: candidate.violation }),
       );
+      const note = (yield* Prompt.run(
+        Prompt.String({ message: "Note for the agent (optional)", default: "" }),
+      )).trim();
       reviewed.push({
         where: at,
         code: lines.slice(start - 1, end).join("\n"),
         violation,
         agreed: violation === candidate.violation,
+        ...(note === "" ? {} : { note }),
       });
     }
     if (missing > 0) {

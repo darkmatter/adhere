@@ -106,6 +106,8 @@ export interface Reviewed {
   readonly violation: boolean;
   /** Whether the user's call matched the agent's. */
   readonly agreed: boolean;
+  /** What the user added to the call, when they did. */
+  readonly note?: string;
 }
 
 export const shapePrompt = (
@@ -161,8 +163,8 @@ const reviewedOf = (reviewed: ReadonlyArray<Reviewed>) =>
     ? "No code from the repository was judged: write short examples of your own."
     : `The user judged this code from the repository. Base the rule's examples on what shows it best; you need not use all of it. Where the user overruled your first call, word the rule so the difference is clear.\n\n${reviewed
         .map(
-          ({ where, code, violation, agreed }) =>
-            `${violation ? "Breaks the rule" : "Does not break the rule"}, ${where}${agreed ? "" : " (overruled)"}\n\`\`\`\n${code}\n\`\`\``,
+          ({ where, code, violation, agreed, note }) =>
+            `${violation ? "Breaks the rule" : "Does not break the rule"}, ${where}${agreed ? "" : " (overruled)"}${note === undefined ? "" : `\nThe user's note: ${note}`}\n\`\`\`\n${code}\n\`\`\``,
         )
         .join("\n\n")}`;
 
@@ -237,6 +239,90 @@ ${draft.invalid
   .join("\n")}
 
 Fix the rule or the examples so every valid example reports nothing and every invalid example reports exactly the diagnostics it expects. Reply with only the corrected JSON.`;
+
+/** The agent's revised native settings, as the wire holds them: a JSON array in a string. */
+export const NativeRevision = Schema.Struct({ options: OptionsFromJson });
+export type NativeRevision = typeof NativeRevision.Type;
+
+/**
+ * What the trial found, as the agent reads it: the saved report's path, the
+ * files it judged, and what the user made of each finding.
+ */
+export const inspectionPrompt = (report: string, id: string) =>
+  `adhere trialled the rule ${id} on real files without installing it. The full report is at ${report}. Read it, and read the source files it names, then answer in plain text:
+- Whether the rule catches what it should and what it should not, citing the report's findings.
+- Which findings look like false positives or false negatives, and why.
+- Concrete changes to the rule's wording or examples, if any.
+Do not edit files. Keep it short.`;
+
+/** Asks for the adhere rule again, with what the trial found and what the user made of it. */
+export const adhereRevisionPrompt = (
+  idea: string,
+  id: string,
+  shape: Shape,
+  draft: string,
+  evidence: string,
+) => `${skill}
+
+---
+
+Revise the adhere rule ${id}. It enforces: ${idea}
+What Jev reads beside the rule: ${contextOf(shape)}
+${readsInstruction(shape)}
+${shape.format === "typescript" ? typescriptFormat(shape) : "Write it as a RULE.md."}
+
+A trial judged real files against the current rule. What it found, and what the user made of it:
+
+${evidence}
+
+The current file:
+
+${draft}
+
+Keep what the evidence supports and change what it contradicts. Reply with only the corrected file, starting with its ${shape.format === "typescript" ? "imports" : "front matter"}.`;
+
+/** Asks for the oxlint plugin again, with what the trial found and what the user made of it. */
+export const pluginRevisionPrompt = (
+  idea: string,
+  id: string,
+  draft: PluginDraft,
+  evidence: string,
+) => `Revise the oxlint JS plugin rule ${id}; it enforces: ${idea}
+
+A trial ran the current plugin on real files. What it found, and what the user made of it:
+
+${evidence}
+
+The current plugin:
+
+\`\`\`js
+${draft.plugin}
+\`\`\`
+
+Its examples were:
+${draft.valid.map((code, index) => `Valid ${index + 1}:\n\`\`\`\n${code}\n\`\`\``).join("\n")}
+${draft.invalid
+  .map(
+    (example, index) =>
+      `Invalid ${index + 1}:\n\`\`\`\n${example.code}\n\`\`\`\nExpected: ${JSON.stringify(example.errors.map((error) => ({ message: error.message, line: error.line ?? null, column: error.column ?? null })))}`,
+  )
+  .join("\n")}
+
+Keep the API rules: plain ESM, no imports, default-export { meta, rules }, and report with context.report({ message, node }). Reply with only JSON: plugin, pluginName, ruleName, valid, invalid, as before.`;
+
+/** Asks for the native rule's settings again, with what the trial found and what the user made of it. */
+export const nativeRevisionPrompt = (
+  idea: string,
+  id: string,
+  options: ReadonlyArray<unknown>,
+  evidence: string,
+) => `Revise the settings for the oxlint rule ${id}; it should enforce: ${idea}
+
+A trial ran it on real files with the settings ${JSON.stringify(options)}. What it found, and what the user made of it:
+
+${evidence}
+
+Answer with JSON: options, a string holding the rule's settings as a JSON array, exactly as a config writes them after the severity. Use "[]" only when the rule's default settings enforce the idea.`;
 
 /** An agent's reply as the file it holds, without the fence it may wrap it in. */
 export const unfenced = (text: string) =>
