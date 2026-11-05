@@ -1,6 +1,7 @@
 /** Bun-only checks for the trial review, run as a subprocess by trial-review.test.ts. */
 import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
 import { Effect, Layer, Path } from "effect";
+import { Prompt } from "effect/cli";
 import {
   adhereRevisionPrompt,
   inspectionPrompt,
@@ -8,6 +9,7 @@ import {
   pluginRevisionPrompt,
   type Shape,
 } from "../../src/create/ask.ts";
+import { look, renderMarkdown } from "../../src/create/look.ts";
 import { nativeSnippet } from "../../src/create/oxlint.ts";
 import { loadedDraft } from "../../src/create/wizard.ts";
 import {
@@ -72,6 +74,27 @@ const straying = [
   "",
 ].join("\n");
 
+// What an agent's inspection may look like: a leading `---` is a rule, not YAML.
+const inspectionText = [
+  "---",
+  "## Findings",
+  "",
+  "The **agent** found one:",
+  "",
+  "```ts",
+  "const x = 1;",
+  "```",
+  "",
+  "---",
+  "",
+].join("\n");
+
+const renderedInspection = await Effect.runPromise(
+  renderMarkdown(inspectionText).pipe(
+    Effect.provideService(Prompt.Theme, Prompt.makeTheme({ ...look, colors: false })),
+  ),
+);
+
 console.log(
   JSON.stringify({
     defaultFiles: DEFAULT_TRIAL_FILES,
@@ -104,6 +127,8 @@ console.log(
     ),
     nativePrompt: nativeRevisionPrompt("No console", "eslint/no-console", [], evidence),
     inspectionPrompt: inspectionPrompt(".adhere/trial/style%2Fno-console.json", "style/no-console"),
+    inspectionText,
+    renderedInspection,
     snippet: snippet.rules["eslint/no-console"],
     strayingDraft: await loaded(straying),
     unloadableDraft: await loaded("throw new Error('boom');\n"),

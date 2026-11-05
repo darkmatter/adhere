@@ -28,6 +28,8 @@ describe("trial review", () => {
       pluginPrompt: expect.stringContaining("- false-positive — this is a test helper: src/a.ts:4"),
       nativePrompt: expect.stringContaining("- false-positive — this is a test helper: src/a.ts:4"),
       inspectionPrompt: expect.stringContaining(".adhere/trial/style%2Fno-console.json"),
+      inspectionText: expect.stringContaining("## Findings"),
+      renderedInspection: expect.any(String),
       snippet: ["error", "always"],
       strayingDraft: {
         _tag: "Loaded",
@@ -38,5 +40,14 @@ describe("trial review", () => {
         problems: [expect.stringContaining("Could not load")],
       },
     });
+    const rendered = String(result.renderedInspection);
+    // A leading `---` is Markdown here, not rule front matter: the whole inspection renders.
+    expect(rendered).toContain("Findings");
+    expect(rendered).toContain("agent");
+    expect(rendered).toContain("const x = 1;");
+    expect(rendered).not.toContain("##");
+    expect(rendered).not.toContain("**");
+    expect(rendered).not.toContain("\x1b[");
+    expect(rendered).not.toBe(result.inspectionText);
   });
 });
