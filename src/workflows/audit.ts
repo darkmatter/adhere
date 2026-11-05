@@ -9,6 +9,7 @@ import {
   type Rules,
 } from "#config.ts";
 import { type Excerpt, type Range } from "#excerpt.ts";
+import { contentPasses, filtersNeedText, hasFilters, ruleAppliesTo } from "#filters.ts";
 import { type ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, answersOf, type Judgment, sha256, type Tally } from "#services/AuditCache.ts";
@@ -147,6 +148,8 @@ const fingerprintOf = (model: string, reads: string, rule: Rule) => {
   const hook = rule.appendState === undefined ? "" : `\u0000${rule.appendState.toString()}`;
   const options =
     rule.optionValues === undefined ? "" : `\u0000${JSON.stringify(rule.optionValues)}`;
+  // Filters decide which files a rule may judge, not what Jev answers, so they
+  // do not change the fingerprint: applicability is checked before the cache.
   return sha256(
     `${model}\u0000${LAYOUT}${reads}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}${hook}${options}`,
   );
@@ -352,7 +355,12 @@ const sameSuppressions = (left: Suppressions, right: Suppressions): boolean => {
   );
 };
 
-/** Validate code and ignore policy before sending a request or showing a cached excerpt. */
+/**
+ * Validate code, ignore policy, and text-dependent filters before sending a
+ * request or showing a cached excerpt. A comment-only edit keeps the code hash
+ * but can change what a content filter sees, so those filters are rechecked
+ * against the new text; path filters cannot change for the same file.
+ */
 const reloadFile = Effect.fn("audit.reload")(function* (plan: FilePlan, includeComments: boolean) {
   const original = yield* (yield* SourceWalker).read(plan.file);
   const { lines, suppressions } = normalized(original.lines, includeComments);
@@ -362,6 +370,17 @@ const reloadFile = Effect.fn("audit.reload")(function* (plan: FilePlan, includeC
   ) {
     return yield* WalkUnavailable.make({
       message: `${plan.file.path}: source changed since planning. Rerun adhere lint to create a fresh plan; changed contents were not sent or cached under the old content key. Files already completed remain cached.`,
+    });
+  }
+  let written: string | undefined;
+  const dropped = Object.entries(plan.prepared).flatMap(([id, { rule }]) =>
+    filtersNeedText(rule) && !contentPasses(rule, (written ??= original.lines.join("\n")))
+      ? [id]
+      : [],
+  );
+  if (dropped.length > 0) {
+    return yield* WalkUnavailable.make({
+      message: `${plan.file.path}: source changed since planning, and content filters no longer apply to ${dropped.join(", ")}. Rerun adhere lint to create a fresh plan; changed contents were not sent or cached under the old content key. Files already completed remain cached.`,
     });
   }
   return { file: { ...plan.file, lines }, original: original.lines } satisfies LoadedFile;
@@ -455,15 +474,17 @@ export const planAudit = (
     );
 
     // The rules that judge a file: those scoped to it, of which only the rules that say `tests`
-    // judge a test, and none that an adhere-ignore-file comment names.
-    const configuredRules = (file: SourceFile, suppressions: Suppressions) =>
+    // judge a test, none that an adhere-ignore-file comment names, and none whose own
+    // include/exclude filters leave this file out.
+    const configuredRules = (file: SourceFile, suppressions: Suppressions, text: () => string) =>
       Record.filter(
         config.scopedRules === undefined
           ? config.rules
           : applicableRules(file.path, config.scopedRules),
         (rule, id) =>
           judgesFile(rule, file.test === true) &&
-          !suppressions.file.has(shownId({ id, preset: presetOfRule.get(rule) })),
+          !suppressions.file.has(shownId({ id, preset: presetOfRule.get(rule) })) &&
+          (!hasFilters(rule) || ruleAppliesTo(rule, fromRoot.get(file.path)!, text())),
       );
 
     // Model, thresholds, and presets are fixed per plan; share immutable descriptors by Rule identity.
@@ -501,7 +522,16 @@ export const planAudit = (
     const planFile = Effect.fn("audit.plan")(function* (file: SourceFile) {
       const original = yield* walker.read(file);
       const { lines, suppressions } = normalized(original.lines, config.includeComments === true);
-      const rules = configuredRules(file, suppressions);
+      // A rule's content filters read the file as written, comments and all, even
+      // when Jev is sent code without them. The decision is kept in `prepared`;
+      // reloading rechecks only those filters, in case a comment-only edit changed
+      // their answer without changing the code hash.
+      let written: string | undefined;
+      const rules = configuredRules(
+        file,
+        suppressions,
+        () => (written ??= original.lines.join("\n")),
+      );
       const code = lines.join("\n");
       const readState: ReadState = {
         ...(workspacePackages === undefined

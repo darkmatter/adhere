@@ -8,7 +8,7 @@
  * explicitly untested; it never counts as validation.
  */
 import { type Agent } from "#create/agents.ts";
-import { RuleNotCreated, asking, inspectionPrompt } from "#create/ask.ts";
+import { RuleNotCreated, asking, filterAdvicePrompt, inspectionPrompt } from "#create/ask.ts";
 import { line, note, renderMarkdown, said, spinning, warn } from "#create/look.ts";
 import {
   type TrialDraft,
@@ -128,7 +128,11 @@ const showPreview = (scope: TrialScope, preview: TrialPreview) =>
     if (preview.deferred > 0) {
       yield* note(`${filesWord(preview.deferred)} wait for a later run.`);
     }
-    if (preview.skipped > 0) yield* note(`${filesWord(preview.skipped)} skipped as too long.`);
+    if (preview.skipped > 0) {
+      yield* note(
+        `${filesWord(preview.skipped)} skipped (too long, or left out by the rule's filters).`,
+      );
+    }
     if (preview.requests === 0) {
       yield* note("Nothing to send: the selected files have no pending requests.");
     }
@@ -265,7 +269,7 @@ const showRun = (run: TrialRun) =>
     );
     yield* note(`${run.findings.length} finding${run.findings.length === 1 ? "" : "s"}.`);
     if (run.judged === 0 && run.files > 0) {
-      yield* note("Every selected file was cached; no request was sent.");
+      yield* note("No request was sent: every selected file was cached or skipped.");
     }
     yield* note(`Report: ${run.reportPath}`);
     for (const limitation of run.notes) yield* note(limitation);
@@ -285,6 +289,36 @@ const inspect = <D, R>(subject: TrialSubject<D, R>, run: TrialRun) =>
     Effect.map((text) => ({ _tag: "Text", text }) as const),
     Effect.catch((cause) => Effect.succeed({ _tag: "Failed", message: messageOf(cause) } as const)),
   );
+
+type Advice =
+  | { readonly _tag: "Text"; readonly text: string }
+  | { readonly _tag: "Failed"; readonly message: string }
+  | { readonly _tag: "None" };
+
+/**
+ * The first adhere trial asks the authoring agent whether the rule should
+ * filter files. An oxlint rule has no filter fields, and a rerun already has
+ * the answer.
+ */
+const filterAdvice = <D, R>(subject: TrialSubject<D, R>, run: TrialRun, first: boolean) =>
+  first && run.draft.kind === "adhere"
+    ? spinning(
+        `Asking ${subject.agent} whether the rule needs filters`,
+        asking(
+          subject.agent,
+          "to recommend filters",
+          subject.root,
+          filterAdvicePrompt(run.reportPath, subject.id),
+        ),
+      ).pipe(
+        Effect.map((text): Advice =>
+          text.trim() === "" ? { _tag: "None" } : { _tag: "Text", text: text.trim() },
+        ),
+        Effect.catch((cause): Effect.Effect<Advice> =>
+          Effect.succeed({ _tag: "Failed", message: messageOf(cause) }),
+        ),
+      )
+    : Effect.succeed<Advice>({ _tag: "None" });
 
 const MAX_SHOWN = 40;
 
@@ -421,14 +455,27 @@ const reviewFindings = (run: TrialRun) =>
       : ({ _tag: "Cancel" } as const);
   });
 
-/** What the agent reads when revising: the report, the counts, and the user's verdicts. */
-export const trialEvidence = (run: TrialRun, reviews: ReadonlyArray<FindingReview>) => {
+/**
+ * What the agent reads when revising: the report, the counts, the filter
+ * recommendation the first trial asked for, and the user's verdicts.
+ */
+export const trialEvidence = (
+  run: TrialRun,
+  reviews: ReadonlyArray<FindingReview>,
+  advice?: string,
+) => {
   const lines = [
     `Trial report: ${run.reportPath}`,
     `Scope: ${run.scope.kind === "all" ? "the entire repo" : `the first ${run.scope.limit} files`}; ${filesWord(run.selectedFiles.length)} selected.`,
     `Counts: ${run.files} files, ${run.judged} judged, ${run.cached} cached, ${run.skipped} skipped, ${run.waiting} waiting.`,
     `Findings: ${run.findings.length}.`,
   ];
+  if (advice !== undefined) {
+    lines.push(
+      "The agent's filter recommendation from the first trial. It is historical: the latest trial report and the user's verdicts decide, and a filter the evidence contradicts should be removed.",
+    );
+    lines.push(advice);
+  }
   if (reviews.length > 0) {
     lines.push("The user's verdicts:");
     for (const review of reviews) {
@@ -497,6 +544,8 @@ export const trialAndReview = <D, R>(subject: TrialSubject<D, R>) =>
     yield* showPreview(scope, preview.preview);
 
     let pinned: ReadonlyArray<string> | undefined;
+    let firstRun = true;
+    let advice: string | undefined;
     for (;;) {
       const result = yield* runOnce(subject, draft, scope, pinned);
       if (result._tag === "Failed") {
@@ -516,6 +565,18 @@ export const trialAndReview = <D, R>(subject: TrialSubject<D, R>) =>
       } else {
         yield* warn(`The agent could not read the report: ${inspection.message}`);
       }
+      const filters = yield* filterAdvice(subject, run, firstRun);
+      firstRun = false;
+      if (filters._tag === "Text") {
+        advice = filters.text;
+        yield* note("The agent's filter recommendation:");
+        yield* line(filters.text);
+        yield* note(
+          "Accept the draft as it is, or ask the agent to revise it with this recommendation.",
+        );
+      } else if (filters._tag === "Failed") {
+        yield* warn(`The agent could not recommend filters: ${filters.message}`);
+      }
       const decision = yield* reviewFindings(run);
       if (decision._tag === "Accept") {
         return { _tag: "Accepted", draft, run, reviews: decision.reviews } as const;
@@ -523,7 +584,7 @@ export const trialAndReview = <D, R>(subject: TrialSubject<D, R>) =>
       if (decision._tag === "Cancel") {
         return { _tag: "Cancelled", draft, reason: "The trial was cancelled." } as const;
       }
-      const revised = yield* subject.revise(draft, trialEvidence(run, decision.reviews));
+      const revised = yield* subject.revise(draft, trialEvidence(run, decision.reviews, advice));
       yield* subject.show(revised);
       const again = yield* approved(subject, revised);
       if (again._tag === "Declined") {

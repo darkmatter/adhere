@@ -1,4 +1,4 @@
-import { ConfigUnavailable, type Example, Reads, type Rule } from "#config.ts";
+import { ConfigUnavailable, type Example, Reads, type Rule, RuleFilter } from "#config.ts";
 import { Effect, Schema } from "effect";
 
 /**
@@ -34,16 +34,25 @@ import { Effect, Schema } from "effect";
  * `warning` reports the rule's findings as warnings, which do not fail a run.
  * `appliesTo` and `excludeIf`, the rule's scope, are JSON arrays of strings on
  * one line, as in `excludeIf: ["a type that mirrors a third-party format"]`.
+ * `include` and `exclude`, its file filters, are JSON objects on one line, as
+ * in `include: {"paths": ["src/**"], "content": ["^import"]}`: a file
+ * must match every `include` category, any match in a category is enough, and
+ * any `exclude` match drops it. `content` takes regular expression sources
+ * matched against the file as written, comments included.
  * `reads` is a JSON array of the same names, as in `reads: ["dependents"]`:
  * it declares what the rule needs, while the config still decides what runs.
  */
 const Matchers = Schema.fromJsonString(Schema.Array(Schema.String));
+/** A filter object on one line, as in `include: {"paths": ["src/**"]}`. */
+const Filters = Schema.fromJsonString(RuleFilter);
 
 const FrontMatter = Schema.Struct({
   description: Schema.String,
   threshold: Schema.optionalKey(Schema.FiniteFromString),
   tests: Schema.optionalKey(Schema.Literals(["only", "include"])),
   level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
+  include: Schema.optionalKey(Filters),
+  exclude: Schema.optionalKey(Filters),
   appliesTo: Schema.optionalKey(Matchers),
   excludeIf: Schema.optionalKey(Matchers),
   reads: Schema.optionalKey(Schema.fromJsonString(Reads)),

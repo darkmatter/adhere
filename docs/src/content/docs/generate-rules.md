@@ -88,15 +88,20 @@ adhere rules create "business logic should live in services"
 5. Before anything is written, adhere runs the draft on real files: the first
    100 applicable files by default, the entire repo, or a number you type.
    Adhere shows the plan's cost first, and never invents a price. The authoring
-   agent reads the saved report in `.adhere/trial/` and the source it names,
-   then you review the findings. Accept them as correct, review each one as
-   correct, a false positive, or unsure, or ask the agent to revise the draft
-   with the evidence. Every finding, and every example verdict, takes an
-   optional note for the agent. A revision is re-approved before it runs, and
-   the rerun judges the same files as the first run, so the new evidence is
-   comparable. Skipping the trial is allowed; the write prompt then says
-   `(not trialled)` and the closing line says `Not trialled: …`. Nothing is
-   called validated on a skipped, partial, or stale run.
+   agent reads the saved report in `.adhere/trial/` and the source it names.
+   After the first completed trial of an adhere rule, it is also asked whether
+   [path or content filters](/adhere/rule-format/#filtering-files) would help.
+   It recommends concrete filters or explains why none are needed; you choose
+   whether to keep the draft or ask for a revision.
+   Review findings as correct, a false positive, or unsure, or accept the
+   batch. Findings and example verdicts take optional notes. A requested
+   revision receives the evidence, your notes, and the filter recommendation,
+   and is re-approved before running. Reruns keep the first trial's file sample:
+   newly filtered files are skipped, not replaced. The initial 100-file cap
+   counts files that pass the rule's filters. Skipping the trial is allowed;
+   the write prompt then says `(not trialled)` and the closing line says
+   `Not trialled: …`. Nothing is called validated on a skipped, partial, or
+   stale run.
 6. A project rule is written to `.adhere/rules/`, carrying its `reads`
    declaration, with a warning when the config does not enable that context.
    An organization rule is committed to a fresh clone

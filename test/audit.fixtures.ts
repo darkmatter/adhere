@@ -244,6 +244,7 @@ export const planOf = (options: {
   readonly files: ReadonlyArray<ScannedFile>;
   readonly cache: Layer.Layer<AuditCache>;
   readonly limit?: number;
+  readonly root?: string;
   readonly typeAware?: boolean;
   readonly reads?: ResolvedConfig["reads"];
   readonly maxSymbolDocumentationLength?: number;
@@ -256,7 +257,10 @@ export const planOf = (options: {
   readonly scopedRules?: RuleSet;
 }) =>
   Effect.runPromise(
-    planAudit({ limit: options.limit }).pipe(
+    planAudit({
+      limit: options.limit,
+      ...(options.root === undefined ? {} : { root: options.root }),
+    }).pipe(
       Effect.provide(
         Layer.mergeAll(
           Layer.succeed(AdhereConfig, {
