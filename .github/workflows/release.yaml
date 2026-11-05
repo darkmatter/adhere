@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: arc
+    runs-on: public-x64-linux
     steps:
       - name: Derive version from tag
         id: release
