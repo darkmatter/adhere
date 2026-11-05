@@ -103,10 +103,10 @@ files and lint is consumed as a package, and with the examples:
   rules, how to import its lint package, how to add a rule, and how to tag a
   release. It also carries a managed guide, between
   `<!-- adhere:rules:start -->` and `<!-- adhere:rules:end -->`: a contents
-  list nesting every rule under its topic, the rules grouped by topic with each
-  bold statement opening that rule's `RULE.md` verbatim: examples and
-  explanation, then a source link. It also lists its enabled native Oxlint
-  settings and custom plugins.
+  list linking the rules, lint settings, and custom plugin sections. Under a
+  level-two Rules heading, each rule id opens an expandable entry containing
+  its description, its `RULE.md` examples and explanation, and a source link.
+  Rules remain ordered by topic without visible topic headings.
 - **`.adhere/instructions/00-workflow.md`** and two rules under
   `.adhere/rules/style/` are examples to replace. adhere renders the
   instruction file into a consumer's `AGENTS.md` through
@@ -125,15 +125,15 @@ files and lint is consumed as a package, and with the examples:
   `rules.json` starts empty; native rules and custom plugins are added there.
 - **`.gitignore`** keeps the installed packages and alchemy's state out of git.
 
-`adhere rules readme` refreshes that guide from the checkout: a contents list
-nesting each rule under its topic, each rule under `.adhere/rules/` grouped by
-its first path segment with the description `adhere list` shows in bold and
-its id, the rest of its `RULE.md` (examples and explanation) embedded
-verbatim, then a source link, expandable beneath, each enabled setting in
-`oxlint/rules.json` with its severity, and each custom plugin's enabled rules,
-linked to the plugin file when it is local. Each rule and topic has a stable
-`#adhere-...` permalink that the contents links to, and each topic section
-links back to the contents. It reads a `RULE.ts` by name only and never runs
+`adhere rules readme` refreshes that guide from the checkout: a section-only
+contents list, each rule under `.adhere/rules/` ordered by its first path
+segment and id, each enabled setting in `oxlint/rules.json` with its severity,
+and each custom plugin's enabled rules, linked to its file when local.
+Each rule id is an expandable heading; its description and the rest of its
+`RULE.md` (examples and explanation) appear inside, followed by a source link.
+Rules and topics keep stable `#adhere-...` permalinks, and the block ends with
+a link back to the contents. The shorter contents list means scrolling to
+find individual rules rather than following a contents link. It reads a `RULE.ts` by name only and never runs
 it, so that rule links to its source but shows no examples; plugin code is
 never loaded. It touches nothing outside the markers. `adhere rules create`
 refreshes the guide after writing locally in the shared repo, and a rule or

@@ -86,18 +86,19 @@ rule is deterministic, so an unchanged set of files always produces the same
 
 A shared repo's README describes what it offers in a guide generated from the
 checkout between `<!-- adhere:rules:start -->` and
-`<!-- adhere:rules:end -->`: a contents list that links every topic and rule,
-every rule under `.adhere/rules/` grouped by topic, every enabled setting in
-`oxlint/rules.json` with its severity, and every custom plugin's enabled rules,
+`<!-- adhere:rules:end -->`: a contents list linking only the rules, lint
+settings, and custom plugin sections, every rule under `.adhere/rules/` ordered
+by topic, every enabled setting in `oxlint/rules.json` with its severity, and
+every custom plugin's enabled rules,
 linked to the plugin file when the plugin is local. A topic is a rule's first
 id segment, a rule with a single segment falls under `Other`, topics sort by
 name, and rules sort by id within a topic, so the same checkout always writes
 the same block. A lint setting left `off` is omitted.
 
-Each rule's entry is a `<details>` whose summary is the description `adhere
-list` shows in bold followed by the rule id, and whose body is the `RULE.md`
-after its front matter, embedded verbatim: all prose, fenced examples with
-their language tags, and links survive. The guide parses the body with
+Each rule's entry is a `<details>` whose summary is the rule id as a level-three
+heading. The description `adhere list` shows appears inside the expanded entry,
+followed by the `RULE.md` after its front matter, embedded verbatim: all prose,
+fenced examples with their language tags, and links survive. The guide parses the body with
 [`mdast-util-from-markdown`](https://github.com/syntax-tree/mdast-util-from-markdown#use),
 the standard CommonMark parser, and edits the original source at the positions
 it reports instead of reserializing the tree: it inserts or adjusts an ATX
@@ -131,18 +132,21 @@ shows no body: its entry names the rule as TypeScript, says the guide does not
 read or run it, and links the file as source. A plugin's code is never loaded
 either.
 
-Each topic, rule, and section has an explicit `<a id="adhere-...">` anchor, and
-each topic section and the block end link back to the contents. A rule's anchor
-is both its contents link and its permalink. An anchor built from the rule's id
-rather than GitHub's heading slug keeps that permalink when its statement
-changes, and the prefix keeps an author's heading from claiming it; ids that
-slug alike get numbered suffixes instead of colliding.
+Each topic, rule, and section has an explicit `<a id="adhere-...">` anchor,
+and the block ends with a link back to the contents. Rule entries sit under
+the level-two Rules heading without visible topic headings. A rule's anchor
+is its permalink. An anchor built from the rule's id rather than GitHub's
+heading slug keeps that permalink when its statement changes, and the prefix
+keeps an author's heading from claiming it; ids that slug alike get numbered
+suffixes instead of colliding.
 
-Embedding the body puts a rule's statement, examples, and explanation where a
-reader expands them without leaving the page, and the expandable form keeps
-long bodies out of the contents list. Reading a `RULE.ts` to show its examples
-would run it, since a rule file may import and execute at load time, so only a
-`RULE.md` contributes body text. A standard CommonMark parser keeps the guide
+The section-only contents list stays short even in a large rule collection,
+at the cost of scrolling to find an individual rule rather than following a
+contents link. Showing rule ids in the collapsed entries makes them easy to
+scan; statements, examples, and explanations remain available by expanding
+the entry. Reading a `RULE.ts` to show its examples would run it, since a rule
+file may import and execute at load time, so only a `RULE.md` contributes body
+text. A standard CommonMark parser keeps the guide
 from carrying a second, approximate Markdown grammar: it recognizes reference
 definitions, nested lists, and code spans, and reports source positions, so the
 guide edits only the ranges it must and leaves the rest alone. The lint

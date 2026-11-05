@@ -411,10 +411,12 @@ Oxlint. `adhere validate` reports rules left over that a linter could check.
 An organization keeps its instructions, rules, and lint settings in one repo,
 scaffolded by `adhere init --shared org/repo`. Its `README.md` carries a
 managed guide between `<!-- adhere:rules:start -->` and
-`<!-- adhere:rules:end -->`: a contents list nesting every rule under its
-topic, the rules grouped by topic with each bold statement and rule id opening
-that rule's `RULE.md` verbatim: examples and explanation, then a source link
-under a stable permalink, every enabled native setting in `oxlint/rules.json`
+`<!-- adhere:rules:end -->`: a contents list linking the rules, lint settings,
+and custom plugin sections. Under a level-two Rules heading, rules sort by
+topic and id without visible topic headings. Each rule id opens an expandable
+entry containing its description, its `RULE.md` examples and explanation,
+and a source link under a stable permalink. The guide also lists every enabled
+native setting in `oxlint/rules.json`
 with its severity, and each custom plugin's enabled rules, linked to
 `oxlint/plugins/<name>.js` when that is a local file. A `RULE.ts` is linked as
 TypeScript source only: the guide never reads or runs it, and plugin code is
