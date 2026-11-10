@@ -7,11 +7,11 @@
 :root,
 ::backdrop {
   /* darkmatter :root palette, desaturated for long-form reading */
- --dm-background: oklch(3.5% 0 0);
- --dm-foreground: oklch(78.5% 0 0);
-     --dm-card: oklch(10% 0 0);
-    --dm-border: oklch(24% 0 16);
- --dm-muted-foreground: oklch(62.8% 0 0);
+  --dm-background: oklch(4.5% 0 0);
+  --dm-foreground: oklch(86.5% 0 0);
+  --dm-card: oklch(16% 0.02 289);
+  --dm-border: oklch(24% 0 16);
+  --dm-muted-foreground: oklch(62.8% 0 0);
   --dm-zinc-200: oklch(92% 0.004 286.32);
   --dm-zinc-300: oklch(87.1% 0.006 286.286);
   --dm-mint: oklch(0.84 0.1 165.84);
@@ -29,8 +29,9 @@
   --sl-color-black: var(--dm-background);
 
   --sl-color-accent-low: color-mix(in oklch, var(--dm-mint) 15%, var(--dm-background));
-  --sl-color-accent: var(--dm-mint);
-  --sl-color-accent-high: var(--dm-mint-light);
+  /* --sl-color-accent: var(--dm-mint); */
+  --sl-color-accent: oklch(0.85 0.15 58.28);
+  --sl-color-accent-high: oklch(0.8 0.18 64.28);
   --sl-color-red-low: var(--dm-destructive);
 
   --sl-color-text: var(--dm-zinc-300);
