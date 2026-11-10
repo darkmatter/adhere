@@ -87,6 +87,14 @@ Every key, grouped by what it changes:
 - `provider` — default: TypeSafe AI's Jev. Where the questions go instead, with
   its own model. See [Providers](/adhere/providers/).
 
+**Transcripts**
+
+- `transcript` — default: `{ every: 8000, keep: 20 }`. How
+  `adhere lint --type transcript` checks a transcript: `every` is the tokens
+  in each window it judges, 1,000 to 16,000, and `keep` how many checks the
+  system temp directory keeps, `0` for none. See
+  [Checking agent transcripts](/adhere/checking-transcripts/#settings).
+
 An invalid shape refuses the run. A config can import other files by relative
 path, but no packages besides `@drkmttr/adhere`: the executable does not
 resolve `node_modules`.

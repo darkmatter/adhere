@@ -310,6 +310,7 @@ const configOf = (arm: Arm, rule: Rule, provider: Provider): ResolvedConfig => (
   reads: [],
   includeComments: false,
   maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+  transcript: { every: 8_000, keep: 20 },
   maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
   rules: { [ID]: rule },
   scopedRules: [{ id: ID, rule, scope: TARGET, preset: "alchemy" }],

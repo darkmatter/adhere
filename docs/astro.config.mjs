@@ -55,7 +55,10 @@ export default defineConfig({
             "presets",
           ],
         },
-        { label: "Usage", items: ["reading-the-report", "config", "running-lint"] },
+        {
+          label: "Usage",
+          items: ["reading-the-report", "config", "running-lint", "checking-transcripts"],
+        },
         { label: "Validate & improve rules", items: ["validating-rules", "live-evals"] },
         {
           label: "Advanced features",

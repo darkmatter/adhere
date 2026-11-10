@@ -75,7 +75,7 @@ anything; otherwise, or with `--yes`, it sends without asking. The package is
 
 - **Start:** [Introduction](https://dm.sh/adhere/), [Install](https://dm.sh/adhere/install/), [Getting started](https://dm.sh/adhere/getting-started/)
 - **Rules:** <a id="rules-as-markdown-files"></a>[Rule format](https://dm.sh/adhere/rule-format/), <a id="rule-writing-tips"></a>[Writing good rules](https://dm.sh/adhere/writing-good-rules/), [Generate rules from your repo](https://dm.sh/adhere/generate-rules/), [Install rules from other repos](https://dm.sh/adhere/install-rules/), [Presets](https://dm.sh/adhere/presets/)
-- **Usage:** [Reading the report](https://dm.sh/adhere/reading-the-report/), [Config](https://dm.sh/adhere/config/), [Running lint](https://dm.sh/adhere/running-lint/)
+- **Usage:** [Reading the report](https://dm.sh/adhere/reading-the-report/), [Config](https://dm.sh/adhere/config/), [Running lint](https://dm.sh/adhere/running-lint/), [Checking agent transcripts](https://dm.sh/adhere/checking-transcripts/)
 - **Validate & improve rules:** [Validating rules](https://dm.sh/adhere/validating-rules/), [Live evals](https://dm.sh/adhere/live-evals/)
 - **Advanced features:** [State Hooks and Type-Awareness](https://dm.sh/adhere/state-hooks/), [Providers](https://dm.sh/adhere/providers/), [Comments and suppressions](https://dm.sh/adhere/comments-and-suppressions/)
 - [Agent skills](https://dm.sh/adhere/agent-skills/)

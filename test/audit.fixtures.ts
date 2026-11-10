@@ -191,6 +191,7 @@ export const audit = (options: {
             sufficiencyThreshold: 0.7,
             maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
             maxSymbolLength: options.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,
+            transcript: { every: 8_000, keep: 20 },
             reads: options.reads ?? [],
             rules: options.rules,
             ...(options.includeComments === undefined
@@ -272,6 +273,7 @@ export const planOf = (options: {
             maxSymbolDocumentationLength:
               options.maxSymbolDocumentationLength ?? DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
             maxSymbolLength: options.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,
+            transcript: { every: 8_000, keep: 20 },
             rules: options.rules,
             ...(options.scopedRules === undefined ? {} : { scopedRules: options.scopedRules }),
             ...(options.includeComments === undefined

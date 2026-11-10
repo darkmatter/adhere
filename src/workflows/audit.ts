@@ -7,6 +7,7 @@ import {
   type Rule,
   type RuleId,
   type Rules,
+  typeOf,
 } from "#config.ts";
 import { type Excerpt, type Range } from "#excerpt.ts";
 import { contentPasses, filtersNeedText, hasFilters, ruleAppliesTo } from "#filters.ts";
@@ -61,7 +62,10 @@ export interface Finding {
   readonly section: Range;
   /** The lines in the section the code that breaks the rule starts and ends on, when Jev named them. */
   readonly lines?: Range;
-  /** The section's code as written, comments and all, without blank lines at either end. */
+  /**
+   * The section's code as written, comments and all, without blank lines at
+   * either end. A transcript's finding shows only its `lines`, when Jev named them.
+   */
   readonly excerpt: Excerpt;
   /**
    * Jev's probability that the file shows enough to check the rule. Below the
@@ -111,7 +115,8 @@ interface FileResult {
   readonly suppressed?: number;
 }
 
-interface PreparedRule {
+/** A rule as a run judges it: with the threshold that applies, and its cache key. */
+export interface PreparedRule {
   readonly rule: Rule;
   readonly fingerprint: string;
   readonly threshold: number;
@@ -156,7 +161,7 @@ const fingerprintOf = (model: string, reads: string, rule: Rule) => {
 };
 
 /** A section's lines as written, without the blank lines at either end. */
-const excerptOf = (lines: ReadonlyArray<string>, { first, last }: Range): Excerpt => {
+export const excerptOf = (lines: ReadonlyArray<string>, { first, last }: Range): Excerpt => {
   let start = first;
   let end = last;
   while (start < end && (lines[start - 1] ?? "").trim() === "") start += 1;
@@ -277,9 +282,15 @@ const needsRequests = (plan: FilePlan): boolean =>
   !plan.deferred &&
   (!isEmpty(plan.pending) || !isEmpty(unlocated(plan.prepared, plan.kept)));
 
-/** Located findings survive skipped new work; suppression is applied by the file workflow. */
-const findingsOf = (
-  { file, prepared }: FilePlan,
+/**
+ * The findings among the judgments of the text at `path`: each located one
+ * above its rule's threshold and in its scope, with its section as written.
+ * Located findings survive skipped new work; suppression is applied by the
+ * file workflow.
+ */
+export const findingsOf = (
+  path: string,
+  prepared: Readonly<Record<RuleId, PreparedRule>>,
   judged: Readonly<Record<RuleId, Judgment>>,
   original: ReadonlyArray<string>,
 ): ReadonlyArray<Finding> =>
@@ -296,7 +307,7 @@ const findingsOf = (
               ...(k.preset === undefined ? {} : { preset: k.preset }),
               description: k.rule.description,
               examples: examplesOf(k.rule),
-              file: file.path,
+              file: path,
               section: judgment.section,
               ...(judgment.lines === undefined ? {} : { lines: judgment.lines }),
               excerpt: excerptOf(original, judgment.section),
@@ -473,15 +484,16 @@ export const planAudit = (
       ),
     );
 
-    // The rules that judge a file: those scoped to it, of which only the rules that say `tests`
-    // judge a test, none that an adhere-ignore-file comment names, and none whose own
-    // include/exclude filters leave this file out.
+    // The rules that judge a file: the code rules scoped to it, of which only the rules that
+    // say `tests` judge a test, none that an adhere-ignore-file comment names, and none whose
+    // own include/exclude filters leave this file out.
     const configuredRules = (file: SourceFile, suppressions: Suppressions, text: () => string) =>
       Record.filter(
         config.scopedRules === undefined
           ? config.rules
           : applicableRules(file.path, config.scopedRules),
         (rule, id) =>
+          typeOf(rule) === "code" &&
           judgesFile(rule, file.test === true) &&
           !suppressions.file.has(shownId({ id, preset: presetOfRule.get(rule) })) &&
           (!hasFilters(rule) || ruleAppliesTo(rule, fromRoot.get(file.path)!, text())),
@@ -891,7 +903,7 @@ export const executeAudit = (
           yield* omitReferences("full context too long for Jev (preflight limit)");
         } else {
           yield* Effect.logDebug(`${file.path}: full context too long for Jev, skipped`);
-          return fileResult("skipped", findingsOf(filePlan, kept, original));
+          return fileResult("skipped", findingsOf(filePlan.file.path, prepared, kept, original));
         }
       }
       const room = questionRoom(file.lines, readState);
@@ -961,7 +973,7 @@ export const executeAudit = (
       const cached = isEmpty(pending) && isEmpty(flagged);
       if (!cached) yield* cache.put(hash, answersOf(located));
 
-      const findings = findingsOf(filePlan, located, original);
+      const findings = findingsOf(filePlan.file.path, prepared, located, original);
       return blocked === undefined
         ? fileResult(cached ? "cached" : "judged", findings)
         : ({ status: "blocked", findings, blocked } satisfies FileResult);
@@ -974,7 +986,9 @@ export const executeAudit = (
           ? yield* reloadFile(filePlan, plan.includeComments === true)
           : undefined;
       const keptFindings =
-        loaded === undefined ? [] : findingsOf(filePlan, filePlan.kept, loaded.original);
+        loaded === undefined
+          ? []
+          : findingsOf(filePlan.file.path, filePlan.prepared, filePlan.kept, loaded.original);
       let sent = 0;
       const judging = (
         !requesting || loaded === undefined

@@ -1,6 +1,6 @@
 ---
 name: adhere
-description: Reference for adhere, the linter for coding conventions a normal linter cannot check, judged by TypeSafe AI's Jev. Covers its commands, the Markdown rule format and how to word a rule, the config, presets, shared repos and lint packages, comments and suppressions, the cache, reading a report, and tuning a noisy rule. Use when writing or editing adhere rules, configuring adhere, reading its findings, or answering questions about it. To set adhere up in a repo, use adhere-setup; to fix findings, adhere-fix.
+description: Reference for adhere, the linter for coding conventions a normal linter cannot check, judged by TypeSafe AI's Jev. Covers its commands, the Markdown rule format and how to word a rule, transcript rules for a coding agent's work, the config, presets, shared repos and lint packages, comments and suppressions, the cache, reading a report, and tuning a noisy rule. Use when writing or editing adhere rules, configuring adhere, reading its findings, or answering questions about it. To set adhere up in a repo, use adhere-setup; to fix findings, adhere-fix.
 ---
 
 # adhere
@@ -35,6 +35,8 @@ adhere lint --preset effect      # add a built-in rule set; the config becomes o
 adhere lint --filter 'src/**'    # read only matching files; repeat, and ! to leave out
 adhere lint --threshold 0.9      # report at another threshold from the cache; judges nothing again
 adhere lint --deny-warnings      # fail on warnings too
+adhere lint --type transcript < turn.txt  # judge text, such as an agent's turn, against the transcript rules
+adhere lint --type transcript --hook      # answer a Claude Code or Codex hook event read on stdin
 adhere list org/repo             # the rules in a GitHub repo's .adhere/rules/, with descriptions
 adhere install org/repo[/topic[/rule]][#ref] [--all]  # copy instructions and rules into .adhere/
 adhere skill [docs|setup|fix]    # print a skill
@@ -160,6 +162,18 @@ changes are not tracked by the cache; neither are built-in read-context contents
 or reader selection. Judgments are redone when own code, model, rule, matcher,
 or hook source changes, or the user clears the cache. Helpers it imports go
 beside it in its directory.
+
+A rule whose front matter says `type: transcript` judges what a coding agent
+did, such as skipping a failing test, instead of code.
+`adhere lint --type transcript` reads the transcript on stdin; plain
+`adhere lint` leaves the rule out, and `adhere validate` checks its wording
+but compares only code rules for contradictions. Its examples are what
+an agent writes or runs, in `text` fences, written the way the hook writes a
+turn: `TOOL CALL <tool>: <input>`, `RESULT: <output>`, and
+`ASSISTANT: <message>`. It cannot have `tests`, `include`, `exclude`,
+`appliesTo`, `excludeIf`, `reads`, or `appendState`, which are about files.
+Hook setup, windows, and the history kept in the temp directory:
+https://dm.sh/adhere/checking-transcripts/.
 
 A rule a regex, an import check, or the type checker could flag every time
 belongs in that tool, not adhere. `adhere validate` reports rules that look

@@ -31,6 +31,7 @@ describe("config", () => {
       typeAware: false,
       maxSymbolDocumentationLength: 256,
       maxSymbolLength: 256,
+      transcript: { every: 8_000, keep: 20 },
       rules: { "data/brand": { description: "d", must: "r" } },
     });
   });
@@ -220,6 +221,26 @@ describe("config", () => {
     expect(mixed.message).toContain(
       "a rule is a requirement (must, never) or a guideline (should, shouldNot), not both",
     );
+  });
+
+  it("loads a transcript rule, and refuses one with keys about files", async () => {
+    const rule = { description: "d", never: "it.skip()", type: "transcript" } as const;
+    const config = await Effect.runPromise(decodeConfig({ rules: { skip: rule } }));
+    expect(config.rules).toEqual({ skip: rule });
+    const refused = await Effect.runPromise(
+      Effect.flip(decodeConfig({ rules: { skip: { ...rule, appliesTo: ["test files"] } } })),
+    );
+    expect(refused._tag).toBe("ConfigUnavailable");
+    expect(refused.message).toContain("appliesTo");
+  });
+
+  it("takes transcript windows from 1,000 to 16,000 tokens, which Jev can read", async () => {
+    for (const every of [999, 16_001]) {
+      const refused = await Effect.runPromise(Effect.flip(decodeConfig({ transcript: { every } })));
+      expect(refused._tag).toBe("ConfigUnavailable");
+    }
+    const config = await Effect.runPromise(loaded({ transcript: { every: 16_000, keep: 0 } }));
+    expect(resolveConfig(config).transcript).toEqual({ every: 16_000, keep: 0 });
   });
 
   it("accepts a rule with only code never to write, and a guideline", async () => {

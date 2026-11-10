@@ -117,7 +117,7 @@ export interface ComparedRule {
 export type Pair = readonly [number, number];
 
 /** A `choice` question accepts at most this many criteria, so a file has at most this many sections. */
-const CHOICE_LIMIT = 255;
+export const CHOICE_LIMIT = 255;
 
 /**
  * Jev 1.13's context, from its model card: the state with its longest
