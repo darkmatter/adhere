@@ -22,6 +22,9 @@ export const projectTemp = Effect.fn("transcript.projectTemp")(function* (root: 
   return project;
 });
 
+/** A run folder's name: its ISO time with `:` as `-`, and the process ID. */
+const RUN_NAME = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z-\d+$/;
+
 /**
  * Keeps a check's `files` in a folder of their own under the project's
  * `runs/`, then removes all but the newest `keep` of them. Returns the new
@@ -47,7 +50,8 @@ export const saveRun = Effect.fn("transcript.saveRun")(function* (
         .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.void));
     }
   }
-  const names = (yield* fs.readDirectory(runs)).sort();
+  // Only folders named as runs are pruned, so a `runs` that is not adhere's loses nothing else.
+  const names = (yield* fs.readDirectory(runs)).filter((name) => RUN_NAME.test(name)).sort();
   // A check running at the same time may remove the same folder first.
   for (const name of names.slice(0, Math.max(0, names.length - keep))) {
     yield* fs.remove(path.join(runs, name), { recursive: true, force: true });

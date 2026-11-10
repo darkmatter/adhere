@@ -182,6 +182,21 @@ describe("lint --type transcript", () => {
     expect(existsSync(join(root, ".adhere/cache"))).toBe(false);
   }, 30_000);
 
+  it("prunes only its own run folders, so a runs folder planted by someone else loses nothing", async () => {
+    const { root, temp } = await project();
+    expect((await transcript(root, temp, "first\n")).code).toBe(0);
+    const { runs } = await runsOf(temp);
+    const folder = join(runs[0] ?? "", "..");
+    const kept = join(folder, ".ssh");
+    await mkdir(kept);
+    await writeFile(join(kept, "id_ed25519"), "key\n");
+    for (const text of ["second\n", "third\n"]) {
+      expect((await transcript(root, temp, text)).code).toBe(0);
+    }
+    expect(await readFile(join(kept, "id_ed25519"), "utf8")).toBe("key\n");
+    expect((await readdir(folder)).filter((name) => name !== ".ssh")).toHaveLength(2);
+  }, 30_000);
+
   it("refuses flags a transcript has no use for, and --hook outside a transcript check or with --json", async () => {
     const { root, temp, log } = await project();
     const unused = await transcript(
