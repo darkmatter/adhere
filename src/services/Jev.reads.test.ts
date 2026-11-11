@@ -82,6 +82,7 @@ const recordedJev = (
         sufficiencyThreshold: 0.6,
         maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
         maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+        transcript: { every: 8_000, keep: 20 },
         reads,
         rules: {},
         workspacePackages,

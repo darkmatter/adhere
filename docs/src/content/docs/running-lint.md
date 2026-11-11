@@ -4,7 +4,9 @@ title: "Running lint"
 
 `adhere lint` judges the TypeScript files under the working directory against
 your rules, and prints a [report](/adhere/reading-the-report/) of what it finds. It
-asks before it sends anything.
+asks before it sends anything. With `--type transcript`, it judges text on
+stdin, such as a coding agent's work, against the transcript rules instead:
+see [Checking agent transcripts](/adhere/checking-transcripts/).
 
 ## Before and during a run
 
@@ -78,6 +80,8 @@ Estimates cover only code and workspace-package context; symbol/reference input,
 
 | Flag                                                     | What it does                                                                                                                                         |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--type <code or transcript>`                            | What to judge: `code`, the default, or a transcript on stdin. See [Checking agent transcripts](/adhere/checking-transcripts/).                       |
+| `--hook`                                                 | With `--type transcript`, answer a Claude Code or Codex hook. See [As an agent hook](/adhere/checking-transcripts/#as-an-agent-hook).                |
 | `--preset <names>`                                       | Add built-in rule sets, or their topics. The config becomes optional. See [Presets](/adhere/presets/).                                               |
 | `--threshold <0 to 1>`                                   | Replace the config's threshold. Per-rule thresholds still apply.                                                                                     |
 | `--sufficiency-threshold <0 to 1>`                       | Replace the config's `sufficiencyThreshold`: a finding warns when its `context` is below it.                                                         |
@@ -174,3 +178,7 @@ adhere lint --log-level debug 2> adhere.log
 | 0    | Nothing is reported, or only warnings.                                                                                                         |
 | 1    | An error is reported. With `--deny-warnings`, a warning too.                                                                                   |
 | 1    | The run refuses, for example on an invalid config or rule file, a missing API key, or an unknown command or flag. A refusal prints its reason. |
+
+`--type transcript` exits the same way. With `--hook`, it exits 0 whatever it
+finds, since the agent reads the findings from its answer, and 1 when it
+fails.

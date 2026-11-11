@@ -109,6 +109,35 @@ export const RuleFilter = Schema.Struct({
 }).annotate({ identifier: "RuleFilter" });
 export interface RuleFilter extends Schema.Schema.Type<typeof RuleFilter> {}
 
+/** The keys about files, which a transcript rule cannot have. */
+const FILE_KEYS = [
+  "tests",
+  "include",
+  "exclude",
+  "appliesTo",
+  "excludeIf",
+  "reads",
+  "appendState",
+] as const;
+
+/**
+ * Why a rule cannot load, when it is a transcript rule with keys about files:
+ * each would be ignored, since a transcript has no path, tests, or reads.
+ */
+export const fileKeysProblem = (
+  rule: { readonly type?: string | undefined } & Partial<
+    Record<(typeof FILE_KEYS)[number], unknown>
+  >,
+): string | undefined => {
+  const keys = rule.type === "transcript" ? FILE_KEYS.filter((key) => rule[key] !== undefined) : [];
+  return keys.length === 0
+    ? undefined
+    : `a transcript rule cannot have ${keys.join(", ")}: ${keys.length === 1 ? "it is" : "they are"} about files`;
+};
+
+/** What a rule can judge: code, the default, or a transcript. */
+export const RULE_TYPES = ["code", "transcript"] as const;
+
 /**
  * A rule's examples, named in RFC 2119's words, which Jev reads as written. A
  * requirement shows code that `must` be written and code that must `never`
@@ -118,6 +147,10 @@ export interface RuleFilter extends Schema.Schema.Type<typeof RuleFilter> {}
 export const Rule = Schema.Struct({
   description: Schema.String.annotate({
     description: "What the rule says, in one sentence. The report shows it with each finding.",
+  }),
+  type: Schema.optionalKey(Schema.Literals(RULE_TYPES)).annotate({
+    description:
+      "What the rule judges: `code`, the default, for the files `adhere lint` reads, or `transcript`, for text such as an agent's work, piped to `adhere lint --type transcript`. A transcript rule cannot have `tests`, `include`, `exclude`, `appliesTo`, `excludeIf`, `reads`, or `appendState`.",
   }),
   details: Schema.optionalKey(Schema.String).annotate({
     description:
@@ -199,6 +232,9 @@ export const Rule = Schema.Struct({
       },
       { toCode: () => ({ runtime: "Schema.makeFilter(isRequirementOrGuideline)" }) },
     ),
+    Schema.makeFilter(fileKeysProblem, {
+      toCode: () => ({ runtime: "Schema.makeFilter(fileKeysProblem)" }),
+    }),
   )
   .annotate({ identifier: "Rule" });
 export interface Rule extends Schema.Schema.Type<typeof Rule> {
@@ -208,6 +244,12 @@ export interface Rule extends Schema.Schema.Type<typeof Rule> {
 
 /** How a finding is reported: an error fails the run, a warning does not. */
 export type Level = NonNullable<Rule["level"]>;
+
+/** What a rule judges, and what a run judges: code unless it says otherwise. */
+export type RuleType = NonNullable<Rule["type"]>;
+
+/** A rule's type, `code` when it names none. */
+export const typeOf = (rule: Pick<Rule, "type">): RuleType => rule.type ?? "code";
 
 /** One of a rule's examples, under the word it is written with. */
 export interface Example {
@@ -247,6 +289,9 @@ const Override = Schema.Union([
   }),
 ]);
 export type Override = typeof Override.Type;
+
+/** Jev reads 32,000 tokens a question, and a transcript window goes with half as much again. */
+export const MAX_TRANSCRIPT_EVERY = 16_000;
 
 /** A config file's keys. Each `description` is what the docs' Config file reference shows. */
 export const AdhereConfig = Schema.Struct({
@@ -306,6 +351,22 @@ export const AdhereConfig = Schema.Struct({
   includeComments: Schema.optionalKey(Schema.Boolean).annotate({
     description:
       "Whether Jev reads every comment, for rules about comments. By default comments are taken out, since a comment changes nothing a file does, but for the notes that say `@adhere`.",
+  }),
+  transcript: Schema.optionalKey(
+    Schema.Struct({
+      every: Schema.optionalKey(
+        Schema.Int.check(Schema.isBetween({ minimum: 1_000, maximum: MAX_TRANSCRIPT_EVERY })),
+      ).annotate({
+        description:
+          "Tokens of transcript per check, at three bytes a token. 1,000 to 16,000; defaults to 8,000.",
+      }),
+      keep: Schema.optionalKey(Schema.Natural).annotate({
+        description: "How many checks the temp directory keeps. Defaults to 20; 0 keeps none.",
+      }),
+    }),
+  ).annotate({
+    description:
+      "How `adhere lint --type transcript` judges a transcript. `every`, 1,000 to 16,000 and 8,000 by default, is the tokens of transcript per check, at three bytes a token: a transcript is judged in windows this long, or of 255 lines with text when those come first, each beside up to half as much of what came before it, and an agent hook checks each time a window fills and when the agent stops. `keep`, 20 by default, is how many checks keep the text they judged and their report in the system temp directory; 0 keeps none.",
   }),
 });
 
@@ -395,6 +456,8 @@ export const DEFAULT_SUFFICIENCY_THRESHOLD = 0.6;
 export const DEFAULT_READS: typeof Reads.Type = ["workspacePackages"];
 export const DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH = 256;
 export const DEFAULT_MAX_SYMBOL_LENGTH = 256;
+export const DEFAULT_TRANSCRIPT_EVERY = 8_000;
+export const DEFAULT_TRANSCRIPT_KEEP = 20;
 
 /** A config with its presets folded in and every default applied. */
 export interface ResolvedConfig {
@@ -428,6 +491,8 @@ export interface ResolvedConfig {
   readonly workspacePackages?: Readonly<Record<string, string>>;
   /** Per workspace package, the workspace packages that depend on it, when reads names `dependents`. */
   readonly workspaceDependents?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** Tokens of transcript per check, and how many checks the temp directory keeps. */
+  readonly transcript: { readonly every: number; readonly keep: number };
 }
 
 /** Command-line values that apply on top of the config file. */
@@ -512,6 +577,10 @@ export const resolveConfig = (
     maxSymbolLength: config.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,
     maxSymbolDocumentationLength:
       config.maxSymbolDocumentationLength ?? DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+    transcript: {
+      every: config.transcript?.every ?? DEFAULT_TRANSCRIPT_EVERY,
+      keep: config.transcript?.keep ?? DEFAULT_TRANSCRIPT_KEEP,
+    },
   };
 };
 

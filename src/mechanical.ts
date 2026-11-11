@@ -1,4 +1,4 @@
-import type { Rule } from "#config.ts";
+import { type Rule, typeOf } from "#config.ts";
 import { type RuleEntry, shownId } from "#rules.ts";
 import { AuditCache, sha256, type Tally } from "#services/AuditCache.ts";
 import { linterQuestion } from "#services/Jev.ts";
@@ -27,14 +27,18 @@ export const talliedOf = (entry: RuleEntry, tally: Tally | undefined): Tallied =
   return { entry, asked: answers.length, flagged: answers.filter((p) => p > 0.5).length };
 };
 
-/** The project's rules with their tallies. A preset's rules are left out: they are not the user's to change. */
+/**
+ * The project's code rules with their tallies. A preset's rules are left out:
+ * they are not the user's to change. So are transcript rules, which lint
+ * never asks the linter check about.
+ */
 export const tallyProjectRules = Effect.fn("mechanical.tally")(function* (
   entries: ReadonlyArray<RuleEntry>,
   model: string,
 ) {
   const cache = yield* AuditCache;
   return yield* Effect.forEach(
-    entries.filter((entry) => entry.preset === undefined),
+    entries.filter((entry) => entry.preset === undefined && typeOf(entry.rule) === "code"),
     (entry) =>
       Effect.map(Effect.flatMap(tallyKeyOf(model, entry.rule), cache.tally), (tally) =>
         talliedOf(entry, tally),

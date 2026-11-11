@@ -301,3 +301,136 @@ asked whether filters would help, using the report and source files. It must
 recommend concrete entries or explain why none are needed. The user chooses
 whether to revise; the recommendation accompanies the next revision's
 evidence. Oxlint settings and plugins do not receive adhere-only fields.
+
+## Transcripts are rules of their own type
+
+A rule's `type` says what it judges: `code`, the default, judges the
+TypeScript files `adhere lint` walks, and `transcript` judges text piped to
+`adhere lint --type transcript`, such as a coding agent's work. A run judges
+only rules of the type it is asked for, so `adhere lint` without `--type`
+judges code as it did before transcript rules existed, and `validate` compares
+only code rules with each other. The rule format, the config, Jev, and the
+report stay shared, and another kind of text, such as commit messages, would
+be another value of the same key rather than another command.
+
+A transcript rule refuses the keys that are about files: `tests`, `include`,
+`exclude`, `appliesTo`, `excludeIf`, `reads`, and `appendState`. Each would
+otherwise be ignored without a word. Every transcript rule applies, whichever
+`.adhere/rules/` holds it, since a transcript belongs to no directory.
+
+Transcripts have a workflow of their own, `src/workflows/transcript.ts`,
+rather than branches through the file audit. A transcript has no walk, cache,
+comment stripping, suppression comments, or linter tallies, so what the two
+share is Jev's judge and locate requests and the code that turns their answers
+into findings. Transcripts are asked Jev's questions as they are, which call
+what they judge `code`, and are split into sections as a file is. Asking
+about `transcript` instead, in words for a turn and in entries split at blank
+lines, judged no better on the eval: over three runs of 30 planted turns,
+caught breaks less false flags averaged 12.00 against 11.67, inside the
+margin of 3 set before the runs (`eval/studies/transcript.md`). So lint asks
+one way, and the questions for code, which key every cached judgment, stay
+as they are.
+
+## Transcripts are judged in windows
+
+A transcript is judged in windows of `transcript.every` tokens, 8,000 by
+default, counted by the same estimate that sizes Jev's requests. A window ends
+at a blank line past its middle when it can, so a tool call's output is
+rarely split. Each window is judged once, with up to half as many tokens of
+the transcript before it as context, so a closing message that says the tests
+pass is judged beside the run that showed it. Jev reads that text, and the
+user's prompt when a hook has it, as `earlierTranscript` and `userPrompt`
+beside the window; when they do not fit, the window is judged without them,
+and only a window too long on its own is left unjudged. Jev reads at most
+32,000 tokens a question, so `every` is at most 16,000. A long transcript
+costs one request per window, where a single request would be refused.
+
+A window also holds at most 255 lines with text, whatever its tokens. Jev
+places a finding by a choice among one section's lines, and a choice takes at
+most 255 options. The code splitter that makes sections reads an unclosed
+`/*` or backtick, such as `rm -rf dist/*` in a tool's output, as a comment or
+string that runs on until something closes it, so hundreds of lines can be one
+section. Windows of short lines, such as a test log, therefore cost more
+requests than their tokens alone would.
+
+As an agent hook, adhere keeps the turn in the system temp directory as the
+harness's events arrive and judges it each time a window fills, so findings
+reach the agent while it works, not only once it stops. The events a project
+registers decide what a turn holds: the user's prompt, each tool call with its
+result, and the agent's final message. Claude Code sends a call that fails,
+such as a test run that exits non-zero, as `PostToolUseFailure`, with an
+`error` in place of the result, and the turn keeps that error as the call's
+result: a failing run is what a claim that the tests pass is judged against.
+Codex sends such a call as `PostToolUse`. The prompt is context only and is
+never judged, since the rules are about what the agent does. The prompt and
+each tool call's input and result are cut to a quarter of a window, their
+start and end kept, so one large file read does not fill windows on its own.
+Only the final message of the agent's text reaches a hook; what it writes
+between tool calls does not, and reading the harness's own transcript file
+instead would tie adhere to formats Codex calls unstable and Claude Code
+writes after the fact.
+
+## Agent hooks answer in the harness's protocol
+
+`adhere lint --type transcript --hook` reads one hook event as JSON on stdin.
+Claude Code and Codex name the fields it reads the same way
+(`hook_event_name`, `session_id`, `prompt`, `tool_name`, `tool_input`,
+`tool_response`, `last_assistant_message`, and `stop_hook_active`), beside
+Claude Code's `error` for a failed call, and accept the same replies, so one
+command serves both. Codex skips the `PostToolUseFailure` entry it has no
+event for. Reading the event in adhere keeps the hook a single command, where
+shell glue would need `jq`.
+
+At `Stop` or `SubagentStop`, findings that fail the run print
+`{"decision":"block","reason":...}`, which keeps the agent working with the
+findings as its next instruction. After a tool call they print as
+`hookSpecificOutput.additionalContext`, named for the event that brought the
+call, since a `block` there replaces the tool's output in Codex. A window
+adhere could not judge prints a `systemMessage` for the user, and a window
+without failing findings prints nothing. Either way the hook exits 0, because
+neither harness acts on exit 1; adhere's own failures, such as a missing API
+key, still exit 1, which the harness reports without stopping the agent. A
+`Stop` with `stop_hook_active` judges nothing, so a turn is blocked at most
+once at its end, as the organization's own review hook does.
+
+A turn lives in `sessions/<hash>/` beside the run history, keyed by a hash of
+the session id and, for a subagent, its agent id, so a subagent's turn is its
+own. Claude Code marks a subagent's events with its `agent_id`. Codex does the
+same for a subagent an agent spawns, under its parent's session id, but not
+for its built-in review, whose events join the parent's turn. Hashing makes
+any id a safe folder name with no code to check or clean it, at the cost of
+names that do not show which session is which. The folder holds the prompt,
+the turn's text, and one claim file per judged window, named by the window's
+first line.
+A check creates its window's claim before judging it, and a claim that
+already exists means another check owns that window, so concurrent tool calls
+do not judge the same text twice. Text is only added to a turn, so a full
+window's bounds never move once found; a window whose check fails keeps its
+claim and is not judged again. A new prompt or a stop clears the turn. The
+prompt prints nothing, because Claude Code adds what that event prints to the
+agent's context.
+
+The reason a hook gives is the Markdown report of the failing findings, with
+the rules' examples, under a line saying what to do with it. It is cut at
+7,500 characters, since Codex shows the model about 2,500 tokens of a hook's
+answer and Claude Code cuts it at 10,000 characters, and a cut reason names
+the run's full report.
+
+## The last transcript checks stay in the temp directory
+
+Each transcript check writes the text it judged and its report to
+`<temp>/adhere-<uid>/<project>-<hash>/runs/`, keeping the newest
+`transcript.keep`, 20 by default, so what a hook told an agent can be read
+afterwards; 0 keeps none. A hook's run also keeps the prompt and the reply it
+printed, and a hook writes a run only when it checked a window. adhere creates
+the folder for the user alone, since its text may be secret, but does not
+check who owns or can open one that already exists: the temp directory's
+safety is the system's concern, not adhere's. Windows has no user id, so there
+the folder is `adhere/`.
+adhere prunes only `runs/`. A session's folder keeps its last prompt, and the
+text of its turn until the agent stops or the next prompt arrives; the folder
+stays until the system clears its temp directory. A transcript check writes
+nothing in the repository: `.adhere/reports/` and the cache stay as the
+last file audit left them. Transcripts can carry secrets from tool output, and
+like code they go to Jev or the configured provider, so the hook is never
+installed for a project; a project registers it in its harness's settings.

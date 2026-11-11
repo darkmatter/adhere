@@ -26,10 +26,14 @@ import {
   progressLine,
   renderJson,
   renderMarkdown,
+  renderOptionsOf,
   renderRuleReports,
   sendQuestion,
 } from "#workflows/format.ts";
-import type { Flags } from "#config.ts";
+import { judgeTranscript, linesOf, windowsOf } from "#workflows/transcript.ts";
+import { answerHook } from "#workflows/transcript-hook.ts";
+import { projectTemp, saveRun } from "#workflows/transcript-runs.ts";
+import { type Flags, RULE_TYPES } from "#config.ts";
 import { findContradictions, formatContradictions } from "#contradictions.ts";
 import { createRule } from "#create/wizard.ts";
 import { AGENTS } from "#create/agents.ts";
@@ -186,6 +190,20 @@ const denyWarnings = Flag.Boolean("deny-warnings").pipe(
   Flag.withDescription("Fail the run on warnings as well as errors."),
 );
 
+const ruleType = Flag.Literals("type", RULE_TYPES).pipe(
+  Flag.withDefault("code"),
+  Flag.withDescription(
+    "What to lint: code, the files under the working directory, or transcript, text on stdin such as a coding agent's work, against the rules that say `type: transcript`.",
+  ),
+);
+
+const hook = Flag.Boolean("hook").pipe(
+  Flag.withDefault(false),
+  Flag.withDescription(
+    "With --type transcript, run as a Claude Code or Codex hook: read the hook's event on stdin, keep the agent's turn in the temp directory, and print the answer the agent's harness reads. It exits 0 whatever it finds.",
+  ),
+);
+
 const yes = Flag.Boolean("yes").pipe(
   Flag.withAlias("y"),
   Flag.withDefault(false),
@@ -272,10 +290,81 @@ export const auditLayer = (flags: Flags, filter: ReadonlyArray<string> = []) =>
     JevLive.pipe(Layer.provide(CredentialsLive)),
   ).pipe(Layer.provideMerge(AdhereConfigLive(flags)), Layer.provideMerge(statusLayer));
 
+/** The lint flags a transcript has no use for, which its check refuses rather than ignores. */
+const codeFlagsIn = (input: {
+  readonly filter: ReadonlyArray<string>;
+  readonly limit: Option.Option<number>;
+  readonly typeAware: Option.Option<boolean>;
+  readonly md: boolean;
+  readonly stdout: boolean;
+}): ReadonlyArray<string> => [
+  ...(input.filter.length > 0 ? ["--filter"] : []),
+  ...(Option.isSome(input.limit) ? ["--limit"] : []),
+  ...(Option.isSome(input.typeAware) ? ["--type-aware"] : []),
+  ...(input.md ? ["--md"] : []),
+  ...(input.stdout ? ["--stdout"] : []),
+];
+
+/**
+ * `adhere lint --type transcript`: the transcript on stdin, judged in windows
+ * against the transcript rules. The report goes to stdout, Markdown or with
+ * `--json` JSON, and a copy of it and the transcript to the history in the
+ * temp directory. It fails the way lint does. With `--hook`, stdin is an
+ * agent hook's event instead, and the answer is the hook's.
+ */
+const lintTranscript = Effect.fn("lint.transcript")(function* (
+  input: Parameters<typeof codeFlagsIn>[0] & {
+    readonly json: boolean;
+    readonly denyWarnings: boolean;
+    readonly hook: boolean;
+  },
+) {
+  const unused = codeFlagsIn(input);
+  if (unused.length > 0) {
+    return yield* CliError.UserError.make({
+      cause: `--type transcript cannot take ${unused.join(", ")}: a transcript has no files, and its report is printed, as Markdown or with --json as JSON.`,
+    });
+  }
+  if (input.hook && input.json) {
+    return yield* CliError.UserError.make({
+      cause: "--hook prints the answer the agent's harness reads, so it cannot take --json.",
+    });
+  }
+  const stdio = yield* Stdio.Stdio;
+  if (yield* stdio.stdinIsTerminal) {
+    return yield* CliError.UserError.make({
+      cause:
+        "--type transcript reads the transcript on stdin: pipe it in, as in `adhere lint --type transcript < transcript.txt`.",
+    });
+  }
+  const text = yield* stdio.stdin.pipe(Stream.decodeText(), Stream.mkString);
+  if (input.hook) return yield* answerHook(text, input.denyWarnings);
+  const config = yield* AdhereConfig;
+  const path = yield* Path.Path;
+  const options = renderOptionsOf(config, path.resolve());
+  const lines = linesOf(text);
+  if (lines.length === 0) {
+    const none = { windows: 0, judged: 0, skipped: 0, blocked: [], findings: [] };
+    yield* Console.log(input.json ? renderJson(none, options) : "Nothing to check.");
+    return;
+  }
+  const project = yield* projectTemp(path.resolve());
+  const result = yield* judgeTranscript(lines, windowsOf(lines, config.transcript.every));
+  const report = renderJson(result, options);
+  yield* saveRun(project, config.transcript.keep, { "input.txt": text, "report.json": report });
+  yield* Console.log(input.json ? report : renderMarkdown(result, options));
+  const failed = failing(result.findings, input.denyWarnings);
+  if (failed.length > 0) {
+    return yield* FindingsReported.make({ count: failed.length });
+  }
+});
+
 /** `adhere lint`: the audit. */
 export const lintCommand = Command.make(
   "lint",
   {
+    type: ruleType,
+    hook,
     preset,
     threshold,
     sufficiencyThreshold,
@@ -288,7 +377,7 @@ export const lintCommand = Command.make(
     json: Flag.Boolean("json").pipe(
       Flag.withDefault(false),
       Flag.withDescription(
-        "Write one JSON file per violated rule to .adhere/reports/. Use --stdout for one combined report instead.",
+        "Write one JSON file per violated rule to .adhere/reports/. Use --stdout for one combined report instead. With --type transcript, print the report as JSON in place of Markdown.",
       ),
     ),
     md: Flag.Boolean("md").pipe(
@@ -306,6 +395,12 @@ export const lintCommand = Command.make(
   },
   (input) =>
     Effect.gen(function* () {
+      if (input.type === "transcript") return yield* lintTranscript(input);
+      if (input.hook) {
+        return yield* CliError.UserError.make({
+          cause: "--hook answers an agent's hook with the transcript rules: add --type transcript.",
+        });
+      }
       if (input.stdout && input.json && input.md) {
         return yield* CliError.UserError.make({
           cause:
@@ -385,7 +480,7 @@ export const lintCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Audit the working directory against the rules in .adhere/rules/ or a preset, judged by Jev.",
+    "Audit the working directory against the rules in .adhere/rules/ or a preset, judged by Jev. With --type transcript, judge a transcript on stdin, such as a coding agent's work, against the transcript rules.",
   ),
   Command.provide((input) =>
     auditLayer(

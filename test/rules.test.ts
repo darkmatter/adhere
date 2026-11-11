@@ -219,6 +219,26 @@ describe("markdown rules", () => {
     expect(refused.message).toContain("rules/a.md");
   });
 
+  it("front matter's type makes a transcript rule, which refuses the keys about files", async () => {
+    expect(await parse("---\ndescription: d\ntype: transcript\n---\na()\n")).toEqual({
+      description: "d",
+      type: "transcript",
+      must: "a()",
+    });
+    const refused = await Effect.runPromise(
+      Effect.flip(
+        parseRuleMarkdown(
+          '---\ndescription: d\ntype: transcript\ntests: only\ninclude: {"paths": ["src/**"]}\n---\na()\n',
+          "rules/a.md",
+        ),
+      ),
+    );
+    expect(refused._tag).toBe("ConfigUnavailable");
+    expect(refused.message).toContain("rules/a.md");
+    expect(refused.message).toContain("tests");
+    expect(refused.message).toContain("include");
+  });
+
   it("front matter's appliesTo and excludeIf are JSON arrays of strings", async () => {
     expect(
       await parse(

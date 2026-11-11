@@ -1,4 +1,12 @@
-import { ConfigUnavailable, type Example, Reads, type Rule, RuleFilter } from "#config.ts";
+import {
+  ConfigUnavailable,
+  type Example,
+  fileKeysProblem,
+  Reads,
+  type Rule,
+  RULE_TYPES,
+  RuleFilter,
+} from "#config.ts";
 import { Effect, Schema } from "effect";
 
 /**
@@ -32,6 +40,9 @@ import { Effect, Schema } from "effect";
  * so is `tests`: `only` for a rule about test files, which rules otherwise
  * skip, and `include` for a rule that judges them too. So is `level`:
  * `warning` reports the rule's findings as warnings, which do not fail a run.
+ * So is `type`: `transcript` for a rule about text piped to
+ * `adhere lint --type transcript`, such as an agent's work, which takes none
+ * of the keys about files below.
  * `appliesTo` and `excludeIf`, the rule's scope, are JSON arrays of strings on
  * one line, as in `excludeIf: ["a type that mirrors a third-party format"]`.
  * `include` and `exclude`, its file filters, are JSON objects on one line, as
@@ -48,6 +59,7 @@ const Filters = Schema.fromJsonString(RuleFilter);
 
 const FrontMatter = Schema.Struct({
   description: Schema.String,
+  type: Schema.optionalKey(Schema.Literals(RULE_TYPES)),
   threshold: Schema.optionalKey(Schema.FiniteFromString),
   tests: Schema.optionalKey(Schema.Literals(["only", "include"])),
   level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
@@ -245,5 +257,10 @@ export const parseRuleMarkdown = (
       });
     }
     const details = detailsOf(match[2]);
-    return { ...front, ...(details === undefined ? {} : { details }), ...code };
+    const rule = { ...front, ...(details === undefined ? {} : { details }), ...code };
+    const problem = fileKeysProblem(rule);
+    if (problem !== undefined) {
+      return yield* ConfigUnavailable.make({ message: `${file}: ${problem}` });
+    }
+    return rule;
   });
