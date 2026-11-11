@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Effect, Schema } from "effect";
+import { askAgent } from "../../src/create/agents.ts";
 import { Candidates, PluginDraft, Shape } from "../../src/create/ask.ts";
 import {
   enabledNative,
@@ -79,6 +80,15 @@ const rejects = (decode: () => unknown) => {
     return true;
   }
 };
+
+const claudeResult = { type: "result", is_error: false, structured_output: { word: "ok" } };
+
+/**
+ * `askAgent`'s schema-bound answer when `claude` prints `output`. The test puts
+ * `test/fixtures/bin/claude`, which prints the prompt it is asked, first on PATH.
+ */
+const claudeAnswer = (output: unknown) =>
+  askAgent("claude", JSON.stringify(output), process.cwd(), { type: "object" });
 
 const directory = await mkdtemp(join(tmpdir(), "adhere-create-agent-"));
 let noTester = false;
@@ -210,6 +220,8 @@ const optionsSchema = shapeDocument.properties.linterOptions;
 
 console.log(
   JSON.stringify({
+    claudeResult: (await claudeAnswer(claudeResult)) === '{"word":"ok"}',
+    claudeEvents: (await claudeAnswer([{ type: "system" }, claudeResult])) === '{"word":"ok"}',
     shapeMissingMechanical: rejects(() =>
       Schema.decodeUnknownSync(Shape)({ ...wire(), mechanical: undefined }),
     ),

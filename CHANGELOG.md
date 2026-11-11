@@ -58,6 +58,7 @@
 
 ### Fixed
 
+- Stop `adhere rules create` crashing with `Expected array` when asking `claude`. `claude -p --output-format json` prints its result as one object unless the user's Claude settings turn `verbose` on, when it prints an array of every event; adhere read only the array.
 - Restore the Markdown renderer import used by trial findings, fixing the rule-creation CLI's CI type-check failure.
 - Avoid opening every eligible document before sending the first request; each native read owns and releases its document and snapshot.
 - Replace per-symbol IDE hover calls with compiler API queries, bounded parallel formatting, and deduplicated types and documentation.
