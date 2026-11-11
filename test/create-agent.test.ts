@@ -1,16 +1,23 @@
 import { execFile } from "node:child_process";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vite-plus/test";
 
 const execFileAsync = promisify(execFile);
 const fixture = join(process.cwd(), "test", "fixtures", "create-agent-check.ts");
+/** Stand-ins for the agent CLIs, put ahead of the installed ones on the fixture's PATH. */
+const standIns = join(process.cwd(), "test", "fixtures", "bin");
 
 describe("create rule checks", () => {
   it("parses with Bun, routes native rules, and verifies plugins with oxlint", async () => {
-    const { stdout } = await execFileAsync("bun", [fixture], { cwd: process.cwd() });
+    const { stdout } = await execFileAsync("bun", [fixture], {
+      cwd: process.cwd(),
+      env: { ...process.env, PATH: `${standIns}${delimiter}${process.env.PATH}` },
+    });
     const result = JSON.parse(stdout) as Record<string, unknown>;
     expect(result).toEqual({
+      claudeResult: true,
+      claudeEvents: true,
       shapeMissingMechanical: true,
       shapeValid: true,
       linterNative: true,

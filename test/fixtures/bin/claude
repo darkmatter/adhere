@@ -1,0 +1,3 @@
+#!/bin/sh
+# Stands in for the `claude` CLI in create-agent.test.ts: prints the prompt it is asked on stdin.
+exec cat

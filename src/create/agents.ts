@@ -17,17 +17,18 @@ export type Agent = (typeof AGENTS)[number];
 export const installedAgents = (): ReadonlyArray<Agent> =>
   AGENTS.filter((agent) => Bun.which(agent) !== null);
 
-/** `claude -p --output-format json` prints its events, the last its result. */
-const ClaudeResult = Schema.fromJsonString(
-  Schema.Array(
-    Schema.Struct({
-      type: Schema.String,
-      is_error: Schema.optionalKey(Schema.Boolean),
-      result: Schema.optionalKey(Schema.String),
-      structured_output: Schema.optionalKey(Schema.Unknown),
-    }),
-  ),
-);
+const ClaudeEvent = Schema.Struct({
+  type: Schema.String,
+  is_error: Schema.optionalKey(Schema.Boolean),
+  result: Schema.optionalKey(Schema.String),
+  structured_output: Schema.optionalKey(Schema.Unknown),
+});
+
+/**
+ * `claude -p --output-format json` prints its result event alone, or, when the
+ * user's Claude settings turn `verbose` on, every event, the last its result.
+ */
+const ClaudeOutput = Schema.fromJsonString(Schema.Union([ClaudeEvent, Schema.Array(ClaudeEvent)]));
 
 /** The line of `omp --mode json` that ends an assistant's message; every other line is skipped. */
 const OmpAnswer = Schema.fromJsonString(
@@ -73,7 +74,7 @@ export const askAgent = async (
 ): Promise<string> => {
   switch (agent) {
     case "claude": {
-      const events = Schema.decodeUnknownSync(ClaudeResult)(
+      const output = Schema.decodeUnknownSync(ClaudeOutput)(
         await run(
           "claude",
           [
@@ -87,7 +88,7 @@ export const askAgent = async (
           prompt,
         ),
       );
-      const result = events.findLast((event) => event.type === "result");
+      const result = [output].flat().findLast((event) => event.type === "result");
       if (result === undefined || result.is_error === true) {
         throw new Error(`claude did not answer: ${result?.result ?? "no result"}`);
       }
