@@ -1,20 +1,17 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { Crypto, Effect, FileSystem, Layer, Path, Record } from "effect";
+import { Effect, FileSystem, Layer, Path, Record } from "effect";
+import { Digest } from "effect/crypto";
 import { describe, expect, it } from "vite-plus/test";
 import { AuditCache, AuditCacheLive } from "../src/services/AuditCache.ts";
 
 describe("cache files", () => {
   const directory = join(process.cwd(), ".adhere", "cache");
   const sha = (text: string) => createHash("sha256").update(text).digest("hex");
-  const sha256Crypto = Layer.succeed(
-    Crypto.Crypto,
-    Crypto.make({
-      randomBytes: (size) => new Uint8Array(size),
-      digest: (_algorithm, data) =>
-        Effect.sync(() => new Uint8Array(createHash("sha256").update(data).digest())),
-    }),
-  );
+  const sha256Crypto = Layer.mock(Digest.Digest, {
+    digest: (_algorithm, data) =>
+      Effect.sync(() => new Uint8Array(createHash("sha256").update(data).digest())),
+  });
 
   /** Files in a map of path to text; listing a directory gives its direct children. */
   const memoryFiles = (seed: Readonly<Record<string, string>> = {}) => {
