@@ -1,5 +1,6 @@
 import { CACHE_DIRECTORY } from "#config.ts";
-import { Context, Crypto, Effect, FileSystem, Layer, Option, Path, Record, Schema } from "effect";
+import { Context, Effect, FileSystem, Layer, Option, Path, Record, Schema } from "effect";
+import { Digest } from "effect/crypto";
 
 /** Jev's probability for each of a rule's `appliesTo` and `excludeIf` matchers, when it has them. */
 const MatcherFields = {
@@ -83,9 +84,9 @@ const hexOf = (bytes: Uint8Array): string =>
   Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 
 export const sha256 = Effect.fn("AuditCache.sha256")(function* (text: string) {
-  const crypto = yield* Crypto.Crypto;
-  const digest = yield* crypto.digest("SHA-256", new TextEncoder().encode(text)).pipe(Effect.orDie);
-  return hexOf(digest);
+  const digest = yield* Digest.Digest;
+  const bytes = yield* digest.digest(Digest.sha256, new TextEncoder().encode(text));
+  return hexOf(bytes);
 });
 
 /** Judgments by rule, as the answers the cache keeps: by the fingerprint of each rule's text. */
@@ -170,11 +171,11 @@ export const AuditCacheAt = (base?: string) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const crypto = yield* Crypto.Crypto;
+      const digest = yield* Digest.Digest;
       const root = path.resolve(base ?? ".");
       const directory = path.join(root, CACHE_DIRECTORY);
       const hash = (text: string) =>
-        sha256(text).pipe(Effect.provideService(Crypto.Crypto, crypto));
+        sha256(text).pipe(Effect.provideService(Digest.Digest, digest));
 
       /** Each group's file names in one folder, listed once and kept current as files come and go. */
       const indexOf = (folder: string) =>

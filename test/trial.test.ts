@@ -1,7 +1,8 @@
 import { readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
-import { Crypto, Effect, FileSystem, Layer, Path } from "effect";
+import { Effect, FileSystem, Layer, Path } from "effect";
+import type { Digest } from "effect/crypto";
 import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
 import { AuditCache, type Answers } from "../src/services/AuditCache.ts";
 import {
@@ -59,7 +60,7 @@ const fakes = (answers: { judge: Record<string, number>; locate: Record<string, 
   };
 };
 
-type TrialEnv = Crypto.Crypto | FileSystem.FileSystem | Path.Path;
+type TrialEnv = Digest.Digest | FileSystem.FileSystem | Path.Path;
 
 const run = <A, E>(effect: Effect.Effect<A, E, TrialEnv>) =>
   Effect.runPromise(effect.pipe(Effect.provide(platform)));

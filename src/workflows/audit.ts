@@ -49,7 +49,8 @@ import {
   workspacePackagesIn,
 } from "#workspaces.ts";
 import { relative, sep } from "node:path";
-import { type Crypto, Duration, Effect, Option, Record, Result, Semaphore, Stream } from "effect";
+import { Duration, Effect, Option, Record, Result, Semaphore, Stream } from "effect";
+import type { Digest } from "effect/crypto";
 
 export interface Finding {
   readonly rule: RuleId;
@@ -424,7 +425,7 @@ export const planAudit = (
 ): Effect.Effect<
   AuditPlan,
   WalkUnavailable,
-  AdhereConfig | AuditCache | Crypto.Crypto | SourceWalker
+  AdhereConfig | AuditCache | Digest.Digest | SourceWalker
 > =>
   Effect.gen(function* () {
     const config = yield* AdhereConfig;
@@ -774,7 +775,7 @@ export const executeAudit = (
 ): Effect.Effect<
   AuditResult,
   WalkUnavailable | JevUnavailable,
-  AuditCache | Crypto.Crypto | Jev | SourceWalker
+  AuditCache | Digest.Digest | Jev | SourceWalker
 > =>
   Effect.gen(function* () {
     const jev = yield* Jev;
@@ -1088,7 +1089,7 @@ export const pruneCache = Effect.fn("audit.prune")(function* (plan: AuditPlan) {
 export const runAudit: Effect.Effect<
   AuditResult,
   WalkUnavailable | JevUnavailable,
-  AdhereConfig | AuditCache | Crypto.Crypto | Jev | SourceWalker
+  AdhereConfig | AuditCache | Digest.Digest | Jev | SourceWalker
 > = Effect.flatMap(planAudit(), (plan) => executeAudit(plan));
 
 export { type RenderOptions, render } from "#workflows/format.ts";

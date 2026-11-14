@@ -51,6 +51,7 @@
 - Audits that overflow the provider context retry once without `references` before skipping the file, keeping references available to `appendState` hooks
 - Provider request state maps now carry a reserved `__comment` explaining the context, and first or overflowing request payloads are logged at debug level
 - `adhere rules create` draws the whole wizard one column in from the terminal's left edge: the rail, its prompts, descriptions, excerpts, and the agent spinner.
+- Update Effect to `4.1.4`. A flag is refused when passed more than once, such as `--limit 1 --limit 2` or `--yes -y`; `--filter` and `--preset` still repeat. Cache file names are unchanged, so existing caches stay valid.
 
 ### Removed
 

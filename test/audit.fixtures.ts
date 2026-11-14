@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { Crypto, Effect, Layer, Path, Record } from "effect";
+import { Effect, Layer, Path, Record } from "effect";
+import { Digest } from "effect/crypto";
 import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
 
 import {
@@ -34,13 +35,9 @@ export const rules: Rules = { a, b };
 export const code1 = ["const port = 3000;"];
 
 /** Echoes the input as its digest, so equal text still shares a cache key. */
-export const testCrypto = Layer.succeed(
-  Crypto.Crypto,
-  Crypto.make({
-    randomBytes: (size) => new Uint8Array(size),
-    digest: (_algorithm, data) => Effect.succeed(data),
-  }),
-);
+export const testCrypto = Layer.mock(Digest.Digest, {
+  digest: (_algorithm, data) => Effect.succeed(data),
+});
 
 /** Answers by content hash, as the cache keeps them; `pruned` holds what each prune was told is live. */
 export const memoryCache = (

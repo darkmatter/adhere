@@ -1,4 +1,11 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"]
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "description": "Each @effect/* release is built against the effect release of the same version, so they are updated together.",
+      "matchPackageNames": ["effect", "@effect/**"],
+      "groupName": "effect"
+    }
+  ]
 }

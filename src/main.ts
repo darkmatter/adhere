@@ -2,7 +2,7 @@
 import { cli } from "#cli.ts";
 import * as adhere from "#index.ts";
 import { version } from "#version.ts";
-import { BunRuntime, BunServices } from "@effect/platform-bun";
+import { BunCrypto, BunRuntime, BunServices } from "@effect/platform-bun";
 import { plugin } from "bun";
 import { Cause, Effect, Layer, Logger, References, Runtime } from "effect";
 import { Command } from "effect/cli";
@@ -49,6 +49,6 @@ const report = (cause: Cause.Cause<unknown>): Effect.Effect<void> => {
 
 Command.run(cli, { version }).pipe(
   Effect.tapCause(report),
-  Effect.provide(Layer.merge(BunServices.layer, logger)),
+  Effect.provide(Layer.mergeAll(BunServices.layer, BunCrypto.layerDigest, logger)),
   (program) => BunRuntime.runMain(program, { disableErrorReporting: true }),
 );

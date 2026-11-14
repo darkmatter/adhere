@@ -2,14 +2,15 @@ import { mkdir, readdir, rm, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vite-plus/test";
-import { Crypto, Effect, FileSystem, Layer, Path } from "effect";
+import { Effect, FileSystem, Layer, Path } from "effect";
+import type { Digest } from "effect/crypto";
 import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
 import { previewTrial, runTrial, TrialUnavailable } from "../src/create/trial.ts";
 import { oxlintIdOf } from "../src/create/oxlint-trial.ts";
 import { onDisk, testCrypto } from "./audit.fixtures.ts";
 
 const platform = Layer.mergeAll(BunFileSystem.layer, Path.layer, testCrypto);
-type TrialEnv = Crypto.Crypto | FileSystem.FileSystem | Path.Path;
+type TrialEnv = Digest.Digest | FileSystem.FileSystem | Path.Path;
 const run = <A, E>(effect: Effect.Effect<A, E, TrialEnv>) =>
   Effect.runPromise(effect.pipe(Effect.provide(platform)));
 
