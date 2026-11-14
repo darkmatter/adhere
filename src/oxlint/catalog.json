@@ -1,5 +1,5 @@
 {
-  "version": "1.87.0",
+  "version": "1.93.0",
   "rules": [
     {
       "id": "accessor-pairs",
@@ -3587,7 +3587,7 @@
       "id": "promise/prefer-catch",
       "category": "style",
       "typeAware": false,
-      "fix": "pending",
+      "fix": "conditional_suggestion",
       "default": false,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/promise/prefer-catch.html",
       "summary": "Prefer catch to then(a, b) and then(null, b). This rule disallows the passing of an argument into the second parameter of then calls for handling promise errors."
@@ -4595,7 +4595,7 @@
       "id": "typescript/consistent-type-exports",
       "category": "style",
       "typeAware": true,
-      "fix": "none",
+      "fix": "fixable_fix",
       "default": false,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/consistent-type-exports.html",
       "summary": "Enforce using export type for exports that are only used as types."
@@ -4613,7 +4613,7 @@
       "id": "typescript/dot-notation",
       "category": "style",
       "typeAware": true,
-      "fix": "none",
+      "fix": "conditional_fix",
       "default": false,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/dot-notation.html",
       "summary": "Enforce dot notation whenever property access can be written safely as obj.prop."
@@ -4890,7 +4890,7 @@
     },
     {
       "id": "typescript/no-non-null-asserted-nullish-coalescing",
-      "category": "restriction",
+      "category": "suspicious",
       "typeAware": false,
       "fix": "fixable_suggestion",
       "default": false,
@@ -4955,7 +4955,7 @@
       "id": "typescript/no-unnecessary-boolean-literal-compare",
       "category": "suspicious",
       "typeAware": true,
-      "fix": "pending",
+      "fix": "fixable_fix",
       "default": false,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-unnecessary-boolean-literal-compare.html",
       "summary": "This rule disallows unnecessary equality comparisons with boolean literals."
@@ -4964,7 +4964,7 @@
       "id": "typescript/no-unnecessary-condition",
       "category": "nursery",
       "typeAware": true,
-      "fix": "pending",
+      "fix": "conditional_suggestion",
       "default": false,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-unnecessary-condition.html",
       "summary": "Disallow conditions that are always truthy, always falsy, or always nullish based on TypeScript's type information."
@@ -5076,6 +5076,15 @@
       "default": true,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-unsafe-declaration-merging.html",
       "summary": "Disallow unsafe declaration merging."
+    },
+    {
+      "id": "typescript/no-unsafe-enum-assignment",
+      "category": "suspicious",
+      "typeAware": true,
+      "fix": "none",
+      "default": false,
+      "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-unsafe-enum-assignment.html",
+      "summary": "Disallows using values that do not share an enum type where an enum value is expected. This includes assignments, arguments, return values, type assertions, mutations, and computed keys in objects keyed by enum members."
     },
     {
       "id": "typescript/no-unsafe-enum-comparison",
@@ -5297,7 +5306,7 @@
       "id": "typescript/prefer-readonly",
       "category": "style",
       "typeAware": true,
-      "fix": "none",
+      "fix": "fixable_fix",
       "default": false,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/prefer-readonly.html",
       "summary": "Require class members that are never reassigned to be marked readonly."
@@ -5342,7 +5351,7 @@
       "id": "typescript/prefer-string-starts-ends-with",
       "category": "style",
       "typeAware": true,
-      "fix": "none",
+      "fix": "conditional_fix",
       "default": false,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/prefer-string-starts-ends-with.html",
       "summary": "Prefer startsWith and endsWith over manual string boundary checks."
@@ -6051,7 +6060,7 @@
     },
     {
       "id": "unicorn/no-useless-error-capture-stack-trace",
-      "category": "restriction",
+      "category": "suspicious",
       "typeAware": false,
       "fix": "fixable_suggestion",
       "default": false,
@@ -6116,7 +6125,7 @@
       "id": "unicorn/no-useless-undefined",
       "category": "pedantic",
       "typeAware": false,
-      "fix": "fixable_fix",
+      "fix": "fixable_safe_fix_or_suggestion",
       "default": false,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-useless-undefined.html",
       "summary": "Prevents usage of undefined in cases where it would be useless."
@@ -6512,7 +6521,7 @@
       "id": "unicorn/prefer-regexp-test",
       "category": "pedantic",
       "typeAware": false,
-      "fix": "fixable_fix",
+      "fix": "fixable_safe_fix_or_suggestion",
       "default": false,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/prefer-regexp-test.html",
       "summary": "Prefers RegExp#test() over String#match() and String#exec()."
@@ -6548,7 +6557,7 @@
       "id": "unicorn/prefer-single-call",
       "category": "pedantic",
       "typeAware": false,
-      "fix": "fixable_fix",
+      "fix": "conditional_fix",
       "default": false,
       "docsUrl": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/prefer-single-call.html",
       "summary": "Enforces combining multiple Array#{push,unshift}(), Element#classList.{add,remove}(), and importScripts() into a single call."
