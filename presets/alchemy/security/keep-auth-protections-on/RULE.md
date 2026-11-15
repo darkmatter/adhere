@@ -1,5 +1,6 @@
 ---
 description: Auth configuration must keep state, PKCE, origin and CSRF checks, ID-token verification, and email verification enabled, never disable them or merge accounts by email alone to work around an error or a cross-origin setup.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

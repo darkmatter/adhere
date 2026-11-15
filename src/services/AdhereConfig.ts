@@ -12,6 +12,7 @@ import {
   resolveConfig,
   RULES_DIRECTORY,
   typeAwareOf,
+  typeOf,
 } from "#config.ts";
 import { type PresetName, presetOf, presets, wholePresetOf } from "#presets.ts";
 import {
@@ -168,6 +169,22 @@ export const AdhereConfigLive = (flags: Flags) =>
         ].join(" and ");
         yield* Effect.logWarning(
           `${shownId(entry)} declares reads ${missing.join(", ")}, which this run does not enable; the rule may be less accurate until enabled. ${enable}.`,
+        );
+      }
+      // A rule's names are what say which files it is about, wherever it is shared: one
+      // without them is sent every file the walk lists, prose and data included.
+      // A nested rule set can hold an id its parent also has: name it once.
+      const unnamed = new Set(
+        scopedRules
+          .filter(
+            (entry) =>
+              typeOf(entry.rule) === "code" && (entry.rule.include?.names ?? []).length === 0,
+          )
+          .map(shownId),
+      );
+      if (unnamed.size > 0) {
+        yield* Effect.logWarning(
+          `Rules that do not name the files they apply to judge every kind of file: ${[...unnamed].join(", ")}. Add include.names to each, as in include: {"names": ["*.ts", "*.tsx"]}, or ["*"] for every kind of file.`,
         );
       }
       // Read on every run so workspace edits are seen, but only when the config enables this context.

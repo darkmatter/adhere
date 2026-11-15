@@ -46,15 +46,17 @@ import { Effect, Schema } from "effect";
  * `appliesTo` and `excludeIf`, the rule's scope, are JSON arrays of strings on
  * one line, as in `excludeIf: ["a type that mirrors a third-party format"]`.
  * `include` and `exclude`, its file filters, are JSON objects on one line, as
- * in `include: {"paths": ["src/**"], "content": ["^import"]}`: a file
- * must match every `include` category, any match in a category is enough, and
- * any `exclude` match drops it. `content` takes regular expression sources
- * matched against the file as written, comments included.
+ * in `include: {"names": ["*.ts"], "paths": ["src/**"], "content": ["^import"]}`:
+ * a file must match every `include` category, any match in a category is
+ * enough, and any `exclude` match drops it. `names` takes globs for a file's
+ * own name, which say which files the rule applies to in any repository;
+ * `paths` takes globs from this repository's root. `content` takes regular
+ * expression sources matched against the file as written, comments included.
  * `reads` is a JSON array of the same names, as in `reads: ["dependents"]`:
  * it declares what the rule needs, while the config still decides what runs.
  */
 const Matchers = Schema.fromJsonString(Schema.Array(Schema.String));
-/** A filter object on one line, as in `include: {"paths": ["src/**"]}`. */
+/** A filter object on one line, as in `include: {"names": ["*.ts"]}`. */
 const Filters = Schema.fromJsonString(RuleFilter);
 
 const FrontMatter = Schema.Struct({

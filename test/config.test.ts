@@ -10,6 +10,7 @@ import {
   resolveConfig,
 } from "../src/config.ts";
 
+import { ruleAppliesTo } from "../src/filters.ts";
 import { type RuleEntry, shownId, withOverrides } from "../src/rules.ts";
 
 describe("config", () => {
@@ -182,6 +183,31 @@ describe("config", () => {
     expect((await refusal({ edge: "off", plain: { options: {} } })).message).toBe(
       "overrides sets options for plain, which takes none.",
     );
+  });
+
+  it("narrows a rule to its override's paths, beside the rule's own filters, and refuses them for a transcript rule", async () => {
+    const entries: ReadonlyArray<RuleEntry> = [
+      {
+        id: "queries",
+        preset: "security",
+        scope: "/repo",
+        rule: { description: "q", must: "a()", include: { names: ["*.ts"], paths: ["apps/**"] } },
+      },
+      { id: "agent", scope: "/repo", rule: { description: "t", must: "a()", type: "transcript" } },
+    ];
+    const [queries] = await Effect.runPromise(
+      withOverrides(entries, { "security/queries": { paths: ["apps/api/**", "packages/db/**"] } }),
+    );
+    const takes = (path: string) => ruleAppliesTo(queries!.rule, path, "");
+    expect(takes("apps/api/src/a.ts")).toBe(true);
+    expect(takes("apps/web/src/a.ts")).toBe(false);
+    // An override narrows: it does not reach past the rule's own paths or names.
+    expect(takes("packages/db/a.ts")).toBe(false);
+    expect(takes("apps/api/README.md")).toBe(false);
+    const refused = await Effect.runPromise(
+      Effect.flip(withOverrides(entries, { agent: { paths: ["src/**"] } })),
+    );
+    expect(refused.message).toContain("agent");
   });
 
   it("keeps the config's exclude globs, and refuses a rule's tests other than only or include", async () => {

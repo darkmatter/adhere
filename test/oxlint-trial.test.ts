@@ -64,7 +64,9 @@ describe("oxlint trial", () => {
   it("runs the consumer binary over only the draft rule, leaving other configured rules off", async () => {
     const root = await oxlintProject({
       "src/a.ts": 'console.log("x");\ndebugger;\n',
-      "src/clean.ts": "export const clean = 1;\n",
+      "src/clean.js": "export const clean = 1;\n",
+      "src/ignored.py": "print('not JavaScript')\n",
+      "README.md": "Project documentation.\n",
       "oxlint.json": JSON.stringify({ rules: { "no-debugger": "error" } }),
     });
     try {
@@ -75,7 +77,7 @@ describe("oxlint trial", () => {
           { root },
         ),
       );
-      expect(result.selectedFiles).toEqual(["src/a.ts", "src/clean.ts"]);
+      expect(result.selectedFiles).toEqual(["src/a.ts", "src/clean.js"]);
       expect(result.files).toBe(2);
       expect(result.findings).toHaveLength(1);
       expect(result.findings[0]).toMatchObject({

@@ -1,6 +1,7 @@
 ---
 description: A function must be named after the domain action it performs, never after a generic verb like handle.
 threshold: 0.8
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 Why: a name like `handle` or `process` says nothing about what the function

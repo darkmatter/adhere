@@ -55,11 +55,14 @@ To keep the cache out of diffs, mark it as generated in `.gitattributes`:
 - After a run that reads every file, adhere prunes the cache: it deletes answers
   about content no file has, and folds what is left into one file per content. A
   run narrowed by `--filter` does not prune.
-- Pruning keeps answers to rules the run left out, so a run with other presets
-  or rules, or with one topic, loses nothing another run still asks. It keeps
-  answers to a rule's old texts too, until the content they are about is gone.
+- Pruning keeps answers to rules the run left out, about the files the run's
+  own rules take by name and path. So a run with other presets or rules, or
+  with one topic, loses nothing another run still asks about those files. It
+  keeps answers to a rule's old texts too, until the content they are about is
+  gone.
 - It also keeps answers about a file the run read but judged against no rule,
-  such as a test when no rule judges tests. A file the config excludes is not
-  read, so answers about it go.
+  such as a test when no rule judges tests. A file the config excludes, or
+  that no rule of the run takes by its name and path, is not read, so answers
+  about it go.
 
 </details>

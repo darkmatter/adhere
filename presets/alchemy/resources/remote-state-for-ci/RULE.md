@@ -1,5 +1,6 @@
 ---
 description: A stack deployed from CI or by more than one machine must use a shared state store such as Cloudflare.state() or AWS.state(), never Alchemy.localState(), which lives on one machine's disk where CI runners cannot see it.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

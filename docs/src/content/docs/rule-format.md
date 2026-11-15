@@ -31,6 +31,7 @@ A `RULE.md` is front matter, then a body that holds the rule's code:
 ---
 description: A port must be a branded, range-checked integer, never a bare number.
 threshold: 0.8
+include: { "names": ["*.ts", "*.tsx"] }
 ---
 
 Why: a bare `number` accepts 70000 and -1.
@@ -59,7 +60,7 @@ const port: number = Number(process.env.PORT);
 | `level`                  | `warning` reports the rule's findings as warnings, which do not fail the run. Use it for a nit, or for a rule that tends to flag code wrongly.                                                                                                                                                                 |
 | `tests`                  | Rules skip tests by default. `only` is for a rule about tests, which judges nothing else. `include` is for one that holds in tests as well.                                                                                                                                                                    |
 | `reads`                  | Optional. Context the rule needs, as `["symbols", "references"]`, a JSON array on one line. It declares what would help; the config still enables reads and type awareness. A bundled rule that declares `symbols` or `references` is left out without `typeAware`; a project's own rule still runs and warns. |
-| `include`, `exclude`     | Local file filters: repository-relative path globs and content regular expressions. See [Filtering files](#filtering-files).                                                                                                                                                                                   |
+| `include`, `exclude`     | Which files the rule applies to: file-name globs, repository-relative path globs, and content regular expressions. A rule without `include.names` judges every kind of file, and lint warns. See [Filtering files](#filtering-files).                                                                          |
 | `appliesTo`, `excludeIf` | Where the rule applies. See [Scoping a rule](#scoping-a-rule).                                                                                                                                                                                                                                                 |
 
 | Heading in the body          | The code under it                                           |
@@ -85,6 +86,7 @@ under `## Should` and `## Should not`:
 ````md
 ---
 description: A third-party API going offline should not also take our app down.
+include: { "names": ["*.ts"] }
 ---
 
 Our APIs should not depend on a third-party API on a critical path. The
@@ -141,21 +143,34 @@ export async function findRestaurants(zipCode: string) {
 
 ## Filtering files
 
-Use `include` and `exclude` to select files **before** a rule sends requests.
-They work in Markdown front matter as JSON objects on one line, and in
-`defineRule` or inline rules as ordinary objects:
+A rule says which files it applies to with `include`, and which it leaves out
+with `exclude`. Both select files **before** the rule sends requests. They
+work in Markdown front matter as JSON objects on one line, and in `defineRule`
+or inline rules as ordinary objects:
 
-```md
-include: {"paths":["src/**"],"content":["from\\s+[\"']effect[\"']"]}
-exclude: {"paths":["**/generated/**"],"content":["@generated"]}
+```text
+include: {"names":["*.ts","*.tsx"],"paths":["src/**"],"content":["from\\s+[\"']effect[\"']"]}
+exclude: {"names":["*.gen.ts"],"paths":["**/generated/**"],"content":["@generated"]}
 ```
 
-This rule judges only files under `src/` whose text matches the `effect`
-import pattern, unless their path is under `generated/` or their text contains
-`@generated`.
+This rule judges only `.ts` and `.tsx` files under `src/` whose text matches
+the `effect` import pattern, unless they are named `*.gen.ts`, their path is
+under `generated/`, or their text contains `@generated`.
 
+- `names` are globs on a file's own name, whichever directory holds it:
+  `*.ts`, `Dockerfile`, or `*` for every file. A name does not depend on where
+  a repository keeps its files, so a rule shared between repositories carries
+  its names unchanged.
+- **Every rule should set `include.names`.** A rule without it judges every
+  kind of file `adhere lint` reads, such as documentation and data files, and
+  each run warns and names those rules. Write `["*"]` for a rule that holds in
+  every kind of file.
 - `paths` uses the same glob matching as `--filter`, relative to the repository
-  root even for a nested rule. Use `/` separators.
+  root even for a nested rule. Use `/` separators. Paths depend on one
+  repository's layout, so a rule meant to be shared leaves them out. A
+  repository narrows a shared or preset rule to the part of its tree the rule
+  is relevant to with `paths` in the config's
+  [overrides](/adhere/config/#overrides), without editing the rule.
 - `content` holds JavaScript regular expression **source strings**, without
   `/` delimiters or flags. Escape backslashes as JSON or TypeScript strings
   require. Invalid expressions refuse loading the rule.
@@ -163,9 +178,12 @@ import pattern, unless their path is under `generated/` or their text contains
   `includeComments`. This is text matching, not import resolution: a commented
   import can match, and a library accessed through a re-export can be missed.
 - Patterns within each list are alternatives. Every nonempty `include` list
-  must match; a match in either `exclude` list excludes the file.
+  must match; a match in any `exclude` list excludes the file.
 - Missing or empty lists add no restriction. Existing directory scope, test
   settings, global exclusions, and ignore directives still apply.
+- A file that no rule takes by its name and path is left out of the run
+  unread. Only the `dependents` read still opens every JavaScript and
+  TypeScript file, for its imports.
 
 A file excluded by these filters gets no judgment for that rule, including
 cached findings. Filters do not replace the model-based scoping below: use
@@ -184,6 +202,7 @@ matter, or an array in a config or a TypeScript rule.
 description: Structured variants must be Schema.TaggedClass members of a Schema.Union, never hand-written object types joined by a tag field.
 appliesTo: ["a declared union type or schema"]
 excludeIf: ["a type that mirrors a third-party format whose tag key that format fixes, such as a Slack Block Kit block"]
+include: {"names": ["*.ts", "*.tsx"]}
 ---
 ```
 

@@ -1,5 +1,6 @@
 ---
 description: A database client or migration config must verify the server's TLS certificate, or connect inside the private network, never setting rejectUnauthorized: false or sslmode=no-verify to make a connection work.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

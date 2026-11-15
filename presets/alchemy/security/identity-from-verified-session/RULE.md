@@ -1,5 +1,6 @@
 ---
 description: The acting user must come from the session or token verified in that request, never from an ID in the request body, query, or headers, and never from a user cached in a process-wide layer.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

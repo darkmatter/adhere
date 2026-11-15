@@ -392,6 +392,23 @@ describe("pipeline", () => {
     });
   });
 
+  it("reads imports only from JavaScript and TypeScript, so prose that shows one names no dependency", async () => {
+    const at = (file: string) => join(process.cwd(), file);
+    const planned = await planOf({
+      rules,
+      files: [
+        { path: at("src/util.ts"), lines: ["export const util = 1;"] },
+        { path: at("src/app.js"), lines: ['import { util } from "./util";'] },
+        { path: at("src/README.md"), lines: ["Usage:", "", '    import { util } from "./util";'] },
+      ],
+      cache: memoryCache(),
+      reads: ["dependents"],
+    });
+    expect(
+      planned.files.find(({ file: { path } }) => path === at("src/util.ts"))!.readState,
+    ).toEqual({ dependents: { packages: {}, files: ["src/app.js"] } });
+  });
+
   it.each([
     { policy: "default", reads: DEFAULT_READS, typeAware: undefined },
     {
@@ -1691,6 +1708,56 @@ describe("pipeline", () => {
     expect(sent.some((code) => code.includes("the port comes next"))).toBe(false);
     expect(sent.every((code) => code.includes("@adhere read once, at startup"))).toBe(true);
     expect(result.findings.map((finding) => finding.excerpt.lines)).toEqual([lines]);
+  });
+
+  it("sends non-JavaScript files as written, keeping their slashes, comment-like text, and directive-like lines", async () => {
+    const lines = [
+      "Docs live at https://example.com/docs // not a comment",
+      "floor = 7 // 2",
+      "// adhere-ignore-file a -- prose, not a directive",
+    ];
+    const { sent, layer } = sendingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 2 } });
+    const result = await audit({
+      rules,
+      jev: layer,
+      cache: memoryCache(),
+      files: [{ path: "/repo/docs/guide.md", lines }],
+    });
+    expect(sent.length).toBeGreaterThan(0);
+    for (const line of lines) expect(sent.every((code) => code.includes(line))).toBe(true);
+    expect(result.findings.map((finding) => finding.excerpt.lines)).toEqual([lines]);
+  });
+
+  it("requests native context only for JavaScript and TypeScript files in a mixed type-aware run", async () => {
+    const markdown = {
+      path: "/repo/docs/guide.md",
+      lines: ["Use the port from https://example.com // not code"],
+    };
+    const prepared: Array<readonly string[]> = [];
+    const read: string[] = [];
+    const sourceReads = Layer.succeed(SourceReads, {
+      prepare: (files) =>
+        Effect.sync(() => {
+          prepared.push(files);
+        }),
+      read: (file) =>
+        Effect.sync(() => {
+          read.push(file.path);
+          return { symbols: {}, references: {} };
+        }),
+    });
+    const result = await audit({
+      rules,
+      typeAware: true,
+      reads: ["symbols", "references"],
+      cache: memoryCache(),
+      sourceReads,
+      jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: { a: 1 } }).layer,
+      files: [source, markdown],
+    });
+    expect(prepared).toEqual([[source.path]]);
+    expect(read).toEqual([source.path]);
+    expect(result.judged).toBe(2);
   });
 
   it("re-judges nothing when only a file's comments change, and sends them all when the config includes comments", async () => {

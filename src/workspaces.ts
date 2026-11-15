@@ -288,8 +288,8 @@ export const workspaceDependentsOf = Effect.fn("workspaceDependentsOf")(function
   ) as Readonly<Record<string, WorkspacePackages>>;
 });
 
-/** TypeScript source extensions an import resolves to, in the order tried. */
-const SOURCE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"] as const;
+/** Source extensions an import resolves to, in the order tried: TypeScript, then JavaScript. */
+const SOURCE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"] as const;
 /** The source extensions an emitted extension in a specifier stands for. */
 const EMITTED: Readonly<Record<string, ReadonlyArray<string>>> = {
   ".js": [".ts", ".tsx"],
@@ -304,8 +304,9 @@ const candidatesOf = (target: string): ReadonlyArray<string> => {
   const emitted = EMITTED[extension] ?? [];
   const stem = target.slice(0, target.length - extension.length);
   return [
-    target,
+    // A TypeScript source wins over the emitted file its specifier names, as the compiler resolves it.
     ...emitted.map((source) => `${stem}${source}`),
+    target,
     ...SOURCE_EXTENSIONS.map((source) => `${target}${source}`),
     ...SOURCE_EXTENSIONS.map((source) => `${target}/index${source}`),
   ];
@@ -315,7 +316,7 @@ const candidatesOf = (target: string): ReadonlyArray<string> => {
  * For each file, the files that import it by a relative specifier, sorted.
  * Keys and values are `/`-separated paths from one root, as `imports` gives
  * them; a specifier resolves only to a file `imports` has, by the first of its
- * candidates found: as written, with `.js` as `.ts`, with a source extension
+ * candidates found: with `.js` as `.ts`, as written, with a source extension
  * added, then as a directory's index. Package and path-alias imports do not count.
  */
 export const dependentFilesIn = (

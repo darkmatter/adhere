@@ -1,5 +1,6 @@
 ---
 description: A resource the code acquires and must give back, such as a file handle, a lock, a database connection or transaction, a temporary file, or a child process, must be released on every path, including when an error is thrown between acquiring and releasing it, with `finally` or `using`; it must never be released only after the work succeeds. A resource whose owner releases it, such as a framework or a pool's query method, is out of scope.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

@@ -1,6 +1,7 @@
 ---
 description: A type whose fields are valid only in some combinations must be a union with one member per state, each carrying only the fields that state has, never one object type of optional fields and flags whose valid combinations only the code that reads them knows. A union of Schema.TaggedClass members is such a union.
 appliesTo: ["a declared type, interface, or schema"]
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

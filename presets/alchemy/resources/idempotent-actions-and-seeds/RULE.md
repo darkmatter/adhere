@@ -1,5 +1,6 @@
 ---
 description: An Action body and a SQL file listed in importFiles must be safe to run again, using IF NOT EXISTS, ON CONFLICT, or upserts, never one-shot inserts or calls that duplicate data or fail when an interrupted deploy retries them.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

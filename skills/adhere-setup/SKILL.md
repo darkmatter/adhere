@@ -115,7 +115,9 @@ are separate, and `adhere install` offers the instruction files too.
 Write each repo candidate as a rule file, worded as the adhere skill says: one
 sentence with "must" and "never" (or "should" and "should not"), one `must`
 block of real code from the repo, and one `never` block, ideally a violation
-from the repo or its history.
+from the repo or its history. Give every draft `include.names`, the file names
+it applies to, such as `include: {"names": ["*.ts", "*.tsx"]}`: a rule without
+it judges every kind of file in the repo, and lint warns.
 
 Write the drafts outside the repo, in a scratch directory such as
 `$(mktemp -d)/<topic>/<slug>/RULE.md`, so nothing lands in `.adhere/` before the

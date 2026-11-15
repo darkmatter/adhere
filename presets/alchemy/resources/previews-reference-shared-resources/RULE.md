@@ -1,5 +1,6 @@
 ---
 description: Preview stages should reference a long-lived database or cluster with ref and create only cheap per-stage pieces such as a branch, and should not provision a whole project or cluster for every preview.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Should

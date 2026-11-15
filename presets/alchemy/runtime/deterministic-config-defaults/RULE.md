@@ -1,5 +1,6 @@
 ---
 description: A Config default or fallback used by a runtime must be deterministic, because it is evaluated at deploy time and at runtime, never computed from the clock, randomness, or per-process values.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

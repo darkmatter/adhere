@@ -1,5 +1,6 @@
 ---
 description: A custom provider's reconcile must read the resource's live state and converge it in one flow that serves create, update, and adoption, never branching into separate create and update bodies on output === undefined or trusting olds as proof the resource exists.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

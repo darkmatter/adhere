@@ -1,5 +1,6 @@
 ---
 description: Business logic must depend on a config service. Config primitives must be read only inside that service's layer, never in business logic.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

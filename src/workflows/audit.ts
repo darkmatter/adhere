@@ -10,7 +10,7 @@ import {
   typeOf,
 } from "#config.ts";
 import { type Excerpt, type Range } from "#excerpt.ts";
-import { contentPasses, filtersNeedText, hasFilters, ruleAppliesTo } from "#filters.ts";
+import { contentPasses, filtersNeedText, hasFilters, pathsPass, ruleAppliesTo } from "#filters.ts";
 import { type ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, answersOf, type Judgment, sha256, type Tally } from "#services/AuditCache.ts";
@@ -35,13 +35,13 @@ import {
   tokensOf,
   logRequestPayload,
 } from "#services/Jev.ts";
-import { type SourceReadRequest, SourceReads } from "#services/SourceReads.ts";
+import { isJsOrTsPath, type SourceReadRequest, SourceReads } from "#services/SourceReads.ts";
 import { type SourceFile, SourceWalker } from "#services/SourceWalker.ts";
 import { clearingStatus, counted, countOf, Status } from "#services/Status.ts";
 import { SAMPLE, tallyKeyOf } from "#mechanical.ts";
 import { priceOf } from "#pricing.ts";
 import { applicableRules, judgesFile, shownId } from "#rules.ts";
-import { suppresses, type Suppressions, suppressionsOf } from "#suppress.ts";
+import { NO_SUPPRESSIONS, suppresses, type Suppressions, suppressionsOf } from "#suppress.ts";
 import {
   dependentFilesIn,
   importSpecifiersIn,
@@ -334,8 +334,10 @@ const inFile =
         : problem,
     );
 
-/** Preserve line numbers while blanking directives, and comments other than @adhere notes. */
-const normalized = (original: ReadonlyArray<string>, includeComments: boolean) => {
+/** Preserve other languages verbatim; only JS/TS directives and comments are normalized. */
+const normalized = (path: string, original: ReadonlyArray<string>, includeComments: boolean) => {
+  if (!isJsOrTsPath(path)) return { lines: original, suppressions: NO_SUPPRESSIONS };
+
   const { lines, suppressions } = suppressionsOf(original);
   return {
     lines: includeComments ? lines : withoutComments(lines, isNote),
@@ -375,7 +377,7 @@ const sameSuppressions = (left: Suppressions, right: Suppressions): boolean => {
  */
 const reloadFile = Effect.fn("audit.reload")(function* (plan: FilePlan, includeComments: boolean) {
   const original = yield* (yield* SourceWalker).read(plan.file);
-  const { lines, suppressions } = normalized(original.lines, includeComments);
+  const { lines, suppressions } = normalized(plan.file.path, original.lines, includeComments);
   if (
     (yield* sha256(lines.join("\n"))) !== plan.hash ||
     !sameSuppressions(plan.suppressions, suppressions)
@@ -455,11 +457,17 @@ export const planAudit = (
             yield* Effect.forEach(
               files,
               (file) =>
-                Effect.map(
-                  walker.read(file),
-                  ({ lines }) =>
-                    [fromRoot.get(file.path)!, importSpecifiersIn(lines.join("\n"))] as const,
-                ),
+                // Only JavaScript and TypeScript import: prose that mentions an import names no dependency.
+                isJsOrTsPath(file.path)
+                  ? Effect.map(
+                      walker.read(file),
+                      ({ lines }) =>
+                        [fromRoot.get(file.path)!, importSpecifiersIn(lines.join("\n"))] as const,
+                    )
+                  : Effect.succeed([
+                      fromRoot.get(file.path)!,
+                      [] as ReadonlyArray<string>,
+                    ] as const),
               { concurrency: 8 },
             ),
           ),
@@ -534,7 +542,11 @@ export const planAudit = (
 
     const planFile = Effect.fn("audit.plan")(function* (file: SourceFile) {
       const original = yield* walker.read(file);
-      const { lines, suppressions } = normalized(original.lines, config.includeComments === true);
+      const { lines, suppressions } = normalized(
+        file.path,
+        original.lines,
+        config.includeComments === true,
+      );
       // A rule's content filters read the file as written, comments and all, even
       // when Jev is sent code without them. The decision is kept in `prepared`;
       // reloading rechecks only those filters, in case a comment-only edit changed
@@ -549,7 +561,11 @@ export const planAudit = (
       const readState: ReadState = {
         ...(workspacePackages === undefined
           ? {}
-          : { workspacePackages: workspacePackagesIn(code, workspacePackages) }),
+          : {
+              workspacePackages: isJsOrTsPath(file.path)
+                ? workspacePackagesIn(code, workspacePackages)
+                : {},
+            }),
         ...(dependentFiles === undefined ? {} : { dependents: dependentsOf(file) }),
       };
       // Hashed even when unjudged or skipped, so a prune keeps what other runs know of its content.
@@ -588,9 +604,20 @@ export const planAudit = (
       ),
     );
 
+    // A file no code rule takes by its name and path is left out unread: a repository's
+    // assets and data cost nothing when no rule names them. Its content is not hashed
+    // either, so a prune does not keep what another run knew of it.
+    const named = files.filter((file) =>
+      Object.values(
+        config.scopedRules === undefined
+          ? config.rules
+          : applicableRules(file.path, config.scopedRules),
+      ).some((rule) => typeOf(rule) === "code" && pathsPass(rule, fromRoot.get(file.path)!)),
+    );
+
     // Ordered prefetch keeps only a bounded number of normalized files alive. Select whole
     // request-bearing files before budgeting them; cheap overflow leaves the slot for the next path.
-    const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
+    const sorted = named.sort((a, b) => a.path.localeCompare(b.path));
     const limited: Array<FilePlan> = [];
     const unjudged: Array<string> = [];
     const rooms = new Map<FilePlan, number>();
@@ -783,7 +810,9 @@ export const executeAudit = (
     const planOnly = plan.planOnly === true;
     const nativeReads =
       plan.nativeReads?.symbols || plan.nativeReads?.references ? plan.nativeReads : undefined;
-    const eligible = planOnly ? [] : plan.files.filter(needsRequests);
+    const eligible = planOnly
+      ? []
+      : plan.files.filter((file) => needsRequests(file) && isJsOrTsPath(file.file.path));
     const sourceReads =
       nativeReads === undefined || eligible.length === 0
         ? Option.none()
@@ -833,7 +862,7 @@ export const executeAudit = (
       const checking = { ...pending, ...unlocated(prepared, kept) };
       let readState = cheapState;
       if (!isEmpty(checking)) {
-        if (nativeReads !== undefined && Option.isSome(sourceReads)) {
+        if (nativeReads !== undefined && Option.isSome(sourceReads) && isJsOrTsPath(file.path)) {
           const native = yield* sourceReads.value
             .read(asWritten, file.lines, nativeReads)
             .pipe(
@@ -1067,8 +1096,10 @@ export const executeAudit = (
  * Deletes from the cache the answers about content no file has anymore.
  * Answers to rules the run left out stay, since a run with other presets or
  * rules asks them, and so do answers about files the run read but judged
- * against no rule. Only after a run that read every file; a run narrowed by
- * `--filter` cannot tell what content the files it left out have.
+ * against no rule. Answers about a file no rule of the run takes by name and
+ * path go, since the plan never read it. Only after a run that read every
+ * file it plans; a run narrowed by `--filter` cannot tell what content the
+ * files it left out have.
  */
 export const pruneCache = Effect.fn("audit.prune")(function* (plan: AuditPlan) {
   const config = yield* AdhereConfig;

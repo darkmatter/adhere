@@ -43,7 +43,7 @@ import { AuditCache, AuditCacheAt, sha256 } from "#services/AuditCache.ts";
 import { Credentials, CredentialsLive } from "#services/Credentials.ts";
 import { Jev } from "#services/Jev.ts";
 import { JevLive } from "#services/Jev.http.ts";
-import { SourceReads, SourceReadsLive } from "#services/SourceReads.ts";
+import { isJsOrTsPath, SourceReads, SourceReadsLive } from "#services/SourceReads.ts";
 import { SourceWalker, SourceWalkerLive, type SourceFile } from "#services/SourceWalker.ts";
 import { workspaceDependentsOf, workspacePackagesOf } from "#workspaces.ts";
 import {
@@ -167,7 +167,7 @@ const draftConfig = (root: string, raw: ProjectConfig, id: string, rule: Rule) =
 const neutralConfig = (raw: ProjectConfig): ResolvedConfig =>
   resolveConfig({ ...raw, rules: {} }, {});
 
-/** Every TypeScript file the project's own walk would read, from the checkout's root. */
+/** Every file the project's own walk would read, from the checkout's root. */
 const eligibleFiles = (root: string, config: ResolvedConfig) =>
   Effect.gen(function* () {
     const walker = yield* SourceWalker.pipe(
@@ -385,7 +385,13 @@ export const previewTrial = (draft: TrialDraft, scope: TrialScope, options: Tria
         const raw = yield* projectConfig(root);
         const config = neutralConfig(raw);
         const { files } = yield* eligibleFiles(root, config);
-        const selected = yield* selectionOf(root, files, () => true, scope, options.files);
+        const selected = yield* selectionOf(
+          root,
+          files,
+          (file) => isJsOrTsPath(file.path),
+          scope,
+          options.files,
+        );
         return {
           eligible: selected.eligible,
           selected: selected.paths.length,
@@ -450,7 +456,13 @@ export const runTrial = (draft: TrialDraft, scope: TrialScope, options: TrialRun
         const raw = yield* projectConfig(root);
         const config = neutralConfig(raw);
         const { files } = yield* eligibleFiles(root, config);
-        const selected = yield* selectionOf(root, files, () => true, scope, options.files);
+        const selected = yield* selectionOf(
+          root,
+          files,
+          (file) => isJsOrTsPath(file.path),
+          scope,
+          options.files,
+        );
         const run = yield* runOxlintDraft(root, draft, selected.paths);
         const id = oxlintIdOf(draft);
         const revision = yield* revisionOf({

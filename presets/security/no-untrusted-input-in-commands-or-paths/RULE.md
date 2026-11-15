@@ -1,5 +1,6 @@
 ---
 description: Input from outside the program, such as a request's parameters or body, must reach a shell command only as a separate argument, and a file path only after the resolved path is checked to be inside the directory meant for it; it must never be interpolated into a command string, passed to `eval` or `new Function`, or joined into a path unchecked.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

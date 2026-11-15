@@ -1,5 +1,6 @@
 ---
 description: In a Worker, Function, or Service, Config values and binding factories must be yielded in the outer construction Effect and captured for the handlers, never yielded for the first time inside fetch or another request handler, which does not run at deploy time, so nothing gets bound.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

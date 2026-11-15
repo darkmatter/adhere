@@ -18,6 +18,7 @@ small API". You can write a rule as a Markdown file, with code that shows it:
 ````md
 ---
 description: A third-party API going offline should not also take our app down.
+include: { "names": ["*.ts"] }
 ---
 
 Our APIs should not depend on a third-party API on a critical path. The

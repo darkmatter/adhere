@@ -73,6 +73,7 @@ rules for that subtree only, and the most specific rule with an id wins.
 ````md
 ---
 description: A port must be a branded, range-checked integer, never a bare number.
+include: { "names": ["*.ts", "*.tsx"] }
 ---
 
 Prose here is the rule's details: Jev reads it after the description. Say why
@@ -123,7 +124,15 @@ Front matter besides `description`, all optional:
 - `tests: only` for a rule about tests, `tests: include` for one that holds in
   tests too. Otherwise rules skip `.test` and `.spec` files and files under
   `test/`, `tests/`, `__tests__/`, and `fixtures/`.
-- `include: {"paths":["src/**"],"content":["from\\s+[\"']effect[\"']"]}`
+- `include: {"names":["*.ts","*.tsx"]}` says which files the rule applies to,
+  by globs on a file's own name, whichever directory holds it: `*.ts`,
+  `Dockerfile`, or `*` for every file. Set it on every rule. A rule without it
+  judges every kind of file `adhere lint` reads, documentation and data
+  included, and each run warns and names those rules. Names carry to any
+  repository, so a shared rule keeps them; `paths` depend on one repository's
+  layout, and a repository narrows a shared or preset rule with `paths` in the
+  config's `overrides`.
+- `include: {"names":["*.ts"],"paths":["src/**"],"content":["from\\s+[\"']effect[\"']"]}`
   and `exclude: {"paths":["**/generated/**"],"content":["@generated"]}`,
   JSON objects on one line, filter files locally before requests or cached
   findings. TypeScript rules use ordinary objects with the same fields.
@@ -323,8 +332,13 @@ configurable `maxSymbolLength` and `maxSymbolDocumentationLength` limits, both
 256 by default. Only `appendState` forces a private rule request group.
 
 `overrides` changes any rule by the id the report shows, a preset's with the
-preset first, without copying it; an id no rule has refuses the run. `rules`
-in the config, inline or as a directory of rule directories, replaces
+preset first, without copying it; an id no rule has refuses the run. Beside
+`level`, `threshold`, and `options`, an override takes `paths`,
+repository-root-relative globs, as in
+`"security/parameterized-queries": { paths: ["apps/api/**"] }`: the rule then
+judges only the files they match, among those its own filters take, so a
+preset or shared rule applies to the part of the repository it is relevant to.
+`rules` in the config, inline or as a directory of rule directories, replaces
 `.adhere/rules/` entirely. Precedence, highest first: `--threshold`, the config, presets
 in order, the default; a rule's own `threshold` beats those, and `overrides`
 beats the rule.
@@ -339,8 +353,8 @@ which the executable supplies.
 subdirectories, and a topic is a preset of its own. Their rules are in the
 adhere package under `presets/`, and at
 https://github.com/darkmatter/adhere/tree/main/presets. A preset leaves out
-what that ecosystem's linters check exactly. Quiet a preset rule with
-`overrides` rather than copying it.
+what that ecosystem's linters check exactly. Quiet a preset rule, or apply it
+to only part of the repository, with `overrides` rather than copying it.
 
 ## Linter-checkable rules
 
@@ -375,7 +389,8 @@ A convention a linter can decide exactly does not belong in a `RULE.md`.
   it nothing is written and no repair is attempted. adhere bundles no Oxlint.
   One failure goes back to the agent to repair; the user approves the repaired
   plugin, then it runs again. Nothing is written unless the tests pass.
-- **An adhere rule**, for judgment, facts outside the file, or types.
+- **An adhere rule**, for judgment, facts outside the file, or types. Its
+  draft names the files it applies to with `include.names`.
 
 Whichever route it takes, the draft is trialled on real files before anything
 is written: the first 100 applicable files by default, the entire repo, or a

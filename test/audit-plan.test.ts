@@ -754,6 +754,39 @@ describe("plan", () => {
     expect(Object.keys(planned.files[0]?.prepared ?? {})).toEqual(["a"]);
   });
 
+  it("never reads or plans a file no rule takes by its name, and plans every file for a rule that names none", async () => {
+    const prose: ScannedFile = { path: "/repo/docs/guide.md", lines: ["# Ports"] };
+    const read: Array<string> = [];
+    const walker = Layer.succeed(SourceWalker, {
+      files: Effect.succeed([{ path: source.path }, { path: prose.path }]),
+      read: ({ path }) =>
+        Effect.sync(() => {
+          read.push(path);
+          return path === source.path ? source : prose;
+        }),
+    });
+    const named = await planOf({
+      rules: { a: { ...a, include: { names: ["*.ts"] } } },
+      files: [],
+      cache: memoryCache(),
+      walker,
+      root: "/repo",
+    });
+    expect(named.files.map((plan) => plan.file.path)).toEqual([source.path]);
+    expect(named.unjudged).toEqual([]);
+    // The planned file may be read again for its sample; the file no rule names never is.
+    expect(read).not.toContain(prose.path);
+
+    const unnamed = await planOf({
+      rules: { a },
+      files: [source, prose],
+      cache: memoryCache(),
+      root: "/repo",
+    });
+    expect(unnamed.files.map((plan) => plan.file.path)).toEqual([prose.path, source.path]);
+    expect(unnamed.unjudged).toEqual([]);
+  });
+
   it("judges only the pairs a rule's content filters allow, with any entry in a list enough", async () => {
     const filtered: Rules = {
       a: { ...a, include: { content: ["^import", "process.env.PORT"] } },

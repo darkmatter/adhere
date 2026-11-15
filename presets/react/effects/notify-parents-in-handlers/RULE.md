@@ -1,6 +1,7 @@
 ---
 description: A component must tell its parent about a change, through a callback prop such as `onChange`, in the event handler that makes the change, never from an effect that watches the component's own state.
 appliesTo: ["a React component or hook"]
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

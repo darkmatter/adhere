@@ -1,6 +1,7 @@
 ---
 description: Code that runs because the user did something, such as submitting a form, clicking a button, or choosing an option, must run in that event's handler, never in an effect that watches state the handler set. An effect is for keeping a component in sync with something outside React while it is shown.
 appliesTo: ["a React component or hook"]
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

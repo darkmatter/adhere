@@ -77,6 +77,7 @@ const TSCONFIG = `{
 const SMALL_FILES = `---
 description: A file should be small and focused, with one primary responsibility, and should not mix unrelated concerns.
 threshold: 0.8
+include: {"names": ["*.ts", "*.tsx"]}
 ---
 
 Why: a file that does one thing is easier to find, read, and change. A helper
@@ -111,6 +112,7 @@ const INSTRUCTIONS = `# Working with adhere
 const NAME_EFFECTS = `---
 description: A function must be named after the domain action it performs, never after a generic verb like handle.
 threshold: 0.8
+include: {"names": ["*.ts", "*.tsx"]}
 ---
 
 Why: a name like \`handle\` or \`process\` says nothing about what the function

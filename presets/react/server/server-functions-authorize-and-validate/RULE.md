@@ -1,6 +1,7 @@
 ---
 description: A Server Function, one marked `"use server"`, is an endpoint any client can call with any arguments, so it must check that the caller is signed in and allowed to do what it does, and validate its arguments at runtime; it must never trust that only the app's own UI calls it.
 appliesTo: ["a Server Function, marked \"use server\""]
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

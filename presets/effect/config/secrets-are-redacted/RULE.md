@@ -1,5 +1,6 @@
 ---
 description: A token, password, or key must be read with Config.Redacted, never with Config.String.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

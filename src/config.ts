@@ -93,11 +93,16 @@ const RegexSource = Schema.String.check(
 );
 
 /**
- * One side of a rule's file filter: repository-relative globs for paths, and
- * regular expression sources for the file's text as written. A rule's
- * `include` and `exclude` each take this shape.
+ * One side of a rule's file filter: globs for a file's own name, which hold in
+ * any repository, repository-relative globs for paths, and regular expression
+ * sources for the file's text as written. A rule's `include` and `exclude`
+ * each take this shape.
  */
 export const RuleFilter = Schema.Struct({
+  names: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
+    description:
+      "Glob patterns for a file's own name, as in `*.ts` or `Dockerfile`, whichever directory holds it. Unlike `paths` they do not depend on a repository's layout, so a shared rule carries them.",
+  }),
   paths: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
     description:
       "Repository-root-relative glob patterns, `/`-separated, as in `src/**` or `**/*.test.ts`.",
@@ -182,11 +187,11 @@ export const Rule = Schema.Struct({
   }),
   include: Schema.optionalKey(RuleFilter).annotate({
     description:
-      "Where the rule applies, beside its scope and `tests`: a file must match every configured category, and within `paths` or `content` any entry is enough. An omitted or empty list puts no condition on that category.",
+      "Where the rule applies, beside its scope and `tests`. A rule says which files it applies to with `names`; one without it judges every kind of file, and lint warns. A file must match every configured category, and within `names`, `paths`, or `content` any entry is enough. An omitted or empty list puts no condition on that category.",
   }),
   exclude: Schema.optionalKey(RuleFilter).annotate({
     description:
-      "Where the rule does not apply: the same shape as `include`. Any matching path or content entry drops the file before it is judged, so no cached finding for it is read or reported.",
+      "Where the rule does not apply: the same shape as `include`. Any matching name, path, or content entry drops the file before it is judged, so no cached finding for it is read or reported.",
   }),
   appliesTo: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
     description:
@@ -240,6 +245,8 @@ export const Rule = Schema.Struct({
 export interface Rule extends Schema.Schema.Type<typeof Rule> {
   /** The settings `options` decoded from the config's override, set as the config is loaded. */
   readonly optionValues?: unknown;
+  /** The `paths` of the config's override: where this repository applies the rule, set as the config is loaded. */
+  readonly overridePaths?: ReadonlyArray<string>;
 }
 
 /** How a finding is reported: an error fails the run, a warning does not. */
@@ -279,13 +286,17 @@ export type Rules = Readonly<Record<RuleId, Rule>>;
 /** Rules inline, or a directory of Markdown rule files (see `markdown.ts`). */
 export type RuleSource = Rules | string | URL;
 
-/** A rule's setting in a config's `overrides`: `off`, a level, or a level, a threshold, and its options. */
+/**
+ * A rule's setting in a config's `overrides`: `off`, a level, or a level, a
+ * threshold, its options, and the paths this repository applies it to.
+ */
 const Override = Schema.Union([
   Schema.Literals(["off", "error", "warning"]),
   Schema.Struct({
     level: Schema.optionalKey(Schema.Literals(["off", "error", "warning"])),
     threshold: Schema.optionalKey(Schema.Finite),
     options: Schema.optionalKey(Schema.Unknown),
+    paths: Schema.optionalKey(Schema.Array(Schema.String)),
   }),
 ]);
 export type Override = typeof Override.Type;
@@ -346,7 +357,7 @@ export const AdhereConfig = Schema.Struct({
   }),
   overrides: Schema.optionalKey(Schema.Record(Schema.String, Override)).annotate({
     description:
-      "Settings for rules by the id a report names them with, a preset's with its preset first, as in `alchemy/providers/idempotent-delete`: `off`, a level, or `{ level, threshold, options }`. A preset's rule changes without its text being copied into `rules`.",
+      "Settings for rules by the id a report names them with, a preset's with its preset first, as in `alchemy/providers/idempotent-delete`: `off`, a level, or `{ level, threshold, options, paths }`. `paths` are repository-root-relative globs: the rule then judges only the files they match, among those it takes itself, so a shared or preset rule applies to the part of this repository it is relevant to. A preset's rule changes without its text being copied into `rules`.",
   }),
   includeComments: Schema.optionalKey(Schema.Boolean).annotate({
     description:

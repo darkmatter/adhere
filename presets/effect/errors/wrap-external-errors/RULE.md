@@ -1,5 +1,6 @@
 ---
 description: An error from an external library must be wrapped in a tagged error with a Schema.Defect field, never passed through raw.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

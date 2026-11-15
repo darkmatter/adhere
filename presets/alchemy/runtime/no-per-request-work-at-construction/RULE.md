@@ -1,5 +1,6 @@
 ---
 description: A runtime's construction Effect runs at deploy time and again at cold start, so it must only build resources, bindings, layers, and handler groups, never do per-request work such as queries, writes, bound calls, or starting consumers.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

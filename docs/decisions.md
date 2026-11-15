@@ -283,12 +283,13 @@ nothing claims validation from stale, partial, or skipped data.
 ## Local rule filters before model judgment
 
 Rules can target files with `include` and `exclude` objects, each containing
-optional `paths` glob lists and `content` regular-expression source lists.
-Paths are repository-root-relative, including for nested rules. Content
-matches original file text, including comments. Alternatives within a list
-are OR; nonempty inclusion categories are AND; any exclusion match vetoes the
-file. Empty lists impose no restriction. Both Markdown JSON front matter
-and TypeScript rules use this contract.
+optional `names` and `paths` glob lists and `content` regular-expression
+source lists. Names match a file's own name; paths are
+repository-root-relative, including for nested rules. Content matches original
+file text, including comments. Alternatives within a list are OR; nonempty
+inclusion categories are AND; any exclusion match vetoes the file. Empty lists
+impose no restriction. Both Markdown JSON front matter and TypeScript rules
+use this contract.
 
 These filters run locally before judgment or cached findings are used.
 Unlike `appliesTo` and `excludeIf`, they do not ask the model a question.
@@ -302,10 +303,56 @@ recommend concrete entries or explain why none are needed. The user chooses
 whether to revise; the recommendation accompanies the next revision's
 evidence. Oxlint settings and plugins do not receive adhere-only fields.
 
+## Rules name the files they apply to
+
+`adhere lint` walks files of any extension, extensionless ones included; it is
+not tied to TypeScript. A rule says which files it applies to with
+`include.names`, globs on a file's own name such as `*.ts` or `Dockerfile`.
+A name does not depend on where a repository keeps its files, so a rule shared
+between repositories, or published in a registry, carries its names unchanged.
+Paths are the repository-specific half, and belong to the repository that runs
+the rule: `paths` under the rule's id in the config's `overrides` narrows a
+preset or shared rule to the part of the tree it is relevant to, without
+editing a copy that would then drift from its source. An override's paths are
+matched together with the rule's own filters, so they narrow what a rule takes
+and never widen it. A rule's own `include.paths` remains for a rule a
+repository wrote for itself. Keeping names and paths apart is why names are
+not written as path globs.
+
+A rule without `include.names` judges every kind of file, and each run warns
+and names those rules. Refusing to load them instead would stop every existing
+project's next run until each of its rules was edited. The cost of the default
+is that an unmarked rule is judged against far more files than before,
+documentation, data, and binary assets included, until it names its files or
+the config excludes them. The bundled presets name TypeScript files, which is
+what they judged before, and `adhere rules create` asks its agent for names in
+every draft.
+
+A file that no rule takes by its name and path is left out of the run unread,
+so assets and data that no rule names cost nothing to plan. Only the
+`dependents` read still opens every JavaScript and TypeScript file, since a
+file no rule names can still import one a rule judges. The cache in turn
+forgets judgments of files the run's rules do not take: a run whose rules
+cover fewer files than another's prunes the other's answers about the rest.
+
+The walker keeps its directory, config, declaration-file, and self-tree
+exclusions, and leaves out common credential file names before any file is
+read: `.env`, `.env.*`, `.npmrc`, `.netrc`, `*.pem`, `*.key`, and
+`secrets.yaml`, `secrets.yml`, or `secrets.json`. These names are a safeguard,
+not secret detection: a repository excludes its other sensitive files itself.
+`.gitignore` is not consulted.
+
+Comment stripping, `adhere-ignore` comments, compiler context, and import
+reading apply to JavaScript and TypeScript only; other files are sent as
+written. Every file is still divided into sections by the JavaScript scanner,
+so a finding's excerpt in another format can be wider than the lines at fault.
+A scanner per language was left out: it is a parser to maintain for each
+format a rule might name.
+
 ## Transcripts are rules of their own type
 
 A rule's `type` says what it judges: `code`, the default, judges the
-TypeScript files `adhere lint` walks, and `transcript` judges text piped to
+files `adhere lint` walks, and `transcript` judges text piped to
 `adhere lint --type transcript`, such as a coding agent's work. A run judges
 only rules of the type it is asked for, so `adhere lint` without `--type`
 judges code as it did before transcript rules existed, and `validate` compares

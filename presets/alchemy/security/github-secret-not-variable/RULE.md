@@ -1,5 +1,6 @@
 ---
 description: A sensitive CI value, such as a token, key, password, or connection string, must be stored with GitHub.Secret, never with GitHub.Variable, which is plain text and visible in logs.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

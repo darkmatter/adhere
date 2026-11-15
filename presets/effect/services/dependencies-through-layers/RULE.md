@@ -1,5 +1,6 @@
 ---
 description: A service that depends on other services must be a Context.Service built by a Layer that yields those services as it is constructed, never a function or class that takes other services' implementations as arguments and returns a service's implementation for its callers to wire by hand.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 A service wired by hand hides its dependencies from the types, so each caller

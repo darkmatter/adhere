@@ -1,5 +1,6 @@
 ---
 description: Timeouts, retries, logging, and spans must be attached with .pipe, never written into the body of the effect.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must
