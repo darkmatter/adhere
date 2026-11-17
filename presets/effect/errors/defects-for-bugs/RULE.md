@@ -1,5 +1,6 @@
 ---
 description: A typed error must be for a failure the caller can handle. A bug or invariant violation must be a defect, never a typed error.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

@@ -1,5 +1,6 @@
 ---
 description: In a Lambda handler, anything that must not be lost must be written durably, to a queue or a table, inside the handler before it responds, never left to a dangling promise, a forked fiber, or a finalizer, because Lambda freezes the instance after the response.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

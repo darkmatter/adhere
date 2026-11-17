@@ -1,5 +1,6 @@
 ---
 description: Workflow task, sleep, and waitForEvent names are replay keys, so they must be stable across replays, never built from the clock, randomness, or other values that change between runs.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

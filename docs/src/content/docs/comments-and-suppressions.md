@@ -30,6 +30,8 @@ checked it, with how you know:
   around it.
 - `includeComments: true` in the config sends every comment, for a project whose
   rules are about comments, such as doc comments on exports.
+- Comments are taken out of JavaScript and TypeScript files only. A file in
+  another language is sent as written, comments included.
 
 ## Suppressing a finding
 
@@ -53,3 +55,5 @@ delete: Effect.fn(function* ({ output }) {
 - A finding without lines is covered when its section overlaps the statement.
 - Jev never reads these comments, even with `includeComments: true`.
 - The summary counts the findings they suppress.
+- These comments work in JavaScript and TypeScript files only. In a file of
+  another kind, leave the file out with the rule's `exclude`, or the config's.

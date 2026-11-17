@@ -1,5 +1,6 @@
 ---
 description: Defects must be caught only at a system boundary for logging or shutdown, never in business logic.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

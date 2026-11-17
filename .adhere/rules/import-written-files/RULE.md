@@ -1,6 +1,7 @@
 ---
 description: Code that writes out a file should import that file's contents from a file of its own, with `with { type: "text" }`, and should not inline them as a string literal, unless the contents are only a line or two.
 threshold: 0.8
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 Adhere's own rule. Contents inlined in a template literal need their backticks

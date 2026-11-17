@@ -100,6 +100,26 @@ describe("dependent files", () => {
     });
   });
 
+  it("resolves JavaScript and other files, and prefers a TypeScript source over the emitted file beside it", () => {
+    const dependents = dependentFilesIn(
+      new Map([
+        [
+          "src/a.js",
+          importSpecifiersIn('import "./b"; import data from "./data.json"; import "./c.js";'),
+        ],
+        ["src/b.js", []],
+        ["src/data.json", []],
+        ["src/c.ts", []],
+        ["src/c.js", []],
+      ]),
+    );
+    expect(Object.fromEntries(dependents)).toEqual({
+      "src/b.js": ["src/a.js"],
+      "src/data.json": ["src/a.js"],
+      "src/c.ts": ["src/a.js"],
+    });
+  });
+
   it("places a file in the deepest package directory that holds it", () => {
     const catalog = { outer: "packages/outer", inner: "packages/outer/inner", other: "packages/o" };
     expect(packageOf("packages/outer/inner/src/a.ts", catalog)).toBe("inner");

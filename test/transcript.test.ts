@@ -94,7 +94,7 @@ const project = async (keep = 2) => {
   await writeFile(join(root, ".adhere/rules/agent/no-skips/RULE.md"), ruleOf("error"));
   await writeFile(
     join(root, ".adhere/rules/data/ports/RULE.md"),
-    "---\ndescription: A port must be a branded integer.\n---\n\nconst port = Port(3000);\n",
+    '---\ndescription: A port must be a branded integer.\ninclude: {"names": ["*.ts"]}\n---\n\nconst port = Port(3000);\n',
   );
   await writeFile(join(root, ".adhere/config.ts"), configOf(log, keep));
   return { root, temp, log };

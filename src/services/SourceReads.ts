@@ -23,6 +23,9 @@ export interface SourceReadRequest {
   readonly maxSymbolLength: number;
   readonly maxSymbolDocumentationLength: number;
 }
+
+/** The files native TypeScript and JavaScript context apply to; other text is read as written. */
+export const isJsOrTsPath = (path: string): boolean => /\.(?:[cm]?[jt]s|[jt]sx)$/.test(path);
 export class SourceReads extends Context.Service<
   SourceReads,
   {
@@ -405,7 +408,7 @@ export const SourceReadsLive = (root?: string) =>
             for (const file of files) preparedPaths.add(resolve(cwd, file));
           }),
         read: (file, _lines, requested) =>
-          !requested.symbols && !requested.references
+          (!requested.symbols && !requested.references) || !isJsOrTsPath(file.path)
             ? Effect.succeed({})
             : Effect.suspend(() => {
                 const pathname = resolve(cwd, file.path);

@@ -21,11 +21,14 @@ or with `--preset`:
   `--preset effect/basics` applies only the rules under
   `presets/effect/basics/`, and `alchemy/secrets` applies only alchemy's
   secrets rules. `security` has no topics.
+- Every preset rule names TypeScript files with `include.names`: `*.ts`,
+  `*.tsx`, `*.mts`, and `*.cts`. Presets judge no other files.
 - A few rules declare the compiler's `symbols` or `references` and run only
   with `typeAware: true` or `--type-aware`. Without it they are left out of the
   run, never judged with less context than they declare, and the rules that
   need no compiler still apply.
-- To change a preset's rule without copying it, use [Overrides](/adhere/config/#overrides).
+- To change a preset's rule without copying it, or to apply it to only part of
+  the repository, use [Overrides](/adhere/config/#overrides).
 - [presets/README.md](https://github.com/darkmatter/adhere/blob/main/presets/README.md) lists every rule in each preset,
   with a one-line summary and a link to the full rule.
 

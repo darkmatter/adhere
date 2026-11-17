@@ -136,6 +136,9 @@ delete: Effect.fn(function* ({ output }) {
 - Never suppress a finding you are unsure of, or a real one you have not
   tried to fix.
 - Jev never reads these comments: adhere removes them before it sends a file.
+- These comments work in JavaScript and TypeScript files only. For a file of
+  another kind, report the false finding; the user can leave the file out with
+  the rule's `exclude`.
 
 When suppressing is allowed and the finding was false because of a fact the
 file does not show, such as how an API behaves, also write the fact where Jev

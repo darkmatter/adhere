@@ -1,6 +1,7 @@
 ---
 description: An effect that requests data over the network must ignore or abort a response that arrives after its inputs changed or the component unmounted, such as with an `ignore` flag or an AbortController that its cleanup sets, never set state from every response in whatever order they arrive.
 appliesTo: ["a React effect"]
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

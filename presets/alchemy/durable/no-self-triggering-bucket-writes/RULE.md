@@ -1,5 +1,6 @@
 ---
 description: A bucket-event handler that writes back into the bucket it listens to should filter its subscription by prefix or suffix so its own writes do not match, and should not subscribe to every object created in that bucket.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Should

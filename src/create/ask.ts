@@ -156,14 +156,15 @@ const readsInstruction = (shape: Shape) => {
 };
 
 /**
- * What a rule may do to narrow the files it judges at all: a mechanical
- * filter, taught when a rule is written or revised, never to an oxlint rule.
+ * How a rule says which files it judges at all: `include.names`, which every
+ * adhere rule sets, and the narrower mechanical filters beside it. Taught
+ * when a rule is written or revised, never to an oxlint rule.
  */
 const filtersInstruction = (shape: Shape) =>
-  `A rule may also narrow the files it judges before Jev sees them, with optional \`include\` and \`exclude\` objects. Each holds \`paths\`, globs relative to the repository root with forward slashes, matched as \`--filter\` matches them, and \`content\`, JavaScript regular expression sources without / delimiters or flags, tested against each file's original text, comments included. Any entry in a list suffices; \`include\` applies only when every list it sets matches, while a match in either \`exclude\` list drops the file. An absent object or an empty list restricts nothing. A filter is silent: a file it drops is never judged, so a wrong one is a false negative. Use \`paths\` for where the rule applies and \`content\` for what a file says; a filter is not a substitute for \`appliesTo\` or \`excludeIf\`, which ask Jev about the code. \`content\` can match a named package's import specifier, such as from "effect", or a directive, but a regular expression cannot resolve aliases or re-exports, know whether a name is a type or a value, or reliably tell code from comments and other strings; use \`paths\`, \`appliesTo\`, or a TypeScript rule for that. Because \`content\` entries are strings, escape a regex's backslashes: a regex ^\\s*import is written "^\\\\s*import" in both front matter JSON and a RULE.ts string. ${
+  `A rule says which files it judges before Jev sees them, with \`include\` and \`exclude\` objects. Each holds \`names\`, globs matched against a file's own name whichever directory holds it, such as \`*.ts\`, \`*.tsx\`, or \`Dockerfile\`; \`paths\`, globs relative to the repository root with forward slashes, matched as \`--filter\` matches them; and \`content\`, JavaScript regular expression sources without / delimiters or flags, tested against each file's original text, comments included. Always set \`include.names\`: adhere reads files of every kind, and a rule without it judges every one of them, which lint warns about. Name the kinds of file the rule is about, and use ["*"] only when the rule truly holds for every kind of file. \`names\` carry to any repository that takes the rule, while \`paths\` depend on this repository's layout. Any entry in a list suffices; \`include\` applies only when every list it sets matches, while a match in any \`exclude\` list drops the file. An absent object or an empty list restricts nothing. A filter is silent: a file it drops is never judged, so a wrong one is a false negative. Use \`names\` for the kind of file, \`paths\` for where the rule applies, and \`content\` for what a file says; a filter is not a substitute for \`appliesTo\` or \`excludeIf\`, which ask Jev about the code. \`content\` can match a named package's import specifier, such as from "effect", or a directive, but a regular expression cannot resolve aliases or re-exports, know whether a name is a type or a value, or reliably tell code from comments and other strings; use \`paths\`, \`appliesTo\`, or a TypeScript rule for that. Because \`content\` entries are strings, escape a regex's backslashes: a regex ^\\s*import is written "^\\\\s*import" in both front matter JSON and a RULE.ts string. ${
     shape.format === "typescript"
-      ? 'Set them in defineRule({...}) as object literals, such as include: { paths: ["src/**"] }.'
-      : 'Set them in the front matter as one-line JSON objects, such as include: {"paths": ["src/**"]}.'
+      ? 'Set them in defineRule({...}) as object literals, such as include: { names: ["*.ts", "*.tsx"] }.'
+      : 'Set them in the front matter as one-line JSON objects, such as include: {"names": ["*.ts", "*.tsx"]}.'
   }`;
 
 const typescriptFormat = (shape: Shape) =>
@@ -195,7 +196,7 @@ What it enforces: ${idea}
 What Jev reads beside the rule: ${contextOf(shape)}
 ${readsInstruction(shape)}
 ${filtersInstruction(shape)}
-Leave them out unless the idea itself names a kind of file, such as API routes or React components; the trial will settle whether they are needed.
+Beyond \`include.names\`, leave \`paths\`, \`content\`, and \`exclude\` out unless the idea itself names where the rule applies, such as API routes or generated files; the trial will settle whether they are needed.
 ${shape.format === "typescript" ? typescriptFormat(shape) : "Write it as a RULE.md."}
 
 ${reviewedOf(reviewed)}
@@ -270,16 +271,18 @@ Do not edit files. Keep it short.`;
 
 /**
  * The first trial of an adhere rule asks the authoring agent, explicitly,
- * whether the rule should narrow which files it judges. A filter is a silent
- * false negative, so the agent names exact entries or says why none fit.
+ * whether the rule's names take the right kinds of file and whether it should
+ * narrow them further. A filter is a silent false negative, so the agent
+ * names exact entries or says why none fit.
  */
 export const filterAdvicePrompt = (report: string, id: string) =>
   `adhere trialled the adhere rule ${id} on real files without installing it. The full report is at ${report}, and it holds the rule's source. Read the report, the rule, and the files it names, then answer in plain text:
-- Whether the rule should carry \`include\` or \`exclude\` filters at all.
-- If it should, the exact entries, as the rule's file writes them: in a RULE.md's front matter, one-line JSON objects such as include: {"paths": ["src/**"]}; in a RULE.ts, object literals such as include: { paths: ["src/**"] }. Say which list each entry belongs to and what it leaves out or keeps.
-- If it should not, one sentence saying why the rule is better judging every file Jev reads.
+- Whether the rule's \`include.names\` takes the kinds of file the rule is about: the exact globs it should carry, and any the trial shows are missing or too wide.
+- Whether the rule should carry any other filter, \`paths\`, \`content\`, or an \`exclude\`, at all.
+- If it should, the exact entries, as the rule's file writes them: in a RULE.md's front matter, one-line JSON objects such as include: {"names": ["*.ts", "*.tsx"]}; in a RULE.ts, object literals such as include: { names: ["*.ts", "*.tsx"] }. Say which list each entry belongs to and what it leaves out or keeps.
+- If it should not, one sentence saying why the rule is better judging every file its names take.
 
-Filters are mechanical and silent: a file one leaves out is never judged, so a wrong filter hides real violations. \`paths\` are repository-root-relative globs with forward slashes, matched as \`--filter\` matches them. \`content\` entries are JavaScript regex source strings without / delimiters or flags, tested against original text including comments. Content filters may match a named package's import specifier, for example from "effect". They cannot resolve aliases or re-exports, and matching text in comments or strings does not prove the file imports the package. Escape regex backslashes in JSON and TypeScript strings: the regex ^\\s*import is written "^\\\\s*import". Within each list, any entry may match; all nonempty inclusion lists must match, and a match in either exclusion list vetoes the file. Empty lists impose no restriction. Recommend a filter only when the evidence supports that boundary.
+Filters are mechanical and silent: a file one leaves out is never judged, so a wrong filter hides real violations. \`names\` are globs matched against a file's own name whichever directory holds it, such as \`*.ts\`, \`*.tsx\`, or \`Dockerfile\`. Every adhere rule sets \`include.names\`, with ["*"] only when the rule truly holds for every kind of file. \`names\` carry to any repository that takes the rule, while \`paths\` depend on this repository's layout. \`paths\` are repository-root-relative globs with forward slashes, matched as \`--filter\` matches them. \`content\` entries are JavaScript regex source strings without / delimiters or flags, tested against original text including comments. Content filters may match a named package's import specifier, for example from "effect". They cannot resolve aliases or re-exports, and matching text in comments or strings does not prove the file imports the package. Escape regex backslashes in JSON and TypeScript strings: the regex ^\\s*import is written "^\\\\s*import". Within each list, any entry may match; all nonempty inclusion lists must match, and a match in any exclusion list vetoes the file. Empty lists impose no restriction. Recommend a \`paths\`, \`content\`, or \`exclude\` filter only when the evidence supports that boundary.
 
 Do not suggest filters for an oxlint rule: those have no such fields. Do not edit files. Keep it short.`;
 
@@ -298,7 +301,7 @@ Revise the adhere rule ${id}. It enforces: ${idea}
 What Jev reads beside the rule: ${contextOf(shape)}
 ${readsInstruction(shape)}
 ${filtersInstruction(shape)}
-Apply, change, or remove \`include\` and \`exclude\` as the trial, the recommendation, and the user's verdicts support; keep a filter only while the evidence supports it.
+Keep \`include.names\` set, correcting it where the trial shows the rule judging a kind of file it is not about or missing one it is. Apply, change, or remove \`paths\`, \`content\`, and \`exclude\` as the trial, the recommendation, and the user's verdicts support; keep each only while the evidence supports it.
 ${shape.format === "typescript" ? typescriptFormat(shape) : "Write it as a RULE.md."}
 
 A trial judged real files against the current rule. What it found, and what the user made of it:

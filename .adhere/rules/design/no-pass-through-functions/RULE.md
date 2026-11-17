@@ -1,6 +1,7 @@
 ---
 description: A function should do its own work, or call the module that owns that work, and should not only pass its arguments on to another function.
 level: warning
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 From AGENTS.md: code is organized by ownership, so tracing a call path is

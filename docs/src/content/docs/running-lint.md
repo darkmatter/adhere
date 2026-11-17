@@ -2,7 +2,7 @@
 title: "Running lint"
 ---
 
-`adhere lint` judges the TypeScript files under the working directory against
+`adhere lint` judges files under the working directory against
 your rules, and prints a [report](/adhere/reading-the-report/) of what it finds. It
 asks before it sends anything. With `--type transcript`, it judges text on
 stdin, such as a coding agent's work, against the transcript rules instead:
@@ -48,9 +48,16 @@ Estimates cover only code and workspace-package context; symbol/reference input,
 
 ## What gets read
 
-- `adhere lint` reads the TypeScript files under the working directory: `.ts`,
-  `.tsx`, `.mts`, and `.cts`. It does not read declaration files such as
-  `.d.ts`, adhere's own config files, or JavaScript.
+- `adhere lint` reads files regardless of extension, including JavaScript,
+  Python, Markdown, JSON, and extensionless files. It still skips TypeScript
+  declaration files such as `.d.ts` and adhere's own config files.
+- Common credential filenames are excluded: `.env` and `.env.*` (including
+  `.env.example`), `.npmrc`, `.netrc`, `*.pem`, `*.key`, and files named
+  `secrets.yaml`, `secrets.yml`, or `secrets.json`. This is a filename safeguard,
+  not secret detection. Use `exclude` for other sensitive files and binary assets.
+- JavaScript and TypeScript retain comment stripping, suppression comments,
+  and optional compiler context. Other formats are sent as written, without
+  those language-specific features.
 - When the working directory contains `agents/`, `apps/`, or `packages/`, only
   those trees are read.
 - Below the working directory, anything under `node_modules/`, `dist/`,
@@ -59,17 +66,27 @@ Estimates cover only code and workspace-package context; symbol/reference input,
   above the working directory do not count.
 - `.gitignore` is not consulted.
 - A config's `exclude` lists globs, relative to the working directory, of files
-  no rule judges, such as generated code. It leaves them out of every run, as
-  `--filter '!<glob>'` leaves them out of one:
+  no rule judges, such as generated code or binary assets. It leaves them out
+  of every run, as `--filter '!<glob>'` leaves them out of one:
 
   ```ts
   export default defineConfig({ exclude: ["**/generated/**"] });
   ```
 
+Each rule names the files it applies to with `include.names`, such as
+`["*.ts", "*.tsx"]` or `["*.py"]` (see
+[Filtering files](/adhere/rule-format/#filtering-files)). A rule that names
+none judges every kind of file read, which costs more, and each run warns and
+names those rules. The built-in presets name TypeScript files. To apply a
+preset or shared rule to only part of the repository, set its `paths` in the
+config's [overrides](/adhere/config/#overrides). A file that no rule takes by
+its name and path is left out of the run unread; only the `dependents` read
+still opens every JavaScript and TypeScript file, for its imports.
+
 **Tests** are judged only by rules about tests, whose front matter says `tests`
 (see [Rules as Markdown files](/adhere/rule-format/#rules-as-markdown-files)). A test is:
 
-- a `.test` or `.spec` file, such as `a.test.ts` or `Button.spec.tsx`;
+- a `.test` or `.spec` file with any extension, such as `a.test.js` or `a.spec.py`;
 - a fixture or test helper named as one, such as `fixtures.ts`,
   `GitHubHttpFixtures.ts`, `ledger-copy.fixture.ts`, `linear-test-helpers.ts`,
   or `test-utils.ts`;

@@ -1,5 +1,6 @@
 ---
 description: A custom provider, credentials, or state-store Layer must defer resolving credentials and opening connections until an operation runs, never resolving credentials, connecting, or prompting while the Layer is built, because every CLI command builds it.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

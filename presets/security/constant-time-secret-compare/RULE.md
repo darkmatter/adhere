@@ -1,5 +1,6 @@
 ---
 description: Code that checks a secret it received, such as a token, an API key, or an HMAC signature, must compare it in constant time, as `crypto.timingSafeEqual` or a library's verify function does, never with `===`, `!==`, or a string method.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

@@ -1,6 +1,7 @@
 ---
 description: An error raised while reading a config, rule, or cache file must name that file in its message, so the user can open it, and never give only the problem.
 threshold: 0.8
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 Adhere's own rule. A refusal is the only thing the user sees, so it points

@@ -5,6 +5,9 @@ summary. Each id links to the full rule, and is the id that reports,
 `overrides`, and `adhere-ignore` comments use. [Presets](https://dm.sh/adhere/presets/)
 says how to name a preset or one of its topics.
 
+Every rule names the files it applies to with `include.names`: TypeScript's
+`*.ts`, `*.tsx`, `*.mts`, and `*.cts`. A preset judges no other file.
+
 Some rules declare the context they need with `reads`, such as
 `["symbols", "references"]` for a rule that compares declarations across
 files. Enable `typeAware: true` or `--type-aware` for the compiler's

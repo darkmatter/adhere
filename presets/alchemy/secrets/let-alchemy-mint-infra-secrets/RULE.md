@@ -1,5 +1,6 @@
 ---
 description: A token the infrastructure owns, such as a webhook secret or bearer token, should be minted once with alchemy's Random or left for alchemy to provision, and should not be a hardcoded literal or regenerated on every deploy with crypto.randomUUID().
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Should

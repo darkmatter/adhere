@@ -363,6 +363,46 @@ describe("comments", () => {
   });
 });
 
+/** The walker over `root`, reading the files it lists through `reads`, with the given run filter and config excludes. */
+const walkerLayer = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  root: string,
+  filter: ReadonlyArray<string>,
+  exclude: Array<string>,
+  reads: Array<string>,
+) =>
+  SourceWalkerLive(filter).pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        Layer.succeed(FileSystem.FileSystem, {
+          ...fs,
+          readFileString: (file) =>
+            Effect.suspend(() => {
+              reads.push(file);
+              return fs.readFileString(file);
+            }),
+        }),
+        Layer.succeed(Path.Path, {
+          ...path,
+          resolve: (...parts) => path.resolve(root, ...parts),
+        }),
+        Layer.succeed(AdhereConfig, {
+          typeAware: false,
+          model: "jev-latest",
+          threshold: 0.7,
+          sufficiencyThreshold: 0.7,
+          maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+          maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+          transcript: { every: 8_000, keep: 20 },
+          reads: [],
+          rules,
+          exclude,
+        }),
+      ),
+    ),
+  );
+
 describe("source walker", () => {
   it("lists only paths and classifications, then reads current contents on demand", async () => {
     const root = await onDisk({
@@ -377,36 +417,7 @@ describe("source walker", () => {
         Effect.all([FileSystem.FileSystem, Path.Path]).pipe(Effect.provide(realFileSystem)),
       );
       const reads: Array<string> = [];
-      const layer = SourceWalkerLive(["src/**"]).pipe(
-        Layer.provide(
-          Layer.mergeAll(
-            Layer.succeed(FileSystem.FileSystem, {
-              ...fs,
-              readFileString: (file) =>
-                Effect.suspend(() => {
-                  reads.push(file);
-                  return fs.readFileString(file);
-                }),
-            }),
-            Layer.succeed(Path.Path, {
-              ...path,
-              resolve: (...parts) => path.resolve(root, ...parts),
-            }),
-            Layer.succeed(AdhereConfig, {
-              typeAware: false,
-              model: "jev-latest",
-              threshold: 0.7,
-              sufficiencyThreshold: 0.7,
-              maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
-              maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
-              transcript: { every: 8_000, keep: 20 },
-              reads: [],
-              rules,
-              exclude: ["src/skip.ts"],
-            }),
-          ),
-        ),
-      );
+      const layer = walkerLayer(fs, path, root, ["src/**"], ["src/skip.ts"], reads);
       await Effect.runPromise(
         Effect.gen(function* () {
           const walker = yield* SourceWalker;
@@ -423,6 +434,87 @@ describe("source walker", () => {
             lines: ["export const after = 2;", ""],
           });
           expect(reads).toEqual([file.path]);
+        }).pipe(Effect.provide(layer)),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("lists and reads files of any extension, extensionless ones too, leaving out what globs and config exclude", async () => {
+    const root = await onDisk({
+      "src/a.ts": "export const a = 1;\n",
+      "src/Makefile": "all:\n",
+      "src/data.json": '{"a": 1}\n',
+      "src/script.py": "print(1)\n",
+      "src/a.test.js": "test('a');\n",
+      "src/skip.py": "skipped\n",
+      "src/gen/out.py": "generated\n",
+      "src/types.d.ts": "declare const declared: number;\n",
+      "lib/outside.py": "outside\n",
+    });
+    try {
+      const [fs, path] = await Effect.runPromise(
+        Effect.all([FileSystem.FileSystem, Path.Path]).pipe(Effect.provide(realFileSystem)),
+      );
+      const reads: Array<string> = [];
+      const layer = walkerLayer(fs, path, root, ["src/**", "!src/gen/**"], ["src/skip.py"], reads);
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const walker = yield* SourceWalker;
+          const files = yield* walker.files;
+          expect(files).toEqual([
+            { path: join(root, "src/Makefile") },
+            { path: join(root, "src/a.test.js"), test: true },
+            { path: join(root, "src/a.ts") },
+            { path: join(root, "src/data.json") },
+            { path: join(root, "src/script.py") },
+          ]);
+          const makefile = files[0]!;
+          expect(yield* walker.read(makefile)).toEqual({ ...makefile, lines: ["all:", ""] });
+          const json = files[3]!;
+          expect(yield* walker.read(json)).toEqual({ ...json, lines: ['{"a": 1}', ""] });
+          expect(reads).toEqual([makefile.path, json.path]);
+        }).pipe(Effect.provide(layer)),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves credential files out of what the walker lists, by name, and keeps look-alike names", async () => {
+    const root = await onDisk({
+      "src/a.ts": "export const a = 1;\n",
+      "src/.env": "TOKEN=1\n",
+      "src/.env.example": "TOKEN=\n",
+      "src/.npmrc": "//registry.example/:_authToken=1\n",
+      "src/.netrc": "machine example.com\n",
+      "src/cert.pem": "pem\n",
+      "src/id.key": "key\n",
+      "src/secrets.yaml": "a: 1\n",
+      "src/secrets.yml": "a: 1\n",
+      "src/secrets.json": "{}\n",
+      "src/env.ts": "export const env = 1;\n",
+      "src/secrets.ts": "export const secrets = 1;\n",
+      "src/pem-notes.md": "notes\n",
+    });
+    try {
+      const [fs, path] = await Effect.runPromise(
+        Effect.all([FileSystem.FileSystem, Path.Path]).pipe(Effect.provide(realFileSystem)),
+      );
+      const reads: Array<string> = [];
+      const layer = walkerLayer(fs, path, root, ["src/**"], [], reads);
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const walker = yield* SourceWalker;
+          const files = yield* walker.files;
+          expect(files.map((file) => file.path)).toEqual([
+            join(root, "src/a.ts"),
+            join(root, "src/env.ts"),
+            join(root, "src/pem-notes.md"),
+            join(root, "src/secrets.ts"),
+          ]);
+          expect(reads).toEqual([]);
         }).pipe(Effect.provide(layer)),
       );
     } finally {
@@ -449,16 +541,35 @@ describe("source walker", () => {
     expect(isInSkippedTree(".adhere/config.ts")).toBe(true);
   });
 
-  it("reads .ts, .tsx, .mts, and .cts files, but not declaration files or JavaScript", () => {
-    for (const name of ["a.ts", "Button.tsx", "a.mts", "a.cts"]) {
+  it("admits every file but declaration files, config files, and our own tree, whatever its extension", () => {
+    for (const name of [
+      "a.ts",
+      "Button.tsx",
+      "a.mts",
+      "a.cts",
+      "a.js",
+      "a.jsx",
+      "a.mjs",
+      "a.py",
+      "a.json",
+      "README.md",
+      "Makefile",
+    ]) {
       expect(isScannable(`/repo/src/${name}`, "/adhere")).toBe(true);
     }
-    for (const name of ["a.d.ts", "a.d.mts", "a.d.cts", "a.js", "a.jsx", "a.mjs"]) {
+    for (const name of ["a.d.ts", "a.d.mts", "a.d.cts"]) {
       expect(isScannable(`/repo/src/${name}`, "/adhere")).toBe(false);
     }
+    expect(isScannable("/repo/adhere.config.ts", "/adhere")).toBe(false);
+    expect(isScannable("/repo/.adhere.config.ts", "/adhere")).toBe(false);
+    expect(isScannable("/adhere/src/a.ts", "/adhere")).toBe(false);
+    // A credential name is a file's own name, never a directory above it.
+    expect(isScannable("/repo/src/.env.local", "/adhere")).toBe(false);
+    expect(isScannable("/repo/.env.d/loader.ts", "/adhere")).toBe(true);
+    expect(isScannable("/home/u/.env.work/repo/src/a.ts", "/adhere")).toBe(true);
   });
 
-  it("counts .test.ts and .spec.ts files, and files under a test directory, as tests", () => {
+  it("counts .test and .spec files of any extension, and files under a test directory, as tests", () => {
     expect(isTestFile("src/a.test.ts")).toBe(true);
     expect(isTestFile("src/a.spec.ts")).toBe(true);
     expect(isTestFile("src/Button.test.tsx")).toBe(true);
@@ -487,5 +598,12 @@ describe("source walker", () => {
     expect(isTestFile("src/tester/TestRun.ts")).toBe(false);
     expect(isTestFile("src/test-runs/test-draft.ts")).toBe(false);
     expect(isTestFile("src/AWS/B2BI/TestConversionHttp.ts")).toBe(false);
+    expect(isTestFile("src/a.test.js")).toBe(true);
+    expect(isTestFile("src/example.spec.py")).toBe(true);
+    expect(isTestFile("src/ledger.fixture.py")).toBe(true);
+    expect(isTestFile("src/linear-test-helpers.js")).toBe(true);
+    expect(isTestFile("src/fixtures.json")).toBe(true);
+    // Python's test_ prefix is not a naming rule this walker reads.
+    expect(isTestFile("src/test_example.py")).toBe(false);
   });
 });

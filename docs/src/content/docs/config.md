@@ -125,19 +125,28 @@ preset's name, as in `alchemy/providers/idempotent-delete`:
 
 ```ts
 export default defineConfig({
-  presets: ["effect", "alchemy"],
+  presets: ["effect", "alchemy", "security"],
   overrides: {
     "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
     "effect/basics/instrument-with-pipe": "off",
+    "security/parameterized-queries": { paths: ["apps/api/**", "packages/db/**"] },
   },
 });
 ```
 
-| Value                           | Effect                                                                                                     |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `"off"`                         | drops the rule                                                                                             |
-| `"warning"`, `"error"`          | sets its level                                                                                             |
-| `{ level, threshold, options }` | sets any of them; `options` only for a rule that takes them ([options](/adhere/state-hooks/#rule-options)) |
+| Value                                  | Effect                                                                                                     |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `"off"`                                | drops the rule                                                                                             |
+| `"warning"`, `"error"`                 | sets its level                                                                                             |
+| `{ level, threshold, options, paths }` | sets any of them; `options` only for a rule that takes them ([options](/adhere/state-hooks/#rule-options)) |
+
+`paths` says where in this repository a rule applies: globs from the repository
+root, as a rule's own `include.paths` are. The rule then judges only the files
+they match, among those it takes itself by its own `include` and `exclude`. Use
+it to apply a preset rule, or a rule shared between repositories, to the part
+of your tree it is relevant to, without editing the rule. It narrows only: a
+file the rule's own filters leave out stays out. A transcript rule judges no
+file, so paths for one refuse the run.
 
 An id that no preset or project rule has refuses the run, so a typo does not go
 unnoticed. A rule of a preset that the run does not name is accepted.

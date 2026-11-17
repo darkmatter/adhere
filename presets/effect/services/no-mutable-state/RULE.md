@@ -1,5 +1,6 @@
 ---
 description: The interface a Context.Service exposes must hold only readonly members, never writable fields or mutable state, such as a Map, Set, or array, that its consumers could change, even through a readonly property.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 State the service's implementation keeps behind its operations is not part of

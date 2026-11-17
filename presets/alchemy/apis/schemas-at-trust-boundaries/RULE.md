@@ -1,5 +1,6 @@
 ---
 description: Input from outside the stack, such as browsers, partners, or public URLs, should be validated with a schema through Effect RPC or HttpApi, while calls between the stack's own runtimes should use schemaless RPC through bindings, and unvalidated payloads should not cross a trust boundary.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Should

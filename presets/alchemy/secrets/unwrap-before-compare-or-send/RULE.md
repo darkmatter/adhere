@@ -1,5 +1,6 @@
 ---
 description: A Redacted value must be unwrapped with Redacted.value before it is compared, sent, or serialized, never put into a template literal, string concatenation, String(), or JSON, where it becomes the literal text <redacted> and silently fails every check.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

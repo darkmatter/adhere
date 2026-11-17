@@ -1,5 +1,6 @@
 ---
 description: In a Workflow or Durable Function, every side effect, such as an HTTP call, binding call, or write, must run inside a task or step, and code outside steps must be deterministic, never doing I/O or reading the clock or randomness, because the body replays.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

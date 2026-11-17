@@ -10,11 +10,11 @@ import { clearingStatus, countOf, Status } from "#services/Status.ts";
 /** A source path and its classification, without retaining its contents. */
 export type SourceFile = Pick<ScannedFile, "path" | "test">;
 
-/** Walks the repository's TypeScript source, skipping what is not ours to read. */
+/** Walks the repository's files, skipping what is not ours to read. */
 export class SourceWalker extends Context.Service<
   SourceWalker,
   {
-    /** Every TypeScript path under the audit's roots, in directory order, with tests marked. */
+    /** Every scannable path under the audit's roots, in directory order, with tests marked. */
     readonly files: Effect.Effect<ReadonlyArray<SourceFile>, WalkUnavailable>;
     /** Reads one path on demand. An unreadable file refuses the audit rather than leaving a gap. */
     readonly read: (file: SourceFile) => Effect.Effect<ScannedFile, WalkUnavailable>;
@@ -53,23 +53,28 @@ export const passesFilter = (relative: string, patterns: ReadonlyArray<string>):
 };
 
 /**
- * A fixture or test helper named as one: `fixtures.ts`, `GitHubHttpFixtures.ts`,
- * `ledger-copy.fixture.ts`, `linear-test-helpers.ts`, `GitHubHttpTestUtils.ts`.
+ * A fixture or test helper named as one, with any extension: `fixtures.json`,
+ * `GitHubHttpFixtures.ts`, `ledger-copy.fixture.py`, `linear-test-helpers.js`.
  * "test" starts a word, so `latest-utils.ts` is not one.
  */
 const TEST_SUPPORT_NAME =
-  /(?:[fF]ixtures?|(?:(?:^|[-_.])[tT]est[-_]?|[a-z]Test)(?:[hH]elpers?|[uU]tils?))\.[cm]?tsx?$/;
+  /(?:[fF]ixtures?|(?:(?:^|[-_.])[tT]est[-_]?|[a-z]Test)(?:[hH]elpers?|[uU]tils?))\.[^.]+$/;
 
-/** A TypeScript source file: `.ts`, `.tsx`, `.mts`, or `.cts`. */
-const SOURCE = /\.(?:tsx?|mts|cts)$/;
 /** A declaration file: `.d.ts`, `.d.mts`, or `.d.cts`. */
 const DECLARATION = /\.d\.[cm]?ts$/;
-/** A test by its name: `a.test.ts`, `Button.spec.tsx`. */
-const TEST_NAME = /\.(?:test|spec)\.[cm]?tsx?$/;
+/**
+ * A file that holds credentials, never read into an audit: `.env` and `.env.*`
+ * (`.env.example` too, conservatively), `.npmrc`, `.netrc`, `*.pem`, `*.key`, and
+ * `secrets.yaml`, `secrets.yml`, or `secrets.json` by exact name.
+ */
+const SENSITIVE =
+  /(?:^|\/)(?:\.env(?:\.[^/]+)?|\.npmrc|\.netrc|secrets\.ya?ml|secrets\.json|[^/]*\.(?:pem|key))$/;
+/** A test by its name, with any extension: `a.test.js`, `Button.spec.tsx`. */
+const TEST_NAME = /\.(?:test|spec)\.[^.]+$/;
 
 /**
  * Whether a path, relative to the working directory, is a test: a `.test` or
- * `.spec` file, such as `a.test.ts` or `Button.spec.tsx`, a fixture or test
+ * `.spec` file, such as `a.test.js` or `example.spec.py`, a fixture or test
  * helper named as one, or any file under a test directory such as `test/`.
  */
 export const isTestFile = (relative: string): boolean => {
@@ -86,8 +91,8 @@ const isInside = (file: string, root: string): boolean =>
   file === root || file.startsWith(`${root}/`);
 
 export const isScannable = (file: string, self: string): boolean =>
-  SOURCE.test(file) &&
   !DECLARATION.test(file) &&
+  !SENSITIVE.test(file) &&
   !file.endsWith("/adhere.config.ts") &&
   !file.endsWith("/.adhere.config.ts") &&
   // The audit's own detector patterns are data, not violations of themselves.

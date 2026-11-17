@@ -1,5 +1,6 @@
 ---
 description: A migration runner must connect with the database's direct URL, never Hyperdrive's runtime connection string or an Accelerate or pooled URL.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

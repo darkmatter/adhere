@@ -1,5 +1,6 @@
 ---
 description: A config value with constraints must be validated as it is read, with Config.schema or Config.mapEffect, never checked by hand after reading.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

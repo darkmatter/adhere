@@ -5,6 +5,7 @@ import {
   type RuleId,
   type RuleSource,
   SKIPPED_DIRECTORIES,
+  typeOf,
 } from "#config.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { walkFiles } from "#walk.ts";
@@ -230,9 +231,10 @@ export const globalRuleSet = (rules: Readonly<Record<RuleId, Rule>>, root: strin
 /**
  * The rules as a config's overrides leave them, each found by the id a report
  * names it with: a rule set `off` gone, and any other with the level and
- * threshold its override gives, over its own, and its `options` decoded by
- * the rule's schema, `{}` when unset. Options a rule does not take, or that
- * do not decode, refuse the run.
+ * threshold its override gives, over its own, its `options` decoded by the
+ * rule's schema, `{}` when unset, and the `paths` this repository narrows it
+ * to. Options a rule does not take, or that do not decode, refuse the run, as
+ * do paths for a transcript rule, which judges no file.
  */
 export const withOverrides = Effect.fn("withOverrides")(function* (
   entries: RuleSet,
@@ -242,12 +244,23 @@ export const withOverrides = Effect.fn("withOverrides")(function* (
     Effect.gen(function* () {
       const id = shownId(entry);
       const override = overrides[id];
-      const { level, threshold, options }: Exclude<Override, string> =
-        typeof override === "string" ? { level: override } : (override ?? {});
+      const {
+        level,
+        threshold,
+        options,
+        paths = [],
+      }: Exclude<Override, string> = typeof override === "string"
+        ? { level: override }
+        : (override ?? {});
       if (level === "off") return [];
       if (entry.rule.options === undefined && options !== undefined) {
         return yield* ConfigUnavailable.make({
           message: `overrides sets options for ${id}, which takes none.`,
+        });
+      }
+      if (typeOf(entry.rule) === "transcript" && paths.length > 0) {
+        return yield* ConfigUnavailable.make({
+          message: `overrides sets paths for ${id}, a transcript rule, which judges no file.`,
         });
       }
       const optionValues =
@@ -265,6 +278,7 @@ export const withOverrides = Effect.fn("withOverrides")(function* (
         ...(level === undefined ? {} : { level }),
         ...(threshold === undefined ? {} : { threshold }),
         ...(optionValues === undefined ? {} : { optionValues }),
+        ...(paths.length === 0 ? {} : { overridePaths: paths }),
       };
       return [{ ...entry, rule }];
     }),

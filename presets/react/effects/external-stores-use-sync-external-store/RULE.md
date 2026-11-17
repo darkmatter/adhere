@@ -1,6 +1,7 @@
 ---
 description: A component or hook that reads a value from a store outside React, such as a browser API like `navigator.onLine` or a store module, should subscribe to it with `useSyncExternalStore`, and should not copy the value into state from a subscription an effect sets up.
 appliesTo: ["a React component or hook"]
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Should
