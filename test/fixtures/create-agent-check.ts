@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { Effect, Schema } from "effect";
 import { askAgent } from "../../src/create/agents.ts";
 import { Candidates, PluginDraft, Shape } from "../../src/create/ask.ts";
+import { run } from "../../src/create/agents.ts";
 import {
   enabledNative,
   nativeSetting,
@@ -124,6 +125,15 @@ const failed = await Effect.runPromise(
     { ...answer, invalid: [{ code: "const foo = 1;", errors: [{ message: "Wrong." }] }] },
     process.cwd(),
   ),
+);
+const stdoutDiagnostics = await run(
+  process.execPath,
+  ["-e", "process.stdout.write('provider rate limited'); process.exit(1)"],
+  process.cwd(),
+  "",
+).then(
+  () => false,
+  (error: unknown) => error instanceof Error && error.message.includes("provider rate limited"),
 );
 
 const completeNative: Record<string, unknown> = {
@@ -341,5 +351,6 @@ console.log(
     passed: passed._tag,
     failed: failed._tag,
     failedProblems: failed._tag === "Failed" ? failed.problems.length : 0,
+    stdoutDiagnostics,
   }),
 );

@@ -59,6 +59,7 @@ describe("create rule checks", () => {
       passed: "Passed",
       failed: "Failed",
       failedProblems: 1,
+      stdoutDiagnostics: true,
     });
   });
 });

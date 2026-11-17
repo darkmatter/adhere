@@ -61,7 +61,13 @@ export const run = async (
     new Response(child.stderr).text(),
     child.exited,
   ]);
-  if (code !== 0) throw new Error(`${command} exited ${code}: ${stderr.trim().slice(-500)}`);
+  if (code !== 0) {
+    const diagnostics = [stderr, stdout]
+      .map((output) => output.trim())
+      .filter(Boolean)
+      .join("\n");
+    throw new Error(`${command} exited ${code}: ${diagnostics.slice(-500)}`);
+  }
   return stdout;
 };
 
