@@ -81,6 +81,8 @@ arms' exact wording, the results, and what was decided.
 `repos/` shows what `adhere lint` reports when run on other codebases, one
 directory per repo and one file per rule.
 
+- [agents](repos/agents/README.md): 28 verified false positives across seven
+  Effect rules in adhere 0.25.0; 18 concerned dependency wiring.
 - [alchemy](repos/alchemy/README.md): 3,083 findings from 45 rules of adhere
   0.9.5's `effect` and `alchemy` presets, on alchemy-run/alchemy at `8a284d0`.
 
