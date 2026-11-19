@@ -109,6 +109,31 @@ still opens every JavaScript and TypeScript file, for its imports.
 | `--log-level <level>`                                    | Log the run's work on stderr. See [Logging a run](#logging-a-run).                                                                                   |
 | `--json`, `--md`                                         | Write one JSON or Markdown file per violated rule to `.adhere/reports/`.                                                                             |
 | `--stdout`                                               | Print one combined report instead of files; use with `--json` or `--md`.                                                                             |
+| `--github`                                               | Print GitHub Actions annotations for code findings.                                                                                                  |
+
+## GitHub pull request annotations
+
+In an existing GitHub Actions workflow triggered by `pull_request`, add
+`--github` to the step that runs Adhere after checkout and installation. For
+example, a project that installs Adhere with npm can use this step:
+
+```yaml
+- name: Adhere
+  run: npm exec -- adhere lint --yes --github
+  env:
+    TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+```
+
+Use the secret for your configured provider. Repository secrets are withheld
+from fork pull requests by default.
+[GitHub's fork workflow documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflows-in-forked-repositories)
+
+GitHub displays findings on matching lines in **Files changed**. The Actions
+step log includes all findings and run counts, even when GitHub reaches its
+limit of 10 error and 10 warning annotations per step. Adhere's usual exit
+codes apply, including `--deny-warnings`. Use `--github` on its own as the
+report format for code lint.
+[GitHub's annotation limits](https://docs.github.com/en/rest/checks/runs)
 
 ## JSON and Markdown reports
 
