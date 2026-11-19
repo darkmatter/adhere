@@ -14,8 +14,8 @@
   --dm-muted-foreground: oklch(62.8% 0 0);
   --dm-zinc-200: oklch(92% 0.004 286.32);
   --dm-zinc-300: oklch(87.1% 0.006 286.286);
-  --dm-mint: oklch(0.84 0.1 165.84);
-  --dm-mint-light: oklch(0.93 0.05 165.84);
+  --dm-mint: oklch(95% 0.25 157.28);
+  --dm-mint-light: oklch(0.93 0.05 157.84);
   --dm-destructive: oklch(39.594% 0.1331 25.72);
 
   --sl-color-white: var(--dm-foreground);
