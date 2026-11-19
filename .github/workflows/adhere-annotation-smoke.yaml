@@ -1,0 +1,45 @@
+name: Adhere annotation smoke test
+
+on:
+  pull_request:
+    branches: [adhere-codeql-style-github-integration]
+
+permissions:
+  contents: read
+
+jobs:
+  annotate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+      - run: bun install --frozen-lockfile
+      - name: Adhere
+        run: |
+          cat > .adhere/config.ts <<'CONFIG'
+          export default {
+            reads: [],
+            rules: {
+              "smoke/inline": {
+                description: "Adhere annotation smoke test.",
+                must: "export const smoke = true;",
+                include: { names: ["github-annotation-smoke.ts"] },
+              },
+            },
+            provider: {
+              model: "annotation-smoke",
+              ask: async (_state, questions) => ({
+                answers: Object.fromEntries(questions.map((q) => [
+                  q.id, q.type === "choice" ? Object.keys(q.options)[0] : 1,
+                ])),
+              }),
+            },
+          };
+          CONFIG
+          bun src/main.ts lint --yes --github --filter github-annotation-smoke.ts
