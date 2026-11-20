@@ -3,6 +3,7 @@ import { type Kind, tokenize } from "#highlight.ts";
 import { shownId } from "#rules.ts";
 import type { AuditPlan, AuditResult, FileDone, Finding } from "#workflows/audit.ts";
 import type { TranscriptResult } from "#workflows/transcript.ts";
+import { relative, sep } from "node:path";
 
 /** What a report is of: a lint of files, or a check of a transcript in windows. */
 type Run = AuditResult | TranscriptResult;
@@ -422,6 +423,24 @@ export const render = (result: AuditResult, options: RenderOptions = {}): Readon
     ...blockedFiles(result, options.root),
   ].map((line) => serialize(line, options.color === true));
 };
+
+// GitHub's workflow command parser unescapes data and properties differently.
+const escapeCommandData = (text: string): string =>
+  text.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+
+const escapeCommandProperty = (text: string): string =>
+  escapeCommandData(text).replaceAll(":", "%3A").replaceAll(",", "%2C");
+
+export const renderGitHub = (result: AuditResult, workspace: string): string =>
+  [
+    ...result.findings.map((finding) => {
+      const file = escapeCommandProperty(relative(workspace, finding.file).split(sep).join("/"));
+      const title = escapeCommandProperty(shownId({ id: finding.rule, preset: finding.preset }));
+      const { first, last } = finding.lines ?? finding.section;
+      return `::${finding.level} file=${file},line=${first},endLine=${last},title=${title}::${escapeCommandData(finding.description)}`;
+    }),
+    ...summary(result).map((line) => serialize(line, false)),
+  ].join("\n");
 
 /** The complete result, with the same rule ids and relative paths as the text report. */
 export const renderJson = (result: Run, options: RenderOptions = {}): string =>

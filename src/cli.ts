@@ -24,6 +24,7 @@ import {
   type Progress,
   progressAfter,
   progressLine,
+  renderGitHub,
   renderJson,
   renderMarkdown,
   renderOptionsOf,
@@ -374,6 +375,10 @@ export const lintCommand = Command.make(
     rpm,
     filter,
     denyWarnings,
+    github: Flag.Boolean("github").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription("Print GitHub Actions annotations for code findings."),
+    ),
     json: Flag.Boolean("json").pipe(
       Flag.withDefault(false),
       Flag.withDescription(
@@ -452,7 +457,9 @@ export const lintCommand = Command.make(
         sufficiencyThreshold: plan.sufficiencyThreshold,
         ...(plan.provider === undefined ? {} : { provider: plan.provider }),
       };
-      if (!input.stdout && (input.json || input.md)) {
+      if (input.github) {
+        yield* Console.log(renderGitHub(result, process.env.GITHUB_WORKSPACE || options.root));
+      } else if (!input.stdout && (input.json || input.md)) {
         const fs = yield* FileSystem.FileSystem;
         const directory = path.join(options.root, ".adhere", "reports");
         const reports = renderRuleReports(result, input, options);
@@ -493,6 +500,16 @@ export const lintCommand = Command.make(
       },
       input.filter,
     ),
+  ),
+  Command.provideEffectDiscard((input) =>
+    input.github && (input.type === "transcript" || input.json || input.md || input.stdout)
+      ? Effect.fail(
+          CliError.UserError.make({
+            cause:
+              "--github is for code lint and cannot be combined with --type transcript, --json, --md, or --stdout.",
+          }),
+        )
+      : Effect.void,
   ),
 );
 

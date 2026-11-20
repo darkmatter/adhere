@@ -38,17 +38,17 @@ overwrites them.
 After that, using adhere is a short loop:
 
 1. **Work like you always do**. When you notice slop, run `adhere rules create`
-2. **Build your rule** - How good of a result you get is determined almost 
+2. **Build your rule** - How good of a result you get is determined almost
    entirely by how well you write your rules. Your effort should be mostly spent on improving your rules.
 3. **Run `adhere lint`.** It says what it found and what judging takes, and
    asks before it sends anything: see [Running lint](/adhere/running-lint/).
-6. **Read the findings.** Each finding names the rule, Jev's probability, and
+4. **Read the findings.** Each finding names the rule, Jev's probability, and
    the lines it points at: see [Reading the report](/adhere/reading-the-report/).
-7. **Fix the code, the rule, or neither.** A wrong finding is usually the
+5. **Fix the code, the rule, or neither.** A wrong finding is usually the
    rule's wording reaching too far: see
    [Writing good rules](/adhere/writing-good-rules/). Suppress a finding that is wrong
    for this code alone with a comment that says why: see
    [Comments and suppressions](/adhere/comments-and-suppressions/).
-8. **Commit `.adhere/`, cache included.** Judgments are cached by file content
+6. **Commit `.adhere/`, cache included.** Judgments are cached by file content
    and rule text, so the next run, and CI, only pay for what changed: see
    [Cache](/adhere/cache/).
