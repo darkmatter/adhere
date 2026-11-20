@@ -373,7 +373,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Set up the repo's package manager and install, from the table below.
-      - run: pnpm exec adhere lint --yes # the manager's way of running adhere
+      - run: pnpm exec adhere lint --yes --github # the manager's way of running adhere
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
 ```
@@ -401,14 +401,16 @@ the user ran:
 
 ```yaml
 - run: |
-    curl -fsSL -o "$RUNNER_TEMP/adhere" https://github.com/darkmatter/adhere/releases/download/v0.14.0/adhere-$(uname -s)-$(uname -m)
+    curl -fsSL -o "$RUNNER_TEMP/adhere" "https://github.com/darkmatter/adhere/releases/download/$ADHERE_TAG/adhere-$(uname -s)-$(uname -m)"
     chmod +x "$RUNNER_TEMP/adhere"
-    "$RUNNER_TEMP/adhere" lint --yes
+    "$RUNNER_TEMP/adhere" lint --yes --github
   env:
+    ADHERE_TAG: vX.Y.Z # replace with the tested release tag
     TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
 ```
 
-Add `--deny-warnings` if the user wants warnings to fail the job too. Match
+Check that the pinned version lists `--github` in `adhere lint --help` before
+adding the flag to an existing installation. Add `--deny-warnings` if the user wants warnings to fail the job too. Match
 the branch to the repo's default branch. For another CI system, write the
 same job: check out, install, run adhere's `lint --yes` with the key from a
 secret.
