@@ -30,6 +30,7 @@ adhere lint                      # judge the working directory; exit 1 on an err
 adhere lint --limit 0            # compiler-free counts/cache plan; no budgeting
 adhere lint --limit 100          # first 100 files needing requests; all pending rules per file
 adhere lint --yes                # send without asking, as in CI
+adhere lint --yes --github       # annotate changed lines in GitHub pull requests
 adhere lint --type-aware         # opt in to both compiler symbols and declaration references
 adhere lint --preset effect      # add a built-in rule set; the config becomes optional
 adhere lint --filter 'src/**'    # read only matching files; repeat, and ! to leave out

@@ -1,11 +1,16 @@
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vite-plus/test";
 import type { AuditResult } from "../src/workflows/audit.ts";
-import { renderJson, renderMarkdown, renderRuleReports } from "../src/workflows/format.ts";
+import {
+  renderGitHub,
+  renderJson,
+  renderMarkdown,
+  renderRuleReports,
+} from "../src/workflows/format.ts";
 import { findingA } from "./audit.fixtures.ts";
 
 const result: AuditResult = {
@@ -20,6 +25,35 @@ const result: AuditResult = {
 };
 
 describe("report formats", () => {
+  it("prints GitHub annotations with the best line range and escaped fields", () => {
+    const { lines, ...unlocated } = findingA;
+    const report = renderGitHub(
+      {
+        ...result,
+        findings: [
+          { ...findingA, lines: { ...lines, last: 3 } },
+          {
+            ...unlocated,
+            file: "/repo/packages/app/src/port,:%0A\r\n.ts",
+            rule: "ports,:%",
+            preset: "effect",
+            description: "Check 10%, then retry:\r\n::warning::literal",
+            level: "warning",
+          },
+        ],
+      },
+      "/repo",
+    );
+    expect(report.split("\n")).toEqual([
+      "::error file=src/server.ts,line=2,endLine=3,title=a::Ports are branded.",
+      "::warning file=packages/app/src/port%2C%3A%250A%0D%0A.ts,line=1,endLine=3,title=effect/ports%2C%3A%25::Check 10%25, then retry:%0D%0A::warning::literal",
+      "Found 1 error and 1 warning.",
+      "7 files, 1 judged, 2 cached, 1 skipped, 2 waiting, 1 blocked, 3 suppressed.",
+    ]);
+    const all = renderGitHub({ ...result, findings: Array(12).fill(findingA) }, "/repo");
+    expect(all.match(/^::error /gm)).toHaveLength(12);
+  });
+
   it("keeps the full JSON result and thresholds with relative paths and preset rule ids", () => {
     const json = renderJson(
       { ...result, findings: [{ ...findingA, preset: "effect" }] },
@@ -103,7 +137,10 @@ describe("report formats", () => {
 const execFileAsync = promisify(execFile);
 const main = join(process.cwd(), "src/main.ts");
 const lint = (root: string, ...flags: ReadonlyArray<string>) =>
-  execFileAsync("bun", [main, "lint", ...flags], { cwd: root }).then(
+  execFileAsync("bun", [main, "lint", ...flags], {
+    cwd: root,
+    env: { ...process.env, GITHUB_WORKSPACE: "" },
+  }).then(
     (output) => ({ ...output, code: 0 }),
     (error: { readonly stdout: string; readonly stderr: string; readonly code: number }) => error,
   );
@@ -131,6 +168,51 @@ const configure = (root: string, probability: number, level: "error" | "warning"
   );
 
 describe("lint reports", () => {
+  it("prints GitHub findings before failing and omits them for plan-only runs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "adhere-github-"));
+    try {
+      await mkdir(join(root, ".adhere"));
+      await writeFile(join(root, "a.ts"), "export const a = 3000;\n");
+      await configure(root, 0.95, "error");
+      const errors = await lint(root, "--github");
+      expect(errors.code).toBe(1);
+      expect(errors.stdout).toContain("::error file=a.ts,line=1,endLine=1,title=");
+      expect(errors.stdout).toContain("Found 2 errors.");
+
+      const planned = await lint(root, "--github", "--limit", "0");
+      expect(planned.code).toBe(0);
+      expect(planned.stdout).toBe("");
+
+      await configure(root, 0.95, "warning");
+      const warnings = await execFileAsync("bun", [main, "lint", "--github"], {
+        cwd: root,
+        env: { ...process.env, GITHUB_WORKSPACE: dirname(root) },
+      });
+      expect(warnings.stdout).toContain(`::warning file=${basename(root)}/a.ts,line=1,`);
+      const denied = await lint(root, "--github", "--deny-warnings");
+      expect(denied.code).toBe(1);
+      expect(denied.stdout.match(/^::warning /gm)).toHaveLength(2);
+      expect(await readdir(join(root, ".adhere"))).not.toContain("reports");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([["--json"], ["--md"], ["--stdout"], ["--type", "transcript"]])(
+    "rejects --github with %j before loading a project",
+    async (...flags) => {
+      const root = await mkdtemp(join(tmpdir(), "adhere-github-options-"));
+      try {
+        const refused = await lint(root, "--github", ...flags);
+        expect(refused.code).toBe(1);
+        expect(refused.stdout).toBe("");
+        expect(refused.stderr).toContain("--github is for code lint and cannot be combined");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
   it.each([
     { flags: ["--json"], names: ["data%2Fports.json", "data_ports.json"] },
     { flags: ["--md"], names: ["data%2Fports.md", "data_ports.md"] },
