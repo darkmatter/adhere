@@ -1,5 +1,6 @@
 ---
 description: A runtime should bind the narrowest capability its calls need, a Read or Write binding when it only reads or only writes, and should not bind ReadWrite for one-sided use.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Should

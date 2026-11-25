@@ -1,5 +1,6 @@
 ---
 description: Connections, pools, sockets, and anything else with a finalizer must be acquired inside a handler or method, where the event's scope releases them, never at module scope or in a runtime's construction Effect, whose finalizers may never run.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

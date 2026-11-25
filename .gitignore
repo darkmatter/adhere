@@ -2,8 +2,11 @@ node_modules/
 dist/
 *.tsbuildinfo
 .adhere/cache/
+.adhere/reports/
 .env
 .env.*
 !.envrc
 .direnv/
 .vitest/
+.agents
+.astro/

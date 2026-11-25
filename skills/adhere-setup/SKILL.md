@@ -25,10 +25,10 @@ the `packageManager` field in `package.json` names it; with neither, **Ask**.
 
 | Manager | Add adhere                       | Run adhere         |
 | ------- | -------------------------------- | ------------------ |
-| bun     | `bun add -D @drkmttr/adhere`     | `bunx adhere`      |
+| bun     | `bun add -D @drkmttr/adhere`     | `bun run adhere`   |
 | pnpm    | `pnpm add -D @drkmttr/adhere`    | `pnpm exec adhere` |
 | yarn    | `yarn add -D @drkmttr/adhere`    | `yarn adhere`      |
-| npm     | `npm install -D @drkmttr/adhere` | `npx adhere`       |
+| npm     | `npm install -D @drkmttr/adhere` | `npm exec adhere`  |
 
 In a repo with a `package.json`, add adhere as a dev dependency with its
 manager, so the repo pins the version the team and CI run. From then on,
@@ -37,12 +37,14 @@ wherever this skill says `adhere`, run it the manager's way, as in
 
 With pnpm, at a workspace root, add `--ignore-workspace-root-check`.
 
-Default lint reads code and `workspacePackages` without starting a compiler.
+Default lint reads code and `workspacePackages` without starting a compiler,
+and leaves out bundled preset rules that declare `symbols` or `references`.
 `typeAware` defaults to `false`; `typeAware: true` or `--type-aware` opts into
-both `symbols` and `references`, regardless of `reads`. `reads` now controls
-workspace context only, defaulting to `["workspacePackages"]`; legacy native
-reader entries alone do not opt in. Code alone uses `reads: []` with type
-awareness off. Explain the extra context/cost and **Ask** before opting in.
+both `symbols` and `references`, regardless of `reads`, and includes those
+rules. `reads` now controls workspace context only, defaulting to
+`["workspacePackages"]`; legacy native reader entries alone do not opt in.
+Code alone uses `reads: []` with type awareness off. Explain the extra
+context/cost and **Ask** before opting in.
 
 With type awareness enabled, native TypeScript starts only during execution,
 after confirmation, when pending judgments or cached findings needing location
@@ -56,17 +58,18 @@ and validate do not start the compiler.
 In a repo without a `package.json`, inspect any `adhere` on PATH with
 `adhere --version`, then **Ask** whether to use the npm/Bun package launcher
 or a raw executable for the same default compiler-free audit. The raw release
-(`adhere-Windows-x86_64.exe` on Windows) needs no Node or package manager and
-runs with workspace context without special configuration. It cannot run a
-type-aware audit: use the package launcher or a checkout if the user opts in.
-Do not silently turn off an explicitly chosen `typeAware` setting. Only fetch
-the raw release after the user chooses that alternative:
+needs no Node or package manager and runs with workspace context without
+special configuration. It cannot run a type-aware audit: use the package
+launcher or a checkout if the user opts in. Do not silently turn off an
+explicitly chosen `typeAware` setting. Only fetch the raw release after the
+user chooses that alternative. On macOS and Linux:
 
 ```sh
-curl -fsSL --create-dirs -o ~/.local/bin/adhere \
-  https://github.com/darkmatter/adhere/releases/latest/download/adhere-$(uname -s)-$(uname -m)
-chmod +x ~/.local/bin/adhere
+curl -fsSL https://github.com/darkmatter/adhere/raw/main/scripts/install.sh | sh
 ```
+
+On Windows, download `adhere-Windows-x86_64.exe` from
+https://github.com/darkmatter/adhere/releases/latest.
 
 Validate and lint's paid requests need a TypeSafe AI API key: `TYPESAFE_API_KEY`,
 or one saved by `adhere login`, which the user runs; never ask for the key in
@@ -90,7 +93,10 @@ from and the evidence.
 
 Keep only conventions that need judgment: about intent, shape, or placement.
 Drop any a regex, an import check, or the type checker could flag every time,
-and note where it belongs instead. Drop any a preset below already covers.
+and note where it belongs instead: a native Oxlint rule, or a convention a
+small syntax-only Oxlint JS plugin could decide. `adhere rules create` routes
+those two, and leaves the rest to adhere. Drop any a preset below already
+covers.
 
 **Presets.** Match the stack: `typescript` for TypeScript, `react` for React,
 `security` for code that handles secrets, SQL, shell commands, or paths,
@@ -99,16 +105,19 @@ and note where it belongs instead. Drop any a preset below already covers.
 https://github.com/darkmatter/adhere/tree/main/presets, to describe them and
 to avoid drafting duplicates.
 
-**A shared repo.** **Ask** whether the organization keeps adhere rules in a
-repo. If it does, `adhere list org/repo` prints its rules with their
-descriptions.
+**A shared repo.** **Ask** whether the organization keeps adhere instructions,
+rules, or lint settings in a repo. If it does, `adhere list org/repo` prints
+its rules with their descriptions; its instruction files and `oxlint/` package
+are separate, and `adhere install` offers the instruction files too.
 
 ## 3. Draft the repo's rules
 
 Write each repo candidate as a rule file, worded as the adhere skill says: one
 sentence with "must" and "never" (or "should" and "should not"), one `must`
 block of real code from the repo, and one `never` block, ideally a violation
-from the repo or its history.
+from the repo or its history. Give every draft `include.names`, the file names
+it applies to, such as `include: {"names": ["*.ts", "*.tsx"]}`: a rule without
+it judges every kind of file in the repo, and lint warns.
 
 Write the drafts outside the repo, in a scratch directory such as
 `$(mktemp -d)/<topic>/<slug>/RULE.md`, so nothing lands in `.adhere/` before the
@@ -130,7 +139,8 @@ Presets
 From acme/standards
   5. data/brand-ports          A port must be a branded, range-checked integer, never a bare number.
 Dropped as a linter's job
-  - "no default exports": eslint import/no-default-export
+  - "no default exports": native oxlint import/no-default-export
+  - "no local date formatting": custom syntax-only oxlint plugin
 ```
 
 For a preset, offer the whole preset or its topics. Show a draft's full text
@@ -151,8 +161,30 @@ the wording of any. Revise drafts the user wants changed and show them again.
   workspace context, not native maps. Only replace `reads` if the user chooses
   to limit workspace context. If requested type awareness lacks compiler resources,
   use the package launcher or a checkout; do not silently turn it off.
-- Install chosen shared rules: `adhere install org/repo/<id>` for each, or
-  `adhere install org/repo` for all of them. They land in `.adhere/rules/org/repo/`.
+- Copy chosen shared instructions and rules: run `adhere install org/repo` and
+  let the user pick at the terminal, or add `--all` only when they chose
+  everything (the non-interactive path). Name an exact rule to copy it without
+  asking. Instruction files land in `.adhere/instructions/org/repo/` and rules
+  in `.adhere/rules/org/repo/`; `adhere postinstall` renders the instructions,
+  copied files first.
+- **Ask** before adding the shared repo's lint package: pin it as a git
+  dependency at the repo-wide tag, then spread `@org/repo/oxlint` into the
+  project's Vite+ lint block or `oxlint.config.ts`. It is a package, not an
+  `adhere install` copy. Project plugins live in `.adhere/oxlint/`.
+- For a chosen linter candidate, run `adhere rules create "<convention>"` and
+  follow its route. A native Oxlint rule must be one of adhere's catalog ids;
+  an unknown id is rejected. It must carry the rule's exact option values when
+  it takes options; adhere prints `["error", ...options]`, never a bare
+  `"error"` that would enforce nothing. It prints the config for the user's lint
+  config, and adhere does not edit it. A custom syntax-only plugin is shown with
+  valid and invalid examples and runs nothing until approved, then its tests
+  use the project's Oxlint through `oxlint/plugins-dev` or
+  `vite-plus/lint/plugins-dev`. That needs its own Oxlint or Vite+ and Node 22
+  or newer on `PATH`; Oxlint's RuleTester refuses Bun and older Node, and
+  without it nothing is written and no repair is attempted. One failed run goes
+  back to the agent for repair; the user approves the repaired plugin, and it
+  runs again. Project files go to `.adhere/oxlint/` as `.mjs`; shared files go
+  to `oxlint/plugins/` as `.js` on a branch for a pull request.
 - Add `exclude` globs for generated or vendored code the default skips miss.
 
 ## 6. Validate
@@ -163,8 +195,10 @@ adhere validate
 
 It reports rules worded against the tips, rules a linter could check, and
 contradictions between rules that apply to the same files. Fix the wording
-yourself. For a linter-checkable rule or a contradiction, **Ask** the user
-which to keep, and apply it. Run it again until it reports no contradictions.
+yourself. For a linter-checkable rule, **Ask** whether to move it to a native
+Oxlint rule or an approved syntax-only plugin, or keep it as an adhere rule.
+For a contradiction, **Ask** which rule to keep and apply the change. Run it
+again until it reports no contradictions.
 
 ## 7. The first lint
 
@@ -339,7 +373,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Set up the repo's package manager and install, from the table below.
-      - run: pnpm exec adhere lint --yes # the manager's way of running adhere
+      - run: pnpm exec adhere lint --yes --github # the manager's way of running adhere
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
 ```
@@ -367,14 +401,16 @@ the user ran:
 
 ```yaml
 - run: |
-    curl -fsSL -o "$RUNNER_TEMP/adhere" https://github.com/darkmatter/adhere/releases/download/v0.14.0/adhere-$(uname -s)-$(uname -m)
+    curl -fsSL -o "$RUNNER_TEMP/adhere" "https://github.com/darkmatter/adhere/releases/download/$ADHERE_TAG/adhere-$(uname -s)-$(uname -m)"
     chmod +x "$RUNNER_TEMP/adhere"
-    "$RUNNER_TEMP/adhere" lint --yes
+    "$RUNNER_TEMP/adhere" lint --yes --github
   env:
+    ADHERE_TAG: vX.Y.Z # replace with the tested release tag
     TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
 ```
 
-Add `--deny-warnings` if the user wants warnings to fail the job too. Match
+Check that the pinned version lists `--github` in `adhere lint --help` before
+adding the flag to an existing installation. Add `--deny-warnings` if the user wants warnings to fail the job too. Match
 the branch to the repo's default branch. For another CI system, write the
 same job: check out, install, run adhere's `lint --yes` with the key from a
 secret.
@@ -401,9 +437,11 @@ This needs the cache committed on the base branch first.
 
 Tell the user:
 
-- the rules imported, by source, and where they are;
+- the rules imported, by source, and where they are, plus any shared
+  instruction files copied and the `oxlint/` package pinned;
 - the presets and shared repo named in the config or installed;
-- the candidates dropped as a linter's job, with where each belongs;
+- the candidates routed to native Oxlint, an approved plugin, or an adhere
+  rule, and which config registers each;
 - the last lint's findings, and what was fixed, made a warning, or suppressed;
 - the CI workflow and whether the secret is set;
 - what is left for them: pushing, setting the secret, fixing remaining findings.

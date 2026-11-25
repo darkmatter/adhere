@@ -1,5 +1,6 @@
 ---
 description: The result of a parameterized layer constructor must be stored in a module constant before it is used in more than one place, never constructed again for each use.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

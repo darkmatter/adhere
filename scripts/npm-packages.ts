@@ -26,9 +26,9 @@ process.chdir(new URL("../", import.meta.url).pathname);
 /**
  * `os` and `cpu` are Node's `process.platform` and `process.arch`, which the
  * launcher names the package from. `release` names the copy on the GitHub
- * release as `uname -s` and `uname -m` print the platform, so a shell fetches
- * its own as `adhere-$(uname -s)-$(uname -m)`. Windows, with no `uname`, is
- * named to match.
+ * release as `uname -s` and `uname -m` print the platform, so a shell, as in
+ * scripts/install.sh, fetches its own as `adhere-$(uname -s)-$(uname -m)`.
+ * Windows, with no `uname`, is named to match.
  */
 const platforms = [
   { os: "darwin", cpu: "arm64", target: "bun-darwin-arm64", release: "adhere-Darwin-arm64" },

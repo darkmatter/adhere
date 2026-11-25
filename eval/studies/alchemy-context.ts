@@ -35,7 +35,7 @@ import { SourceWalker } from "#services/SourceWalker.ts";
 
 import { walkFiles } from "#walk.ts";
 import { executeAudit, inScope, planAudit, type AuditResult } from "#workflows/audit.ts";
-import { BunRuntime, BunServices } from "@effect/platform-bun";
+import { BunCrypto, BunRuntime, BunServices } from "@effect/platform-bun";
 import { Console, Effect, FileSystem, Layer, Path, Result, Schema, Stream } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { ChildProcess } from "effect/process";
@@ -310,6 +310,7 @@ const configOf = (arm: Arm, rule: Rule, provider: Provider): ResolvedConfig => (
   reads: [],
   includeComments: false,
   maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+  transcript: { every: 8_000, keep: 20 },
   maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
   rules: { [ID]: rule },
   scopedRules: [{ id: ID, rule, scope: TARGET, preset: "alchemy" }],
@@ -1010,6 +1011,6 @@ const program = Effect.gen(function* () {
 program.pipe(
   Effect.scoped,
   Effect.timeout(process.argv[2] === "--plan" ? "3 minutes" : "20 minutes"),
-  Effect.provide(BunServices.layer),
+  Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest)),
   BunRuntime.runMain,
 );

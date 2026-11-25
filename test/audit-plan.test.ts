@@ -13,6 +13,7 @@ import {
   fixtureWalker,
   audit,
   findingA,
+  emptySourceReads,
 } from "./audit.fixtures.ts";
 
 import { Effect, Layer, Record } from "effect";
@@ -91,6 +92,7 @@ describe("plan", () => {
               sufficiencyThreshold: 0.7,
               maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
               maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+              transcript: { every: 8_000, keep: 20 },
               reads: [],
               rules,
             }),
@@ -105,6 +107,22 @@ describe("plan", () => {
     expect(planned.files.every((plan) => !Object.hasOwn(plan, "original"))).toBe(true);
     expect(JSON.stringify(planned)).not.toContain("export const bounded");
     expect(planned).toMatchObject({ checks: 128, deferred: 64, requests: 0, tokens: 0 });
+  });
+
+  it("does not enable the context a rule declares", async () => {
+    const files = [source];
+    const plain = await planOf({ rules: { a }, files, cache: memoryCache() });
+    const declared = await planOf({
+      rules: { a: { ...a, reads: ["dependents", "symbols"] } },
+      files,
+      cache: memoryCache(),
+    });
+    expect(declared.files[0]?.readState).toEqual({});
+    expect(declared.checks).toBe(plain.checks);
+    expect(declared.requests).toBe(plain.requests);
+    expect(declared.files[0]?.prepared.a?.fingerprint).toBe(
+      plain.files[0]?.prepared.a?.fingerprint,
+    );
   });
 
   it("refuses the whole audit without pruning when a later prefetched source read fails", async () => {
@@ -152,6 +170,7 @@ describe("plan", () => {
               sufficiencyThreshold: 0.7,
               maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
               maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+              transcript: { every: 8_000, keep: 20 },
               reads: [],
               rules,
             }),
@@ -352,6 +371,47 @@ describe("plan", () => {
     expect(jev.calls).toEqual({ judge: [], locate: [] });
   });
 
+  it("rechecks text-dependent filters when only a comment changed since planning", async () => {
+    const filtered = { ...a, include: { content: ["adhere-filter"] } };
+    const cache = memoryCache();
+    let current = { ...source, lines: ["// adhere-filter: before", ...source.lines] };
+    const walker = Layer.succeed(SourceWalker, {
+      files: Effect.succeed([{ path: source.path }]),
+      read: () => Effect.sync(() => current),
+    });
+    const planned = await planOf({ rules: { a: filtered }, files: [], cache, walker });
+    expect(planned.files).toHaveLength(1);
+
+    // A comment-only edit that still matches is sent under the unchanged code.
+    current = { ...source, lines: ["// adhere-filter: after", ...source.lines] };
+    const jev = recordingJev({ judge: { a: 0.9 }, locate: { a: 3 } });
+    const accepted = await Effect.runPromise(
+      executeAudit(planned).pipe(
+        Effect.provide(Layer.mergeAll(walker, cache, jev.layer, testCrypto)),
+      ),
+    );
+    expect(accepted.findings.map((finding) => finding.rule)).toEqual(["a"]);
+
+    // A plan that kept the cached finding still refuses after a comment-only edit leaves the filter out.
+    const cachedPlan = await planOf({ rules: { a: filtered }, files: [], cache, walker });
+    expect(cachedPlan.files[0]?.kept.a).toBeDefined();
+    current = { ...source, lines: ["// unrelated", ...source.lines] };
+    const refused = await Effect.runPromise(
+      Effect.result(executeAudit(cachedPlan)).pipe(
+        Effect.provide(
+          Layer.mergeAll(walker, cache, recordingJev({ judge: {}, locate: {} }).layer, testCrypto),
+        ),
+      ),
+    );
+    expect(refused).toMatchObject({
+      _tag: "Failure",
+      failure: {
+        _tag: "WalkUnavailable",
+        message: expect.stringContaining("content filters no longer apply"),
+      },
+    });
+  });
+
   it("judges a test file only by the rules that say tests, and leaves out a file no rule judges", async () => {
     const plain = { description: "Plain.", must: "plain()" };
     const onTests = { description: "On tests.", must: "tests()", tests: "only" as const };
@@ -410,6 +470,8 @@ describe("plan", () => {
         rules: { a },
         files: [imported],
         cache,
+        reads: ["workspacePackages"],
+        workspacePackages,
         jev: recordingJev({ judge: { a: 0.9 }, locate: {} }).layer,
       });
       const reads: Array<string> = [];
@@ -538,6 +600,7 @@ describe("plan", () => {
               sufficiencyThreshold: 0.7,
               maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
               maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+              transcript: { every: 8_000, keep: 20 },
               reads: [],
               rules,
             }),
@@ -676,6 +739,202 @@ describe("plan", () => {
     expect(second.findings).toEqual(first.findings);
   });
 
+  it("leaves out a pair whose own path and content filters reject it, before any cache lookup", async () => {
+    const filtered: Rules = {
+      a: { ...a, include: { paths: ["src/**"], content: ["process.env.PORT"] } },
+      b: { ...b, include: { paths: ["src/**"], content: ["^import"] } },
+    };
+    const planned = await planOf({
+      rules: filtered,
+      files: [source],
+      cache: memoryCache(),
+      root: "/repo",
+    });
+    expect(planned.checks).toBe(1);
+    expect(Object.keys(planned.files[0]?.prepared ?? {})).toEqual(["a"]);
+  });
+
+  it("never reads or plans a file no rule takes by its name, and plans every file for a rule that names none", async () => {
+    const prose: ScannedFile = { path: "/repo/docs/guide.md", lines: ["# Ports"] };
+    const read: Array<string> = [];
+    const walker = Layer.succeed(SourceWalker, {
+      files: Effect.succeed([{ path: source.path }, { path: prose.path }]),
+      read: ({ path }) =>
+        Effect.sync(() => {
+          read.push(path);
+          return path === source.path ? source : prose;
+        }),
+    });
+    const named = await planOf({
+      rules: { a: { ...a, include: { names: ["*.ts"] } } },
+      files: [],
+      cache: memoryCache(),
+      walker,
+      root: "/repo",
+    });
+    expect(named.files.map((plan) => plan.file.path)).toEqual([source.path]);
+    expect(named.unjudged).toEqual([]);
+    // The planned file may be read again for its sample; the file no rule names never is.
+    expect(read).not.toContain(prose.path);
+
+    const unnamed = await planOf({
+      rules: { a },
+      files: [source, prose],
+      cache: memoryCache(),
+      root: "/repo",
+    });
+    expect(unnamed.files.map((plan) => plan.file.path)).toEqual([prose.path, source.path]);
+    expect(unnamed.unjudged).toEqual([]);
+  });
+
+  it("judges only the pairs a rule's content filters allow, with any entry in a list enough", async () => {
+    const filtered: Rules = {
+      a: { ...a, include: { content: ["^import", "process.env.PORT"] } },
+      b: { ...b, exclude: { content: ["process.env.PORT"] } },
+    };
+    const cache = memoryCache();
+    const planned = await planOf({ rules: filtered, files: [source], cache });
+    expect(planned.checks).toBe(1);
+    expect(Object.keys(planned.files[0]?.prepared ?? {})).toEqual(["a"]);
+
+    const jev = recordingJev({ judge: { a: 0.9, b: 0.9 }, locate: { a: 2 } });
+    const result = await audit({ rules: filtered, jev: jev.layer, cache });
+    expect(result.findings.map((finding) => finding.rule)).toEqual(["a"]);
+  });
+
+  it("does not read or report a cached finding for a file its filters now leave out", async () => {
+    const cache = memoryCache();
+    const first = await audit({
+      rules: { a },
+      jev: recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } }).layer,
+      cache,
+    });
+    expect(first.findings).toHaveLength(1);
+
+    const filtered = { ...a, exclude: { content: ["process.env.PORT"] } };
+    const planned = await planOf({ rules: { a: filtered }, files: [source], cache });
+    expect(planned.checks).toBe(0);
+    expect(planned.files).toEqual([]);
+    expect(planned.unjudged).toHaveLength(1);
+
+    const jev = recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } });
+    const second = await audit({ rules: { a: filtered }, jev: jev.layer, cache });
+    expect(second.findings).toEqual([]);
+    expect(jev.calls).toEqual({ judge: [], locate: [] });
+  });
+
+  it("matches a content filter against the file as written, comments included", async () => {
+    const commented: ScannedFile = {
+      path: "/repo/src/server.ts",
+      lines: ["// adhere-filter: the port below", ...source.lines],
+    };
+    const filtered = { ...a, include: { content: ["adhere-filter"] } };
+    const cache = memoryCache();
+    const planned = await planOf({
+      rules: { a: filtered },
+      files: [commented],
+      cache,
+      includeComments: false,
+    });
+    expect(planned.checks).toBe(1);
+    expect(planned.files[0]?.prepared.a).toBeDefined();
+
+    const jev = recordingJev({ judge: { a: 0.9 }, locate: { a: 3 } });
+    const result = await audit({
+      rules: { a: filtered },
+      files: [commented],
+      jev: jev.layer,
+      cache,
+      includeComments: false,
+    });
+    expect(result.findings.map((finding) => finding.rule)).toEqual(["a"]);
+    expect(jev.calls.judge).toHaveLength(1);
+  });
+
+  it("reuses a cached judgment for a still-applicable file, and hides one a filter excludes", async () => {
+    const cache = memoryCache();
+    const first = await audit({
+      rules: { a },
+      jev: recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } }).layer,
+      cache,
+    });
+    expect(first.findings).toHaveLength(1);
+
+    const included = { ...a, include: { content: ["process.env.PORT"] } };
+    const jev = recordingJev({ judge: {}, locate: {} });
+    const reused = await audit({ rules: { a: included }, jev: jev.layer, cache });
+    expect(reused.cached).toBe(1);
+    expect(reused.findings).toEqual(first.findings);
+    expect(jev.calls).toEqual({ judge: [], locate: [] });
+
+    const excluded = { ...a, exclude: { content: ["process.env.PORT"] } };
+    const hidden = recordingJev({ judge: { a: 0.9 }, locate: { a: 2 } });
+    const filtered = await audit({ rules: { a: excluded }, jev: hidden.layer, cache });
+    expect(filtered.findings).toEqual([]);
+    expect(hidden.calls).toEqual({ judge: [], locate: [] });
+  });
+
+  it("does not revive a cached finding for a rule its include filter left out at planning", async () => {
+    const cache = memoryCache();
+    let current = { ...source, lines: ["// nothing yet", ...source.lines] };
+    await audit({
+      rules,
+      files: [current],
+      jev: recordingJev({ judge: { a: 0.9, b: 0.9 }, locate: { a: 3, b: 3 } }).layer,
+      cache,
+    });
+    const walker = Layer.succeed(SourceWalker, {
+      files: Effect.succeed([{ path: source.path }]),
+      read: () => Effect.sync(() => current),
+    });
+    const included = { ...a, include: { content: ["adhere-filter"] } };
+    const planned = await planOf({ rules: { a: included, b }, files: [], cache, walker });
+    expect(Object.keys(planned.files[0]?.prepared ?? {})).toEqual(["b"]);
+
+    current = { ...source, lines: ["// adhere-filter", ...source.lines] };
+    const jev = recordingJev({ judge: {}, locate: {} });
+    const result = await Effect.runPromise(
+      executeAudit(planned).pipe(
+        Effect.provide(Layer.mergeAll(walker, cache, jev.layer, testCrypto)),
+      ),
+    );
+    expect(result.findings.map((finding) => finding.rule)).toEqual(["b"]);
+    expect(jev.calls).toEqual({ judge: [], locate: [] });
+  });
+
+  it("keys a judgment by the rule's question, so edited description and examples re-judge", async () => {
+    const plain = await planOf({ rules: { a }, files: [source], cache: memoryCache() });
+    const described = await planOf({
+      rules: { a: { ...a, description: "A different description." } },
+      files: [source],
+      cache: memoryCache(),
+    });
+    expect(described.files[0]?.prepared.a?.fingerprint).not.toBe(
+      plain.files[0]?.prepared.a?.fingerprint,
+    );
+
+    const reworded = await planOf({
+      rules: { a: { ...a, must: "different()" } },
+      files: [source],
+      cache: memoryCache(),
+    });
+    expect(reworded.files[0]?.prepared.a?.fingerprint).not.toBe(
+      plain.files[0]?.prepared.a?.fingerprint,
+    );
+  });
+
+  it("keeps tests eligibility beside a rule's own filters", async () => {
+    const onlyTests = { ...a, tests: "only" as const, include: { content: ["const port"] } };
+    const plain = await planOf({ rules: { a: onlyTests }, files: [source], cache: memoryCache() });
+    expect(plain.checks).toBe(0);
+    const allowed = await planOf({
+      rules: { a: onlyTests },
+      files: [{ ...source, test: true }],
+      cache: memoryCache(),
+    });
+    expect(allowed.checks).toBe(1);
+  });
+
   it("names the file a refusal stopped at, and that a rerun continues", async () => {
     const refusing = Layer.succeed(Jev, {
       judge: () => Effect.fail(JevUnavailable.make({ message: "Jev answered HTTP 429" })),
@@ -695,6 +954,7 @@ describe("plan", () => {
                 sufficiencyThreshold: 0.7,
                 maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
                 maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+                transcript: { every: 8_000, keep: 20 },
                 reads: [],
                 rules,
               }),
@@ -815,6 +1075,9 @@ describe("plan", () => {
       rules,
       files: [cached],
       cache,
+      typeAware: true,
+      reads: DEFAULT_READS,
+      sourceReads: emptySourceReads,
       jev: recordingJev({ judge: { a: 0.9, b: 0.2 }, locate: {} }).layer,
     });
     const generated: ScannedFile = {
@@ -1056,6 +1319,7 @@ describe("plan", () => {
               sufficiencyThreshold: 0.7,
               maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
               maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+              transcript: { every: 8_000, keep: 20 },
               reads: [],
               rules,
               scopedRules,

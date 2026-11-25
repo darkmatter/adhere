@@ -1,5 +1,6 @@
 ---
 description: A handler behind a public URL, such as a Function URL, workers.dev route, or a Durable Object chosen by a client-supplied name, must authenticate the caller and check its access before doing protected work, never treating CORS, an obscure URL, or a trusted origin as authorization.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { Crypto, Effect, Layer, Path, Record } from "effect";
+import { Effect, Layer, Path, Record } from "effect";
+import { Digest } from "effect/crypto";
 import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
 
 import {
@@ -34,13 +35,9 @@ export const rules: Rules = { a, b };
 export const code1 = ["const port = 3000;"];
 
 /** Echoes the input as its digest, so equal text still shares a cache key. */
-export const testCrypto = Layer.succeed(
-  Crypto.Crypto,
-  Crypto.make({
-    randomBytes: (size) => new Uint8Array(size),
-    digest: (_algorithm, data) => Effect.succeed(data),
-  }),
-);
+export const testCrypto = Layer.mock(Digest.Digest, {
+  digest: (_algorithm, data) => Effect.succeed(data),
+});
 
 /** Answers by content hash, as the cache keeps them; `pruned` holds what each prune was told is live. */
 export const memoryCache = (
@@ -160,6 +157,12 @@ export const fixtureWalker = (files: ReadonlyArray<ScannedFile>) =>
       }),
   });
 
+/** Native reads that find nothing: for a run that must share the read settings, and so the cache, of another. */
+export const emptySourceReads = Layer.succeed(SourceReads, {
+  prepare: () => Effect.void,
+  read: () => Effect.succeed({}),
+});
+
 export const audit = (options: {
   readonly rules: Rules;
   readonly model?: string;
@@ -169,6 +172,7 @@ export const audit = (options: {
   readonly files?: ReadonlyArray<ScannedFile>;
   readonly includeComments?: boolean;
   readonly typeAware?: boolean;
+  readonly maxSymbolLength?: number;
   readonly reads?: ResolvedConfig["reads"];
   readonly workspacePackages?: Readonly<Record<string, string>>;
   readonly sourceReads?: Layer.Layer<SourceReads>;
@@ -183,7 +187,8 @@ export const audit = (options: {
             threshold: options.threshold ?? 0.7,
             sufficiencyThreshold: 0.7,
             maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
-            maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+            maxSymbolLength: options.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,
+            transcript: { every: 8_000, keep: 20 },
             reads: options.reads ?? [],
             rules: options.rules,
             ...(options.includeComments === undefined
@@ -237,18 +242,23 @@ export const planOf = (options: {
   readonly files: ReadonlyArray<ScannedFile>;
   readonly cache: Layer.Layer<AuditCache>;
   readonly limit?: number;
+  readonly root?: string;
   readonly typeAware?: boolean;
   readonly reads?: ResolvedConfig["reads"];
   readonly maxSymbolDocumentationLength?: number;
   readonly maxSymbolLength?: number;
   readonly includeComments?: boolean;
   readonly workspacePackages?: Readonly<Record<string, string>>;
+  readonly workspaceDependents?: ResolvedConfig["workspaceDependents"];
   readonly sourceReads?: Layer.Layer<SourceReads>;
   readonly walker?: Layer.Layer<SourceWalker>;
   readonly scopedRules?: RuleSet;
 }) =>
   Effect.runPromise(
-    planAudit({ limit: options.limit }).pipe(
+    planAudit({
+      limit: options.limit,
+      ...(options.root === undefined ? {} : { root: options.root }),
+    }).pipe(
       Effect.provide(
         Layer.mergeAll(
           Layer.succeed(AdhereConfig, {
@@ -260,6 +270,7 @@ export const planOf = (options: {
             maxSymbolDocumentationLength:
               options.maxSymbolDocumentationLength ?? DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
             maxSymbolLength: options.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,
+            transcript: { every: 8_000, keep: 20 },
             rules: options.rules,
             ...(options.scopedRules === undefined ? {} : { scopedRules: options.scopedRules }),
             ...(options.includeComments === undefined
@@ -268,6 +279,9 @@ export const planOf = (options: {
             ...(options.workspacePackages === undefined
               ? {}
               : { workspacePackages: options.workspacePackages }),
+            ...(options.workspaceDependents === undefined
+              ? {}
+              : { workspaceDependents: options.workspaceDependents }),
           }),
           options.walker ?? fixtureWalker(options.files),
           options.cache,

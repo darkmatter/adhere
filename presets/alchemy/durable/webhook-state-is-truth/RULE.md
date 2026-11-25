@@ -1,5 +1,6 @@
 ---
 description: Access to paid features must be gated on state recorded from Stripe webhooks in the app's own store, never granted because the user reached a success_url or return_url.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

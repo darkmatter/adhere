@@ -1,6 +1,7 @@
 ---
 description: A test of code that consumes configuration should supply it with Layer.succeed on the config service, and should not set environment variables or a ConfigProvider to do it.
 tests: only
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 Code that reads its settings from the environment in a test reads them from

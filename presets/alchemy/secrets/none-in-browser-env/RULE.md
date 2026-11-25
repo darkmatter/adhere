@@ -1,5 +1,6 @@
 ---
 description: A value in an env key that a framework inlines into the browser bundle, such as VITE_, NEXT_PUBLIC_, PUBLIC_, or NUXT_PUBLIC_, must be public configuration, never a secret, credential, or connection string, even wrapped in Redacted.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

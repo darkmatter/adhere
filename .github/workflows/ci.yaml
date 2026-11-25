@@ -7,16 +7,18 @@ on:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: arc
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.4.3"
+          bun-version: "1.4.4"
       - uses: actions/setup-node@v7
         with:
           node-version: "26"
       - run: bun install --frozen-lockfile
+      - name: Verify the bundled oxlint rule catalog is current
+        run: bun run oxlint:catalog:check
       - run: bun run typecheck
       - run: bun run test
       - run: bun run build:npm
@@ -36,7 +38,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.4.3"
+          bun-version: "1.4.4"
       - uses: actions/setup-node@v7
         with:
           node-version: "26"

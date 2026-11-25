@@ -1,5 +1,6 @@
 ---
 description: A bucket or database holding user or business data should be retained with RemovalPolicy.retain(), at least in production, and forceDestroy should be set only on buckets whose contents are disposable; irreplaceable data should not depend on the default destroy policy.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Should

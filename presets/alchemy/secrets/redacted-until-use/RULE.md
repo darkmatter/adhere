@@ -1,5 +1,6 @@
 ---
 description: A secret should be read with Config.Redacted, passed to resources and env as Redacted, and unwrapped with Redacted.value only at the call that needs the raw string; it should not be read with Config.String or process.env, or unwrapped early into plain variables.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Should

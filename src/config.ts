@@ -1,7 +1,7 @@
 import { type PresetName, presetNames } from "#presets.ts";
 import { type Provider, SAVED_KEYS } from "#providers/provider.ts";
 import type { RuleSet } from "#rules.ts";
-import { Effect, Predicate, Schema, SchemaTransformation } from "effect";
+import { Effect, Predicate, Schema } from "effect";
 
 export type RuleId = string;
 
@@ -32,7 +32,10 @@ const ProviderSchema = Schema.declare(
     Predicate.hasProperty(value, "ask") &&
     Predicate.isFunction(value.ask) &&
     (!Predicate.hasProperty(value, "savedKey") || SAVED_KEYS.some((key) => key === value.savedKey)),
-  { expected: "a provider: a model, and a function to ask it" },
+  {
+    expected: "a provider: a model, and a function to ask it",
+    toCode: () => ({ runtime: "Provider", Type: "Provider" }),
+  },
 );
 
 /**
@@ -54,14 +57,91 @@ export type AppendState = (
 
 /**
  * What the config can have Jev read beside each file's code, shared by all
- * its rules. Each name is the key the state carries it under, which a rule's
- * description can name in backticks. `workspacePackages` maps only workspace
- * packages imported by this file to their directories. `symbols` maps names
+ * its rules. A rule may also declare the reads it needs, which tells the run
+ * what would help without enabling any of it. Each name is the key the state
+ * carries it under, which a rule's description can name in backticks. `workspacePackages` maps only workspace
+ * packages imported by this file to their directories. `dependents` lists what
+ * depends on this file: workspace packages whose package.json names its package,
+ * and files that import it by a relative path. `symbols` maps names
  * to native compiler types, with documentation and JSDoc tags shared across variants.
  * `references` maps used names to complete AST declaration scopes by
  * repo-relative path, rather than fixed line windows or full related files.
  */
-export const Reads = Schema.Array(Schema.Literals(["workspacePackages", "symbols", "references"]));
+export const Reads = Schema.Array(
+  Schema.Literals(["workspacePackages", "dependents", "symbols", "references"]),
+);
+
+/**
+ * A JavaScript regular expression's source, checked here so a rule with a bad
+ * pattern fails to load rather than at the first file it would filter.
+ */
+const isValidRegexSource = (source: string): string | undefined => {
+  try {
+    new RegExp(source);
+    return undefined;
+  } catch (problem) {
+    return `is not a valid JavaScript regular expression: ${
+      problem instanceof Error ? problem.message : String(problem)
+    }`;
+  }
+};
+
+const RegexSource = Schema.String.check(
+  Schema.makeFilter(isValidRegexSource, {
+    toCode: () => ({ runtime: "Schema.makeFilter(isValidRegexSource)" }),
+  }),
+);
+
+/**
+ * One side of a rule's file filter: globs for a file's own name, which hold in
+ * any repository, repository-relative globs for paths, and regular expression
+ * sources for the file's text as written. A rule's `include` and `exclude`
+ * each take this shape.
+ */
+export const RuleFilter = Schema.Struct({
+  names: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
+    description:
+      "Glob patterns for a file's own name, as in `*.ts` or `Dockerfile`, whichever directory holds it. Unlike `paths` they do not depend on a repository's layout, so a shared rule carries them.",
+  }),
+  paths: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
+    description:
+      "Repository-root-relative glob patterns, `/`-separated, as in `src/**` or `**/*.test.ts`.",
+  }),
+  content: Schema.optionalKey(Schema.Array(RegexSource)).annotate({
+    description:
+      "JavaScript regular expression sources, without `/` delimiters or flags, matched against the file's text as written, comments included.",
+  }),
+}).annotate({ identifier: "RuleFilter" });
+export interface RuleFilter extends Schema.Schema.Type<typeof RuleFilter> {}
+
+/** The keys about files, which a transcript rule cannot have. */
+const FILE_KEYS = [
+  "tests",
+  "include",
+  "exclude",
+  "appliesTo",
+  "excludeIf",
+  "reads",
+  "appendState",
+] as const;
+
+/**
+ * Why a rule cannot load, when it is a transcript rule with keys about files:
+ * each would be ignored, since a transcript has no path, tests, or reads.
+ */
+export const fileKeysProblem = (
+  rule: { readonly type?: string | undefined } & Partial<
+    Record<(typeof FILE_KEYS)[number], unknown>
+  >,
+): string | undefined => {
+  const keys = rule.type === "transcript" ? FILE_KEYS.filter((key) => rule[key] !== undefined) : [];
+  return keys.length === 0
+    ? undefined
+    : `a transcript rule cannot have ${keys.join(", ")}: ${keys.length === 1 ? "it is" : "they are"} about files`;
+};
+
+/** What a rule can judge: code, the default, or a transcript. */
+export const RULE_TYPES = ["code", "transcript"] as const;
 
 /**
  * A rule's examples, named in RFC 2119's words, which Jev reads as written. A
@@ -69,94 +149,114 @@ export const Reads = Schema.Array(Schema.Literals(["workspacePackages", "symbols
  * be. A guideline, which asks for less, shows code that `should` be written
  * and code that `shouldNot` be.
  */
-const RuleFields = Schema.Struct({
-  description: Schema.String,
-  /**
-   * What the description leaves out, such as why the rule holds or where it
-   * does not: in a `RULE.md`, the prose around its code. Jev reads it after
-   * the description, as part of the rule; the report shows the description
-   * alone.
-   */
-  details: Schema.optionalKey(Schema.String),
-  must: Schema.optionalKey(Schema.String),
-  never: Schema.optionalKey(Schema.String),
-  should: Schema.optionalKey(Schema.String),
-  shouldNot: Schema.optionalKey(Schema.String),
-  threshold: Schema.optionalKey(Schema.Finite),
-  /**
-   * Test files, which a rule skips by default: `only` for a rule about tests,
-   * which judges nothing else, and `include` for one that holds in tests too.
-   */
-  tests: Schema.optionalKey(Schema.Literals(["only", "include"])),
-  /**
-   * How a finding under the rule is reported: an `error`, the default, which
-   * fails the run, or a `warning`, for a nit or a rule that errs toward false
-   * findings, which does not.
-   */
-  level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
-  /**
-   * Where the rule applies, each a description of code that breaks it: Jev is
-   * asked of each whether any code that breaks the rule is as it describes,
-   * and a finding stands only when it says yes to every one.
-   */
-  appliesTo: Schema.optionalKey(Schema.Array(Schema.String)),
-  /**
-   * Where the rule does not apply: Jev is asked of each whether all the code
-   * that breaks the rule is as it describes, and a yes to any drops the finding.
-   */
-  excludeIf: Schema.optionalKey(Schema.Array(Schema.String)),
-  /**
-   * A hook on the state Jev reads for the rule, in a rule written in
-   * TypeScript (see `AppendState`). The rule's questions go in requests of
-   * their own, so only they read what it adds.
-   */
+export const Rule = Schema.Struct({
+  description: Schema.String.annotate({
+    description: "What the rule says, in one sentence. The report shows it with each finding.",
+  }),
+  type: Schema.optionalKey(Schema.Literals(RULE_TYPES)).annotate({
+    description:
+      "What the rule judges: `code`, the default, for the files `adhere lint` reads, or `transcript`, for text such as an agent's work, piped to `adhere lint --type transcript`. A transcript rule cannot have `tests`, `include`, `exclude`, `appliesTo`, `excludeIf`, `reads`, or `appendState`.",
+  }),
+  details: Schema.optionalKey(Schema.String).annotate({
+    description:
+      "What the description leaves out, such as why the rule holds or where it does not: in a `RULE.md`, the prose around its code. Jev reads it after the description, as part of the rule; the report shows the description alone.",
+  }),
+  must: Schema.optionalKey(Schema.String).annotate({
+    description:
+      "Code the rule requires. A rule has `must` and `never`, or, as a guideline, `should` and `shouldNot`.",
+  }),
+  never: Schema.optionalKey(Schema.String).annotate({
+    description: "Code the rule forbids.",
+  }),
+  should: Schema.optionalKey(Schema.String).annotate({
+    description: "A guideline's code to write.",
+  }),
+  shouldNot: Schema.optionalKey(Schema.String).annotate({
+    description: "A guideline's code not to write.",
+  }),
+  threshold: Schema.optionalKey(Schema.Finite).annotate({
+    description: "The rule's own confidence threshold, 0 to 1, in place of the config's.",
+  }),
+  tests: Schema.optionalKey(Schema.Literals(["only", "include"])).annotate({
+    description:
+      "Test files, which a rule skips by default: `only` for a rule about tests, which judges nothing else, and `include` for one that holds in tests too.",
+  }),
+  level: Schema.optionalKey(Schema.Literals(["error", "warning"])).annotate({
+    description:
+      "How a finding under the rule is reported: an `error`, the default, which fails the run, or a `warning`, for a nit or a rule that errs toward false findings, which does not.",
+  }),
+  include: Schema.optionalKey(RuleFilter).annotate({
+    description:
+      "Where the rule applies, beside its scope and `tests`. A rule says which files it applies to with `names`; one without it judges every kind of file, and lint warns. A file must match every configured category, and within `names`, `paths`, or `content` any entry is enough. An omitted or empty list puts no condition on that category.",
+  }),
+  exclude: Schema.optionalKey(RuleFilter).annotate({
+    description:
+      "Where the rule does not apply: the same shape as `include`. Any matching name, path, or content entry drops the file before it is judged, so no cached finding for it is read or reported.",
+  }),
+  appliesTo: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
+    description:
+      "Where the rule applies, each a description of code that breaks it: Jev is asked of each whether any code that breaks the rule is as it describes, and a finding stands only when it says yes to every one.",
+  }),
+  excludeIf: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
+    description:
+      "Where the rule does not apply: Jev is asked of each whether all the code that breaks the rule is as it describes, and a yes to any drops the finding.",
+  }),
+  reads: Schema.optionalKey(Reads).annotate({
+    description:
+      "Context the rule needs, such as `dependents` or `symbols`. This declares what would help; the config's `reads` and `typeAware` still decide what this run enables. A project's rule that declares a read they do not enable warns that it may be less accurate until enabled; a bundled preset rule that declares `symbols` or `references` is left out unless `typeAware` is on.",
+  }),
   appendState: Schema.optionalKey(
     Schema.declare((value: unknown): value is AppendState => typeof value === "function", {
       expected: "a function",
+      toCode: () => ({ runtime: "AppendState", Type: "AppendState" }),
     }),
-  ),
-});
-
-/** Before 0.7, a rule's examples were `reference` and `avoid`: read as `must` and `never`. */
-export const Rule = Schema.Struct({
-  ...RuleFields.fields,
-  reference: Schema.optionalKey(Schema.String),
-  avoid: Schema.optionalKey(Schema.String),
-  // Guard the removed key instead of silently dropping it as an excess property.
-  reads: Schema.optionalKey(
-    Schema.declare((_value: unknown): _value is never => false, {
-      expected: "no rule-level reads; move reads to the top level of defineConfig({...})",
+  ).annotate({
+    description:
+      "A hook on the state Jev reads for the rule, in a rule written in TypeScript (see `AppendState`). The rule's questions go in requests of their own, so only they read what it adds.",
+  }),
+  options: Schema.optionalKey(
+    Schema.declare((value: unknown): value is Schema.Decoder<unknown> => Schema.isSchema(value), {
+      expected: "an Effect Schema",
+      toCode: () => ({ runtime: "Schema", Type: "Schema.Decoder<unknown>" }),
     }),
-  ),
+  ).annotate({
+    description:
+      "The settings a rule written in TypeScript takes, as an Effect Schema, set under the rule's id in a config's `overrides`, as `options`. A key the schema does not make optional must be set. Jev reads the decoded settings as `options`, in requests of the rule's own.",
+  }),
 })
-  .pipe(
-    Schema.decodeTo(
-      RuleFields,
-      SchemaTransformation.transform({
-        decode: ({ reference, avoid, ...rule }) => ({
-          ...rule,
-          ...(rule.must === undefined && reference !== undefined ? { must: reference } : {}),
-          ...(rule.never === undefined && avoid !== undefined ? { never: avoid } : {}),
-        }),
-        encode: (rule) => rule,
-      }),
-    ),
-  )
   .check(
-    Schema.makeFilter((rule) => {
-      const requirement = rule.must !== undefined || rule.never !== undefined;
-      const guideline = rule.should !== undefined || rule.shouldNot !== undefined;
-      return requirement && guideline
-        ? "a rule is a requirement (must, never) or a guideline (should, shouldNot), not both"
-        : requirement || guideline
-          ? undefined
-          : "a rule needs an example: must, never, should, or shouldNot";
+    Schema.makeFilter(
+      (rule) => {
+        const requirement = rule.must !== undefined || rule.never !== undefined;
+        const guideline = rule.should !== undefined || rule.shouldNot !== undefined;
+        return requirement && guideline
+          ? "a rule is a requirement (must, never) or a guideline (should, shouldNot), not both"
+          : requirement || guideline
+            ? undefined
+            : "a rule needs an example: must, never, should, or shouldNot";
+      },
+      { toCode: () => ({ runtime: "Schema.makeFilter(isRequirementOrGuideline)" }) },
+    ),
+    Schema.makeFilter(fileKeysProblem, {
+      toCode: () => ({ runtime: "Schema.makeFilter(fileKeysProblem)" }),
     }),
-  );
-export interface Rule extends Schema.Schema.Type<typeof Rule> {}
+  )
+  .annotate({ identifier: "Rule" });
+export interface Rule extends Schema.Schema.Type<typeof Rule> {
+  /** The settings `options` decoded from the config's override, set as the config is loaded. */
+  readonly optionValues?: unknown;
+  /** The `paths` of the config's override: where this repository applies the rule, set as the config is loaded. */
+  readonly overridePaths?: ReadonlyArray<string>;
+}
 
 /** How a finding is reported: an error fails the run, a warning does not. */
 export type Level = NonNullable<Rule["level"]>;
+
+/** What a rule judges, and what a run judges: code unless it says otherwise. */
+export type RuleType = NonNullable<Rule["type"]>;
+
+/** A rule's type, `code` when it names none. */
+export const typeOf = (rule: Pick<Rule, "type">): RuleType => rule.type ?? "code";
 
 /** One of a rule's examples, under the word it is written with. */
 export interface Example {
@@ -186,78 +286,107 @@ export type Rules = Readonly<Record<RuleId, Rule>>;
 /** Rules inline, or a directory of Markdown rule files (see `markdown.ts`). */
 export type RuleSource = Rules | string | URL;
 
-/** A rule's setting in a config's `overrides`: `off`, a level, or a level and a threshold. */
+/**
+ * A rule's setting in a config's `overrides`: `off`, a level, or a level, a
+ * threshold, its options, and the paths this repository applies it to.
+ */
 const Override = Schema.Union([
   Schema.Literals(["off", "error", "warning"]),
   Schema.Struct({
     level: Schema.optionalKey(Schema.Literals(["off", "error", "warning"])),
     threshold: Schema.optionalKey(Schema.Finite),
+    options: Schema.optionalKey(Schema.Unknown),
+    paths: Schema.optionalKey(Schema.Array(Schema.String)),
   }),
 ]);
 export type Override = typeof Override.Type;
 
+/** Jev reads 32,000 tokens a question, and a transcript window goes with half as much again. */
+export const MAX_TRANSCRIPT_EVERY = 16_000;
+
+/** A config file's keys. Each `description` is what the docs' Config file reference shows. */
 export const AdhereConfig = Schema.Struct({
-  /**
-   * The model id sent to typesafe. Defaults to "jev-latest"
-   */
-  model: Schema.optionalKey(Schema.String),
-  /** Where the questions go in place of TypeSafe's Jev, with its own model (see `Provider`). */
-  provider: Schema.optionalKey(ProviderSchema),
-  /**
-   * The minimum confidence threshold for a positive match. Defaults to 0.8
-   */
-  threshold: Schema.optionalKey(Schema.Finite),
-  /**
-   * Below this, Jev's probability that a file shows enough to decide a
-   * finding's rule adds a warning to the finding: check what the code relies
-   * on outside the file. Defaults to 0.6
-   */
-  sufficiencyThreshold: Schema.optionalKey(Schema.Finite),
-  /**
-   * The presets to use for rule matching. Defaults to an empty array. Current presets
-   * include "effect" and "alchemy". Subcategories can be expanded by appending `/<subcategory>`.
-   */
-  presets: Schema.Array(Schema.Literals(presetNames)).pipe(
-    Schema.withDecodingDefaultKey(Effect.succeed([])),
-  ),
-  /** Workspace context shared by every rule. Defaults to workspacePackages; [] disables it. Native read names do not enable type awareness. */
-  reads: Schema.optionalKey(Reads),
-  /** Include both compiler-resolved symbols and declaration excerpts. Defaults to false. */
-  typeAware: Schema.optionalKey(Schema.Boolean),
-  /** Maximum characters of each symbol's complete resolved content. Defaults to 256. */
-  maxSymbolLength: Schema.optionalKey(Schema.Natural),
-  /** Maximum characters of documentation and JSDoc tags per symbol. Defaults to 256; 0 omits them. */
-  maxSymbolDocumentationLength: Schema.optionalKey(Schema.Natural),
-  /**
-   * A record of rules, or a directory path relative to the config file,
-   * which holds its rules as `.adhere/rules/` does. Unset: the rules in
-   * `.adhere/rules/`, and in any nested `.adhere/rules/`.
-   */
-  rules: Schema.optionalKey(Schema.Union([Schema.Record(Schema.String, Rule), Schema.String])),
-  /**
-   * Globs, relative to the working directory, of files no rule judges: what
-   * `--filter '!<glob>'` leaves out of one run, left out of every run.
-   */
-  exclude: Schema.optionalKey(Schema.Array(Schema.String)),
-  /**
-   * Settings for rules by the id a report names them with, a preset's with
-   * its preset first, as in `alchemy/providers/idempotent-delete`: `off`, a
-   * level, or `{ level, threshold }`. A preset's rule changes without its text
-   * being copied into `rules`.
-   */
-  overrides: Schema.optionalKey(Schema.Record(Schema.String, Override)),
-  /**
-   * Whether Jev reads every comment, for rules about comments. By default
-   * comments are taken out, since a comment changes nothing a file does, but
-   * for the notes that say `@adhere`.
-   */
-  includeComments: Schema.optionalKey(Schema.Boolean),
+  model: Schema.optionalKey(Schema.String).annotate({
+    description: `The model id sent to TypeSafe AI. Defaults to "jev-latest".`,
+  }),
+  provider: Schema.optionalKey(ProviderSchema).annotate({
+    description:
+      "Where the questions go in place of TypeSafe's Jev, with its own model (see `Provider`).",
+  }),
+  threshold: Schema.optionalKey(Schema.Finite).annotate({
+    description: "The minimum confidence threshold for a positive match. Defaults to 0.8.",
+  }),
+  sufficiencyThreshold: Schema.optionalKey(Schema.Finite).annotate({
+    description:
+      "Below this, Jev's probability that a file shows enough to decide a finding's rule adds a warning to the finding: check what the code relies on outside the file. Defaults to 0.6.",
+  }),
+  presets: Schema.Array(Schema.Literals(presetNames))
+    .pipe(Schema.withDecodingDefaultKey(Effect.succeed([])))
+    .annotate({
+      description:
+        "The built-in rule sets to use, such as `effect` or `alchemy`. Append `/<topic>` for one topic, as in `effect/basics`. Defaults to none.",
+    }),
+  reads: Schema.optionalKey(Reads).annotate({
+    description:
+      "Workspace context shared by every rule: `workspacePackages` (the default) and `dependents`; `[]` disables it. Native read names do not enable type awareness.",
+  }),
+  typeAware: Schema.optionalKey(Schema.Boolean).annotate({
+    description:
+      "Include both compiler-resolved symbols and declaration excerpts. Defaults to false. Bundled preset rules that declare either run only with it on; a project's own rule still runs and warns.",
+  }),
+  maxSymbolLength: Schema.optionalKey(Schema.Natural).annotate({
+    description: "Maximum characters of each symbol's complete resolved content. Defaults to 256.",
+  }),
+  maxSymbolDocumentationLength: Schema.optionalKey(Schema.Natural).annotate({
+    description:
+      "Maximum characters of documentation and JSDoc tags per symbol. Defaults to 256; 0 omits them.",
+  }),
+  rules: Schema.optionalKey(
+    Schema.Union([Schema.Record(Schema.String, Rule), Schema.String]),
+  ).annotate({
+    description:
+      "A record of rules (see Rule keys), or a directory path relative to the config file, which holds its rules as `.adhere/rules/` does. Unset: the rules in `.adhere/rules/`, and in any nested `.adhere/rules/`.",
+  }),
+  instructions: Schema.optionalKey(Schema.NonEmptyString).annotate({
+    description:
+      "Instructions directory relative to the config file. Unset: `.adhere/instructions`, then `.agents/instructions`.",
+  }),
+  exclude: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
+    description:
+      "Globs, relative to the working directory, of files no rule judges: what `--filter '!<glob>'` leaves out of one run, left out of every run.",
+  }),
+  overrides: Schema.optionalKey(Schema.Record(Schema.String, Override)).annotate({
+    description:
+      "Settings for rules by the id a report names them with, a preset's with its preset first, as in `alchemy/providers/idempotent-delete`: `off`, a level, or `{ level, threshold, options, paths }`. `paths` are repository-root-relative globs: the rule then judges only the files they match, among those it takes itself, so a shared or preset rule applies to the part of this repository it is relevant to. A preset's rule changes without its text being copied into `rules`.",
+  }),
+  includeComments: Schema.optionalKey(Schema.Boolean).annotate({
+    description:
+      "Whether Jev reads every comment, for rules about comments. By default comments are taken out, since a comment changes nothing a file does, but for the notes that say `@adhere`.",
+  }),
+  transcript: Schema.optionalKey(
+    Schema.Struct({
+      every: Schema.optionalKey(
+        Schema.Int.check(Schema.isBetween({ minimum: 1_000, maximum: MAX_TRANSCRIPT_EVERY })),
+      ).annotate({
+        description:
+          "Tokens of transcript per check, at three bytes a token. 1,000 to 16,000; defaults to 8,000.",
+      }),
+      keep: Schema.optionalKey(Schema.Natural).annotate({
+        description: "How many checks the temp directory keeps. Defaults to 20; 0 keeps none.",
+      }),
+    }),
+  ).annotate({
+    description:
+      "How `adhere lint --type transcript` judges a transcript. `every`, 1,000 to 16,000 and 8,000 by default, is the tokens of transcript per check, at three bytes a token: a transcript is judged in windows this long, or of 255 lines with text when those come first, each beside up to half as much of what came before it, and an agent hook checks each time a window fills and when the agent stops. `keep`, 20 by default, is how many checks keep the text they judged and their report in the system temp directory; 0 keeps none.",
+  }),
 });
 
 /** Where a repo keeps what adhere reads and writes: its config, its rules, and the cache. */
 export const ADHERE_DIRECTORY = ".adhere";
 /** Where a repo keeps its rules by default, one to a directory: `<id>/RULE.md` or `<id>/RULE.ts`. */
 export const RULES_DIRECTORY = `${ADHERE_DIRECTORY}/rules`;
+/** Where a repo keeps the Markdown instruction files postinstall renders into AGENTS.md. */
+export const INSTRUCTIONS_DIRECTORY = `${ADHERE_DIRECTORY}/instructions`;
 export const CACHE_DIRECTORY = `${ADHERE_DIRECTORY}/cache`;
 /** Where a config may live, relative to the working directory. Exactly one may exist. */
 export const CONFIG_FILES = [
@@ -338,6 +467,8 @@ export const DEFAULT_SUFFICIENCY_THRESHOLD = 0.6;
 export const DEFAULT_READS: typeof Reads.Type = ["workspacePackages"];
 export const DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH = 256;
 export const DEFAULT_MAX_SYMBOL_LENGTH = 256;
+export const DEFAULT_TRANSCRIPT_EVERY = 8_000;
+export const DEFAULT_TRANSCRIPT_KEEP = 20;
 
 /** A config with its presets folded in and every default applied. */
 export interface ResolvedConfig {
@@ -366,9 +497,13 @@ export interface ResolvedConfig {
   /**
    * The workspace's packages, each name with its directory from the working
    * directory, read from its manifests on every run when the config's reads
-   * names them.
+   * names `workspacePackages` or `dependents`.
    */
   readonly workspacePackages?: Readonly<Record<string, string>>;
+  /** Per workspace package, the workspace packages that depend on it, when reads names `dependents`. */
+  readonly workspaceDependents?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** Tokens of transcript per check, and how many checks the temp directory keeps. */
+  readonly transcript: { readonly every: number; readonly keep: number };
 }
 
 /** Command-line values that apply on top of the config file. */
@@ -401,6 +536,22 @@ export const presetsOf = (
 };
 
 /**
+ * Whether the run enables the compiler's native reads: the command line
+ * replaces the config's opt-in, which defaults to off.
+ */
+export const typeAwareOf = (
+  config: Pick<typeof AdhereConfig.Type, "typeAware">,
+  flags: Flags,
+): boolean => flags.typeAware ?? config.typeAware ?? false;
+
+/**
+ * Whether a rule declares a read only `typeAware` enables, so a run without
+ * it cannot judge the rule as it was written.
+ */
+export const declaresNativeReads = (rule: Pick<Rule, "reads">): boolean =>
+  (rule.reads ?? []).some((read) => read === "symbols" || read === "references");
+
+/**
  * Precedence, highest first: command line, config file, presets in order
  * (a later preset wins), then the defaults. A config rule replaces a preset
  * rule with the same id.
@@ -416,7 +567,7 @@ export const resolveConfig = (
   });
   const last = <K extends "model" | "threshold">(key: K) =>
     applied.map((preset) => preset[key]).findLast((value) => value !== undefined);
-  const typeAware = flags.typeAware ?? config.typeAware ?? false;
+  const typeAware = typeAwareOf(config, flags);
   return {
     model: config.provider?.model ?? config.model ?? last("model") ?? DEFAULT_MODEL,
     ...(config.provider === undefined ? {} : { provider: config.provider }),
@@ -429,12 +580,18 @@ export const resolveConfig = (
     ...(config.includeComments === undefined ? {} : { includeComments: config.includeComments }),
     typeAware,
     reads: [
-      ...(config.reads ?? DEFAULT_READS).filter((read) => read === "workspacePackages"),
+      ...(config.reads ?? DEFAULT_READS).filter(
+        (read) => read === "workspacePackages" || read === "dependents",
+      ),
       ...(typeAware ? (["symbols", "references"] as const) : []),
     ],
     maxSymbolLength: config.maxSymbolLength ?? DEFAULT_MAX_SYMBOL_LENGTH,
     maxSymbolDocumentationLength:
       config.maxSymbolDocumentationLength ?? DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
+    transcript: {
+      every: config.transcript?.every ?? DEFAULT_TRANSCRIPT_EVERY,
+      keep: config.transcript?.keep ?? DEFAULT_TRANSCRIPT_KEEP,
+    },
   };
 };
 

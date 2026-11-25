@@ -1,5 +1,5 @@
 import { loaded, a, b, rules } from "./audit.fixtures.ts";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import {
   AdhereConfig as AdhereConfigSchema,
@@ -10,6 +10,7 @@ import {
   resolveConfig,
 } from "../src/config.ts";
 
+import { ruleAppliesTo } from "../src/filters.ts";
 import { type RuleEntry, shownId, withOverrides } from "../src/rules.ts";
 
 describe("config", () => {
@@ -31,6 +32,7 @@ describe("config", () => {
       typeAware: false,
       maxSymbolDocumentationLength: 256,
       maxSymbolLength: 256,
+      transcript: { every: 8_000, keep: 20 },
       rules: { "data/brand": { description: "d", must: "r" } },
     });
   });
@@ -129,7 +131,7 @@ describe("config", () => {
     expect(refused._tag).toBe("ConfigUnavailable");
   });
 
-  it("applies overrides by the id a report shows: off drops a rule, a level or threshold replaces its own", () => {
+  it("applies overrides by the id a report shows: off drops a rule, a level or threshold replaces its own", async () => {
     const entry = (id: string, preset?: string): RuleEntry => ({
       id,
       ...(preset === undefined ? {} : { preset }),
@@ -142,16 +144,70 @@ describe("config", () => {
       entry("style/names"),
       entry("style/kept"),
     ];
-    const overridden = withOverrides(entries, {
-      "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
-      "effect/basics/gen-for-sequencing": "off",
-      "style/names": "warning",
-    });
+    const overridden = await Effect.runPromise(
+      withOverrides(entries, {
+        "alchemy/providers/idempotent-delete": { level: "warning", threshold: 0.9 },
+        "effect/basics/gen-for-sequencing": "off",
+        "style/names": "warning",
+      }),
+    );
     expect(overridden.map((one) => [shownId(one), one.rule.level, one.rule.threshold])).toEqual([
       ["alchemy/providers/idempotent-delete", "warning", 0.9],
       ["style/names", "warning", 0.7],
       ["style/kept", undefined, 0.7],
     ]);
+  });
+
+  it("decodes a rule's options from its override, refusing missing, invalid, or untaken ones", async () => {
+    const options = Schema.Struct({
+      edgePaths: Schema.Array(Schema.String),
+      strict: Schema.optionalKey(Schema.Boolean),
+    });
+    const entries: ReadonlyArray<RuleEntry> = [
+      { id: "edge", scope: "/repo", rule: { description: "edge", must: "a()", options } },
+      { id: "plain", scope: "/repo", rule: { description: "plain", must: "a()" } },
+    ];
+    const [edge, plain] = await Effect.runPromise(
+      withOverrides(entries, { edge: { options: { strict: true, edgePaths: ["src/edge"] } } }),
+    );
+    expect(edge?.rule.optionValues).toEqual({ edgePaths: ["src/edge"], strict: true });
+    expect(plain?.rule.optionValues).toBeUndefined();
+    const refusal = (overrides: Parameters<typeof withOverrides>[1]) =>
+      Effect.runPromise(Effect.flip(withOverrides(entries, overrides)));
+    for (const overrides of [{}, { edge: "warning" as const }]) {
+      expect((await refusal(overrides)).message).toMatch(/options of edge.*edgePaths/s);
+    }
+    expect((await refusal({ edge: { options: { edgePaths: "src/edge" } } })).message).toMatch(
+      /options of edge/,
+    );
+    expect((await refusal({ edge: "off", plain: { options: {} } })).message).toBe(
+      "overrides sets options for plain, which takes none.",
+    );
+  });
+
+  it("narrows a rule to its override's paths, beside the rule's own filters, and refuses them for a transcript rule", async () => {
+    const entries: ReadonlyArray<RuleEntry> = [
+      {
+        id: "queries",
+        preset: "security",
+        scope: "/repo",
+        rule: { description: "q", must: "a()", include: { names: ["*.ts"], paths: ["apps/**"] } },
+      },
+      { id: "agent", scope: "/repo", rule: { description: "t", must: "a()", type: "transcript" } },
+    ];
+    const [queries] = await Effect.runPromise(
+      withOverrides(entries, { "security/queries": { paths: ["apps/api/**", "packages/db/**"] } }),
+    );
+    const takes = (path: string) => ruleAppliesTo(queries!.rule, path, "");
+    expect(takes("apps/api/src/a.ts")).toBe(true);
+    expect(takes("apps/web/src/a.ts")).toBe(false);
+    // An override narrows: it does not reach past the rule's own paths or names.
+    expect(takes("packages/db/a.ts")).toBe(false);
+    expect(takes("apps/api/README.md")).toBe(false);
+    const refused = await Effect.runPromise(
+      Effect.flip(withOverrides(entries, { agent: { paths: ["src/**"] } })),
+    );
+    expect(refused.message).toContain("agent");
   });
 
   it("keeps the config's exclude globs, and refuses a rule's tests other than only or include", async () => {
@@ -193,6 +249,26 @@ describe("config", () => {
     );
   });
 
+  it("loads a transcript rule, and refuses one with keys about files", async () => {
+    const rule = { description: "d", never: "it.skip()", type: "transcript" } as const;
+    const config = await Effect.runPromise(decodeConfig({ rules: { skip: rule } }));
+    expect(config.rules).toEqual({ skip: rule });
+    const refused = await Effect.runPromise(
+      Effect.flip(decodeConfig({ rules: { skip: { ...rule, appliesTo: ["test files"] } } })),
+    );
+    expect(refused._tag).toBe("ConfigUnavailable");
+    expect(refused.message).toContain("appliesTo");
+  });
+
+  it("takes transcript windows from 1,000 to 16,000 tokens, which Jev can read", async () => {
+    for (const every of [999, 16_001]) {
+      const refused = await Effect.runPromise(Effect.flip(decodeConfig({ transcript: { every } })));
+      expect(refused._tag).toBe("ConfigUnavailable");
+    }
+    const config = await Effect.runPromise(loaded({ transcript: { every: 16_000, keep: 0 } }));
+    expect(resolveConfig(config).transcript).toEqual({ every: 16_000, keep: 0 });
+  });
+
   it("accepts a rule with only code never to write, and a guideline", async () => {
     const never = { description: "Domain code does not throw.", never: "throw new Error()" };
     const guideline = { description: "A file should be small.", should: "export const one = 1;" };
@@ -211,16 +287,63 @@ describe("config", () => {
   });
 
   it("keeps configured shared reads through resolution and refuses unknown reads", async () => {
-    const reads = ["workspacePackages", "symbols", "references"] as const;
+    const reads = ["workspacePackages", "dependents", "symbols", "references"] as const;
     const decoded = await Effect.runPromise(decodeConfig({ reads, rules }));
     expect(decoded.reads).toEqual(reads);
     expect(decoded.rules).toEqual(rules);
-    expect(resolveConfig({ ...decoded, rules }).reads).toEqual(["workspacePackages"]);
+    expect(resolveConfig({ ...decoded, rules }).reads).toEqual(["workspacePackages", "dependents"]);
     expect(resolveConfig({ ...decoded, rules }).typeAware).toBe(false);
     const refused = await Effect.runPromise(Effect.flip(decodeConfig({ reads: ["comments"] })));
     expect(refused.message).toContain(
-      'Expected "workspacePackages" | "symbols" | "references"\n  at ["reads"][0]',
+      'Expected "workspacePackages" | "dependents" | "symbols" | "references"\n  at ["reads"][0]',
     );
+  });
+
+  it("keeps a rule's declared reads without letting them change what the config enables", async () => {
+    const declared = {
+      "data/brand": { ...a, reads: ["dependents", "symbols"] },
+    } as const;
+    const decoded = await Effect.runPromise(decodeConfig({ rules: declared }));
+    const decodedRules = decoded.rules;
+    if (typeof decodedRules === "string" || decodedRules === undefined) {
+      throw new Error("inline rules decode to a record");
+    }
+    expect(decodedRules["data/brand"]?.reads).toEqual(["dependents", "symbols"]);
+    expect(resolveConfig({ ...decoded, rules: declared }).reads).toEqual(["workspacePackages"]);
+    expect(resolveConfig({ ...decoded, rules: declared, typeAware: true }).reads).toEqual([
+      "workspacePackages",
+      "symbols",
+      "references",
+    ]);
+    const refused = await Effect.runPromise(
+      Effect.flip(decodeConfig({ rules: { a: { ...a, reads: ["comments"] } } })),
+    );
+    expect(refused.message).toContain(
+      'Expected "workspacePackages" | "dependents" | "symbols" | "references"',
+    );
+  });
+
+  it("keeps a rule's include and exclude filters through decode and resolution", async () => {
+    const filtered = {
+      ...a,
+      include: { paths: ["src/**"], content: ["^import\\b"] },
+      exclude: { content: ["generated by "] },
+    } as const;
+    const decoded = await Effect.runPromise(decodeConfig({ rules: { filtered } }));
+    const decodedRules = decoded.rules;
+    if (typeof decodedRules === "string" || decodedRules === undefined) {
+      throw new Error("inline rules decode to a record");
+    }
+    expect(decodedRules.filtered).toEqual(filtered);
+    expect(resolveConfig({ ...decoded, rules: { filtered } }).rules.filtered).toEqual(filtered);
+  });
+
+  it("refuses a content filter that is not a JavaScript regular expression, at load", async () => {
+    const refused = await Effect.runPromise(
+      Effect.flip(decodeConfig({ rules: { a: { ...a, include: { content: ["("] } } } })),
+    );
+    expect(refused._tag).toBe("ConfigUnavailable");
+    expect(refused.message).toContain("regular expression");
   });
 
   it("replaces default reads with explicit empty or subset lists rather than merging them", async () => {
@@ -237,24 +360,5 @@ describe("config", () => {
         reads.filter((read) => read === "workspacePackages"),
       );
     }
-  });
-
-  it("refuses rule-level reads with instructions to move them to the config", async () => {
-    for (const reads of [["workspacePackages", "symbols", "references"], [], ["comments"]]) {
-      const refused = await Effect.runPromise(
-        Effect.flip(decodeConfig({ reads: ["symbols"], rules: { a: { ...a, reads } } })),
-      );
-      expect(refused._tag).toBe("ConfigUnavailable");
-      expect(refused.message).toContain("reads");
-      expect(refused.message).toMatch(/move/i);
-      expect(refused.message).toMatch(/config/i);
-    }
-  });
-
-  it("reads reference and avoid, the names before 0.7, as must and never", async () => {
-    const config = await Effect.runPromise(
-      decodeConfig({ rules: { old: { description: "d", reference: "a()", avoid: "b()" } } }),
-    );
-    expect(config.rules).toEqual({ old: { description: "d", must: "a()", never: "b()" } });
   });
 });

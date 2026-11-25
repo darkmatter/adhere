@@ -1,5 +1,6 @@
 ---
 description: A resource's logical ID, its first argument, must stay the same from one deploy to the next, never built from timestamps, random values, UUIDs, or commit SHAs, because a new logical ID replaces the resource and deletes the old one with its data.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

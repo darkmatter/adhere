@@ -1286,4 +1286,9 @@ describe("native TypeScript compiler and declaration reads", () => {
       await cancellation;
     }
   });
+
+  it("returns no native context for non-JavaScript files, which are never compiled", async () => {
+    const { root, read } = await fixture({ "notes.md": "See https://example.com // prose" }, false);
+    await expect(run(root, read("notes.md"))).resolves.toEqual({});
+  });
 });

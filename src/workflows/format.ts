@@ -1,7 +1,14 @@
-import { DEFAULT_SUFFICIENCY_THRESHOLD, DEFAULT_THRESHOLD } from "#config.ts";
+import { DEFAULT_SUFFICIENCY_THRESHOLD, DEFAULT_THRESHOLD, type ResolvedConfig } from "#config.ts";
 import { type Kind, tokenize } from "#highlight.ts";
 import { shownId } from "#rules.ts";
 import type { AuditPlan, AuditResult, FileDone, Finding } from "#workflows/audit.ts";
+import type { TranscriptResult } from "#workflows/transcript.ts";
+import { relative, sep } from "node:path";
+
+/** What a report is of: a lint of files, or a check of a transcript in windows. */
+type Run = AuditResult | TranscriptResult;
+
+const isTranscript = (run: Run): run is TranscriptResult => "windows" in run;
 
 /**
  * The report as data: lines of spans, each span a part of the frame or a
@@ -88,6 +95,10 @@ const hanging = (label: Span, lines: ReadonlyArray<Line>): ReadonlyArray<Line> =
 /** Code as lines of spans, each token in the role of its kind. */
 const highlighted = (code: string): ReadonlyArray<Line> =>
   tokenize(code).map((tokens) => tokens.map(({ text, kind }) => span(text, kind)));
+
+/** Code as lines of text, highlighted as a report highlights it when `color`. */
+export const highlightedLines = (code: string, color: boolean): ReadonlyArray<string> =>
+  highlighted(code).map((line) => serialize(line, color));
 
 /** Code as highlighted lines, without the blank lines at either end. */
 const codeLines = (code: string): ReadonlyArray<Line> => {
@@ -210,7 +221,7 @@ const excerpt = (finding: Finding, root: string | undefined): ReadonlyArray<Line
 /**
  * The warning on a finding whose file may not show enough to check its rule,
  * which its context score in the header says how far, and help: how to add
- * what the code relies on as a note Jev reads, in the form the README asks for.
+ * what the code relies on as a note Jev reads, in the form the docs ask for.
  */
 const insufficient = (finding: Finding, sufficiencyThreshold: number): ReadonlyArray<Line> =>
   !lacksContext(finding, sufficiencyThreshold)
@@ -329,15 +340,19 @@ const found = (findings: ReadonlyArray<Finding>): string => {
   return warnings === 0 ? errors : `${errors} and ${counted(warnings, "warning", "warnings")}`;
 };
 
-const summary = (result: AuditResult): ReadonlyArray<Line> => {
+const summary = (result: Run): ReadonlyArray<Line> => {
   const counts = [
-    counted(result.files, "file", "files"),
-    `${result.judged} judged`,
-    `${result.cached} cached`,
+    ...(isTranscript(result)
+      ? [counted(result.windows, "window", "windows"), `${result.judged} judged`]
+      : [
+          counted(result.files, "file", "files"),
+          `${result.judged} judged`,
+          `${result.cached} cached`,
+        ]),
     ...(result.skipped > 0 ? [`${result.skipped} skipped`] : []),
-    ...(result.waiting > 0 ? [`${result.waiting} waiting`] : []),
+    ...(!isTranscript(result) && result.waiting > 0 ? [`${result.waiting} waiting`] : []),
     ...(result.blocked.length > 0 ? [`${result.blocked.length} blocked`] : []),
-    ...(result.suppressed > 0 ? [`${result.suppressed} suppressed`] : []),
+    ...(!isTranscript(result) && result.suppressed > 0 ? [`${result.suppressed} suppressed`] : []),
   ];
   return [[span(`Found ${found(result.findings)}.`)], [span(`${counts.join(", ")}.`)]];
 };
@@ -346,14 +361,14 @@ const summary = (result: AuditResult): ReadonlyArray<Line> => {
  * The files the firewall in front of Jev's API refused, each with the Ray ID
  * TypeSafe AI can look the block up by, so a gap in the audit says where it is.
  */
-const blockedFiles = (result: AuditResult, root: string | undefined): ReadonlyArray<Line> =>
+const blockedFiles = (result: Run, root: string | undefined): ReadonlyArray<Line> =>
   result.blocked.length === 0
     ? []
     : [
         [],
         [
           span(
-            `The firewall in front of Jev's API blocked ${counted(result.blocked.length, "file", "files")}, so ${result.blocked.length === 1 ? "it is" : "they are"} not judged in full. TypeSafe AI can look each block up by its Ray ID:`,
+            `The firewall in front of Jev's API blocked ${isTranscript(result) ? counted(result.blocked.length, "window", "windows") : counted(result.blocked.length, "file", "files")}, so ${result.blocked.length === 1 ? "it is" : "they are"} not judged in full. TypeSafe AI can look each block up by its Ray ID:`,
           ),
         ],
         ...result.blocked.map(({ file, ray }) => [
@@ -374,6 +389,17 @@ export interface RenderOptions {
   /** The model of the config's provider, which the legend names in place of Jev. */
   readonly provider?: string;
 }
+
+/** The options a config gives a report: its thresholds, and its provider's model. */
+export const renderOptionsOf = (
+  config: Pick<ResolvedConfig, "threshold" | "sufficiencyThreshold" | "provider">,
+  root: string,
+): RenderOptions => ({
+  root,
+  threshold: config.threshold,
+  sufficiencyThreshold: config.sufficiencyThreshold,
+  ...(config.provider === undefined ? {} : { provider: config.provider.model }),
+});
 
 /**
  * The report, in the default `vp lint` layout: each diagnostic followed by a
@@ -396,6 +422,122 @@ export const render = (result: AuditResult, options: RenderOptions = {}): Readon
     ...summary(result),
     ...blockedFiles(result, options.root),
   ].map((line) => serialize(line, options.color === true));
+};
+
+// GitHub's workflow command parser unescapes data and properties differently.
+const escapeCommandData = (text: string): string =>
+  text.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+
+const escapeCommandProperty = (text: string): string =>
+  escapeCommandData(text).replaceAll(":", "%3A").replaceAll(",", "%2C");
+
+export const renderGitHub = (result: AuditResult, workspace: string): string =>
+  [
+    ...result.findings.map((finding) => {
+      const file = escapeCommandProperty(relative(workspace, finding.file).split(sep).join("/"));
+      const title = escapeCommandProperty(shownId({ id: finding.rule, preset: finding.preset }));
+      const { first, last } = finding.lines ?? finding.section;
+      return `::${finding.level} file=${file},line=${first},endLine=${last},title=${title}::${escapeCommandData(finding.description)}`;
+    }),
+    ...summary(result).map((line) => serialize(line, false)),
+  ].join("\n");
+
+/** The complete result, with the same rule ids and relative paths as the text report. */
+export const renderJson = (result: Run, options: RenderOptions = {}): string =>
+  JSON.stringify(
+    {
+      ...result,
+      threshold: options.threshold ?? DEFAULT_THRESHOLD,
+      sufficiencyThreshold: options.sufficiencyThreshold ?? DEFAULT_SUFFICIENCY_THRESHOLD,
+      ...(options.provider === undefined ? {} : { provider: options.provider }),
+      findings: result.findings.map((finding) => ({
+        ...finding,
+        rule: shownId({ id: finding.rule, preset: finding.preset }),
+        file: displayPath(finding.file, options.root),
+      })),
+      blocked: result.blocked.map((blocked) => ({
+        ...blocked,
+        file: displayPath(blocked.file, options.root),
+      })),
+    },
+    null,
+    2,
+  );
+
+const markdownText = (text: string): string => text.replace(/[\\`*_[\]<>#]/g, "\\$&");
+
+/** A fence longer than any backtick run in the text, including template literals. */
+const fenced = (text: string, language: string): string => {
+  const fence = "`".repeat(
+    Math.max(3, ...Array.from(text.matchAll(/`+/g), ([run]) => run.length + 1)),
+  );
+  return `${fence}${language}\n${text}\n${fence}`;
+};
+
+/** All findings grouped by rule, followed by the run summary once. A transcript's excerpts are plain text. */
+export const renderMarkdown = (result: Run, options: RenderOptions = {}): string => {
+  const language = isTranscript(result) ? "text" : "typescript";
+  const sufficiencyThreshold = options.sufficiencyThreshold ?? DEFAULT_SUFFICIENCY_THRESHOLD;
+  const groups = Map.groupBy(result.findings, (finding) =>
+    shownId({ id: finding.rule, preset: finding.preset }),
+  );
+  return [
+    ...Array.from(groups, ([id, findings]) =>
+      [
+        `# ${markdownText(id)}`,
+        counted(findings.length, "finding", "findings"),
+        ...findings.flatMap((finding) => {
+          const lines = finding.lines ?? finding.section;
+          const location = `${displayPath(finding.file, options.root)}:${lines.first}${lines.last === lines.first ? "" : `–${lines.last}`}`;
+          return [
+            `## ${markdownText(location)}`,
+            finding.description,
+            `Level: **${finding.level}** · Confidence: ${finding.probability} · Threshold: ${finding.threshold}${finding.context === undefined ? "" : ` · Context: ${finding.context}`}`,
+            ...(lacksContext(finding, sufficiencyThreshold)
+              ? [
+                  isTranscript(result)
+                    ? `> Warning: the transcript may not show enough to check this rule (context below ${sufficiencyThreshold}).`
+                    : `> Warning: this file may not show enough to check this rule (context below ${sufficiencyThreshold}). Add missing context with an \`@adhere\` note.`,
+                ]
+              : []),
+            `Excerpt starting at line ${finding.excerpt.start}:`,
+            fenced(finding.excerpt.lines.join("\n"), language),
+            ...[finding.examples.good, finding.examples.bad].flatMap((example) =>
+              example === undefined
+                ? []
+                : [`### ${example.word}`, fenced(example.code.trim(), language)],
+            ),
+          ];
+        }),
+      ].join("\n\n"),
+    ),
+    "## Run summary",
+    ...summary(result).map((line) => serialize(line, false)),
+    ...blockedFiles(result, options.root)
+      .filter((line) => line.length > 0)
+      .map((line) => serialize(line, false)),
+  ].join("\n\n");
+};
+
+/** One file per violated rule in each requested format, with run counts retained as context. */
+export const renderRuleReports = (
+  result: AuditResult,
+  formats: { readonly json: boolean; readonly md: boolean },
+  options: RenderOptions = {},
+): ReadonlyMap<string, string> => {
+  const groups = Map.groupBy(result.findings, (finding) =>
+    shownId({ id: finding.rule, preset: finding.preset }),
+  );
+  return new Map(
+    Array.from(groups).flatMap(([id, findings]): Array<[string, string]> => {
+      const name = encodeURIComponent(id);
+      const report = { ...result, findings };
+      const files: Array<[string, string]> = [];
+      if (formats.json) files.push([`${name}.json`, `${renderJson(report, options)}\n`]);
+      if (formats.md) files.push([`${name}.md`, `${renderMarkdown(report, options)}\n`]);
+      return files;
+    }),
+  );
 };
 
 /**

@@ -1,6 +1,6 @@
 ---
 name: adhere
-description: Reference for adhere, the linter for coding conventions a normal linter cannot check, judged by TypeSafe AI's Jev. Covers its commands, the Markdown rule format and how to word a rule, the config, presets, shared rules, comments and suppressions, the cache, reading a report, and tuning a noisy rule. Use when writing or editing adhere rules, configuring adhere, reading its findings, or answering questions about it. To set adhere up in a repo, use adhere-setup; to fix findings, adhere-fix.
+description: Reference for adhere, the linter for coding conventions a normal linter cannot check, judged by TypeSafe AI's Jev. Covers its commands, the Markdown rule format and how to word a rule, transcript rules for a coding agent's work, the config, presets, shared repos and lint packages, comments and suppressions, the cache, reading a report, and tuning a noisy rule. Use when writing or editing adhere rules, configuring adhere, reading its findings, or answering questions about it. To set adhere up in a repo, use adhere-setup; to fix findings, adhere-fix.
 ---
 
 # adhere
@@ -19,29 +19,36 @@ first rules, first lint, and CI, and adhere-fix verifies and fixes findings.
 ## Commands
 
 ```sh
-adhere init [--force]            # .adhere/config.ts, two example rules, and the dev dependency
-adhere init --shared org/repo    # a repo of rules other repos install, with CI and an alchemy stack
+adhere init [--force]            # config, tsconfig, two example rules, and the dev dependency
+adhere init --shared org/repo    # rules, instructions, lint package, CI, and an alchemy stack
+adhere postinstall               # render .adhere/instructions/**/*.md into AGENTS.md
 adhere login                     # save a TypeSafe AI API key; TYPESAFE_API_KEY takes precedence
 adhere validate                  # rule wording, rules a linter could check, contradictions
+adhere rules create [idea]       # native rule, approved plugin, or rule file; org PR
+adhere rules readme [org/repo]   # refresh a shared repo README's managed guide
 adhere lint                      # judge the working directory; exit 1 on an error finding
 adhere lint --limit 0            # compiler-free counts/cache plan; no budgeting
 adhere lint --limit 100          # first 100 files needing requests; all pending rules per file
 adhere lint --yes                # send without asking, as in CI
+adhere lint --yes --github       # annotate changed lines in GitHub pull requests
 adhere lint --type-aware         # opt in to both compiler symbols and declaration references
 adhere lint --preset effect      # add a built-in rule set; the config becomes optional
 adhere lint --filter 'src/**'    # read only matching files; repeat, and ! to leave out
 adhere lint --threshold 0.9      # report at another threshold from the cache; judges nothing again
 adhere lint --deny-warnings      # fail on warnings too
-adhere list org/repo             # the rules in a GitHub repo's .adhere/rules/
-adhere install org/repo[/topic[/rule]][#ref]   # copy them into .adhere/rules/org/repo/
+adhere lint --type transcript < turn.txt  # judge text, such as an agent's turn, against the transcript rules
+adhere lint --type transcript --hook      # answer a Claude Code or Codex hook event read on stdin
+adhere list org/repo             # the rules in a GitHub repo's .adhere/rules/, with descriptions
+adhere install org/repo[/topic[/rule]][#ref] [--all]  # copy instructions and rules into .adhere/
 adhere skill [docs|setup|fix]    # print a skill
 ```
 
 `adhere <command> --help` lists every flag. Version, help, skills, `validate`,
 and planning with `--limit 0` do not start the native compiler. Default `lint`
-is compiler-free. With `typeAware: true` or `--type-aware`, it starts the compiler
-only during execution, after confirmation, for pending judgments or cached
-findings still needing location.
+is compiler-free, and leaves out bundled preset rules that declare native
+reads. With `typeAware: true` or `--type-aware`, it includes them and starts the
+compiler only during execution, after confirmation, for pending judgments or
+cached findings still needing location.
 
 `--limit` now counts files, not rule checks; use the same flag without an extra
 unit selector. Each request-bearing file consumes one slot for all its pending
@@ -58,15 +65,16 @@ native-context caveat before execution.
 A repo's rules live in `.adhere/rules/`, a directory per rule holding a
 `RULE.md`, or a `RULE.ts` (below). The directory's path is the rule id:
 `.adhere/rules/data/brand-ports/RULE.md` is `data/brand-ports`. Other files in
-a rule's directory are not rules. A `*.md` rule elsewhere in `.adhere/`, as
-rules were once written, refuses the run with where it goes to keep its id.
-A `.adhere/rules/` in a subdirectory holds rules for that
-subtree only, and the most specific rule with an id wins. `cache/` and the
-config in `.adhere/` are not rules.
+a rule's directory are not rules, and only `RULE.md` or `RULE.ts` in a rule's
+directory defines one: other Markdown in `.adhere/`, such as
+`.adhere/instructions/`, is ignored. A `.adhere/rules/` in a subdirectory holds
+rules for that subtree only, and the most specific rule with an id wins.
+`cache/` and the config in `.adhere/` are not rules.
 
 ````md
 ---
 description: A port must be a branded, range-checked integer, never a bare number.
+include: { "names": ["*.ts", "*.tsx"] }
 ---
 
 Prose here is the rule's details: Jev reads it after the description. Say why
@@ -117,11 +125,38 @@ Front matter besides `description`, all optional:
 - `tests: only` for a rule about tests, `tests: include` for one that holds in
   tests too. Otherwise rules skip `.test` and `.spec` files and files under
   `test/`, `tests/`, `__tests__/`, and `fixtures/`.
+- `include: {"names":["*.ts","*.tsx"]}` says which files the rule applies to,
+  by globs on a file's own name, whichever directory holds it: `*.ts`,
+  `Dockerfile`, or `*` for every file. Set it on every rule. A rule without it
+  judges every kind of file `adhere lint` reads, documentation and data
+  included, and each run warns and names those rules. Names carry to any
+  repository, so a shared rule keeps them; `paths` depend on one repository's
+  layout, and a repository narrows a shared or preset rule with `paths` in the
+  config's `overrides`.
+- `include: {"names":["*.ts"],"paths":["src/**"],"content":["from\\s+[\"']effect[\"']"]}`
+  and `exclude: {"paths":["**/generated/**"],"content":["@generated"]}`,
+  JSON objects on one line, filter files locally before requests or cached
+  findings. TypeScript rules use ordinary objects with the same fields.
+  Paths are repository-root-relative globs, even for nested rules. Content
+  patterns are JavaScript regex source strings without delimiters or flags,
+  matched against original text including comments. Invalid regex refuses
+  loading. Entries within each list are alternatives; every nonempty include
+  list must match, and any exclude match vetoes the file. Empty lists impose
+  no restriction. Existing scope, test settings, and ignores still apply.
+  An import regex is not import resolution: check comments, alternative import
+  forms, and re-exports before narrowing a rule and silently missing violations.
 - `appliesTo: ["a declared union type or schema"]` and
   `excludeIf: ["a type that mirrors a third-party format"]`, JSON arrays on
   one line, scope a rule without widening its description: a finding stands
   only when Jev says the code that breaks the rule is as every `appliesTo`
   describes and as no `excludeIf` does.
+
+- `reads: ["symbols", "references"]` declares the context the rule needs, a
+  JSON array on one line. It enables nothing: the config's `reads` and
+  `typeAware` still choose what this run sends. A project's own rule still
+  runs and lint warns that it may be less accurate until a declared read is
+  enabled; a bundled preset rule that declares either native read is left out
+  unless `typeAware` is on.
 
 A rule's directory can hold a `RULE.ts` instead, which default-exports
 `defineRule({...})` from `@drkmttr/adhere`, with the fields a config's inline
@@ -137,6 +172,18 @@ changes are not tracked by the cache; neither are built-in read-context contents
 or reader selection. Judgments are redone when own code, model, rule, matcher,
 or hook source changes, or the user clears the cache. Helpers it imports go
 beside it in its directory.
+
+A rule whose front matter says `type: transcript` judges what a coding agent
+did, such as skipping a failing test, instead of code.
+`adhere lint --type transcript` reads the transcript on stdin; plain
+`adhere lint` leaves the rule out, and `adhere validate` checks its wording
+but compares only code rules for contradictions. Its examples are what
+an agent writes or runs, in `text` fences, written the way the hook writes a
+turn: `TOOL CALL <tool>: <input>`, `RESULT: <output>`, and
+`ASSISTANT: <message>`. It cannot have `tests`, `include`, `exclude`,
+`appliesTo`, `excludeIf`, `reads`, or `appendState`, which are about files.
+Hook setup, windows, and the history kept in the temp directory:
+https://dm.sh/adhere/checking-transcripts/.
 
 A rule a regex, an import check, or the type checker could flag every time
 belongs in that tool, not adhere. `adhere validate` reports rules that look
@@ -173,9 +220,13 @@ Opting in with `typeAware: true` or `--type-aware` enables both `symbols` and
 `references`, regardless of `reads`. Legacy native-reader entries in `reads`
 alone do not enable the compiler; leaving them out does not disable it when
 type awareness is on. Code alone requires `reads: []` and type awareness off.
-Presets do not own or override this selection. Rule-level `reads`, in Markdown
-front matter, `defineRule`, or inline rules, is rejected with guidance to move
-it to the config. The context maps are:
+Presets do not own or override this selection. A rule may declare what it
+needs with `reads`, in Markdown front matter, `defineRule`, or an inline rule;
+the declaration enables nothing. A bundled preset rule that declares `symbols`
+or `references` is left out unless `typeAware` is on, so it is never judged
+with less than it declares. A project's own rule still runs, and a declared
+read the run does not enable is a warning that it may be less accurate until
+enabled. The context maps are:
 
 - `workspacePackages`: only packages matched by this file's literal imports,
   as `{ canonicalPackageName: directory }`. Subpaths match the owning package;
@@ -282,8 +333,13 @@ configurable `maxSymbolLength` and `maxSymbolDocumentationLength` limits, both
 256 by default. Only `appendState` forces a private rule request group.
 
 `overrides` changes any rule by the id the report shows, a preset's with the
-preset first, without copying it; an id no rule has refuses the run. `rules`
-in the config, inline or as a directory of rule directories, replaces
+preset first, without copying it; an id no rule has refuses the run. Beside
+`level`, `threshold`, and `options`, an override takes `paths`,
+repository-root-relative globs, as in
+`"security/parameterized-queries": { paths: ["apps/api/**"] }`: the rule then
+judges only the files they match, among those its own filters take, so a
+preset or shared rule applies to the part of the repository it is relevant to.
+`rules` in the config, inline or as a directory of rule directories, replaces
 `.adhere/rules/` entirely. Precedence, highest first: `--threshold`, the config, presets
 in order, the default; a rule's own `threshold` beats those, and `overrides`
 beats the rule.
@@ -298,20 +354,176 @@ which the executable supplies.
 subdirectories, and a topic is a preset of its own. Their rules are in the
 adhere package under `presets/`, and at
 https://github.com/darkmatter/adhere/tree/main/presets. A preset leaves out
-what that ecosystem's linters check exactly. Quiet a preset rule with
-`overrides` rather than copying it.
+what that ecosystem's linters check exactly. Quiet a preset rule, or apply it
+to only part of the repository, with `overrides` rather than copying it.
 
-## Shared rules
+## Linter-checkable rules
 
-An organization keeps rules in one repo's `.adhere/rules/`, scaffolded by
-`adhere init --shared org/repo`, and other repos copy them in with
-`adhere install org/repo`, or one topic or rule with
-`adhere install org/repo/<topic>[/<rule>]`. Each rule's whole directory lands
-in `.adhere/rules/org/repo/`, so `data/brand-ports` becomes the rule
-`org/repo/data/brand-ports`, and a copied `RULE.ts` runs whenever lint does.
-They are the repo's own rules from then on; a second install skips existing
-rules unless `--force`, which replaces their directories, local edits and all. The source is cloned with git,
-so a private repo needs git's credentials for GitHub.
+A convention a linter can decide exactly does not belong in a `RULE.md`.
+`adhere rules create` asks the coding agent for one of three routes:
+
+- **A native Oxlint rule.** The agent answers `linter` as a plain rule-id
+  string, or null, and adhere checks it against its bundled Oxlint catalog at
+  decode time; unknown ids are rejected. It also supplies the rule's exact
+  option values, which the config puts after the severity: a rule whose
+  defaults enforce the idea prints `"error"`, while an option-dependent rule
+  prints `["error", ...options]`, because bare `"error"` would enforce
+  nothing. Banning lodash with `no-restricted-imports` becomes
+  `["error", { "paths": [{ "name": "lodash" }] }]`. A project rule prints the
+  exact config; an organization rule enables it in the shared `oxlint/rules.json`
+  and pushes a branch for a pull request with the README guide refreshed. In a
+  shared repo itself, "this project" writes `oxlint/rules.json` locally instead
+  of printing the config. A rule from a plugin Oxlint leaves off
+  by default also needs that plugin in `plugins`, whose list replaces Oxlint's
+  default set. A type-aware rule needs
+  `options.typeAware` and `oxlint-tsgolint`, which Vite+ includes.
+- **A custom Oxlint JS plugin.** Only when the convention is visible in the
+  syntax tree and scopes: a JS plugin cannot see TypeScript types, other
+  files, or another parser's AST. The plugin must be plain ESM, default-export
+  its object, and import nothing; the agent reports each diagnostic's message
+  literally, so its valid and invalid fixtures can match exact diagnostics.
+  adhere shows the plugin and fixtures, and runs nothing until the user
+  approves. It then runs the fixtures with the project's own Oxlint RuleTester,
+  through `oxlint/plugins-dev` or `vite-plus/lint/plugins-dev`, so the project
+  needs its own Oxlint or Vite+ and Node 22 or newer on `PATH`; Oxlint's
+  RuleTester refuses Bun and older Node, there is no Bun fallback, and without
+  it nothing is written and no repair is attempted. adhere bundles no Oxlint.
+  One failure goes back to the agent to repair; the user approves the repaired
+  plugin, then it runs again. Nothing is written unless the tests pass.
+- **An adhere rule**, for judgment, facts outside the file, or types. Its
+  draft names the files it applies to with `include.names`.
+
+Whichever route it takes, the draft is trialled on real files before anything
+is written: the first 100 applicable files by default, the entire repo, or a
+number the user types, with the plan's known cost shown first. The authoring
+agent reads the saved report in `.adhere/trial/` and the source it names. After
+the first completed adhere trial, it is explicitly asked whether path/content
+filters would help: recommend exact entries or explain why none are needed,
+including the risk of hiding real violations. The user accepts the draft,
+reviews findings, or asks for a revision. Findings and examples take optional
+notes; revisions receive those notes and the filter recommendation, are
+re-approved, and rerun the same sample. Newly filtered files are reported as
+skipped, not replaced. The initial cap counts files that pass filters.
+Skipping is allowed, but the write prompt then says `(not trialled)` and the
+closing line says `Not trialled: …`; nothing is called validated on a skipped,
+partial, or stale run. Native settings and approved plugins are trialled too,
+without adhere-only filter recommendations.
+
+A project plugin and its checked-in test go to
+`.adhere/oxlint/<plugin>.mjs` and `.adhere/oxlint/<plugin>.test.mjs`; the
+`.mjs` keeps ESM in a `type: commonjs` package. adhere prints the config to add
+to `oxlint.config.ts` or Vite+'s lint block:
+
+```json
+{
+  "jsPlugins": ["./.adhere/oxlint/no-foo.mjs"],
+  "rules": { "no-foo/no-foo": "error" }
+}
+```
+
+Run the test with Node 22 or newer: `node .adhere/oxlint/no-foo.test.mjs`.
+
+A native project rule without options prints only its id:
+
+```json
+{ "rules": { "typescript/no-explicit-any": "error" } }
+```
+
+A shared repo keeps plugins in `oxlint/plugins/` as `.js`, with `.test.js` beside
+them, because the shared package is `type: module`; it registers them in
+`oxlint/rules.json`. The catalog follows adhere's toolchain, not the project's
+installed Oxlint, so a suggestion may be missing on an older Oxlint or a newer
+rule may be absent from the catalog; the plugin tests always use the project's
+Oxlint. `adhere validate` reports rules left over that a linter could check.
+
+## Shared repos
+
+An organization keeps its instructions, rules, and lint settings in one repo,
+scaffolded by `adhere init --shared org/repo`. Its `README.md` carries a
+managed guide between `<!-- adhere:rules:start -->` and
+`<!-- adhere:rules:end -->`: a contents list linking the rules, lint settings,
+and custom plugin sections. Under a level-two Rules heading, rules sort by
+topic and id without visible topic headings. Each rule id opens an expandable
+entry containing its description, its `RULE.md` examples and explanation,
+and a source link under a stable permalink. The guide also lists every enabled
+native setting in `oxlint/rules.json`
+with its severity, and each custom plugin's enabled rules, linked to
+`oxlint/plugins/<name>.js` when that is a local file. A `RULE.ts` is linked as
+TypeScript source only: the guide never reads or runs it, and plugin code is
+never loaded. Refresh it with `adhere rules readme [org/repo]` after renaming
+or deleting a rule; it preserves prose outside the block, omits off lint
+settings, and refuses malformed markers without writing.
+`adhere rules create` refreshes it for local writes and stages it with
+shared-repo branches.
+
+The command chooses its target by argument, then by where it runs. A named
+`org/repo` wins. Otherwise a working directory that is itself a shared repo
+(`package.json` exporting `./oxlint`) is written in place. Anywhere else,
+adhere reads the checkout's GitHub `origin` (`https`, `ssh`, or scp form) and
+infers `<owner>/standards` (`acme/app` -> `acme/standards`, never `acme/app`);
+a fork's owner is the fork's. That remote target is cloned at its default
+branch, the changed block is committed alone on a fresh
+`adhere/readme-<timestamp>` branch, pushed, and printed with a compare link.
+No pull request is opened, the consumer checkout and the default branch stay
+untouched, and an unchanged guide prints `No change, so nothing was pushed.`
+without committing. A rules-only remote works, since the `./oxlint` export is
+only required for the local write. A missing or non-GitHub `origin` fails and
+names `adhere rules readme org/repo`; name the repo explicitly when the
+organization's repo is not `<owner>/standards`.
+
+Other repos copy the first two with `adhere install`:
+
+```sh
+adhere list org/repo                  # rules and descriptions; instructions are not listed
+adhere install org/repo               # choose instruction files, then rules, at a terminal
+adhere install org/repo --all         # everything, without a terminal (CI)
+adhere install org/repo/data          # choose among the data topic's rules
+adhere install org/repo/data/ports    # exactly that rule, without asking
+adhere install org/repo#v1.0.0 --all  # everything at tag v1.0.0
+```
+
+A bare repo chooses from instruction files and rules. A topic chooses only the
+rules under it, never instructions, even a topic named `instructions`. An exact
+rule id with no rule deeper under it is copied directly. Already-installed
+items are preselected. A rerun skips what exists; `--force` replaces existing
+files and rule directories, and deselecting never deletes them.
+
+Instruction files land in `.adhere/instructions/org/repo/<path>`. Rules keep
+their whole directory in `.adhere/rules/org/repo/`, so `data/brand-ports`
+becomes the rule `org/repo/data/brand-ports`, and a copied `RULE.ts` runs
+whenever lint does. Copies are the repo's own from then on. `adhere postinstall`
+renders the instruction files into `AGENTS.md`; files whose path has at least
+three segments come first (copied files, and local files two directories deep),
+then files directly in the instructions directory, then files one directory
+deep, each group sorted by path.
+
+The shared `oxlint/` package is not copied. Pin it as a git dependency at a
+repo-wide tag (there are no per-rule or per-package tags; one tag covers rules,
+instructions, and lint together), then spread it into Vite+ or plain Oxlint:
+
+```ts
+// vite.config.ts
+import sharedLint from "@org/repo/oxlint";
+import { defineConfig } from "vite-plus";
+
+export default defineConfig({
+  lint: { ...sharedLint, jsPlugins: [...sharedLint.jsPlugins, "./.adhere/oxlint/local.mjs"] },
+});
+```
+
+```ts
+// oxlint.config.ts: oxlint -c oxlint.config.ts
+import sharedLint from "@org/repo/oxlint";
+
+export default { ...sharedLint };
+```
+
+`oxlint/index.js` reads `oxlint/rules.json` and resolves plugin paths relative to
+the package. Paths a project adds stay relative to its own config; project
+plugins live in `.adhere/oxlint/`.
+
+The source is cloned with git, so a private repo needs git's credentials for
+GitHub.
 
 ## Comments and suppressions
 
@@ -346,9 +558,10 @@ re-judges that rule; a threshold change re-judges nothing.
 
 Dependencies, related source, reader selection, shared read-context contents,
 and hook-owned external data are deliberately not fingerprinted. If `A.ts` imports
-`B.ts`, changing `B.ts` does not invalidate `A.ts`. Changing config `reads` or
-`typeAware` does not refresh its cached answers either. This keeps planning cheap but accepts
-stale dependency/context judgments.
+`B.ts`, changing `B.ts` does not invalidate `A.ts`. Changing the config's
+`reads` or `typeAware` re-judges every rule once; changing what those reads
+find does not. This keeps planning cheap but accepts stale dependency/context
+judgments.
 
 `planAudit` reads/counts/hashes code, checks the cache, and makes code plus cheap
 workspace estimates without compiler or `SourceReads` calls. It applies `--limit`
@@ -421,6 +634,10 @@ Per rule, read its findings and decide:
 - Many hits at 0.80 to 0.90, mostly not violations: the description is too
   broad. Narrow it, or scope it with `appliesTo` or `excludeIf`, before
   raising its `threshold`: a threshold hides, a sentence explains.
+- Hits in irrelevant files: consider local `include`/`exclude` path or content
+  filters before paying to judge them. Verify the boundary against real
+  violations and unflagged files; an absent import does not prove the library
+  is unused when the project uses wrappers or re-exports.
 - Hits on code that follows the pattern through another API: the `must`
   block is too specific. Use the repo's most general correct example.
 - Right less than half the time and not fixable by wording: `level: warning`,

@@ -45,9 +45,13 @@ describe("jev over http", () => {
 
   it("sends at most --rpm requests a minute, evenly spaced", async () => {
     const sent: Array<number> = [];
+    const answer = () => Response.json({ answers: { a: { noul: 0.25 } } });
+    // Node loads fetch's globals on their first use: here, so that it does not
+    // fall between the limiter's first turn and the first send.
+    answer();
     const fetch = fetchFrom(() => {
       sent.push(Date.now());
-      return Response.json({ answers: { a: { noul: 0.25 } } });
+      return answer();
     });
     const layer = JevLive.pipe(
       Layer.provide([
@@ -60,6 +64,7 @@ describe("jev over http", () => {
           sufficiencyThreshold: 0.7,
           maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
           maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+          transcript: { every: 8_000, keep: 20 },
           reads: [],
           rules: {},
           rpm: 1200,
@@ -113,6 +118,7 @@ describe("jev over http", () => {
           sufficiencyThreshold: 0.7,
           maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
           maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+          transcript: { every: 8_000, keep: 20 },
           reads: [],
           rules: {},
         }),
@@ -158,6 +164,7 @@ describe("jev over http", () => {
           sufficiencyThreshold: 0.7,
           maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
           maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+          transcript: { every: 8_000, keep: 20 },
           reads: [],
           rules: {},
         }),
@@ -210,6 +217,7 @@ describe("jev over http", () => {
           sufficiencyThreshold: 0.7,
           maxSymbolDocumentationLength: DEFAULT_MAX_SYMBOL_DOCUMENTATION_LENGTH,
           maxSymbolLength: DEFAULT_MAX_SYMBOL_LENGTH,
+          transcript: { every: 8_000, keep: 20 },
           rules: {},
           ...config,
           reads: config.reads ?? [],

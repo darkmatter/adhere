@@ -1,5 +1,6 @@
 ---
 description: Credentials a stack mints for CI should be scoped to what the app deploys, using a GitHub OIDC role pinned to the repository on AWS and a trimmed permission list on Cloudflare, and should not grant AdministratorAccess or unused write scopes.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Should

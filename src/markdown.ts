@@ -1,4 +1,12 @@
-import { ConfigUnavailable, type Example, type Rule } from "#config.ts";
+import {
+  ConfigUnavailable,
+  type Example,
+  fileKeysProblem,
+  Reads,
+  type Rule,
+  RULE_TYPES,
+  RuleFilter,
+} from "#config.ts";
 import { Effect, Schema } from "effect";
 
 /**
@@ -28,26 +36,51 @@ import { Effect, Schema } from "effect";
  * fence's own word wins over its heading's. The first fence under each word is
  * that example, and a rule has either or both. An untagged fence outside those
  * sections is the code to write, and without a fence the whole body is.
- * `avoid`, the word before 0.7, means `never`. `threshold` is optional, and
+ * `threshold` is optional, and
  * so is `tests`: `only` for a rule about test files, which rules otherwise
  * skip, and `include` for a rule that judges them too. So is `level`:
  * `warning` reports the rule's findings as warnings, which do not fail a run.
+ * So is `type`: `transcript` for a rule about text piped to
+ * `adhere lint --type transcript`, such as an agent's work, which takes none
+ * of the keys about files below.
  * `appliesTo` and `excludeIf`, the rule's scope, are JSON arrays of strings on
  * one line, as in `excludeIf: ["a type that mirrors a third-party format"]`.
-
+ * `include` and `exclude`, its file filters, are JSON objects on one line, as
+ * in `include: {"names": ["*.ts"], "paths": ["src/**"], "content": ["^import"]}`:
+ * a file must match every `include` category, any match in a category is
+ * enough, and any `exclude` match drops it. `names` takes globs for a file's
+ * own name, which say which files the rule applies to in any repository;
+ * `paths` takes globs from this repository's root. `content` takes regular
+ * expression sources matched against the file as written, comments included.
+ * `reads` is a JSON array of the same names, as in `reads: ["dependents"]`:
+ * it declares what the rule needs, while the config still decides what runs.
  */
 const Matchers = Schema.fromJsonString(Schema.Array(Schema.String));
+/** A filter object on one line, as in `include: {"names": ["*.ts"]}`. */
+const Filters = Schema.fromJsonString(RuleFilter);
 
 const FrontMatter = Schema.Struct({
   description: Schema.String,
+  type: Schema.optionalKey(Schema.Literals(RULE_TYPES)),
   threshold: Schema.optionalKey(Schema.FiniteFromString),
   tests: Schema.optionalKey(Schema.Literals(["only", "include"])),
   level: Schema.optionalKey(Schema.Literals(["error", "warning"])),
+  include: Schema.optionalKey(Filters),
+  exclude: Schema.optionalKey(Filters),
   appliesTo: Schema.optionalKey(Matchers),
   excludeIf: Schema.optionalKey(Matchers),
+  reads: Schema.optionalKey(Schema.fromJsonString(Reads)),
 });
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
+
+/**
+ * A rule file's Markdown after its front matter, as written: a README embeds
+ * it whole, examples and prose alike. Without front matter there is nothing to
+ * strip, so the text is its own body; `parseRuleMarkdown` refuses that anyway.
+ */
+export const ruleBodyOf = (text: string): string => FRONT_MATTER.exec(text)?.[2] ?? text;
+
 const FENCE = /^ {0,3}(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n {0,3}\1[ \t]*$/gm;
 /** An ATX heading: its level as `#`s, then its text, without a closing run of `#`s. */
 const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/gm;
@@ -85,11 +118,11 @@ interface Heading {
   readonly word: Word | undefined;
 }
 
-/** `must not`, like `never` and the older `avoid`, names code never to write. */
+/** `must not`, like `never`, names code never to write. */
 const wordOf = (info: string): Word | undefined => {
   const words = info.trim().toLowerCase().split(/\s+/);
   const not = words.includes("not");
-  if (words.includes("never") || words.includes("avoid")) return "never";
+  if (words.includes("never")) return "never";
   if (words.includes("should")) return not ? "should not" : "should";
   if (words.includes("must")) return not ? "never" : "must";
   return undefined;
@@ -99,7 +132,6 @@ const HEADING_WORDS: ReadonlySet<string> = new Set([
   "must",
   "must not",
   "never",
-  "avoid",
   "should",
   "should not",
 ]);
@@ -208,11 +240,6 @@ export const parseRuleMarkdown = (
       });
     }
     const fields = parseFrontMatter(match[1]);
-    if (Object.hasOwn(fields, "reads")) {
-      return yield* ConfigUnavailable.make({
-        message: `${file}: move reads from the rule's front matter to the top level of defineConfig({...}) in your config file.`,
-      });
-    }
     const front = yield* Schema.decodeUnknownEffect(FrontMatter)(fields).pipe(
       Effect.mapError((problem) =>
         ConfigUnavailable.make({ message: `${file}: ${problem.message}` }),
@@ -232,5 +259,10 @@ export const parseRuleMarkdown = (
       });
     }
     const details = detailsOf(match[2]);
-    return { ...front, ...(details === undefined ? {} : { details }), ...code };
+    const rule = { ...front, ...(details === undefined ? {} : { details }), ...code };
+    const problem = fileKeysProblem(rule);
+    if (problem !== undefined) {
+      return yield* ConfigUnavailable.make({ message: `${file}: ${problem}` });
+    }
+    return rule;
   });

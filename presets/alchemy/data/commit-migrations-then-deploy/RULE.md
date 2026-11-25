@@ -1,5 +1,6 @@
 ---
 description: Migrations must be generated and reviewed ahead of time, committed with the schema, and applied from the committed files; a deploy, deploy hook, or Action must never generate migration SQL, and schema changes must never run from an HTTP route.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

@@ -32,7 +32,7 @@ jobs:
           ref: main
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.4.3"
+          bun-version: "1.4.4"
       - uses: actions/setup-node@v7
         with:
           node-version: "26"
@@ -44,14 +44,15 @@ jobs:
 
   publish:
     needs: verify-macos
-    runs-on: ubuntu-latest
+    # npm rejects --provenance from self-hosted runners such as arc.
+    runs-on: public-x64-linux
     steps:
       - uses: actions/checkout@v7
         with:
           ref: main
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.4.3"
+          bun-version: "1.4.4"
       - uses: actions/setup-node@v7
         with:
           node-version: "26"

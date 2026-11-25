@@ -1,5 +1,7 @@
 ---
 description: Variants of a domain type, alternatives that carry fields and that a service returns, stores, or decodes, must be tagged schemas such as Schema.TaggedClass or Schema.TaggedStruct members of a Schema.Union, never TypeScript object types joined by a tag field.
+reads: ["symbols", "references"]
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 A tagged schema decodes each variant at the boundary and lets `Match.tag`

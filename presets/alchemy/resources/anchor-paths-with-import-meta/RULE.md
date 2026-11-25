@@ -1,5 +1,6 @@
 ---
 description: A path prop such as main or rootDir on a resource declared outside the directory alchemy runs from must be anchored to the declaring file with import.meta, never given as a bare relative string, which resolves from the root instead.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

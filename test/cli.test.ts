@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import packageJson from "../package.json";
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 
 const execFileAsync = promisify(execFile);
 const main = join(process.cwd(), "src", "main.ts");
@@ -28,6 +28,7 @@ describe("cli", () => {
       "lint",
       "validate",
       "init",
+      "postinstall",
       "list",
       "install",
       "login",
@@ -85,7 +86,7 @@ describe("cli", () => {
         "  ports (.adhere/rules/ports/RULE.md)",
         '    The description does not say "must", though the rule has a must example.',
         "    The rule has no never example. Rules with one example of each kind judge best.",
-        "Rule writing tips: https://github.com/darkmatter/adhere#rule-writing-tips",
+        "Rule writing tips: https://dm.sh/adhere/writing-good-rules/#rule-writing-tips",
         "1 rule has fewer than 10 answers from lint yet, which asks as it judges files.",
         "No contradictions found among configured rules.",
         "",
@@ -174,16 +175,33 @@ describe("cli", () => {
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("TYPESAFE_API_KEY");
   });
 
-  it("lists another repo's rules, and copies one topic, then the rest, under its org and repo, skipping what is there", async () => {
-    const source = join(tmpdir(), `adhere-install-source-${Date.now()}`);
-    const root = join(tmpdir(), `adhere-install-${Date.now()}`);
+  /** Directories the install fixture makes, removed after each case. */
+  const installRoots: Array<string> = [];
+  afterEach(async () => {
+    await Promise.all(
+      installRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
+    );
+  });
+
+  /**
+   * A source repo whose `.adhere/` names instruction files and rules, and a
+   * root to install them into, with `adhere` run there. git reads github.com
+   * as the source, so nothing is fetched.
+   */
+  const installFixture = async () => {
+    const source = await mkdtemp(join(tmpdir(), "adhere-install-source-"));
+    const root = await mkdtemp(join(tmpdir(), "adhere-install-"));
+    installRoots.push(source, root);
     const rules = join(source, ".adhere", "rules");
-    for (const directory of ["data/ports", "data/columns", "style/small"]) {
+    const instructions = join(source, ".adhere", "instructions");
+    for (const directory of ["data/ports", "data/columns", "style/small", "instructions/known"]) {
       await mkdir(join(rules, directory), { recursive: true });
     }
+    await mkdir(join(instructions, "security"), { recursive: true });
     await mkdir(join(source, ".adhere", "cache"), { recursive: true });
-    await mkdir(root, { recursive: true });
     const ports = "---\ndescription: A port must be branded.\n---\n\nconst Port = 1\n";
+    const workflow = "Start with a plan.\n";
+    const hardening = "Do not trust input.\n";
     await writeFile(join(rules, "data", "ports", "RULE.md"), ports, "utf8");
     // Listing a RULE.ts would run it, so list names it without a description.
     await writeFile(
@@ -201,11 +219,20 @@ describe("cli", () => {
       "---\ndescription: A file should be small.\n---\n\nx\n",
       "utf8",
     );
+    // A rule topic named instructions stays a rule topic, never the instruction files.
+    await writeFile(
+      join(rules, "instructions", "known", "RULE.md"),
+      "---\ndescription: A rule under a topic named instructions.\n---\n\nx\n",
+      "utf8",
+    );
+    await writeFile(join(instructions, "00-workflow.md"), workflow, "utf8");
+    await writeFile(join(instructions, "security", "hardening.md"), hardening, "utf8");
     await writeFile(join(source, ".adhere", "cache", "stale.md"), "not a rule\n", "utf8");
     const git = (...args: ReadonlyArray<string>) => execFileAsync("git", args, { cwd: source });
     await git("init", "--quiet");
     await git("add", "-A");
     await git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "rules");
+    await git("branch", "pinned");
     // Bash can read .bashrc when these are set, writing shell startup output
     // into the local upload-pack's Git protocol.
     const { SSH_CLIENT: _sshClient, SSH2_CLIENT: _ssh2Client, ...localEnv } = process.env;
@@ -216,31 +243,119 @@ describe("cli", () => {
       GIT_CONFIG_KEY_0: `url.file://${source}.insteadOf`,
       GIT_CONFIG_VALUE_0: "https://github.com/acme/rules.git",
     };
-    const adhere = async (...args: ReadonlyArray<string>) =>
-      (await execFileAsync("bun", [main, ...args], { cwd: root, env })).stdout;
+    const adhereRaw = (...args: ReadonlyArray<string>) =>
+      execFileAsync("bun", [main, ...args], { cwd: root, env });
+    const adhere = async (...args: ReadonlyArray<string>) => (await adhereRaw(...args)).stdout;
+    const refused = (...args: ReadonlyArray<string>) =>
+      adhereRaw(...args).then(
+        () => undefined,
+        (error: { readonly code: number; readonly stdout: string; readonly stderr: string }) =>
+          error,
+      );
+    return { adhere, hardening, ports, refused, root, workflow };
+  };
+
+  it("lists another repo's rules, and names a RULE.ts without running it", async () => {
+    const { adhere } = await installFixture();
+    const listed = (entries: ReadonlyArray<readonly [string, string]>) => {
+      const width = Math.max(...entries.map(([id]) => id.length));
+      return `${entries.map(([id, description]) => `${id.padEnd(width)}  ${description}`).join("\n")}\n`;
+    };
 
     expect(await adhere("list", "acme/rules")).toBe(
-      [
-        "data/columns  (TypeScript, which list does not run)",
-        "data/ports    A port must be branded.",
-        "style/small   A file should be small.",
-        "",
-      ].join("\n"),
+      listed([
+        ["data/columns", "(TypeScript, which list does not run)"],
+        ["data/ports", "A port must be branded."],
+        ["instructions/known", "A rule under a topic named instructions."],
+        ["style/small", "A file should be small."],
+      ]),
     );
-    const installed = ".adhere/rules/acme/rules";
-    expect(await adhere("install", "acme/rules/data")).toBe(
-      `created: ${installed}/data/columns/, ${installed}/data/ports/\nskipped: none\n`,
+  });
+
+  it("asks for a choice when there is no terminal, saying what --all would copy", async () => {
+    const { refused } = await installFixture();
+
+    // A bare repo or a topic needs a choice, and says what --all would copy without a terminal.
+    const bare = await refused("install", "acme/rules");
+    expect(bare?.code).toBe(1);
+    expect(`${bare?.stdout}${bare?.stderr}`).toContain("no terminal to choose from");
+    expect(`${bare?.stdout}${bare?.stderr}`).toContain("instructions/00-workflow.md");
+    expect(`${bare?.stdout}${bare?.stderr}`).toContain("--all");
+    const topic = await refused("install", "acme/rules/data");
+    expect(topic?.code).toBe(1);
+    expect(`${topic?.stdout}${topic?.stderr}`).toContain(
+      "Pass --all to copy every match (data/columns, data/ports), or name one rule exactly",
     );
-    expect(await adhere("install", "acme/rules")).toBe(
-      `created: ${installed}/style/small/\nskipped: ${installed}/data/columns/, ${installed}/data/ports/\n`,
+    // A pin stays in the suggested exact install, so it is not lost by copy-paste.
+    const pinned = await refused("install", "acme/rules#pinned");
+    expect(pinned?.code).toBe(1);
+    expect(`${pinned?.stdout}${pinned?.stderr}`).toContain(
+      "adhere install acme/rules#pinned: no terminal to choose from",
     );
-    expect(await readFile(join(root, installed, "data", "ports", "RULE.md"), "utf8")).toBe(ports);
+    expect(`${pinned?.stdout}${pinned?.stderr}`).toContain("as in acme/rules/data/columns#pinned");
+  });
+
+  it("copies the instructions and rules a source names, whole and with their helpers", async () => {
+    const { adhere, hardening, ports, root, workflow } = await installFixture();
+    const rulesInstalled = ".adhere/rules/acme/rules";
+    const instructionsInstalled = ".adhere/instructions/acme/rules";
+
+    // An exact rule copies without a terminal, and without instruction files.
+    expect(await adhere("install", "acme/rules/data/ports")).toBe(
+      `created: ${rulesInstalled}/data/ports/\nskipped: none\n`,
+    );
+    // A topic with --all copies its rules, and only them.
+    expect(await adhere("install", "--all", "acme/rules/data")).toBe(
+      `created: ${rulesInstalled}/data/columns/\nskipped: ${rulesInstalled}/data/ports/\n`,
+    );
+    expect(await adhere("install", "--all", "acme/rules/instructions")).toBe(
+      `created: ${rulesInstalled}/instructions/known/\nskipped: none\n`,
+    );
+    // A bare repo with --all copies instruction files first, then the rules left.
+    expect(await adhere("install", "--all", "acme/rules")).toBe(
+      `${[
+        `created: ${instructionsInstalled}/00-workflow.md, ${instructionsInstalled}/security/hardening.md, ${rulesInstalled}/style/small/`,
+        `skipped: ${rulesInstalled}/data/columns/, ${rulesInstalled}/data/ports/, ${rulesInstalled}/instructions/known/`,
+      ].join("\n")}\n`,
+    );
+    expect(await readFile(join(root, rulesInstalled, "data", "ports", "RULE.md"), "utf8")).toBe(
+      ports,
+    );
+    expect(await readFile(join(root, instructionsInstalled, "00-workflow.md"), "utf8")).toBe(
+      workflow,
+    );
+    expect(
+      await readFile(join(root, instructionsInstalled, "security", "hardening.md"), "utf8"),
+    ).toBe(hardening);
     // A rule's directory comes whole, with the helpers its RULE.ts imports.
-    expect((await readdir(join(root, installed, "data", "columns"))).sort()).toEqual([
+    expect((await readdir(join(root, rulesInstalled, "data", "columns"))).sort()).toEqual([
       "RULE.ts",
       "schema.ts",
     ]);
-    expect((await readdir(join(root, installed))).sort()).toEqual(["data", "style"]);
+    expect((await readdir(join(root, rulesInstalled))).sort()).toEqual([
+      "data",
+      "instructions",
+      "style",
+    ]);
+  });
+
+  it("skips what is there until --force replaces it", async () => {
+    const { adhere, ports, root } = await installFixture();
+    const rulesInstalled = ".adhere/rules/acme/rules";
+    // An exact install, as the case above does, so the rule is there to skip.
+    await adhere("install", "acme/rules/data/ports");
+
+    // What is there is skipped, until --force replaces it.
+    const copiedPorts = join(root, rulesInstalled, "data", "ports", "RULE.md");
+    await writeFile(copiedPorts, "Local edit\n", "utf8");
+    expect(await adhere("install", "--all", "acme/rules/data/ports")).toBe(
+      `created: none\nskipped: ${rulesInstalled}/data/ports/\n`,
+    );
+    expect(await readFile(copiedPorts, "utf8")).toBe("Local edit\n");
+    expect(await adhere("install", "--all", "--force", "acme/rules/data/ports")).toBe(
+      `created: ${rulesInstalled}/data/ports/\nskipped: none\n`,
+    );
+    expect(await readFile(copiedPorts, "utf8")).toBe(ports);
   });
 
   it("removes the temporary clone directory when cloning fails", async () => {
@@ -275,7 +390,7 @@ describe("cli", () => {
       timeout: 20_000,
     };
     const source = "export const port = 3000;\n";
-    const capturedFile = join(root, "inferred-state.json");
+    const capturedFile = join(root, ".adhere", "inferred-state.json");
     try {
       await mkdir(join(root, ".adhere", "rules", "ports"), { recursive: true });
       await writeFile(join(root, "server.ts"), source, "utf8");
@@ -284,6 +399,7 @@ describe("cli", () => {
         `export default {
           description: "A port must be named.",
           must: "const port = PORT;",
+          include: { names: ["*.ts"] },
           appendState: async (state, file, bun) => {
             await bun.write(${JSON.stringify(capturedFile)}, JSON.stringify(state));
             return {};
@@ -438,6 +554,7 @@ describe("cli", () => {
             named: {
               description: "A value must be named.",
               must: "export const value = VALUE;",
+              include: { names: ["*.ts"] },
               appendState: async (state, file, bun) => {
                 await bun.write(${JSON.stringify(capturedFile)}, JSON.stringify({ state, file }));
                 return {};
@@ -543,17 +660,24 @@ describe("cli", () => {
     // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
     const plan = (...presets: ReadonlyArray<string>) =>
       execFileAsync("bun", [main, "lint", ...presets, "--limit", "0"], { cwd: root }).then(
-        ({ stderr }) => stderr.split("\n")[0],
-        ({ stderr }: { readonly stderr: string }) => stderr.split("\n")[0],
+        ({ stderr }) => stderr,
+        ({ stderr }: { readonly stderr: string }) => stderr,
       );
+    // Built-in rules may warn about declared reads before the plan summary, so read the summary itself.
+    const count = (stderr: string) => {
+      const summary = stderr.split("\n").find((line) => /^\d+ files? and \d+ rules?:/.test(line));
+      return Number(/(\d+) rules?/.exec(summary ?? "")?.[1]);
+    };
 
-    const effect = await plan("--preset", "effect");
-    const alchemy = await plan("--preset", "alchemy");
-    const both = await plan("--preset", "effect,alchemy");
-    const count = (line: string | undefined) => Number(/(\d+) rules/.exec(line ?? "")?.[1]);
-    expect(count(both)).toBe(count(effect) + count(alchemy));
-    expect(await plan("--preset", "effect", "--preset", "alchemy")).toBe(both);
-    expect(await plan("--preset", "alchemy, effect")).toBe(both);
+    const effect = count(await plan("--preset", "effect"));
+    const alchemy = count(await plan("--preset", "alchemy"));
+    const both = count(await plan("--preset", "effect,alchemy"));
+    expect(effect).toBeGreaterThan(0);
+    expect(alchemy).toBeGreaterThan(0);
+    expect(Number.isNaN(both)).toBe(false);
+    expect(count(await plan("--preset", "effect", "--preset", "alchemy"))).toBe(both);
+    expect(count(await plan("--preset", "alchemy, effect"))).toBe(both);
+    expect(both).toBe(effect + alchemy);
 
     const refused = await execFileAsync("bun", [main, "lint", "--preset", "effect,vue"], {
       cwd: root,
@@ -565,6 +689,53 @@ describe("cli", () => {
     expect(`${refused?.stdout}${refused?.stderr}`).toContain("(not vue)");
   });
 
+  it("leaves bundled rules that need type awareness out of a run without it, and takes them back on opt-in", async () => {
+    const root = join(tmpdir(), `adhere-bundled-type-aware-${Date.now()}`);
+    await mkdir(root, { recursive: true });
+    await writeFile(join(root, "index.ts"), "export const x = 1;\n", "utf8");
+    const config = (text: string) => writeFile(join(root, "adhere.config.ts"), text, "utf8");
+    await config("export default {};\n");
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    const plan = async (preset: string, flags: ReadonlyArray<string> = []) => {
+      const { stderr } = await execFileAsync(
+        "bun",
+        [main, "lint", "--preset", preset, "--limit", "0", ...flags],
+        { cwd: root },
+      );
+      const summary = stderr.split("\n").find((line) => /^\d+ files? and \d+ rules?:/.test(line));
+      return { stderr, rules: Number(/(\d+) rules?/.exec(summary ?? "")?.[1]) };
+    };
+
+    const effectOff = await plan("effect");
+    const effectOn = await plan("effect", ["--type-aware"]);
+    // effect/data/brand-meaningful-primitives and effect/data/variants-are-tagged-unions.
+    expect(effectOn.rules - effectOff.rules).toBe(2);
+    // alchemy/runtime/bind-tag-not-implementation and typescript/types/derive-dont-restate.
+    expect((await plan("alchemy", ["--type-aware"])).rules - (await plan("alchemy")).rules).toBe(1);
+    expect(
+      (await plan("typescript", ["--type-aware"])).rules - (await plan("typescript")).rules,
+    ).toBe(1);
+    // A bundled rule is skipped quietly; a project's own rule is what warns.
+    expect(effectOff.stderr).not.toContain("may be less accurate");
+    expect(effectOn.stderr).not.toContain("may be less accurate");
+
+    // The config's opt-in enables them, and the command-line flag replaces the config's false.
+    await config("export default { typeAware: true };\n");
+    expect((await plan("effect")).rules).toBe(effectOn.rules);
+    await config("export default { typeAware: false };\n");
+    expect((await plan("effect")).rules).toBe(effectOff.rules);
+    expect((await plan("effect", ["--type-aware"])).rules).toBe(effectOn.rules);
+
+    // Naming a skipped bundled rule in overrides is still the name of a preset rule.
+    await config(
+      `export default { overrides: {
+        "effect/data/brand-meaningful-primitives": "off",
+        "typescript/types/derive-dont-restate": "error",
+      } };\n`,
+    );
+    expect((await plan("effect")).rules).toBe(effectOff.rules);
+  }, 30_000);
+
   it("turns a preset rule off by its id, takes a rule of a preset the run leaves out, and refuses one no rule has", async () => {
     const root = join(tmpdir(), `adhere-overrides-${Date.now()}`);
     await mkdir(root, { recursive: true });
@@ -573,8 +744,11 @@ describe("cli", () => {
     // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
     const lint = () =>
       execFileAsync("bun", [main, "lint", "--preset", "effect", "--limit", "0"], { cwd: root });
-    const rules = async () =>
-      Number(/(\d+) rules?/.exec((await lint()).stderr.split("\n")[0] ?? "")?.[1]);
+    const rules = async () => {
+      const { stderr } = await lint();
+      const summary = stderr.split("\n").find((line) => /^\d+ files? and \d+ rules?:/.test(line));
+      return Number(/(\d+) rules?/.exec(summary ?? "")?.[1]);
+    };
     const config = (overrides: string) =>
       writeFile(
         join(root, "adhere.config.ts"),
@@ -583,6 +757,7 @@ describe("cli", () => {
       );
 
     const all = await rules();
+    expect(Number.isNaN(all)).toBe(false);
     await config(
       '{ "effect/basics/gen-for-sequencing": "off", "alchemy/providers/idempotent-delete": "warning" }',
     );
@@ -609,7 +784,7 @@ describe("cli", () => {
       "gen/b.ts": "export const b = 1;\n",
       "adhere.config.ts": 'export default { reads: [], exclude: ["gen/**"] };\n',
       ".adhere/rules/named/RULE.md":
-        "---\ndescription: A constant must be named.\n---\n\nexport const named = 1;\n",
+        '---\ndescription: A constant must be named.\ninclude: {"names": ["*.ts"]}\n---\n\nexport const named = 1;\n',
     };
     for (const [file, text] of Object.entries(files)) {
       await writeFile(join(root, file), text, "utf8");
@@ -618,6 +793,134 @@ describe("cli", () => {
     const { stderr } = await execFileAsync("bun", [main, "lint", "--limit", "0"], { cwd: root });
     expect(stderr.split("\n")[0]).toBe("1 file and 1 rule: 1 check.");
   });
+
+  it("warns once when a rule declares reads the run does not enable, and stays quiet when they are enabled or off", async () => {
+    const root = join(tmpdir(), `adhere-declared-reads-${Date.now()}`);
+    const ruleFile = join(root, ".adhere", "rules", "demo", "RULE.md");
+    const configFile = join(root, "adhere.config.ts");
+    const config = (text: string) => writeFile(configFile, text, "utf8");
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    const lint = (flags: ReadonlyArray<string> = []) =>
+      execFileAsync("bun", [main, "lint", "--limit", "0", ...flags], { cwd: root });
+    try {
+      await mkdir(join(root, ".adhere", "rules", "demo"), { recursive: true });
+      await writeFile(join(root, "src.ts"), "export const demo = 1;\n", "utf8");
+      await writeFile(ruleFile, '---\ndescription: demo\nreads: ["dependents"]\n---\n\ndemo()\n');
+
+      await config("export default { reads: [] };\n");
+      const missing = await lint();
+      expect(missing.stderr).toContain(
+        'demo declares reads dependents, which this run does not enable; the rule may be less accurate until enabled. add "dependents" to the config\'s reads.',
+      );
+      expect(missing.stderr.match(/may be less accurate until enabled/g)).toHaveLength(1);
+
+      await config('export default { reads: ["dependents"] };\n');
+      expect((await lint()).stderr).not.toContain("may be less accurate");
+
+      await config('export default { reads: [], overrides: { demo: "off" } };\n');
+      expect((await lint()).stderr).not.toContain("may be less accurate");
+
+      // Naming a native read in the config does not enable type awareness; only typeAware does.
+      await writeFile(ruleFile, '---\ndescription: demo\nreads: ["symbols"]\n---\n\ndemo()\n');
+      await config('export default { reads: ["symbols"] };\n');
+      expect((await lint()).stderr).toContain("enable typeAware: true (or pass --type-aware)");
+      expect((await lint(["--type-aware"])).stderr).not.toContain("may be less accurate");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("warns once, in one line, naming every rule that does not say which files it applies to", async () => {
+    const root = join(tmpdir(), `adhere-unnamed-rules-${Date.now()}`);
+    const rule = async (id: string, frontMatter: ReadonlyArray<string>) => {
+      await mkdir(join(root, ".adhere", "rules", id), { recursive: true });
+      await writeFile(
+        join(root, ".adhere", "rules", id, "RULE.md"),
+        `---\n${["description: demo", ...frontMatter].join("\n")}\n---\n\ndemo()\n`,
+        "utf8",
+      );
+    };
+    const named = 'include: {"names": ["*.ts"]}';
+    // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+    const warnings = async () => {
+      const { stderr } = await execFileAsync("bun", [main, "lint", "--limit", "0"], { cwd: root });
+      return stderr.split("\n").filter((line) => line.includes("do not name the files"));
+    };
+    try {
+      await mkdir(root, { recursive: true });
+      await writeFile(join(root, "src.ts"), "export const demo = 1;\n", "utf8");
+      await writeFile(
+        join(root, "adhere.config.ts"),
+        'export default { reads: [], overrides: { "style/off": "off" } };\n',
+        "utf8",
+      );
+      await rule("style/unnamed", []);
+      // Paths say where in this repository, not which files: the rule still judges every kind.
+      await rule("data/ports", ['include: {"paths": ["src/**"]}']);
+      await rule("style/named", [named]);
+      await rule("style/off", []);
+      await rule("agent/no-skips", ["type: transcript"]);
+
+      const [warning, ...others] = await warnings();
+      expect(others).toEqual([]);
+      const ids = /every kind of file: (.*)\. Add include\.names/.exec(warning ?? "")?.[1];
+      expect(ids?.split(", ").sort()).toEqual(["data/ports", "style/unnamed"]);
+
+      await rule("style/unnamed", [named]);
+      await rule("data/ports", ['include: {"names": ["*"], "paths": ["src/**"]}']);
+      expect(await warnings()).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("takes dot-named files for a rule that names every file", async () => {
+    const root = join(tmpdir(), `adhere-every-file-${Date.now()}`);
+    try {
+      await mkdir(join(root, ".adhere", "rules", "every"), { recursive: true });
+      await writeFile(join(root, "src.ts"), "export const demo = 1;\n", "utf8");
+      await writeFile(join(root, ".gitlab-ci.yml"), "stages: [test]\n", "utf8");
+      await writeFile(join(root, "adhere.config.ts"), "export default { reads: [] };\n", "utf8");
+      await writeFile(
+        join(root, ".adhere", "rules", "every", "RULE.md"),
+        '---\ndescription: demo\ninclude: {"names": ["*"]}\n---\n\ndemo()\n',
+        "utf8",
+      );
+      // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+      const { stderr } = await execFileAsync("bun", [main, "lint", "--limit", "0"], { cwd: root });
+      expect(stderr.split("\n")[0]).toBe("2 files and 1 rule: 2 checks.");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("judges a preset rule only where an override's paths say this repository applies it", async () => {
+    const root = join(tmpdir(), `adhere-override-paths-${Date.now()}`);
+    const checks = async (overrides: string) => {
+      await writeFile(
+        join(root, "adhere.config.ts"),
+        `export default { reads: [], presets: ["security"], overrides: ${overrides} };\n`,
+        "utf8",
+      );
+      // --limit 0 plans the run and judges nothing, so nothing is sent to Jev.
+      const { stderr } = await execFileAsync("bun", [main, "lint", "--limit", "0"], { cwd: root });
+      return Number(/(\d+) checks/.exec(stderr)?.[1]);
+    };
+    try {
+      for (const directory of ["src/api", "src/web"]) {
+        await mkdir(join(root, directory), { recursive: true });
+        await writeFile(join(root, directory, "a.ts"), "export const demo = 1;\n", "utf8");
+      }
+      const everywhere = await checks("{}");
+      expect(everywhere).toBeGreaterThan(1);
+      // One rule left off one of the two files is one check fewer.
+      expect(await checks('{ "security/parameterized-queries": { paths: ["src/api/**"] } }')).toBe(
+        everywhere - 1,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("reads a rule written in TypeScript with the package's defineRule, and not the config beside it", async () => {
     const root = join(tmpdir(), `adhere-ts-rule-${Date.now()}`);
@@ -634,6 +937,7 @@ describe("cli", () => {
         "export default defineRule({",
         '  description: "A port must be a branded integer.",',
         '  must: "const port = Port.make(3000);",',
+        '  include: { names: ["*.ts"] },',
         "  appendState: (state) => ({ sections: Object.keys(state.code).length }),",
         "});",
         "",
@@ -658,7 +962,7 @@ describe("cli", () => {
       "test/helper.ts": "export const h = 1;\n",
       "adhere.config.ts": "export default { reads: [] };\n",
       ".adhere/rules/named/RULE.md":
-        "---\ndescription: A constant must be named.\n---\n\nexport const named = 1;\n",
+        '---\ndescription: A constant must be named.\ninclude: {"names": ["*.ts"]}\n---\n\nexport const named = 1;\n',
     };
     for (const [file, text] of Object.entries(files)) {
       await writeFile(join(root, file), text, "utf8");
@@ -675,7 +979,7 @@ describe("cli", () => {
     await mkdir(join(root, ".adhere", "rules", "tests"), { recursive: true });
     await writeFile(
       join(root, ".adhere", "rules", "tests", "RULE.md"),
-      "---\ndescription: A test must be named.\ntests: only\n---\n\nexport const named = 1;\n",
+      '---\ndescription: A test must be named.\ntests: only\ninclude: {"names": ["*.ts"]}\n---\n\nexport const named = 1;\n',
       "utf8",
     );
     // Now the two tests as well, each judged only by the rule on tests.

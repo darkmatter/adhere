@@ -1,5 +1,6 @@
 ---
 description: A handler for events delivered at least once, such as Stripe webhooks, scheduled callbacks, or bucket and queue events, must be idempotent, upserting by a stable ID or deduplicating by event ID, never doing blind inserts, increments, or charges.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

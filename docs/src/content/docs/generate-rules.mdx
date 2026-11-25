@@ -1,0 +1,150 @@
+---
+title: "Generate high-impact rules"
+---
+
+import RuleWalkthrough from "../../components/RuleWalkthrough.astro";
+
+`adhere rules create` is the command you'll use the most, and what makes adhere produce
+effective rules that actually make a difference.
+
+`adhere rules create` will launch the rule creator - an iterative workflow which
+leverages both Jev + whatever local coding agent you have available (claude, codex, omp)
+in order to build the highest quality rules possible. We've done a lot of testing and have found that
+the wording of the rule itself almost entirely determines the results you'll get out
+of them.
+
+<RuleWalkthrough />
+
+## How a run goes
+
+### Describe the rule
+
+The first run picks an agent: the one `--agent` names, the only one installed,
+or the one you choose. It also asks for your organization's
+[shared rules](/adhere/install-rules/) repo as `org/repo`, which you can leave
+empty.
+
+Both answers are saved to `~/.config/adhere/settings.json`, or under
+`$XDG_CONFIG_HOME` when that is set. Run with `--setup` to change them, or pass
+`--agent` to use another agent for one run.
+
+Then the agent reads your idea and tells you:
+
+- whether a rule in adhere's Oxlint catalog already checks it
+- whether the rule belongs to this project or the shared repo
+- three names to choose from
+- what kind of rule it should be (see [below](#what-kind-of-rule))
+- what context Jev needs to judge it, declared on the rule as `reads`
+
+### Judge real code
+
+The agent finds code in your repo that might break the rule. Each excerpt shows
+three lines either side, with the agent's call and its reason. You say whether
+it breaks the rule.
+
+The draft's examples come from the code you judged. If the agent finds none, it
+writes its own.
+
+### Trial the draft
+
+adhere checks the draft before you see it. A `RULE.md` gets the same wording
+checks as `adhere validate`. A `RULE.ts` must parse and have a default export.
+Problems go back to the agent once.
+
+Next, adhere runs the draft on real files. Choose the first 100 files the rule
+applies to, the whole repo, or a number you type. It shows the cost before it
+starts and never guesses a price.
+
+You can skip the trial. The write prompt then says `(not trialled)`, and adhere
+never calls a skipped, partial, or stale run validated.
+
+### Review the findings
+
+The agent reads the trial report, saved in `.adhere/trial/`, and the code it
+cites. After the first trial of a `RULE.md` or `RULE.ts`, it also says whether
+[path or content filters](/adhere/rule-format/#filtering-files) would help, or
+why none are needed.
+
+Mark each finding correct, a false positive, or unsure, or accept them all. You
+can add a note to any finding or example. Then keep the draft or ask for a
+revision.
+
+### Revise and push
+
+A revision gets the trial evidence, your notes, and the filter advice. You
+approve it before it runs again on the same files. Files a new filter excludes
+are skipped, not replaced.
+
+When you keep the draft:
+
+- **A project rule** is written to `.adhere/rules/`. adhere warns if your config
+  does not enable the context the rule `reads`.
+- **An organization rule** is committed to a fresh clone of the shared repo on
+  the branch `adhere/<rule-id>` and pushed. adhere prints a link to open the pull
+  request. The repo's README index is updated in the same commit.
+
+## What kind of rule
+
+The agent picks one of four kinds. Every kind is trialled before it is written.
+
+**A native Oxlint rule**, when Oxlint already has one. It must be in adhere's
+Oxlint catalog; unknown ids are rejected. adhere prints the config with the
+exact options the rule needs, since a bare `"error"` would enforce nothing for
+some rules. Banning lodash through `no-restricted-imports`, for example, prints:
+
+```json
+["error", { "paths": [{ "name": "lodash" }] }]
+```
+
+For a shared repo, adhere turns the rule on in its `oxlint/rules.json` instead.
+
+**An Oxlint JS plugin**, for a check that only needs syntax. You see its valid
+and invalid examples, and nothing runs until you approve it. Its tests need the
+project's own Oxlint or Vite+ and Node 22 or newer, because Oxlint's test runner
+refuses Bun and older Node; without them, nothing is written. If a test fails,
+the agent gets one try to fix it, and you approve the fix before it runs again.
+Nothing is written until the tests pass.
+
+A project plugin lands in `.adhere/oxlint/` as `.mjs` files; add the printed
+`jsPlugins` entry to your lint config. A shared plugin goes in
+`oxlint/plugins/` and is registered in `oxlint/rules.json`.
+
+**A `RULE.md`**, for a convention Jev can judge from the file and the context
+the rule `reads`.
+
+**A [`RULE.ts`](/adhere/rule-format/#rules-as-typescript-files)**, when Jev
+needs state that neither the file nor that context shows. adhere imports and
+runs it only after you approve it. If its checks find problems, you choose
+whether to write it anyway.
+
+A rule that `reads` workspace context, `symbols`, or `references` needs that
+context turned on in your config: `reads` for workspace context, `typeAware` for
+the other two. A preset rule that needs `typeAware` is skipped without it. A
+rule you write here still runs, with a warning.
+
+Run the command inside the shared repo and choose "this project" to write its
+`oxlint/rules.json` or `oxlint/plugins/` directly.
+
+## Keep the shared README current
+
+Rules copied by `adhere install` belong to your project, so editing or deleting
+one leaves the shared repo's README index out of date. Refresh it from your
+project:
+
+```sh
+adhere rules readme [org/repo]
+```
+
+Without `org/repo`, adhere uses `<owner>/standards` from your GitHub `origin`.
+It pushes the refreshed index to a review branch and prints a compare link. It
+opens no pull request, and pushes nothing when the index already matches. Run
+it inside the shared repo to update that checkout instead.
+
+:::note[Setting up a whole repo]
+Before `adhere rules create`, the way to start was the
+[`adhere-setup`](https://github.com/darkmatter/adhere/blob/main/skills/adhere-setup/SKILL.md)
+agent skill. It still works if you want an agent to survey a repo in one go: it
+reads your docs and review history, drafts several rules, adds presets, and
+adds adhere to CI. Install it with `skills add darkmatter/adhere`, or print it
+with `adhere skill setup`, then ask your agent to set adhere up.
+:::

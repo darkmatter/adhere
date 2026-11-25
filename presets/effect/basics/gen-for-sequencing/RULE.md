@@ -1,5 +1,6 @@
 ---
 description: Sequential effectful steps must be written with Effect.gen and yield*, never as nested flatMap or callback chains. A single flatMap or andThen in a flat pipe is out of scope; the rule is about a step whose callback holds further steps.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

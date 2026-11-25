@@ -1,4 +1,4 @@
-import type { Rule } from "#config.ts";
+import { type Rule, typeOf } from "#config.ts";
 import { judgesFile, type RuleEntry, shownId } from "#rules.ts";
 import { Jev, type Pair } from "#services/Jev.ts";
 import { Effect } from "effect";
@@ -25,13 +25,15 @@ const judgeSameKind = (a: Rule, b: Rule): boolean =>
 /**
  * Per rule, the rules that apply to some of the same files. A rule with the
  * same id is left out: a nested rule that shares an id shadows the other on
- * purpose.
+ * purpose. Transcript rules judge no files, so they have no partners.
  */
 const partnersOf = (entries: ReadonlyArray<RuleEntry>): ReadonlyArray<ReadonlyArray<number>> =>
   entries.map((first, index) =>
     entries.flatMap((second, other) =>
       other !== index &&
       first.id !== second.id &&
+      typeOf(first.rule) === "code" &&
+      typeOf(second.rule) === "code" &&
       scopesOverlap(first.scope, second.scope) &&
       judgeSameKind(first.rule, second.rule)
         ? [other]

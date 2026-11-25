@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: public-x64-linux
     steps:
       - name: Derive version from tag
         id: release
@@ -41,7 +41,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.4.3"
+          bun-version: "1.4.4"
 
       - uses: actions/setup-node@v7
         with:

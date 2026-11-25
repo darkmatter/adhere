@@ -1,5 +1,6 @@
 ---
 description: In a stack deployed to several stages, a resource whose physical name is global to an account or org should omit name, so alchemy derives one per stage, or derive it from the stage, and should not hardcode a single name every stage shares.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Should

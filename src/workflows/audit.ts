@@ -7,8 +7,10 @@ import {
   type Rule,
   type RuleId,
   type Rules,
+  typeOf,
 } from "#config.ts";
 import { type Excerpt, type Range } from "#excerpt.ts";
+import { contentPasses, filtersNeedText, hasFilters, pathsPass, ruleAppliesTo } from "#filters.ts";
 import { type ScannedFile, WalkUnavailable } from "#models/Audit.ts";
 import { AdhereConfig } from "#services/AdhereConfig.ts";
 import { AuditCache, answersOf, type Judgment, sha256, type Tally } from "#services/AuditCache.ts";
@@ -33,15 +35,22 @@ import {
   tokensOf,
   logRequestPayload,
 } from "#services/Jev.ts";
-import { type SourceReadRequest, SourceReads } from "#services/SourceReads.ts";
+import { isJsOrTsPath, type SourceReadRequest, SourceReads } from "#services/SourceReads.ts";
 import { type SourceFile, SourceWalker } from "#services/SourceWalker.ts";
 import { clearingStatus, counted, countOf, Status } from "#services/Status.ts";
 import { SAMPLE, tallyKeyOf } from "#mechanical.ts";
 import { priceOf } from "#pricing.ts";
 import { applicableRules, judgesFile, shownId } from "#rules.ts";
-import { suppresses, type Suppressions, suppressionsOf } from "#suppress.ts";
-import { workspacePackagesIn } from "#workspaces.ts";
-import { type Crypto, Duration, Effect, Option, Record, Result, Semaphore, Stream } from "effect";
+import { NO_SUPPRESSIONS, suppresses, type Suppressions, suppressionsOf } from "#suppress.ts";
+import {
+  dependentFilesIn,
+  importSpecifiersIn,
+  packageOf,
+  workspacePackagesIn,
+} from "#workspaces.ts";
+import { relative, sep } from "node:path";
+import { Duration, Effect, Option, Record, Result, Semaphore, Stream } from "effect";
+import type { Digest } from "effect/crypto";
 
 export interface Finding {
   readonly rule: RuleId;
@@ -54,7 +63,10 @@ export interface Finding {
   readonly section: Range;
   /** The lines in the section the code that breaks the rule starts and ends on, when Jev named them. */
   readonly lines?: Range;
-  /** The section's code as written, comments and all, without blank lines at either end. */
+  /**
+   * The section's code as written, comments and all, without blank lines at
+   * either end. A transcript's finding shows only its `lines`, when Jev named them.
+   */
   readonly excerpt: Excerpt;
   /**
    * Jev's probability that the file shows enough to check the rule. Below the
@@ -104,7 +116,8 @@ interface FileResult {
   readonly suppressed?: number;
 }
 
-interface PreparedRule {
+/** A rule as a run judges it: with the threshold that applies, and its cache key. */
+export interface PreparedRule {
   readonly rule: Rule;
   readonly fingerprint: string;
   readonly threshold: number;
@@ -125,24 +138,31 @@ const LAYOUT = "sections";
 
 /**
  * What a judgment depends on besides the file: the model, how the file is
- * laid out, and the questions asked for the rule, which carry the rule: its
- * judge question, and its matchers' when it has any. An edited rule or
- * matcher re-judges the rule, and a question asked differently re-judges
- * every rule. So does an edited `appendState`, by its source; what the hook
- * reads outside the file is not known until it runs, so a change there does
- * not. Shared read context and related files do not invalidate judgments.
+ * laid out, what the config has Jev read, and the questions asked for the
+ * rule, which carry the rule: its judge question, and its matchers' when it
+ * has any. An edited rule or matcher re-judges the rule, and a question asked
+ * differently, or other reads, re-judge every rule. So does an edited
+ * `appendState`, by its source; what the hook reads outside the file is not
+ * known until it runs, so a change there does not. Options set differently
+ * re-judge their rule: decoded, a struct's keys come in its schema's order,
+ * however the config writes them. What the reads find, such as related
+ * files, does not invalidate judgments.
  */
-const fingerprintOf = (model: string, rule: Rule) => {
+const fingerprintOf = (model: string, reads: string, rule: Rule) => {
   const matchers = matcherQuestions("", rule).map(([, question]) => question);
   const scope = matchers.length === 0 ? "" : `\u0000${JSON.stringify(matchers)}`;
   const hook = rule.appendState === undefined ? "" : `\u0000${rule.appendState.toString()}`;
+  const options =
+    rule.optionValues === undefined ? "" : `\u0000${JSON.stringify(rule.optionValues)}`;
+  // Filters decide which files a rule may judge, not what Jev answers, so they
+  // do not change the fingerprint: applicability is checked before the cache.
   return sha256(
-    `${model}\u0000${LAYOUT}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}${hook}`,
+    `${model}\u0000${LAYOUT}${reads}\u0000${JSON.stringify(judgeQuestion(rule))}${scope}${hook}${options}`,
   );
 };
 
 /** A section's lines as written, without the blank lines at either end. */
-const excerptOf = (lines: ReadonlyArray<string>, { first, last }: Range): Excerpt => {
+export const excerptOf = (lines: ReadonlyArray<string>, { first, last }: Range): Excerpt => {
   let start = first;
   let end = last;
   while (start < end && (lines[start - 1] ?? "").trim() === "") start += 1;
@@ -263,9 +283,15 @@ const needsRequests = (plan: FilePlan): boolean =>
   !plan.deferred &&
   (!isEmpty(plan.pending) || !isEmpty(unlocated(plan.prepared, plan.kept)));
 
-/** Located findings survive skipped new work; suppression is applied by the file workflow. */
-const findingsOf = (
-  { file, prepared }: FilePlan,
+/**
+ * The findings among the judgments of the text at `path`: each located one
+ * above its rule's threshold and in its scope, with its section as written.
+ * Located findings survive skipped new work; suppression is applied by the
+ * file workflow.
+ */
+export const findingsOf = (
+  path: string,
+  prepared: Readonly<Record<RuleId, PreparedRule>>,
   judged: Readonly<Record<RuleId, Judgment>>,
   original: ReadonlyArray<string>,
 ): ReadonlyArray<Finding> =>
@@ -282,7 +308,7 @@ const findingsOf = (
               ...(k.preset === undefined ? {} : { preset: k.preset }),
               description: k.rule.description,
               examples: examplesOf(k.rule),
-              file: file.path,
+              file: path,
               section: judgment.section,
               ...(judgment.lines === undefined ? {} : { lines: judgment.lines }),
               excerpt: excerptOf(original, judgment.section),
@@ -308,8 +334,10 @@ const inFile =
         : problem,
     );
 
-/** Preserve line numbers while blanking directives, and comments other than @adhere notes. */
-const normalized = (original: ReadonlyArray<string>, includeComments: boolean) => {
+/** Preserve other languages verbatim; only JS/TS directives and comments are normalized. */
+const normalized = (path: string, original: ReadonlyArray<string>, includeComments: boolean) => {
+  if (!isJsOrTsPath(path)) return { lines: original, suppressions: NO_SUPPRESSIONS };
+
   const { lines, suppressions } = suppressionsOf(original);
   return {
     lines: includeComments ? lines : withoutComments(lines, isNote),
@@ -341,16 +369,32 @@ const sameSuppressions = (left: Suppressions, right: Suppressions): boolean => {
   );
 };
 
-/** Validate code and ignore policy before sending a request or showing a cached excerpt. */
+/**
+ * Validate code, ignore policy, and text-dependent filters before sending a
+ * request or showing a cached excerpt. A comment-only edit keeps the code hash
+ * but can change what a content filter sees, so those filters are rechecked
+ * against the new text; path filters cannot change for the same file.
+ */
 const reloadFile = Effect.fn("audit.reload")(function* (plan: FilePlan, includeComments: boolean) {
   const original = yield* (yield* SourceWalker).read(plan.file);
-  const { lines, suppressions } = normalized(original.lines, includeComments);
+  const { lines, suppressions } = normalized(plan.file.path, original.lines, includeComments);
   if (
     (yield* sha256(lines.join("\n"))) !== plan.hash ||
     !sameSuppressions(plan.suppressions, suppressions)
   ) {
     return yield* WalkUnavailable.make({
       message: `${plan.file.path}: source changed since planning. Rerun adhere lint to create a fresh plan; changed contents were not sent or cached under the old content key. Files already completed remain cached.`,
+    });
+  }
+  let written: string | undefined;
+  const dropped = Object.entries(plan.prepared).flatMap(([id, { rule }]) =>
+    filtersNeedText(rule) && !contentPasses(rule, (written ??= original.lines.join("\n")))
+      ? [id]
+      : [],
+  );
+  if (dropped.length > 0) {
+    return yield* WalkUnavailable.make({
+      message: `${plan.file.path}: source changed since planning, and content filters no longer apply to ${dropped.join(", ")}. Rerun adhere lint to create a fresh plan; changed contents were not sent or cached under the old content key. Files already completed remain cached.`,
     });
   }
   return { file: { ...plan.file, lines }, original: original.lines } satisfies LoadedFile;
@@ -368,9 +412,14 @@ const hasLocatedFindings = (plan: FilePlan): boolean =>
     );
   });
 
+/** At most this many of a file's dependent files are listed; the rest are counted. */
+const MAX_DEPENDENT_FILES = 50;
+
 export interface PlanOptions {
   /** Select at most this many files needing judge or cached-locate requests; zero plans only. */
   readonly limit?: number | undefined;
+  /** The checkout Jev's paths are relative to. Defaults to the working directory. */
+  readonly root?: string | undefined;
 }
 
 export const planAudit = (
@@ -378,7 +427,7 @@ export const planAudit = (
 ): Effect.Effect<
   AuditPlan,
   WalkUnavailable,
-  AdhereConfig | AuditCache | Crypto.Crypto | SourceWalker
+  AdhereConfig | AuditCache | Digest.Digest | SourceWalker
 > =>
   Effect.gen(function* () {
     const config = yield* AdhereConfig;
@@ -386,6 +435,7 @@ export const planAudit = (
     const workspacePackages = config.reads.includes("workspacePackages")
       ? (config.workspacePackages ?? {})
       : undefined;
+    const catalog = config.workspacePackages ?? {};
     const nativeReads: SourceReadRequest = {
       symbols: config.typeAware,
       references: config.typeAware,
@@ -395,6 +445,46 @@ export const planAudit = (
     };
     const walker = yield* SourceWalker;
     const files = yield* walker.files;
+    // Each file's path from the checkout, `/`-separated, as Jev reads it.
+    const root = options.root ?? process.cwd();
+    const fromRoot = new Map(
+      files.map((file) => [file.path, relative(root, file.path).split(sep).join("/")]),
+    );
+    // Only the specifiers stay in memory: each file is read again when it is planned.
+    const dependentFiles = config.reads.includes("dependents")
+      ? dependentFilesIn(
+          new Map(
+            yield* Effect.forEach(
+              files,
+              (file) =>
+                // Only JavaScript and TypeScript import: prose that mentions an import names no dependency.
+                isJsOrTsPath(file.path)
+                  ? Effect.map(
+                      walker.read(file),
+                      ({ lines }) =>
+                        [fromRoot.get(file.path)!, importSpecifiersIn(lines.join("\n"))] as const,
+                    )
+                  : Effect.succeed([
+                      fromRoot.get(file.path)!,
+                      [] as ReadonlyArray<string>,
+                    ] as const),
+              { concurrency: 8 },
+            ),
+          ),
+        )
+      : undefined;
+    const dependentsOf = (file: SourceFile) => {
+      const at = fromRoot.get(file.path)!;
+      const name = packageOf(at, catalog);
+      const importers = dependentFiles?.get(at) ?? [];
+      return {
+        packages: (name === undefined ? undefined : config.workspaceDependents?.[name]) ?? {},
+        files: importers.slice(0, MAX_DEPENDENT_FILES),
+        ...(importers.length > MAX_DEPENDENT_FILES
+          ? { omittedFiles: importers.length - MAX_DEPENDENT_FILES }
+          : {}),
+      };
+    };
 
     // Each preset's rule, with the preset it came from, for its findings to name.
     const presetOfRule = new Map(
@@ -403,24 +493,39 @@ export const planAudit = (
       ),
     );
 
-    // The rules that judge a file: those scoped to it, of which only the rules that say `tests`
-    // judge a test, and none that an adhere-ignore-file comment names.
-    const configuredRules = (file: SourceFile, suppressions: Suppressions) =>
+    // The rules that judge a file: the code rules scoped to it, of which only the rules that
+    // say `tests` judge a test, none that an adhere-ignore-file comment names, and none whose
+    // own include/exclude filters leave this file out.
+    const configuredRules = (file: SourceFile, suppressions: Suppressions, text: () => string) =>
       Record.filter(
         config.scopedRules === undefined
           ? config.rules
           : applicableRules(file.path, config.scopedRules),
         (rule, id) =>
+          typeOf(rule) === "code" &&
           judgesFile(rule, file.test === true) &&
-          !suppressions.file.has(shownId({ id, preset: presetOfRule.get(rule) })),
+          !suppressions.file.has(shownId({ id, preset: presetOfRule.get(rule) })) &&
+          (!hasFilters(rule) || ruleAppliesTo(rule, fromRoot.get(file.path)!, text())),
       );
 
     // Model, thresholds, and presets are fixed per plan; share immutable descriptors by Rule identity.
+    // The reads that take effect key every judgment; code-only keeps the key it always had.
+    // includeComments shapes other files' `references` excerpts, which the target's hash misses.
+    const reads = [
+      ...(workspacePackages === undefined ? [] : ["workspacePackages"]),
+      ...(dependentFiles === undefined ? [] : ["dependents"]),
+      ...(config.typeAware
+        ? [
+            `symbols:${config.maxSymbolLength}:${config.maxSymbolDocumentationLength}:${config.includeComments === true}`,
+          ]
+        : []),
+    ];
+    const readsKey = reads.length === 0 ? "" : `\u0000${reads.join(",")}`;
     const preparedRules = new Map<Rule, PreparedRule>(
       yield* Effect.forEach(
         new Set(config.scopedRules?.map(({ rule }) => rule) ?? Object.values(config.rules)),
         (rule) =>
-          Effect.map(fingerprintOf(config.model, rule), (fingerprint) => {
+          Effect.map(fingerprintOf(config.model, readsKey, rule), (fingerprint) => {
             const preset = presetOfRule.get(rule);
             return [
               rule,
@@ -437,13 +542,32 @@ export const planAudit = (
 
     const planFile = Effect.fn("audit.plan")(function* (file: SourceFile) {
       const original = yield* walker.read(file);
-      const { lines, suppressions } = normalized(original.lines, config.includeComments === true);
-      const rules = configuredRules(file, suppressions);
+      const { lines, suppressions } = normalized(
+        file.path,
+        original.lines,
+        config.includeComments === true,
+      );
+      // A rule's content filters read the file as written, comments and all, even
+      // when Jev is sent code without them. The decision is kept in `prepared`;
+      // reloading rechecks only those filters, in case a comment-only edit changed
+      // their answer without changing the code hash.
+      let written: string | undefined;
+      const rules = configuredRules(
+        file,
+        suppressions,
+        () => (written ??= original.lines.join("\n")),
+      );
       const code = lines.join("\n");
-      const readState: ReadState =
-        workspacePackages === undefined
+      const readState: ReadState = {
+        ...(workspacePackages === undefined
           ? {}
-          : { workspacePackages: workspacePackagesIn(code, workspacePackages) };
+          : {
+              workspacePackages: isJsOrTsPath(file.path)
+                ? workspacePackagesIn(code, workspacePackages)
+                : {},
+            }),
+        ...(dependentFiles === undefined ? {} : { dependents: dependentsOf(file) }),
+      };
       // Hashed even when unjudged or skipped, so a prune keeps what other runs know of its content.
       const hash = yield* sha256(code);
       const prepared = Record.map(rules, (rule) => preparedRules.get(rule)!);
@@ -480,9 +604,20 @@ export const planAudit = (
       ),
     );
 
+    // A file no code rule takes by its name and path is left out unread: a repository's
+    // assets and data cost nothing when no rule names them. Its content is not hashed
+    // either, so a prune does not keep what another run knew of it.
+    const named = files.filter((file) =>
+      Object.values(
+        config.scopedRules === undefined
+          ? config.rules
+          : applicableRules(file.path, config.scopedRules),
+      ).some((rule) => typeOf(rule) === "code" && pathsPass(rule, fromRoot.get(file.path)!)),
+    );
+
     // Ordered prefetch keeps only a bounded number of normalized files alive. Select whole
     // request-bearing files before budgeting them; cheap overflow leaves the slot for the next path.
-    const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
+    const sorted = named.sort((a, b) => a.path.localeCompare(b.path));
     const limited: Array<FilePlan> = [];
     const unjudged: Array<string> = [];
     const rooms = new Map<FilePlan, number>();
@@ -667,7 +802,7 @@ export const executeAudit = (
 ): Effect.Effect<
   AuditResult,
   WalkUnavailable | JevUnavailable,
-  AuditCache | Crypto.Crypto | Jev | SourceWalker
+  AuditCache | Digest.Digest | Jev | SourceWalker
 > =>
   Effect.gen(function* () {
     const jev = yield* Jev;
@@ -675,7 +810,9 @@ export const executeAudit = (
     const planOnly = plan.planOnly === true;
     const nativeReads =
       plan.nativeReads?.symbols || plan.nativeReads?.references ? plan.nativeReads : undefined;
-    const eligible = planOnly ? [] : plan.files.filter(needsRequests);
+    const eligible = planOnly
+      ? []
+      : plan.files.filter((file) => needsRequests(file) && isJsOrTsPath(file.file.path));
     const sourceReads =
       nativeReads === undefined || eligible.length === 0
         ? Option.none()
@@ -725,7 +862,7 @@ export const executeAudit = (
       const checking = { ...pending, ...unlocated(prepared, kept) };
       let readState = cheapState;
       if (!isEmpty(checking)) {
-        if (nativeReads !== undefined && Option.isSome(sourceReads)) {
+        if (nativeReads !== undefined && Option.isSome(sourceReads) && isJsOrTsPath(file.path)) {
           const native = yield* sourceReads.value
             .read(asWritten, file.lines, nativeReads)
             .pipe(
@@ -796,13 +933,19 @@ export const executeAudit = (
           yield* omitReferences("full context too long for Jev (preflight limit)");
         } else {
           yield* Effect.logDebug(`${file.path}: full context too long for Jev, skipped`);
-          return fileResult("skipped", findingsOf(filePlan, kept, original));
+          return fileResult("skipped", findingsOf(filePlan.file.path, prepared, kept, original));
         }
       }
       const room = questionRoom(file.lines, readState);
       const sentSamples = Record.filter(sampled, (_, id) => {
         const k = pending[id];
-        return k !== undefined && tokensOf(linterQuestion(k.rule)) <= room;
+        if (k === undefined) return false;
+        // A rule with options asks beside them, in a request of its own.
+        const left =
+          k.rule.optionValues === undefined
+            ? room
+            : questionRoom(file.lines, { ...readState, options: k.rule.optionValues });
+        return tokensOf(linterQuestion(k.rule)) <= left;
       });
       const sampleIds = Object.keys(sentSamples);
       const { probabilities, linter, matchers }: Judged = isEmpty(pending)
@@ -860,7 +1003,7 @@ export const executeAudit = (
       const cached = isEmpty(pending) && isEmpty(flagged);
       if (!cached) yield* cache.put(hash, answersOf(located));
 
-      const findings = findingsOf(filePlan, located, original);
+      const findings = findingsOf(filePlan.file.path, prepared, located, original);
       return blocked === undefined
         ? fileResult(cached ? "cached" : "judged", findings)
         : ({ status: "blocked", findings, blocked } satisfies FileResult);
@@ -873,7 +1016,9 @@ export const executeAudit = (
           ? yield* reloadFile(filePlan, plan.includeComments === true)
           : undefined;
       const keptFindings =
-        loaded === undefined ? [] : findingsOf(filePlan, filePlan.kept, loaded.original);
+        loaded === undefined
+          ? []
+          : findingsOf(filePlan.file.path, filePlan.prepared, filePlan.kept, loaded.original);
       let sent = 0;
       const judging = (
         !requesting || loaded === undefined
@@ -951,8 +1096,10 @@ export const executeAudit = (
  * Deletes from the cache the answers about content no file has anymore.
  * Answers to rules the run left out stay, since a run with other presets or
  * rules asks them, and so do answers about files the run read but judged
- * against no rule. Only after a run that read every file; a run narrowed by
- * `--filter` cannot tell what content the files it left out have.
+ * against no rule. Answers about a file no rule of the run takes by name and
+ * path go, since the plan never read it. Only after a run that read every
+ * file it plans; a run narrowed by `--filter` cannot tell what content the
+ * files it left out have.
  */
 export const pruneCache = Effect.fn("audit.prune")(function* (plan: AuditPlan) {
   const config = yield* AdhereConfig;
@@ -973,7 +1120,7 @@ export const pruneCache = Effect.fn("audit.prune")(function* (plan: AuditPlan) {
 export const runAudit: Effect.Effect<
   AuditResult,
   WalkUnavailable | JevUnavailable,
-  AdhereConfig | AuditCache | Crypto.Crypto | Jev | SourceWalker
+  AdhereConfig | AuditCache | Digest.Digest | Jev | SourceWalker
 > = Effect.flatMap(planAudit(), (plan) => executeAudit(plan));
 
 export { type RenderOptions, render } from "#workflows/format.ts";

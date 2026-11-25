@@ -24,21 +24,54 @@ import {
   type Progress,
   progressAfter,
   progressLine,
+  renderGitHub,
+  renderJson,
+  renderMarkdown,
+  renderOptionsOf,
+  renderRuleReports,
   sendQuestion,
 } from "#workflows/format.ts";
-import type { Flags } from "#config.ts";
+import { judgeTranscript, linesOf, windowsOf } from "#workflows/transcript.ts";
+import { answerHook } from "#workflows/transcript-hook.ts";
+import { projectTemp, saveRun } from "#workflows/transcript-runs.ts";
+import { type Flags, RULE_TYPES } from "#config.ts";
 import { findContradictions, formatContradictions } from "#contradictions.ts";
+import { createRule } from "#create/wizard.ts";
+import { AGENTS } from "#create/agents.ts";
 import { type Install, initProject } from "#init.ts";
-import { installRules, listRules, parseSource } from "#install.ts";
+import {
+  type CatalogMatch,
+  type InstallPicks,
+  type Source,
+  catalogOf,
+  cloned,
+  describeRules,
+  installSelected,
+  instructionPath,
+  listRules,
+  matchOf,
+  parseSource,
+  rulePath,
+} from "#install.ts";
+import { renderInstructions } from "#instructions.ts";
 import { formatLinterCheck, tallyProjectRules } from "#mechanical.ts";
 import { type PresetName, presetNames } from "#presets.ts";
 import type { SavedKey } from "#providers/provider.ts";
+import {
+  ReadmeUnavailable,
+  standardsRepoOf,
+  isSharedRepo,
+  originUrlAt,
+  refreshRemoteReadme,
+  refreshSharedReadme,
+} from "#readme.ts";
 import { globalRuleSet } from "#rules.ts";
 import { formatStrays, straysAmong } from "#wording.ts";
 import {
   Console,
   Effect,
   Exit,
+  FileSystem,
   Layer,
   LogLevel,
   Option,
@@ -49,8 +82,9 @@ import {
   Schema,
   Stdio,
   Stream,
+  Terminal,
 } from "effect";
-import { Argument, Command, Flag, Prompt } from "effect/cli";
+import { Argument, CliError, Command, Flag, Prompt } from "effect/cli";
 // A Bun text import (https://bun.sh/docs/bundler/loaders#text): the file's
 // contents become a string at bundle time, so the compiled binary carries the
 // skill without an --asset flag. `skills/` sits beside `src/`, outside the `#`
@@ -121,7 +155,7 @@ const sufficiencyThreshold = Flag.Finite("sufficiency-threshold").pipe(
 const typeAware = Flag.Boolean("type-aware").pipe(
   Flag.optional,
   Flag.withDescription(
-    "Include compiler-resolved symbols and declaration excerpts. Off by default.",
+    "Include compiler-resolved symbols and declaration excerpts, and the bundled rules that declare them. Off by default.",
   ),
 );
 
@@ -155,6 +189,20 @@ const filter = Flag.String("filter").pipe(
 const denyWarnings = Flag.Boolean("deny-warnings").pipe(
   Flag.withDefault(false),
   Flag.withDescription("Fail the run on warnings as well as errors."),
+);
+
+const ruleType = Flag.Literals("type", RULE_TYPES).pipe(
+  Flag.withDefault("code"),
+  Flag.withDescription(
+    "What to lint: code, the files under the working directory, or transcript, text on stdin such as a coding agent's work, against the rules that say `type: transcript`.",
+  ),
+);
+
+const hook = Flag.Boolean("hook").pipe(
+  Flag.withDefault(false),
+  Flag.withDescription(
+    "With --type transcript, run as a Claude Code or Codex hook: read the hook's event on stdin, keep the agent's turn in the temp directory, and print the answer the agent's harness reads. It exits 0 whatever it finds.",
+  ),
 );
 
 const yes = Flag.Boolean("yes").pipe(
@@ -243,12 +291,127 @@ export const auditLayer = (flags: Flags, filter: ReadonlyArray<string> = []) =>
     JevLive.pipe(Layer.provide(CredentialsLive)),
   ).pipe(Layer.provideMerge(AdhereConfigLive(flags)), Layer.provideMerge(statusLayer));
 
+/** The lint flags a transcript has no use for, which its check refuses rather than ignores. */
+const codeFlagsIn = (input: {
+  readonly filter: ReadonlyArray<string>;
+  readonly limit: Option.Option<number>;
+  readonly typeAware: Option.Option<boolean>;
+  readonly md: boolean;
+  readonly stdout: boolean;
+}): ReadonlyArray<string> => [
+  ...(input.filter.length > 0 ? ["--filter"] : []),
+  ...(Option.isSome(input.limit) ? ["--limit"] : []),
+  ...(Option.isSome(input.typeAware) ? ["--type-aware"] : []),
+  ...(input.md ? ["--md"] : []),
+  ...(input.stdout ? ["--stdout"] : []),
+];
+
+/**
+ * `adhere lint --type transcript`: the transcript on stdin, judged in windows
+ * against the transcript rules. The report goes to stdout, Markdown or with
+ * `--json` JSON, and a copy of it and the transcript to the history in the
+ * temp directory. It fails the way lint does. With `--hook`, stdin is an
+ * agent hook's event instead, and the answer is the hook's.
+ */
+const lintTranscript = Effect.fn("lint.transcript")(function* (
+  input: Parameters<typeof codeFlagsIn>[0] & {
+    readonly json: boolean;
+    readonly denyWarnings: boolean;
+    readonly hook: boolean;
+  },
+) {
+  const unused = codeFlagsIn(input);
+  if (unused.length > 0) {
+    return yield* CliError.UserError.make({
+      cause: `--type transcript cannot take ${unused.join(", ")}: a transcript has no files, and its report is printed, as Markdown or with --json as JSON.`,
+    });
+  }
+  if (input.hook && input.json) {
+    return yield* CliError.UserError.make({
+      cause: "--hook prints the answer the agent's harness reads, so it cannot take --json.",
+    });
+  }
+  const stdio = yield* Stdio.Stdio;
+  if (yield* stdio.stdinIsTerminal) {
+    return yield* CliError.UserError.make({
+      cause:
+        "--type transcript reads the transcript on stdin: pipe it in, as in `adhere lint --type transcript < transcript.txt`.",
+    });
+  }
+  const text = yield* stdio.stdin.pipe(Stream.decodeText(), Stream.mkString);
+  if (input.hook) return yield* answerHook(text, input.denyWarnings);
+  const config = yield* AdhereConfig;
+  const path = yield* Path.Path;
+  const options = renderOptionsOf(config, path.resolve());
+  const lines = linesOf(text);
+  if (lines.length === 0) {
+    const none = { windows: 0, judged: 0, skipped: 0, blocked: [], findings: [] };
+    yield* Console.log(input.json ? renderJson(none, options) : "Nothing to check.");
+    return;
+  }
+  const project = yield* projectTemp(path.resolve());
+  const result = yield* judgeTranscript(lines, windowsOf(lines, config.transcript.every));
+  const report = renderJson(result, options);
+  yield* saveRun(project, config.transcript.keep, { "input.txt": text, "report.json": report });
+  yield* Console.log(input.json ? report : renderMarkdown(result, options));
+  const failed = failing(result.findings, input.denyWarnings);
+  if (failed.length > 0) {
+    return yield* FindingsReported.make({ count: failed.length });
+  }
+});
+
 /** `adhere lint`: the audit. */
 export const lintCommand = Command.make(
   "lint",
-  { preset, threshold, sufficiencyThreshold, typeAware, yes, limit, rpm, filter, denyWarnings },
+  {
+    type: ruleType,
+    hook,
+    preset,
+    threshold,
+    sufficiencyThreshold,
+    typeAware,
+    yes,
+    limit,
+    rpm,
+    filter,
+    denyWarnings,
+    github: Flag.Boolean("github").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription("Print GitHub Actions annotations for code findings."),
+    ),
+    json: Flag.Boolean("json").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Write one JSON file per violated rule to .adhere/reports/. Use --stdout for one combined report instead. With --type transcript, print the report as JSON in place of Markdown.",
+      ),
+    ),
+    md: Flag.Boolean("md").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Write one Markdown file per violated rule to .adhere/reports/. Use --stdout for one combined report instead.",
+      ),
+    ),
+    stdout: Flag.Boolean("stdout").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Print all findings together instead of writing files. Select either --json or --md for a formatted report.",
+      ),
+    ),
+  },
   (input) =>
     Effect.gen(function* () {
+      if (input.type === "transcript") return yield* lintTranscript(input);
+      if (input.hook) {
+        return yield* CliError.UserError.make({
+          cause: "--hook answers an agent's hook with the transcript rules: add --type transcript.",
+        });
+      }
+      if (input.stdout && input.json && input.md) {
+        return yield* CliError.UserError.make({
+          cause:
+            "Choose either --json or --md with --stdout; both formats can be written to files together.",
+        });
+      }
       const stdio = yield* Stdio.Stdio;
       const plan = yield* planAudit({ limit: Option.getOrUndefined(input.limit) });
       const limits = { filter: input.filter, rpm: Option.getOrUndefined(input.rpm) };
@@ -258,8 +421,7 @@ export const lintCommand = Command.make(
         if (input.filter.length === 0) yield* pruneCache(plan);
         return;
       }
-      // A prompt draws on stdout, so it needs a terminal at both ends: none when
-      // the report is redirected, or in CI.
+      // Keep prompting limited to interactive runs, including when JSON is requested.
       const interactive = (yield* stdio.stdinIsTerminal) && (yield* stdio.stdoutIsTerminal);
       if (
         (plan.requests > 0 || (plan.cachedLocateRequests ?? 0) > 0) &&
@@ -268,6 +430,11 @@ export const lintCommand = Command.make(
       ) {
         const send = yield* Prompt.run(
           Prompt.Confirm({ message: sendQuestion(plan), initial: true }),
+        ).pipe(
+          Effect.updateService(Terminal.Terminal, (terminal) => ({
+            ...terminal,
+            display: toStderr,
+          })),
         );
         if (!send) {
           yield* toStderr("Nothing sent.\n");
@@ -283,16 +450,35 @@ export const lintCommand = Command.make(
       if (input.filter.length === 0) yield* pruneCache(plan);
       const color = yield* stdio.stdoutIsTerminal;
       const path = yield* Path.Path;
-      // One write: separate Console.log calls have interleaved out of order here.
-      yield* Console.log(
-        render(result, {
-          color,
-          root: path.resolve(),
-          threshold: plan.threshold,
-          sufficiencyThreshold: plan.sufficiencyThreshold,
-          ...(plan.provider === undefined ? {} : { provider: plan.provider }),
-        }).join("\n"),
-      );
+      const options = {
+        color,
+        root: path.resolve(),
+        threshold: plan.threshold,
+        sufficiencyThreshold: plan.sufficiencyThreshold,
+        ...(plan.provider === undefined ? {} : { provider: plan.provider }),
+      };
+      if (input.github) {
+        yield* Console.log(renderGitHub(result, process.env.GITHUB_WORKSPACE || options.root));
+      } else if (!input.stdout && (input.json || input.md)) {
+        const fs = yield* FileSystem.FileSystem;
+        const directory = path.join(options.root, ".adhere", "reports");
+        const reports = renderRuleReports(result, input, options);
+        yield* fs.remove(directory, { recursive: true, force: true });
+        yield* fs.makeDirectory(directory, { recursive: true });
+        for (const [name, report] of reports) {
+          yield* fs.writeFileString(path.join(directory, name), report);
+        }
+        yield* toStderr(`Wrote ${reports.size} report files to .adhere/reports/.\n`);
+      } else {
+        // One write: separate Console.log calls have interleaved out of order here.
+        yield* Console.log(
+          input.json
+            ? renderJson(result, options)
+            : input.md
+              ? renderMarkdown(result, options)
+              : render(result, options).join("\n"),
+        );
+      }
       // Only errors fail the run, unless --deny-warnings: a warning is for a nit or a noisy rule.
       const failed = failing(result.findings, input.denyWarnings);
       if (failed.length > 0) {
@@ -301,7 +487,7 @@ export const lintCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Audit the working directory against the rules in .adhere/rules/ or a preset, judged by Jev.",
+    "Audit the working directory against the rules in .adhere/rules/ or a preset, judged by Jev. With --type transcript, judge a transcript on stdin, such as a coding agent's work, against the transcript rules.",
   ),
   Command.provide((input) =>
     auditLayer(
@@ -315,6 +501,16 @@ export const lintCommand = Command.make(
       input.filter,
     ),
   ),
+  Command.provideEffectDiscard((input) =>
+    input.github && (input.type === "transcript" || input.json || input.md || input.stdout)
+      ? Effect.fail(
+          CliError.UserError.make({
+            cause:
+              "--github is for code lint and cannot be combined with --type transcript, --json, --md, or --stdout.",
+          }),
+        )
+      : Effect.void,
+  ),
 );
 
 /** Jev, with the key `lint` uses, and the config it reads the model and threshold from. */
@@ -326,7 +522,7 @@ export const validateLayer = (flags: Flags) =>
 
 /**
  * `adhere validate`: everything `lint` loads, then how each rule's wording
- * differs from the README's rule writing tips, then the linter check's tallies
+ * differs from the docs' rule writing tips, then the linter check's tallies
  * from lint, then Jev on whether any two rules that apply to the same files
  * contradict. Only a contradiction fails the run: the tips and the linter
  * check are advice. A config, rule file, or preset that does not decode
@@ -356,7 +552,7 @@ export const validateCommand = Command.make("validate", { preset }, () =>
   }),
 ).pipe(
   Command.withDescription(
-    "Load the config, rule files, and presets the way lint does, check each rule's wording against the README's rule writing tips, report the rules lint's linter check flags, then ask Jev whether any two rules that apply to the same files contradict each other.",
+    "Load the config, rule files, and presets the way lint does, check each rule's wording against the docs' rule writing tips, report the rules lint's linter check flags, then ask Jev whether any two rules that apply to the same files contradict each other.",
   ),
   Command.provide((input) => validateLayer({ presets: input.preset })),
 );
@@ -379,7 +575,7 @@ const shared = Flag.String("shared").pipe(
   ),
   Flag.optional,
   Flag.withDescription(
-    "Scaffold a repo of rules other repos copy with adhere install, named org/repo on GitHub: example rules, a README, a CI workflow that runs adhere validate, and an alchemy.run.ts that creates the repo, public unless you make it private when asked, and its TYPESAFE_API_KEY secret.",
+    "Scaffold a repo of instructions, rules, and a lint package other repos use, named org/repo on GitHub: example instructions and rules, a README, a CI workflow that runs adhere validate, and an alchemy.run.ts that creates the repo, public unless you make it private when asked, and its TYPESAFE_API_KEY secret.",
   ),
 );
 
@@ -408,7 +604,7 @@ export const initCommand = Command.make("init", { force, shared }, (input) =>
   }),
 ).pipe(
   Command.withDescription(
-    "Scaffold .adhere/config.ts and example Markdown rules, and add @drkmttr/adhere to devDependencies with the project's package manager.",
+    "Scaffold .adhere/config.ts, .adhere/tsconfig.json, and example Markdown rules, and add @drkmttr/adhere to devDependencies with the project's package manager.",
   ),
 );
 
@@ -418,7 +614,7 @@ const source = Argument.String("source").pipe(
     (spec) => `org/repo, then optionally a topic or rule and #ref, not ${spec}`,
   ),
   Argument.withDescription(
-    "A GitHub repo with rules in .adhere/rules/, as org/repo, optionally followed by a topic or a rule, as in org/repo/data/brand-ports, and by #branch or #tag.",
+    "A GitHub repo with instructions in .adhere/instructions/ and rules in .adhere/rules/, as org/repo, optionally followed by a topic or a rule, as in org/repo/data/brand-ports, and by #branch or #tag.",
   ),
 );
 
@@ -437,30 +633,136 @@ export const listCommand = Command.make("list", { source }, (input) =>
   ),
 );
 
-/** `adhere install org/repo`: another repo's rules, copied into this one's `.adhere/rules/`. */
+class InstallUnavailable extends Schema.TaggedError<InstallUnavailable>()("InstallUnavailable", {
+  message: Schema.String,
+}) {}
+
+/**
+ * What `adhere install` copies: one exact rule without asking, everything
+ * when `--all` is given, or what the user picks at a terminal. Without a
+ * terminal, a choice refuses and says what `--all` would copy and which exact
+ * rule can be named instead. A choice already installed is preselected, so
+ * running install again offers to bring it up to date, and deselecting it
+ * leaves it as it is.
+ */
+const choosePicks = Effect.fn("install.choosePicks")(function* (
+  source: Source,
+  match: CatalogMatch,
+  options: { readonly all: boolean; readonly root: string; readonly clone: string },
+) {
+  if (match.kind === "direct") {
+    return { instructions: [], rules: [match.rule.id] } satisfies InstallPicks;
+  }
+  if (options.all) {
+    return {
+      instructions: match.instructions,
+      rules: match.rules.map(({ id }) => id),
+    } satisfies InstallPicks;
+  }
+  const pinned = source.ref === undefined ? "" : `#${source.ref}`;
+  const stdio = yield* Stdio.Stdio;
+  if (!(yield* stdio.stdinIsTerminal) || !(yield* stdio.stdoutIsTerminal)) {
+    const [first] = match.rules;
+    const ids = [
+      ...match.instructions.map((file) => `instructions/${file}`),
+      ...match.rules.map(({ id }) => id),
+    ];
+    const spec = `${source.repo}${source.rule === "" ? "" : `/${source.rule}`}${pinned}`;
+    const exact =
+      first === undefined
+        ? ""
+        : `, or name one rule exactly, as in ${source.repo}/${first.id}${pinned}`;
+    return yield* new InstallUnavailable({
+      message: `adhere install ${spec}: no terminal to choose from. Pass --all to copy every match (${ids.join(", ")})${exact}.`,
+    });
+  }
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  type Pick =
+    | { readonly kind: "instruction"; readonly path: string }
+    | { readonly kind: "rule"; readonly id: string };
+  const instructionChoices = yield* Effect.forEach(match.instructions, (file) =>
+    fs.exists(path.join(options.root, instructionPath(source, file))).pipe(
+      Effect.orElseSucceed(() => false),
+      Effect.map((selected) => ({
+        title: `instructions/${file}`,
+        value: { kind: "instruction", path: file } as const,
+        selected,
+      })),
+    ),
+  );
+  const described = yield* describeRules(source, options.clone, match.rules);
+  const ruleChoices = yield* Effect.forEach(described, (rule) =>
+    fs.exists(path.join(options.root, rulePath(source, rule.id))).pipe(
+      Effect.orElseSucceed(() => false),
+      Effect.map((selected) => ({
+        title: rule.id,
+        description: rule.description,
+        value: { kind: "rule", id: rule.id } as const,
+        selected,
+      })),
+    ),
+  );
+  const picks: ReadonlyArray<Pick> = yield* Prompt.run(
+    Prompt.MultiSelect<Pick>({
+      message:
+        source.rule === ""
+          ? `What should adhere copy from ${source.repo}${pinned}?`
+          : `Which rules under ${source.repo}/${source.rule}${pinned} should adhere copy?`,
+      choices: [...instructionChoices, ...ruleChoices],
+    }),
+  );
+  return {
+    instructions: picks.flatMap((pick) => (pick.kind === "instruction" ? [pick.path] : [])),
+    rules: picks.flatMap((pick) => (pick.kind === "rule" ? [pick.id] : [])),
+  } satisfies InstallPicks;
+});
+
+/** `adhere install org/repo`: another repo's instructions and rules, copied into this one's `.adhere/`. */
 export const installCommand = Command.make(
   "install",
   {
     source,
     force: Flag.Boolean("force").pipe(
       Flag.withDefault(false),
-      Flag.withDescription("Replace rules already in .adhere/rules/, directory and all."),
+      Flag.withDescription(
+        "Replace instruction files and rules already in .adhere/, file by file and directory by directory.",
+      ),
+    ),
+    all: Flag.Boolean("all").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Copy every instruction file and rule the source names, without asking. Needs no terminal.",
+      ),
     ),
   },
   (input) =>
-    Effect.gen(function* () {
-      const path = yield* Path.Path;
-      const result = yield* installRules(path.resolve(), input.source, { force: input.force });
-      yield* Console.log(
-        [
-          result.created.length > 0 ? `created: ${result.created.join(", ")}` : "created: none",
-          result.skipped.length > 0 ? `skipped: ${result.skipped.join(", ")}` : "skipped: none",
-        ].join("\n"),
-      );
-    }),
+    Effect.scoped(
+      Effect.gen(function* () {
+        const path = yield* Path.Path;
+        const root = path.resolve();
+        const clone = yield* cloned(input.source);
+        const catalog = yield* catalogOf(input.source, clone);
+        const match = yield* matchOf(input.source, catalog);
+        const picks = yield* choosePicks(input.source, match, {
+          all: input.all,
+          root,
+          clone,
+        });
+        const result = yield* installSelected(root, input.source, clone, picks, {
+          force: input.force,
+        });
+        yield* Console.log(
+          [
+            result.created.length > 0 ? `created: ${result.created.join(", ")}` : "created: none",
+            result.skipped.length > 0 ? `skipped: ${result.skipped.join(", ")}` : "skipped: none",
+          ].join("\n"),
+        );
+      }),
+    ),
 ).pipe(
   Command.withDescription(
-    "Copy the rules in a GitHub repo's .adhere/rules/, or one topic or rule of them, each its whole directory, into this repo's .adhere/rules/<org>/<repo>/. They are this repo's own rules from then on, to edit or keep in step by hand, and a copied RULE.ts runs whenever lint does. A rule already there is skipped unless --force.",
+    "Copy instruction files and rules from a GitHub repo's .adhere/ into this repo's .adhere/instructions/<org>/<repo>/ and .adhere/rules/<org>/<repo>/. At a terminal, choose which instruction files and rules to copy; name a topic for its rules, or name one rule exactly to copy it without asking. --all copies everything. Existing files are skipped unless --force.",
   ),
 );
 
@@ -556,11 +858,117 @@ export const skillCommand = Command.make("skill", { name: skillName }, ({ name }
   ),
 );
 
+const agent = Flag.Literals("agent", AGENTS).pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "The coding agent to ask this time: claude, codex, or omp, in place of the one setup saved.",
+  ),
+);
+
+/** `adhere rules create [idea]`: a wizard that writes one rule, with a coding agent's help. */
+const rulesCreateCommand = Command.make(
+  "create",
+  {
+    idea: Argument.String("idea").pipe(
+      Argument.optional,
+      Argument.withDescription("What the rule should enforce. Asked for when left out."),
+    ),
+    agent,
+    setup: Flag.Boolean("setup").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Choose again which agent to ask and which GitHub repo, as org/repo, holds the organization's shared rules. The first run asks without it.",
+      ),
+    ),
+  },
+  (input) => createRule(input.idea, input.agent, input.setup).pipe(Effect.provide(statusLayer)),
+).pipe(
+  Command.withDescription(
+    "Write a rule with a coding agent's help: it suggests whether the convention is a native oxlint rule (an id from adhere's catalog; unknown ids are rejected, with its exact option values and the config to print or enable in the shared repo), a mechanical rule (an oxlint JS plugin, approved before it runs and tested on Node 22 or newer; a failed test gets one repair and reapproval), or one adhere must judge. It then suggests whether the rule belongs to this project or the organization's shared rules repo, names it, chooses a RULE.md or, when Jev needs state the file cannot show, a RULE.ts, and says which config context (typeAware, reads) it needs. It finds code in the repo for you to judge, with the lines around it, and drafts the rule from your answers; the draft is checked as adhere validate checks wording. A project rule is written to .adhere/rules/ or .adhere/oxlint/; an organization rule is pushed to the shared repo on a branch for a pull request.",
+  ),
+);
+
+/** The shared rules repo to refresh instead of this checkout's, as `org/repo`. */
+const sharedRepo = Argument.String("repo").pipe(
+  Argument.filterMap(
+    (spec) => Option.fromNullishOr(/^[\w.-]+\/[\w.-]+$/.test(spec) ? spec : undefined),
+    (spec) => `org/repo, as on GitHub, not ${spec}`,
+  ),
+  Argument.optional,
+  Argument.withDescription(
+    "The shared rules repo to refresh, as org/repo, instead of this checkout or the org's standards repo this checkout's origin names.",
+  ),
+);
+
+/**
+ * `adhere rules readme [org/repo]`: refresh the managed index in a shared
+ * rules repo's README from the rules and lint config checked out there. In a
+ * shared repo it writes that README; otherwise it clones the GitHub repo named
+ * here, or the org's standards repo this checkout's origin names, and pushes the refreshed
+ * README on a review branch for a pull request.
+ */
+const rulesReadmeCommand = Command.make("readme", { repo: sharedRepo }, ({ repo }) =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    const root = path.resolve();
+    const named = Option.isSome(repo) ? repo.value : undefined;
+    if (named === undefined && (yield* isSharedRepo(root))) {
+      const refreshed = yield* refreshSharedReadme(root);
+      yield* Console.log(refreshed.message);
+      return;
+    }
+    const origin = named === undefined ? yield* originUrlAt(root) : undefined;
+    // A consumer repo's shared rules live in its org's standards repo, never in the repo itself.
+    const target = named ?? (origin === undefined ? undefined : standardsRepoOf(origin));
+    if (target === undefined) {
+      return yield* ReadmeUnavailable.make({
+        message:
+          origin === undefined
+            ? `${root} is not a shared rules repo, and git names no origin here, so there is no README to refresh. Run this in the shared repo, name it as adhere rules readme org/repo, or add a GitHub origin.`
+            : `${root} is not a shared rules repo, and its origin ${origin} is not a GitHub repo. Run this in the shared repo, or name one: adhere rules readme org/repo.`,
+      });
+    }
+    const refreshed = yield* refreshRemoteReadme(target);
+    yield* Console.log(
+      refreshed.branch === undefined
+        ? `${refreshed.message}\nNo change, so nothing was pushed.`
+        : [
+            refreshed.message,
+            `Pushed ${refreshed.branch} to ${refreshed.repo}.`,
+            `Open the pull request: https://github.com/${refreshed.repo}/compare/${refreshed.branch}?expand=1`,
+          ].join("\n"),
+    );
+  }).pipe(Effect.provide(statusLayer)),
+).pipe(
+  Command.withDescription(
+    "Refresh the managed index in a shared rules repo's README from .adhere/rules/ and oxlint/rules.json: each rule's link and description, each enabled native Oxlint setting, and each custom plugin's enabled rules. In the shared repo it writes that README. Elsewhere it refreshes the GitHub repo named as org/repo, or the org's standards repo this checkout's origin names, from a clone, pushes README.md alone on a review branch, and prints the pull request link; a current README pushes nothing. It preserves the rest of the README and refuses malformed markers.",
+  ),
+);
+
+export const rulesCommand = Command.make("rules").pipe(
+  Command.withDescription("Work on this repo's rules."),
+  Command.withSubcommands([rulesCreateCommand, rulesReadmeCommand]),
+);
+
+export const postinstallCommand = Command.make("postinstall", {}, () =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    yield* Console.log(yield* renderInstructions(path.resolve()));
+  }),
+).pipe(
+  Command.withDescription(
+    "Render instruction files recursively into a managed block in AGENTS.md.",
+  ),
+);
+
 /** The whole CLI. Bare `adhere` prints its help. */
 export const cli = Command.make("adhere").pipe(
   Command.withDescription("Lint a repository against the rules in .adhere/rules/, judged by Jev."),
   Command.withExamples([
-    { command: "adhere init", description: "Scaffold .adhere/config.ts and two example rules" },
+    {
+      command: "adhere init",
+      description: "Scaffold config, tsconfig, and two example rules",
+    },
     {
       command: "adhere validate",
       description: "Check the rules' wording, and ask Jev whether any contradict",
@@ -569,7 +977,7 @@ export const cli = Command.make("adhere").pipe(
     { command: "adhere lint", description: "Audit the working directory" },
     {
       command: "adhere install org/repo",
-      description: "Copy another repo's .adhere/rules/ into this one",
+      description: "Copy another repo's instructions and rules into this one",
     },
     {
       command: "adhere lint --preset effect",
@@ -580,10 +988,12 @@ export const cli = Command.make("adhere").pipe(
     lintCommand,
     validateCommand,
     initCommand,
+    postinstallCommand,
     listCommand,
     installCommand,
     loginCommand,
     logoutCommand,
     skillCommand,
+    rulesCommand,
   ]),
 );

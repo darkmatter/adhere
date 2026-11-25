@@ -1,6 +1,7 @@
 ---
 description: A test must assert what the code under test returned or did, such as its result, what it rendered, or the state it left, never only that it ran without throwing or returned something defined.
 tests: only
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

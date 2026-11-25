@@ -1,5 +1,6 @@
 ---
 description: A custom provider's diff must check isResolved(news) and return undefined before comparing props that may still be unresolved Outputs, never comparing them directly.
+include: {"names": ["*.ts", "*.tsx", "*.mts", "*.cts"]}
 ---
 
 ## Must

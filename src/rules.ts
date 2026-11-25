@@ -5,6 +5,7 @@ import {
   type RuleId,
   type RuleSource,
   SKIPPED_DIRECTORIES,
+  typeOf,
 } from "#config.ts";
 import { parseRuleMarkdown } from "#markdown.ts";
 import { walkFiles } from "#walk.ts";
@@ -60,11 +61,9 @@ interface RuleFile {
 
 /**
  * The rules among `leaves`, the paths in `directory`, whose rules sit under
- * `prefix` one to a directory: `<id>/RULE.md` or `<id>/RULE.ts`. Anything else
- * in a rule's directory, such as a helper its RULE.ts imports, is not a rule.
- * A directory with both files refuses, and so does a Markdown file outside
- * every rule's directory, but a README.md: before rule directories, it was a
- * rule, and the refusal says where it goes now to keep its id.
+ * `prefix` one to a directory: `<id>/RULE.md` or `<id>/RULE.ts`. Any other
+ * file, such as a helper a RULE.ts imports, is not a rule. A directory with
+ * both files refuses.
  */
 const ruleFilesIn = (
   directory: string,
@@ -82,29 +81,6 @@ const ruleFilesIn = (
     return Effect.fail(
       ConfigUnavailable.make({
         message: `${directory}/${prefix}${both.id}: a rule is a RULE.md or a RULE.ts, not both`,
-      }),
-    );
-  }
-  const homes = files.map(({ leaf }) => leaf.slice(0, leaf.lastIndexOf("/") + 1));
-  const flat = leaves.filter((leaf) => {
-    const name = segmentsOf(leaf).at(-1) ?? "";
-    return (
-      leaf.endsWith(".md") &&
-      !RULE_FILES.has(name) &&
-      name !== "README.md" &&
-      !homes.some((home) => leaf.startsWith(home))
-    );
-  });
-  if (flat.length > 0) {
-    return Effect.fail(
-      ConfigUnavailable.make({
-        message: [
-          `Rules now live one to a directory, as ${directory}/${prefix}<id>/RULE.md or RULE.ts. Move each of these to keep its id:`,
-          ...flat.map(
-            (leaf) =>
-              `  ${directory}/${leaf} → ${directory}/${prefix}${leaf.slice(0, -".md".length)}/RULE.md`,
-          ),
-        ].join("\n"),
       }),
     );
   }
@@ -161,7 +137,7 @@ const moreSpecific = (a: RuleEntry, b: RuleEntry): RuleEntry =>
  * config's inline rule is, so a hook such as `appendState` comes with it.
  * Like a config, the file is imported, so its code runs.
  */
-const importRule = Effect.fn("importRule")(function* (file: string) {
+export const importRule = Effect.fn("importRule")(function* (file: string) {
   const path = yield* Path.Path;
   const url = yield* path.toFileUrl(file).pipe(Effect.orDie);
   const loaded = yield* Effect.tryPromise({
@@ -255,25 +231,60 @@ export const globalRuleSet = (rules: Readonly<Record<RuleId, Rule>>, root: strin
 /**
  * The rules as a config's overrides leave them, each found by the id a report
  * names it with: a rule set `off` gone, and any other with the level and
- * threshold its override gives, over its own.
+ * threshold its override gives, over its own, its `options` decoded by the
+ * rule's schema, `{}` when unset, and the `paths` this repository narrows it
+ * to. Options a rule does not take, or that do not decode, refuse the run, as
+ * do paths for a transcript rule, which judges no file.
  */
-export const withOverrides = (
+export const withOverrides = Effect.fn("withOverrides")(function* (
   entries: RuleSet,
   overrides: Readonly<Record<string, Override>>,
-): RuleSet =>
-  entries.flatMap((entry) => {
-    const override = overrides[shownId(entry)];
-    if (override === undefined) return [entry];
-    const { level, threshold }: Exclude<Override, string> =
-      typeof override === "string" ? { level: override } : override;
-    if (level === "off") return [];
-    const rule: Rule = {
-      ...entry.rule,
-      ...(level === undefined ? {} : { level }),
-      ...(threshold === undefined ? {} : { threshold }),
-    };
-    return [{ ...entry, rule }];
-  });
+) {
+  const kept = yield* Effect.forEach(entries, (entry) =>
+    Effect.gen(function* () {
+      const id = shownId(entry);
+      const override = overrides[id];
+      const {
+        level,
+        threshold,
+        options,
+        paths = [],
+      }: Exclude<Override, string> = typeof override === "string"
+        ? { level: override }
+        : (override ?? {});
+      if (level === "off") return [];
+      if (entry.rule.options === undefined && options !== undefined) {
+        return yield* ConfigUnavailable.make({
+          message: `overrides sets options for ${id}, which takes none.`,
+        });
+      }
+      if (typeOf(entry.rule) === "transcript" && paths.length > 0) {
+        return yield* ConfigUnavailable.make({
+          message: `overrides sets paths for ${id}, a transcript rule, which judges no file.`,
+        });
+      }
+      const optionValues =
+        entry.rule.options === undefined
+          ? undefined
+          : yield* Schema.decodeUnknownEffect(entry.rule.options)(options ?? {}).pipe(
+              Effect.mapError((problem) =>
+                ConfigUnavailable.make({
+                  message: `The options of ${id}, set in overrides, did not decode: ${problem.message}`,
+                }),
+              ),
+            );
+      const rule: Rule = {
+        ...entry.rule,
+        ...(level === undefined ? {} : { level }),
+        ...(threshold === undefined ? {} : { threshold }),
+        ...(optionValues === undefined ? {} : { optionValues }),
+        ...(paths.length === 0 ? {} : { overridePaths: paths }),
+      };
+      return [{ ...entry, rule }];
+    }),
+  );
+  return kept.flat();
+});
 
 /**
  * Whether a rule judges a file: a test file only when the rule says `tests`,
